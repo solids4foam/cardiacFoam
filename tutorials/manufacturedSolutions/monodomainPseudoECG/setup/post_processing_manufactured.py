@@ -1570,20 +1570,17 @@ def _plot_dimension_errors_on_axis(ax, rows, dimension: str, *, convergence_axis
         )
         return False
 
-    plotted_rows = dimension_rows
-    if not plotted_rows:
-        continue
-        plotted_rows = sorted(plotted_rows, key=axis_meta["sort_key"])
+    plotted_rows = sorted(dimension_rows, key=axis_meta["sort_key"])
 
-        for col, color in FIELD_COLORS.items():
-            ax.loglog(
-                [row[axis_meta["x_key"]] for row in plotted_rows],
-                [row[col] for row in plotted_rows],
-                marker="s",
-                linestyle="--",
-                color=color,
-                label=f"{FIELD_LABELS[col]} ({dimension})",
-            )
+    for col, color in FIELD_COLORS.items():
+        ax.loglog(
+            [row[axis_meta["x_key"]] for row in plotted_rows],
+            [row[col] for row in plotted_rows],
+            marker="s",
+            linestyle="--",
+            color=color,
+            label=f"{FIELD_LABELS[col]} ({dimension})",
+        )
 
     style_matplotlib_axes(
         ax,
@@ -1606,17 +1603,17 @@ def _plot_vm_across_dimensions_on_axis(ax, rows, *, convergence_axis: str = "spa
         plotted_rows = dimension_rows
         if not plotted_rows:
             continue
-            plotted_rows = sorted(plotted_rows, key=axis_meta["sort_key"])
+        plotted_rows = sorted(plotted_rows, key=axis_meta["sort_key"])
 
-            ax.loglog(
-                [row[axis_meta["x_key"]] for row in plotted_rows],
-                [row["Linf_V"] for row in plotted_rows],
-                marker="s",
-                linestyle="--",
-                color=DIMENSION_COLORS.get(dimension, "black"),
-                label=f"{dimension}",
-            )
-            plotted = True
+        ax.loglog(
+            [row[axis_meta["x_key"]] for row in plotted_rows],
+            [row["Linf_V"] for row in plotted_rows],
+            marker="s",
+            linestyle="--",
+            color=DIMENSION_COLORS.get(dimension, "black"),
+            label=f"{dimension}",
+        )
+        plotted = True
 
     if not plotted:
         ax.text(
@@ -1651,15 +1648,15 @@ def _plot_ecg_metric_on_axis(ax, rows, *, value_key: str, title: str, ylabel: st
         if not plotted_rows:
             continue
 
-            ax.loglog(
-                [row["N"] for row in plotted_rows],
-                [row[value_key] for row in plotted_rows],
-                marker="s",
-                linestyle="--",
-                color=DIMENSION_COLORS.get(dimension, "black"),
-                label=f"{dimension}",
-            )
-            plotted = True
+        ax.loglog(
+            [row["N"] for row in plotted_rows],
+            [row[value_key] for row in plotted_rows],
+            marker="s",
+            linestyle="--",
+            color=DIMENSION_COLORS.get(dimension, "black"),
+            label=f"{dimension}",
+        )
+        plotted = True
 
     if not plotted:
         ax.text(
@@ -1718,21 +1715,21 @@ def plot_ecg_quadrature_summary(
     ):
         plotted = False
         plotted_rows = rows
-            for q_check in q_checks:
-                selected_rows = [
-                    row for row in plotted_rows
-                    if q_check in row.get("delta_by_q", {})
-                ]
-                if not selected_rows:
-                    continue
-                axis.loglog(
-                    [row["N"] for row in selected_rows],
-                    [row["delta_by_q"][q_check][reducer_key] for row in selected_rows],
-                    marker="s",
-                    linestyle="--",
-                    label=f"q={q_check} vs qRef={q_reference}",
-                )
-                plotted = True
+        for q_check in q_checks:
+            selected_rows = [
+                row for row in plotted_rows
+                if q_check in row.get("delta_by_q", {})
+            ]
+            if not selected_rows:
+                continue
+            axis.loglog(
+                [row["N"] for row in selected_rows],
+                [row["delta_by_q"][q_check][reducer_key] for row in selected_rows],
+                marker="s",
+                linestyle="--",
+                label=f"q={q_check} vs qRef={q_reference}",
+            )
+            plotted = True
 
         if not plotted:
             axis.text(
@@ -2734,20 +2731,20 @@ def plot_ecg_error_vs_gap_summary(
             continue
 
         plotted_rows = rows
-            ax.loglog(
-                [row["N"] for row in plotted_rows],
-                [max(row[error_key], 1e-30) for row in plotted_rows],
-                marker="o",
-                linestyle="-",
-                label=f"{error_label} ()",
-            )
-            ax.loglog(
-                [row["N"] for row in plotted_rows],
-                [max(row[gap_key], 1e-30) for row in plotted_rows],
-                marker="s",
-                linestyle="--",
-                label=f"{gap_label} ()",
-            )
+        ax.loglog(
+            [row["N"] for row in plotted_rows],
+            [max(row[error_key], 1e-30) for row in plotted_rows],
+            marker="o",
+            linestyle="-",
+            label=f"{error_label} ()",
+        )
+        ax.loglog(
+            [row["N"] for row in plotted_rows],
+            [max(row[gap_key], 1e-30) for row in plotted_rows],
+            marker="s",
+            linestyle="--",
+            label=f"{gap_label} ()",
+        )
 
         style_matplotlib_axes(
             ax,
