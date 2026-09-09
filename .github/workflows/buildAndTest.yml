@@ -48,6 +48,17 @@ jobs:
       options: --user 0
 
     steps:
+      # actions/checkout's `lfs: true` shells out to the git-lfs binary, and
+      # the solids4foam images do not ship it - without this the checkout
+      # fails with "Unable to locate executable file: git-lfs". Must run
+      # before the checkout that needs it.
+      - name: Install Git LFS
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq git-lfs
+          git lfs install
+          git lfs version
+
       - name: Checkout cardiacFoam
         uses: actions/checkout@v4
         with:
