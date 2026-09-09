@@ -70,6 +70,9 @@ jobs:
           # consumes it fails as "missing output file".
           lfs: true
 
+      - name: Mark workspace as a safe directory for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       # Fail fast and unambiguously if the mesh did not actually materialise.
       # Without this the first symptom is a regression reporting "missing
       # output file" twenty minutes into the run, which points at the solver
