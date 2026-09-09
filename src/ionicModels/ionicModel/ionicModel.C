@@ -326,18 +326,18 @@ void Foam::ionicModel::configureIonicHeterogeneity
 }
 
 
-void Foam::ionicModel::configureApexBaseBandsHeterogeneity
+void Foam::ionicModel::configureGradientAxisHeterogeneity
 (
-    const scalarField& apexDist,
+    const scalarField& fieldValues,
     const dictionary& dict
 )
 {
-    (void)apexDist;
+    (void)fieldValues;
     (void)dict;
 
     FatalErrorInFunction
-        << "apexBaseBands heterogeneity was requested for ionic model " << type()
-        << ", but this model does not support apex-to-base heterogeneity."
+        << "gradientAxes heterogeneity was requested for ionic model " << type()
+        << ", but this model does not support gradient-axis heterogeneity."
         << exit(FatalError);
 }
 
@@ -359,16 +359,16 @@ Foam::scalarField Foam::ionicModel::initialStatesForTissue
     return scalarField();
 }
 
-void Foam::ionicModel::configureApexBaseBandsHeterogeneityImpl
+void Foam::ionicModel::configureGradientAxisHeterogeneityImpl
 (
-    const scalarField& apexDist,
+    const scalarField& fieldValues,
     const dictionary& dict,
     PtrList<scalarField>& heterogeneousConstants
 ) const
 {
-    ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityImpl
+    ionicHeterogeneityOrchestrator::configureGradientAxisHeterogeneity
     (
-        *this, apexDist, dict, heterogeneousConstants
+        *this, fieldValues, dict, heterogeneousConstants
     );
 }
 

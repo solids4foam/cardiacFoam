@@ -388,9 +388,9 @@ public:
             const dictionary& heterogeneityDict
         );
 
-        virtual void configureApexBaseBandsHeterogeneity
+        virtual void configureGradientAxisHeterogeneity
         (
-            const scalarField& apexDist,
+            const scalarField& fieldValues,
             const dictionary& dict
         );
 
@@ -404,11 +404,10 @@ public:
             PtrList<scalarField>* heterogeneousInitialStates = nullptr
         ) const;
 
-        //- Configure apex-to-base heterogeneity through
-        //  ionicHeterogeneityOrchestrator.
-        void configureApexBaseBandsHeterogeneityImpl
+        //- Configure one gradientAxes axis's heterogeneity.
+        void configureGradientAxisHeterogeneityImpl
         (
-            const scalarField& apexDist,
+            const scalarField& fieldValues,
             const dictionary& dict,
             PtrList<scalarField>& heterogeneousConstants
         ) const;
