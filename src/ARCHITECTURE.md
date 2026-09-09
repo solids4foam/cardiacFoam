@@ -97,7 +97,7 @@ heterogeneity of cellular phenotypes (endocardial, mid-myocardial, epicardial, o
 open-ended named/scar regions) through the `ionicHeterogeneity` dictionary block,
 in one of three modes — `transmuralBands` (fixed 3-zone), `namedRegions` (open,
 field-range-based), or `cellZoneRegions` (mesh-topology-based) — plus an optional
-`apexBaseBands` scaling composable with any mode. All 12 scalar models (via
+`gradientAxes` scaling composable with any mode. All 12 scalar models (via
 `configuredIonicModel`) support this; batched models support it only when their
 `supportedTissueTypes()` includes all three anatomical types (currently
 `BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`, `ToRORd_dynClBatched`). See

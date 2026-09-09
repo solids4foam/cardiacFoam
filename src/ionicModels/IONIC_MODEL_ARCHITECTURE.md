@@ -244,7 +244,7 @@ spatial mesh via smooth or sharp transitions, or via named mesh regions.
 - `transmuralBands`: smooth or hard transitions based on normalized transmural distance
 - `namedRegions`: field-value-based regions with optional blending
 - `cellZoneRegions`: hard-boundary mesh cell-zone assignment
-- `apexBaseBands`: optional apex-to-base exponential scaling overlay
+- `gradientAxes`: optional dict of named exponential-scaling overlay axes (e.g. `apicobasal`); each composes multiplicatively on top of the transmural blend
 
 See `ionicHeterogeneity.H` and `ionicHeterogeneityOrchestrator.H` for implementation details.
 

@@ -247,7 +247,7 @@ width, mode, and smoothing keys `transmuralBands` already reads. For
 `regions` sub-dictionary (each naming a mesh `cellZone`), with a crisp
 (unblended) per-cell weight of 1.0 for cells in that zone — this mode has
 no `field`/`transitionWidth`/`smoothing`/`transitionMode` concept at all,
-matching how the monodomain path already treats it. `apexBaseBands` is not
+matching how the monodomain path already treats it. `gradientAxes` is not
 supported by any mode; using `personalizedTemplates` with it is rejected
 (see timing note below).
 

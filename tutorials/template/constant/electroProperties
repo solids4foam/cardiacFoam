@@ -158,22 +158,31 @@ monodomainSolverCoeffs
     //     }
     // }
     //
-    // apexBaseBands is an optional overlay, composable with any of the three
+    // gradientAxes is an optional overlay, composable with any of the three
     // modes above (or used on its own with no other ionicHeterogeneity keys
-    // set). It scales named constants smoothly from apex to base using an
-    // exponential profile, independent of the transmural blend. Only
-    // monodomainSolver and bidomainSolver construct it (both go through
+    // set). It is a dict of independently-configured named axes, each
+    // scaling named constants smoothly along its own field using an
+    // exponential profile, independent of the transmural blend and of each
+    // other (multiple axes compose multiplicatively). Only monodomainSolver
+    // and bidomainSolver construct it (both go through
     // myocardiumDomainInterface::New()); eikonalSolver and singleCellSolver
-    // do not.
+    // do not. 'field' is required on every axis — there is no default, so a
+    // case that omits it fails at parse time rather than silently reusing
+    // another field.
     // ionicHeterogeneity
     // {
-    //     apexBaseBands
+    //     gradientAxes
     //     {
-    //         field       ab;          // apicobasal-distance field (0=apex, 1=base)
-    //         beta        1.5;         // exponential steepness, must be > 0
-    //         scalingMin  0.7;         // scale factor applied at the apex
-    //         scalingMax  1.3;         // scale factor applied at the base, must be >= scalingMin
-    //         variables   (AC_g_Ks);   // ionic constant name(s) to scale
+    //         apicobasal
+    //         {
+    //             field       ab;          // apicobasal-distance field (0=apex, 1=base), required
+    //             beta        1.5;         // exponential steepness, must be > 0
+    //             scalingMin  0.7;         // scale factor applied at the apex
+    //             scalingMax  1.3;         // scale factor applied at the base, must be >= scalingMin
+    //             variables   (AC_g_Ks);   // ionic constant name(s) to scale
+    //         }
+    //
+    //         // additional axes, e.g. interventricular, declared the same way
     //     }
     // }
 

@@ -308,9 +308,9 @@ ionicHeterogeneity
 
 Each region must declare `cellZone <meshCellZoneName>`. Optional `baseline` defaults per the standard rule. No transition width or smoothing; assignment is hard (binary per cell).
 
-#### Apex-to-base exponential scaling
+#### Gradient-axis exponential scaling
 
-Optional `apexBaseBands` sub-dictionary (applies with any mode) scales selected constants along an apex-to-base gradient:
+Optional `gradientAxes` sub-dictionary (applies with any mode) scales selected constants along one or more independently-configured named axes — each with its own required field, target constants, and exponential shape — composing multiplicatively on top of whatever the transmural pass already computed. Two axes targeting the same constant is legal and intended (their scale factors multiply).
 
 ```
 ionicHeterogeneity
@@ -318,13 +318,20 @@ ionicHeterogeneity
     mode namedRegions;  // or transmuralBands, or cellZoneRegions
     regions { ... }
 
-    apexBaseBands
+    gradientAxes
     {
-        beta        3.0;        // Exponential power (default)
-        scalingMin  0.2;        // Scale at apex (default)
-        scalingMax  5.0;        // Scale at base (default)
-        variables   (G_K1 G_Na);  // Constant names to scale
-        field       d;          // Apex-to-base distance field
+        apicobasal
+        {
+            field       d;           // Required — no default, no fallback
+                                      // to the transmural field.
+            beta        3.0;         // Exponential power (default)
+            scalingMin  0.2;         // Scale at the field-value-0 end (default)
+            scalingMax  5.0;         // Scale at the field-value-1 end (default)
+            variables   (G_K1 G_Na); // Constant names to scale
+        }
+
+        // additional axes, e.g. interventricular, are declared the same
+        // way once a source field for them exists.
     }
 }
 ```
