@@ -81,6 +81,35 @@ void Foam::ionicHeterogeneity::validateTransmuralBandConfig
 }
 
 
+void Foam::ionicHeterogeneity::validateGradientAxisConfig
+(
+    const word& axisName,
+    const scalar scalingMin,
+    const scalar scalingMax,
+    const wordList& variables,
+    const word& modelType
+)
+{
+    if (variables.empty())
+    {
+        FatalErrorInFunction
+            << "gradientAxes '" << axisName << "': 'variables' list is "
+            << "empty for ionic model " << modelType
+            << ". Specify at least one constant name to scale."
+            << exit(FatalError);
+    }
+
+    if (scalingMin <= 0.0 || scalingMax <= 0.0 || scalingMax < scalingMin)
+    {
+        FatalErrorInFunction
+            << "gradientAxes '" << axisName << "': invalid scalingMin="
+            << scalingMin << " scalingMax=" << scalingMax
+            << ". Require 0 < scalingMin <= scalingMax."
+            << exit(FatalError);
+    }
+}
+
+
 Foam::scalar Foam::ionicHeterogeneity::smoothingWeight
 (
     const scalar x,

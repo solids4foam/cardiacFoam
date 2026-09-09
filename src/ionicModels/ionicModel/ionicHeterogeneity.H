@@ -53,6 +53,16 @@ void validateTransmuralBandConfig
     const word& transitionMode
 );
 
+//- Validate a gradientAxes axis's scalingMin/scalingMax/variables.
+void validateGradientAxisConfig
+(
+    const word& axisName,
+    scalar scalingMin,
+    scalar scalingMax,
+    const wordList& variables,
+    const word& modelType
+);
+
 struct NamedFieldRegion
 {
     word name;
