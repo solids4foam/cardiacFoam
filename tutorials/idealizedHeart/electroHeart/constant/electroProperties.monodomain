@@ -49,13 +49,16 @@ monodomainSolverCoeffs
         // measurements (RKF45, S1 pacing) to target the ~20ms total
         // apex-base gradient commonly used in simulation studies, not the
         // library's generic wide-range defaults.
-        apexBaseBands
+        gradientAxes
         {
-            field       apicobasal;
-            beta        1.2;
-            scalingMin  0.97;
-            scalingMax  1.04;
-            variables   (tauSi);
+            apicobasal
+            {
+                field       apicobasal;
+                beta        1.2;
+                scalingMin  0.97;
+                scalingMax  1.04;
+                variables   (tauSi);
+            }
         }
     }
 

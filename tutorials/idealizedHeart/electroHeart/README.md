@@ -61,8 +61,8 @@ blend;` (all three variants — a hard cutoff destabilizes `eikonal`'s
 gradient-dependent advection term, and the smooth transition is the more
 physiologically realistic choice for `monodomain`/`hybrid` anyway).
 
-`monodomain`'s `ionicHeterogeneity` additionally composes an `apexBaseBands`
-sub-dict for an apex-to-base APD gradient: `apicobasal` is used directly
+`monodomain`'s `ionicHeterogeneity` additionally composes a `gradientAxes.apicobasal`
+axis for an apex-to-base APD gradient: `apicobasal` is used directly
 as the distance field (0=apex, 1=base, already this mesh's convention),
 and `variables (tauSi)` scales the Bueno-Orovio-Cherry-Fenton model's
 primary APD-determining time constant. `scalingMin 0.97;`/`scalingMax
