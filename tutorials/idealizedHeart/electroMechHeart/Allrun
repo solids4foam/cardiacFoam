@@ -55,6 +55,16 @@ requireFullElectroMechanicalBuild
 # 226 mL) - just copy it into both regions. Do not run blockMesh here:
 # system/blockMeshDict belongs to the slab tutorial scaffold and was already
 # removed from this case.
+# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
+# checkout made without LFS), fail here with a readable message instead of
+# letting cardiacFoam die later on an unparsable mesh.
+if head -c 40 ../mesh/constant/polyMesh/points 2>/dev/null \
+    | grep -q "git-lfs.github.com"; then
+    echo "ERROR: ../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
+    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+    exit 1
+fi
+
 cp -a ../mesh/constant/polyMesh constant/electro/polyMesh
 cp -a ../mesh/constant/polyMesh constant/solid/polyMesh
 

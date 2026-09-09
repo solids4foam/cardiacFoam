@@ -39,6 +39,16 @@ fi
 # sibling electroHeart/electroMechHeart cases, kept once in
 # ../../mesh/ to avoid tracking the same ~10MB mesh twice in git. The mesh in
 # ../../mesh/ is already scaled to adult-heart-scale SI metres - just copy it in.
+# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
+# checkout made without LFS), fail here with a readable message instead of
+# letting cardiacFoam die later on an unparsable mesh.
+if head -c 40 ../../mesh/constant/polyMesh/points 2>/dev/null \
+    | grep -q "git-lfs.github.com"; then
+    echo "ERROR: ../../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
+    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+    exit 1
+fi
+
 cp -a ../../mesh/constant/polyMesh constant/polyMesh
 
 cp ../../mesh/0/fiber 0/fiber

@@ -44,8 +44,27 @@ trap restoreControlDict EXIT
 sed -E 's/^endTime[[:space:]]+[^;]+;/endTime    0.02;/' \
     "${CONTROL_DICT_BACKUP}" > "${CONTROL_DICT}"
 
+dumpLogTail()
+{
+    local label="$1"
+    local logFile="$2"
+    local maxLines="${3:-80}"
+
+    if [[ -s "${logFile}" ]]; then
+        echo "----- last ${maxLines} lines of ${label} (${logFile}) -----"
+        tail -n "${maxLines}" "${logFile}"
+        echo "----- end of ${label} -----"
+    else
+        echo "(no log file at ${logFile})"
+    fi
+}
+
 ./Allclean > /dev/null 2>&1 || true
-./Allrun lbbb > "${ALLRUN_LOGFILE}" 2>&1
+if ! ./Allrun lbbb > "${ALLRUN_LOGFILE}" 2>&1; then
+    echo "FAIL: Allrun exited non-zero. Surfacing logs:"
+    dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
+    exit 1
+fi
 
 if [[ ! -f "${REF_FILE}" ]]; then
     echo "FAIL: reference file not found: ${REF_FILE}"

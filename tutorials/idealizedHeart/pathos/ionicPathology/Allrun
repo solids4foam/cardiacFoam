@@ -44,6 +44,16 @@ echo "Active ionic-pathology variant: $variant (constant/electroProperties -> el
 # metres - just copy it in. The graph itself is not modified by either
 # pathology variant here (unlike conductionBlock), so it's copied straight
 # in under its normal name.
+# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
+# checkout made without LFS), fail here with a readable message instead of
+# letting cardiacFoam die later on an unparsable mesh.
+if head -c 40 ../../mesh/constant/polyMesh/points 2>/dev/null \
+    | grep -q "git-lfs.github.com"; then
+    echo "ERROR: ../../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
+    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+    exit 1
+fi
+
 cp -a ../../mesh/constant/polyMesh constant/polyMesh
 
 cp ../../mesh/0/fiber 0/fiber

@@ -52,6 +52,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: false
+          # The idealizedHeart tutorials share one Git-LFS-tracked mesh
+          # (tutorials/idealizedHeart/mesh/{0,constant/polyMesh}). Without
+          # this, those paths check out as ~130-byte LFS pointer files,
+          # cardiacFoam cannot read the mesh, and every regression that
+          # consumes it fails as "missing output file".
+          lfs: true
 
       - name: Build cardiacFoam
         shell: bash -l {0}
