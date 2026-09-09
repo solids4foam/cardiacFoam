@@ -435,6 +435,89 @@ def _parse_vector_literal(literal: str) -> tuple[float, float, float]:
     return values
 
 
+DISTANCE_BAND_EDGES = (0.05, 0.2, 0.4, 0.7, 1.0)
+
+
+def electrode_standoff_distance(position: tuple[float, float, float]) -> float:
+    """Distance from a point to the surface of the unit cube [0,1]^3.
+
+    Matches the placement rule the electrode positions were generated
+    with: exit the cube along a ray from its centre, then go this far
+    further. Zero inside/on the cube, positive outside it.
+    """
+    x, y, z = position
+    dx = max(0.0 - x, 0.0, x - 1.0)
+    dy = max(0.0 - y, 0.0, y - 1.0)
+    dz = max(0.0 - z, 0.0, z - 1.0)
+    return math.sqrt(dx * dx + dy * dy + dz * dz)
+
+
+def electrode_distance_table(dimension: str = "3D") -> dict[str, float]:
+    """Standoff distance for every configured electrode, keyed by name."""
+    electrodes = driver_defaults.ECG_ELECTRODES_BY_DIMENSION[dimension]
+    return {
+        name: electrode_standoff_distance(_parse_vector_literal(literal))
+        for name, literal in electrodes.items()
+    }
+
+
+def assign_distance_band(distance: float, bin_edges: tuple[float, ...] = DISTANCE_BAND_EDGES) -> str:
+    """Label a standoff distance with the band it falls in, e.g. '0.05-0.20'.
+
+    Electrodes below the first edge sit in a 'near' band of their own --
+    the pseudo-ECG lead-field kernel scales like 1/r^2 (see
+    pseudoECGSolver.C), so distances that small can inflate the error
+    relative to farther electrodes for reasons that have nothing to do with
+    the gradient reconstruction scheme under test.
+    """
+    edges = [0.0] + list(bin_edges)
+    for lower, upper in zip(edges, edges[1:]):
+        if lower <= distance < upper or math.isclose(distance, upper, rel_tol=0.0, abs_tol=1e-9):
+            return f"{lower:.2f}-{upper:.2f}"
+    return f">{edges[-1]:.2f}"
+
+
+def group_electrode_errors_by_distance_band(
+    electrode_rows: list[dict[str, float | str]],
+    *,
+    dimension: str = "3D",
+    error_column: str = "Linf_err_ref",
+) -> dict[str, dict[str, float]]:
+    """Bucket per-electrode error rows (from `_parse_ecg_summary_file`) by
+    standoff-distance band and summarize each band's error statistics.
+
+    Purpose: separate a genuine gradient-reconstruction error trend from an
+    artifact of the pseudo-ECG kernel's near-field 1/r^2 growth. If the
+    nearest band's error is orders of magnitude above the others and does
+    not shrink with mesh refinement the way the farther bands do, that
+    band's numbers reflect proximity to the source, not the reconstruction
+    scheme, and should be reported/interpreted separately from the rest.
+    """
+    distances = electrode_distance_table(dimension)
+    bands: dict[str, list[float]] = {}
+    for row in electrode_rows:
+        name = row.get("Electrode")
+        if name not in distances:
+            continue
+        value = row.get(error_column)
+        if value is None:
+            continue
+        band = assign_distance_band(distances[name])
+        bands.setdefault(band, []).append(float(value))
+
+    summary: dict[str, dict[str, float]] = {}
+    for band, values in bands.items():
+        if not values:
+            continue
+        summary[band] = {
+            "count": len(values),
+            "mean": sum(values) / len(values),
+            "max": max(values),
+            "min": min(values),
+        }
+    return summary
+
+
 def _interpolate_series(
     source_times: list[float],
     source_values: list[float],
