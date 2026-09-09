@@ -47,6 +47,17 @@ preloading `tm` with `readFields`), and `ionicHeterogeneity` reads
 `field t;` with the standard thresholds `endoMInterface 0.3;` /
 `mEpiInterface 0.7;`.
 
+An `apexBaseBands` sub-dict composes an apex-to-base APD gradient on top
+of the transmural bands above (previously unexercised by any tutorial):
+`apicobasal` is used directly as the distance field (0=apex, 1=base,
+already this mesh's convention — no inversion needed, unlike `tm`), and
+`variables (tauSi)` scales the Bueno-Orovio-Cherry-Fenton model's primary
+APD-determining time constant. `scalingMin 0.97;`/`scalingMax 1.04;` were
+calibrated against single-cell APD90 measurements (not the library's
+generic wide-range defaults) to target the ~20ms apex-to-base gradient
+commonly reported in the literature and used in simulation studies —
+shorter APD at the apex, longer at the base.
+
 ## Purkinje conduction network
 
 `constant/purkinjeGraph` (copied in by `Allrun` from `../mesh/constant/`)

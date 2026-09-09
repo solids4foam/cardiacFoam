@@ -35,6 +35,28 @@ monodomainSolverCoeffs
         transitionWidth   0;
         transitionMode    hard;
         smoothing         smoothstep;
+
+        // Apex-to-base APD gradient (composes with the transmural bands
+        // above): APD shorter at the apex, longer at the base, matching the
+        // consistently reported direction in the literature (e.g. Opthof
+        // et al., J Cardiovasc Electrophysiol; Sengupta et al., Circulation
+        // Cardiovasc Imaging). apicobasal follows the same 0=apex/1=base
+        // convention this tutorial already uses for Purkinje-tree UVCs (see
+        // README), so it is used directly as the distance field, no
+        // inversion needed. tauSi is the primary APD-determining time
+        // constant in the Bueno-Orovio-Cherry-Fenton minimal model;
+        // scalingMin/scalingMax were calibrated against single-cell APD90
+        // measurements (RKF45, S1 pacing) to target the ~20ms total
+        // apex-base gradient commonly used in simulation studies, not the
+        // library's generic wide-range defaults.
+        apexBaseBands
+        {
+            field       apicobasal;
+            beta        1.2;
+            scalingMin  0.97;
+            scalingMax  1.04;
+            variables   (tauSi);
+        }
     }
 
     solutionAlgorithm explicit;
