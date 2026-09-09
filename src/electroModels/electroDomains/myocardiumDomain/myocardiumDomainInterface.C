@@ -146,6 +146,58 @@ scalarField readTransmuralDistance
     return mappedValues;
 }
 
+
+scalarField readNamedScalarField
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties,
+    const word& fieldName
+)
+{
+    const volScalarField namedField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh
+    );
+    scalarField fullValues = namedField.primitiveField();
+
+    if (!electroProperties.found("cellZone"))
+    {
+        return fullValues;
+    }
+
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+
+    if (zoneId < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot find myocardium cellZone '" << cellZoneName
+            << "' on mesh '" << mesh.name() << "'."
+            << exit(FatalError);
+    }
+
+    fvMeshSubset subset(mesh);
+    subset.setCellSubset(mesh.cellZones()[zoneId]);
+
+    const labelUList& cellMap = subset.cellMap();
+    scalarField mappedValues(cellMap.size(), 0.0);
+
+    forAll(cellMap, subCellI)
+    {
+        mappedValues[subCellI] = fullValues[cellMap[subCellI]];
+    }
+
+    return mappedValues;
+}
+
 } // End anonymous namespace
 
 
@@ -203,19 +255,26 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
             );
         }
 
-        if (heterogeneityDict.found("apexBaseBands"))
+        if (heterogeneityDict.found("gradientAxes"))
         {
-            const dictionary& abDict =
-                heterogeneityDict.subDict("apexBaseBands");
+            const dictionary& axesDict =
+                heterogeneityDict.subDict("gradientAxes");
 
-            const scalarField longitudinalDist =
-                readTransmuralDistance(mesh, electroProperties, abDict);
+            forAllConstIter(dictionary, axesDict, iter)
+            {
+                const word axisName(iter().keyword());
+                const dictionary& axisDict = axesDict.subDict(axisName);
+                const word fieldName(axisDict.lookup("field"));
 
-            ionicModelPtr->configureApexBaseBandsHeterogeneity
-            (
-                longitudinalDist,
-                abDict
-            );
+                const scalarField axisField =
+                    readNamedScalarField(mesh, electroProperties, fieldName);
+
+                ionicModelPtr->configureGradientAxisHeterogeneity
+                (
+                    axisField,
+                    axisDict
+                );
+            }
         }
     }
 
