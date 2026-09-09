@@ -51,11 +51,11 @@ void configureTransmuralBandHeterogeneity
     PtrList<scalarField>* heterogeneousInitialStates = nullptr
 );
 
-//- Apply apex-to-base exponential scaling to selected constants.
-void configureApexBaseBandsHeterogeneityImpl
+//- Apply exponential scaling for one gradientAxes axis.
+void configureGradientAxisHeterogeneity
 (
     const ionicModel& model,
-    const scalarField& apexDist,
+    const scalarField& fieldValues,
     const dictionary& dict,
     PtrList<scalarField>& heterogeneousConstants
 );

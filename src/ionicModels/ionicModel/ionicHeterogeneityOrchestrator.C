@@ -30,14 +30,16 @@ Author
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-void Foam::ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityImpl
+void Foam::ionicHeterogeneityOrchestrator::configureGradientAxisHeterogeneity
 (
     const ionicModel& model,
-    const scalarField& apexDist,
+    const scalarField& fieldValues,
     const dictionary& dict,
     PtrList<scalarField>& heterogeneousConstants
 )
 {
+    const word axisName(dict.dictName());
+
     const scalar beta =
         dict.lookupOrDefault<scalar>("beta", 3.0);
     const scalar scalingMin =
@@ -46,22 +48,10 @@ void Foam::ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityIm
         dict.lookupOrDefault<scalar>("scalingMax", 5.0);
     const wordList variables(dict.lookup("variables"));
 
-    if (variables.empty())
-    {
-        FatalErrorInFunction
-            << "apexBaseBands: 'variables' list is empty for ionic model "
-            << model.type() << ". Specify at least one constant name to scale."
-            << exit(FatalError);
-    }
-
-    if (scalingMin <= 0.0 || scalingMax <= 0.0 || scalingMax < scalingMin)
-    {
-        FatalErrorInFunction
-            << "apexBaseBands: invalid scalingMin=" << scalingMin
-            << " scalingMax=" << scalingMax
-            << ". Require 0 < scalingMin <= scalingMax."
-            << exit(FatalError);
-    }
+    ionicHeterogeneity::validateGradientAxisConfig
+    (
+        axisName, scalingMin, scalingMax, variables, model.type()
+    );
 
     const label nConst = model.ioNumConstants();
     const char* const* names = model.ioConstantNames();
@@ -70,9 +60,9 @@ void Foam::ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityIm
     if (!names || nConst <= 0 || !baseConstants || baseConstants->empty())
     {
         FatalErrorInFunction
-            << "apexBaseBands was requested for ionic model " << model.type()
-            << ", but this model does not expose constant metadata "
-            << "(ioConstantNames / ioConstantsPtr)."
+            << "gradientAxes '" << axisName << "' was requested for ionic "
+            << "model " << model.type() << ", but this model does not "
+            << "expose constant metadata (ioConstantNames / ioConstantsPtr)."
             << exit(FatalError);
     }
 
@@ -90,9 +80,9 @@ void Foam::ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityIm
         if (indices[vi] < 0)
         {
             FatalErrorInFunction
-                << "apexBaseBands: variable '" << variables[vi]
-                << "' not found in constant names of ionic model " << model.type()
-                << ". Available constants: ";
+                << "gradientAxes '" << axisName << "': variable '"
+                << variables[vi] << "' not found in constant names of "
+                << "ionic model " << model.type() << ". Available constants: ";
             for (label ci = 0; ci < nConst; ci++)
             {
                 FatalErrorInFunction << names[ci] << ' ';
@@ -103,25 +93,25 @@ void Foam::ionicHeterogeneityOrchestrator::configureApexBaseBandsHeterogeneityIm
 
     if (heterogeneousConstants.empty())
     {
-        heterogeneousConstants.setSize(apexDist.size());
-        forAll(apexDist, cellI)
+        heterogeneousConstants.setSize(fieldValues.size());
+        forAll(fieldValues, cellI)
         {
             heterogeneousConstants.set(cellI, new scalarField(*baseConstants));
         }
     }
-    else if (heterogeneousConstants.size() != apexDist.size())
+    else if (heterogeneousConstants.size() != fieldValues.size())
     {
         FatalErrorInFunction
-            << "apexBaseBands: longitudinal distance field has "
-            << apexDist.size() << " values but " << model.type()
+            << "gradientAxes '" << axisName << "': field has "
+            << fieldValues.size() << " values but " << model.type()
             << " has " << heterogeneousConstants.size()
             << " heterogeneous constant sets."
             << exit(FatalError);
     }
 
-    forAll(apexDist, cellI)
+    forAll(fieldValues, cellI)
     {
-        const scalar d = min(max(apexDist[cellI], scalar(0.0)), scalar(1.0));
+        const scalar d = min(max(fieldValues[cellI], scalar(0.0)), scalar(1.0));
         const scalar f =
             ionicHeterogeneity::apexBaseScale(d, beta, scalingMin, scalingMax);
 
