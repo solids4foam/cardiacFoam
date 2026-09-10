@@ -310,3 +310,9 @@ tutorials/manufacturedSolutions/eikonalECG/gradient_full_sweep.csv
 # Local-only open-issue working notes (kept on disk, never tracked)
 docs/issues/
 
+
+# Local-only planning and agent-instruction files: kept in the working tree
+# but not tracked, so they do not ship with the repository.
+/CLAUDE.md
+/RESTART_STATE_PLAN.md
+/meluxinaScripts_GPU/
