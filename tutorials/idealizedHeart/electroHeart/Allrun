@@ -26,12 +26,13 @@ done
 ln -sf "electroProperties.$variant" constant/electroProperties
 echo "Active solver variant: $variant (constant/electroProperties -> electroProperties.$variant)"
 
-# controlDict is per-variant too: monodomain's own activation completes
-# within 20ms, but hybrid's eikonal-Purkinje-to-monodomain coupling needs
-# ~100ms to show activation (measured directly, not guessed - see
-# regression/ and this tutorial's own history). Sharing one endTime across
-# variants would either slow down monodomain's regression for no reason or
-# starve hybrid of the time it actually needs.
+# controlDict is still per-variant, but all three now share endTime 0.04.
+# The probe activations were re-measured: monodomain at 19.4ms, hybrid's
+# eikonal-Purkinje-to-monodomain coupling at 31.3ms (an earlier note here
+# claimed ~100ms; that was not borne out). 0.04 clears both with margin and
+# keeps the variants comparable. eikonal is unaffected either way - it
+# overrides the case time controls and solves one steady problem, writing
+# only time 1.
 ln -sf "controlDict.$variant" system/controlDict
 echo "Active controlDict: $variant (system/controlDict -> controlDict.$variant)"
 

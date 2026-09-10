@@ -1,0 +1,9 @@
+# Eikonal variant: eikonalSolver + eikonalSolver1D.
+#
+# The eikonal myocardium domain overrides the case time controls
+# (eikonalMyocardiumDomain::applyModelTimeControls) and solves a single
+# steady boundary-value problem, so the run writes exactly one time
+# directory, 1/, whatever endTime says. Sample that.
+#
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         1      2    0.0046302     1e-4

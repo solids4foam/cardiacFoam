@@ -104,7 +104,7 @@ eikonalSolverCoeffs
             sampling
             {
                 start  0;
-                end    0.02;
+                end    0.04;
                 deltaT 1e-4;
             }
 
