@@ -74,6 +74,12 @@ cp -a ../mesh/constant/polyMesh constant/solid/polyMesh
 # electroMechanicalLaw requires) was precomputed once from f0 via
 # interpolateFibreField and committed alongside it, the same way f0
 # itself is precomputed rather than solved for at run time.
+# git does not track empty directories, so a case whose 0/ holds nothing
+# tracked has no 0/ at all in a fresh checkout and every copy below fails
+# with "No such file or directory" - the solver then dies and the
+# regression reports "missing output file". Create the destinations first.
+mkdir -p 0/electro 0/solid
+
 cp ../mesh/0/fiber 0/solid/f0
 cp ../mesh/0/f0f 0/solid/f0f
 cp ../mesh/0/sheet 0/solid/sheet

@@ -56,6 +56,12 @@ fi
 
 cp -a ../../mesh/constant/polyMesh constant/polyMesh
 
+# git does not track empty directories, so a case whose 0/ holds nothing
+# tracked has no 0/ at all in a fresh checkout and every copy below fails
+# with "No such file or directory" - the solver then dies and the
+# regression reports "missing output file". Create the destinations first.
+mkdir -p 0
+
 cp ../../mesh/0/fiber 0/fiber
 cp ../../mesh/0/sheet 0/sheet
 cp ../../mesh/0/sheetNormal 0/sheetNormal
