@@ -1,0 +1,70 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# Allrun script for electro-mechanical coupling tutorial
+#
+# Usage:
+#   ./Allrun          serial
+#   ./Allrun parallel  parallel (N cores set in system/decomposeParDict)
+#-------------------------------------------------------------------------------
+
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+requireFullElectroMechanicalBuild()
+{
+    local lib
+    local libDir="${FOAM_USER_LIBBIN:-}"
+
+    if [[ -z "$libDir" ]]; then
+        echo "FOAM_USER_LIBBIN is not set. Source the OpenFOAM environment first."
+        exit 1
+    fi
+
+    for lib in "${libDir}"/libelectroMechanicalModels.*; do
+        if [[ -e "$lib" ]]; then
+            return 0
+        fi
+    done
+
+    cat <<'EOF'
+This tutorial requires cardiacFoam built in full solids4foam mode.
+The lightweight electrophysiology-only build does not compile
+libelectroMechanicalModels, so electroMechanicalModel is unavailable.
+
+Rebuild cardiacFoam after compiling solids4foam and sourcing that environment.
+EOF
+
+    exit 1
+}
+
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        parallel) parallelRun=true ;;
+    esac
+done
+
+requireFullElectroMechanicalBuild
+
+# -------------------------
+# Mesh generation
+# -------------------------
+
+runApplication blockMesh
+cp -r constant/polyMesh constant/electro/polyMesh
+cp -r constant/polyMesh constant/solid/polyMesh
+
+# Transmural-distance field t (0=endo, 1=epi) for ionicHeterogeneity.
+# Must run on the serial mesh before decomposition.
+runApplication setExprFields -region electro -time 0 -ascii
+
+# -------------------------
+# Run solver
+# -------------------------
+
+if $parallelRun; then
+    runApplication -s electro decomposePar -region electro
+    runApplication -s solid decomposePar -region solid
+    runParallel cardiacFoam
+else
+    runApplication cardiacFoam
+fi

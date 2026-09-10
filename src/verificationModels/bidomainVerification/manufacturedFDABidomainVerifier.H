@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    manufacturedFDABidomainVerifier
+
+Description
+    Manufactured FDA bidomain verifier.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedFDABidomainVerifier_H
@@ -29,14 +37,10 @@ namespace Foam
 class manufacturedFDABidomainVerifier : public electroVerificationModel
 {
     volScalarField* phiEPtr_;
-    Switch enabled_;
-    Switch reportPDEResiduals_;
-    bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
     scalar k_;
     scalar phiEReferenceValue_;
     point phiEReferencePoint_;
-    fileName outputFileName_;
 
     const dictionary& verificationDict() const;
 

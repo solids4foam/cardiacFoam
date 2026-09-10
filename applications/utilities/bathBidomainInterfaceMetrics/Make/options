@@ -1,0 +1,13 @@
+EXE_INC = \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I../../../src/electroModels/electroDomains/extracellularPotentialDomain \
+    -I../../../src/electroModels/core \
+    -I../../../src/genericWriter/lnInclude
+
+EXE_LIBS = \
+    -L$(FOAM_USER_LIBBIN) \
+    -lelectroModels \
+    -lgenericWriter \
+    -lfiniteVolume \
+    -lmeshTools

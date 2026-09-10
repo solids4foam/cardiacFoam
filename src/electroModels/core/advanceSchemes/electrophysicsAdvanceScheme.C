@@ -41,8 +41,6 @@ autoPtr<electrophysicsAdvanceScheme> electrophysicsAdvanceScheme::New
         )
     );
 
-    Info<< "Selecting electrophysicsAdvanceScheme " << schemeType << nl;
-
     auto* ctorPtr = dictionaryConstructorTable(schemeType);
 
     if (!ctorPtr)

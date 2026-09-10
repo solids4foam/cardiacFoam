@@ -16,29 +16,20 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::Monodomain1DSolver
+    monodomain1DSolver
 
 Description
-    Implicit monodomain cable-equation solver for a tree conduction-system
-    graph. Uses the same reaction/diffusion splitting as the 3-D myocardium:
-
-        1.  Solve the ionic-model ODE  (reaction step)
-        2.  Solve the implicit cable equation  (diffusion step)
-
-    The cable equation is discretised as a 1-D finite-volume graph problem.
-    Each graph node owns a control length assembled from half of each incident
-    edge length. Edge diffusion uses sigma/L flux coefficients and is solved
-    with a tree Hines elimination pass.
+    Implicit monodomain cable-equation solver for a tree conduction-system graph.
 
 Author
-    Simao Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 
 SourceFiles
-    Monodomain1DSolver.C
+    monodomain1DSolver.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef MonoDomain1DSolver_H
-#define MonoDomain1DSolver_H
+#ifndef monodomain1DSolver_H
+#define monodomain1DSolver_H
 
 #include "conductionSystemSolver.H"
 #include "fvMesh.H"
@@ -49,25 +40,41 @@ SourceFiles
 namespace Foam
 {
 
-class Monodomain1DSolver
+class monodomain1DSolver
 :
     public conductionSystemSolver
 {
     mutable scalarField appliedCurrentBuffer_;
 
+    // Vm threshold above which a node is considered activated.
+    // Defaults to 0.0 (physical-unit models: rest≈-0.084 V, peak≈+0.05 V).
+    scalar activationVmThreshold_;
+
 public:
 
     OverrideTypeName("monodomain1DSolver");
 
-    Monodomain1DSolver(const fvMesh&, const dictionary&)
+    monodomain1DSolver(const fvMesh&, const dictionary& dict)
+    :
+        activationVmThreshold_(dict.lookupOrDefault<scalar>("activationVmThreshold", 0.0))
     {}
 
     virtual void advance
     (
-        ConductionSystemDomain& domain,
+        conductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) override;
+
+    virtual bool writesGraphVm() const override
+    {
+        return true;
+    }
+
+    virtual bool writesGraphIion() const override
+    {
+        return true;
+    }
 };
 
 } // End namespace Foam

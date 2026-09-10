@@ -1,0 +1,18 @@
+{
+  "base": {
+    "entry": "niederer2012",
+    "solvers": ["implicit"],
+    "end_time_by_dx": {"0.5": 0.2, "0.2": 0.08, "0.1": 0.055},
+    "archive_dir_name": "sweepCases"
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {
+      "dx_values": [[0.5], [0.2], [0.1]],
+      "dt_values": [[0.01], [0.005], [0.001]]
+    },
+    "dependent": [
+      {"name": "output_dir_name", "derive": "output_dir_name_template", "of": ["dx_values", "dt_values"]}
+    ]
+  }
+}

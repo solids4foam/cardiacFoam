@@ -1,0 +1,80 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Small 2 cm cube, coarse 8x8x8 hex mesh -- fast regression fixture, not a
+// physiologically detailed case. constant/0/t assigns each cell a
+// transmural coordinate directly from its position along this block's local
+// x-axis (x fastest, then y, then z in blockMesh's single-block numbering).
+
+scale 1;
+
+vertices
+(
+    (0     0     0)
+    (0.02  0     0)
+    (0.02  0.02  0)
+    (0     0.02  0)
+    (0     0     0.02)
+    (0.02  0     0.02)
+    (0.02  0.02  0.02)
+    (0     0.02  0.02)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (8 8 8) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    endo
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+    epi
+    {
+        type patch;
+        faces
+        (
+            (1 2 6 5)
+        );
+    }
+    sides
+    {
+        type patch;
+        faces
+        (
+            (0 1 5 4)
+            (3 7 6 2)
+            (0 3 2 1)
+            (4 5 6 7)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

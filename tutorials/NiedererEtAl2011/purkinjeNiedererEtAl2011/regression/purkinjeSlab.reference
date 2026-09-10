@@ -1,0 +1,21 @@
+# kind            key             metric      expected          tolerance
+topology          rootNode        value       0                 0
+topology          pvjNodes        count       8                 0
+topology          pvjLocations    count       8                 0
+topology          conductionEdges count       192               0
+graphUtilityVm    node0           final      -0.08322358        1e-6
+graphUtilityVm    node8           final      -0.08349977        1e-6
+graphUtilityVm    node15          final      -0.08350017        1e-6
+coupledVm         node0           final      -0.08321231        1e-6
+coupledVm         node8           final      -0.08350078        1e-6
+coupledVm         node15          final      -0.08350077        1e-6
+coupledPVJ        pvj0            final      -20.178481         50
+coupledPVJ        pvj1            final      -19.077249         50
+coupledPVJ        pvj2            final      -17.785089         50
+coupledPVJ        pvj3            final      -19.060801         50
+coupledPVJ        pvj4            final      -19.247515         50
+coupledPVJ        pvj5            final      -20.992873         50
+coupledPVJ        pvj6            final      -22.619127         50
+coupledPVJ        pvj7            final      -22.553983         50
+coupledRootVm     node0           at0.012     0.023732325       1e-6
+coupledRootVm     node0           at0.302    -0.058887120       1e-6

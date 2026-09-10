@@ -22,130 +22,139 @@ License
 #include "IOmanip.H"
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
-#include "Switch.H"
+#include "conductivityFieldIO.H"
 
 namespace Foam
 {
 
-defineTypeNameAndDebug(MonodomainSolver, 0);
+defineTypeNameAndDebug(monodomainSolver, 0);
 addToRunTimeSelectionTable
 (
     myocardiumSolver,
-    MonodomainSolver,
+    monodomainSolver,
     dictionary
 );
 
 
-MonodomainSolver::MonodomainSolver
+monodomainSolver::monodomainSolver
 (
     const fvMesh& mesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
     const dictionary& electroProperties
 )
 :
-    conductivity_(initialiseConductivity(mesh, electroProperties))
+    conductivity_
+    (
+        initialiseConductivity
+        (
+            mesh,
+            supportMesh,
+            meshSubsetPtr,
+            electroProperties
+        )
+    )
 {}
 
-tmp<volTensorField> MonodomainSolver::initialiseConductivity
+tmp<volTensorField> monodomainSolver::initialiseConductivity
 (
     const fvMesh& mesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
     const dictionary& electroProperties
 ) const
 {
-    tmp<volTensorField> tresult
+    return readConductivityField
     (
-        new volTensorField
-        (
-            IOobject
-            (
-                "conductivity",
-                mesh.time().timeName(),
-                mesh,
-                IOobject::READ_IF_PRESENT,
-                IOobject::NO_WRITE
-            ),
-            mesh,
-            dimensionedTensor
-            (
-                "zero",
-                pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-                tensor::zero
-            )
-        )
-    );
-
-    volTensorField& result = tresult.ref();
-
-    if (!result.headerOk())
-    {
-        if (electroProperties.lookupOrDefault<Switch>("reportSetup", false))
+        mesh,
+        supportMesh,
+        meshSubsetPtr,
+        electroProperties,
+        conductivityFieldSpec
         {
-            Info << nl
-                 << "conductivity not found on disk, using value from "
-                 << electroProperties.name()
-                 << nl << endl;
+            "Conductivity",
+            "conductivity",
+            "conductivity"
         }
+    );
+}
 
-        result = dimensionedTensor
+
+void monodomainSolver::solveDiffusionExplicit
+(
+    electroVolumeFieldDomain& domain,
+    scalar dt
+)
+{
+    (void)dt;
+
+    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
+    {
+        solve
         (
-            dimensionedSymmTensor
-            (
-                "conductivity",
-                pow3(dimTime) * sqr(dimCurrent)/(dimMass*dimVolume),
-                electroProperties
-            ) & tensor(I)
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvc::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+           - (*coeff)*domain.Vm()
         );
     }
-
-    return tresult;
-}
-
-
-void MonodomainSolver::solveDiffusionExplicit
-(
-    electroVolumeFieldDomain& domain,
-    scalar dt
-)
-{
-    (void)dt;
-
-    solve
-    (
-        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvc::laplacian(conductivity_, domain.Vm())
-       - domain.chi()*domain.Cm()*domain.Iion()
-       + domain.sourceField()
-    );
-}
-
-
-void MonodomainSolver::solveDiffusionImplicit
-(
-    electroVolumeFieldDomain& domain,
-    scalar dt
-)
-{
-    (void)dt;
-
-    solve
-    (
-        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-      == fvm::laplacian(conductivity_, domain.Vm())
-       - domain.chi()*domain.Cm()*domain.Iion()
-        + domain.sourceField()
-    );
-}
-
-
-void MonodomainSolver::solveDiffusionImplicit
-(
-    electroVolumeFieldDomain& domain,
-    scalar dt,
-    pimpleControl& pimple
-)
-{
-    while (pimple.loop())
+    else
     {
-        solveDiffusionImplicit(domain, dt);
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvc::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*domain.Iion()
+           + domain.sourceField()
+        );
+    }
+}
+
+
+void monodomainSolver::solveDiffusionImplicit
+(
+    electroVolumeFieldDomain& domain,
+    scalar dt
+)
+{
+    (void)dt;
+
+    tmp<volScalarField> tIionExtrap;
+    const volScalarField* IionOldPtr = domain.IionOldPtr();
+    const volScalarField* IionOldOldPtr = domain.IionOldOldPtr();
+    if (IionOldPtr && IionOldOldPtr)
+    {
+        const scalar deltaT = domain.mesh().time().deltaTValue();
+        const scalar deltaT0 = domain.mesh().time().deltaT0Value();
+        const scalar r = (deltaT0 > VSMALL) ? (deltaT / deltaT0) : 1.0;
+        tIionExtrap = *IionOldPtr + r*(*IionOldPtr - *IionOldOldPtr);
+    }
+    else
+    {
+        tIionExtrap = domain.Iion();
+    }
+
+    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          + fvm::Sp(*coeff, domain.VmRef())
+          == fvm::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*tIionExtrap()
+           + domain.sourceField()
+        );
+    }
+    else
+    {
+        solve
+        (
+            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          == fvm::laplacian(conductivity_, domain.Vm())
+           - domain.chi()*domain.Cm()*tIionExtrap()
+           + domain.sourceField()
+        );
     }
 }
 

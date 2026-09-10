@@ -1,3 +1,30 @@
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Module
+#     discovery
+#
+# Description
+#     Automates discovery of cardiac model components from Myokit.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 """
 discovery.py - Automated discovery of cardiac model components from Myokit.
 """
@@ -15,18 +42,18 @@ def find_voltage(model):
     v = find_variable_by_label(model, 'membrane_voltage')
     if v:
         return v
-    
+
     # 2. Check common names in state variables
     for s in model.states():
         name = s.name().lower()
         if name in ['v', 'vm', 'v_m', 'membrane_v', 'membrane_voltage']:
             return s
-            
+
     # 3. Fallback: first state variable (usually V in cardiac models)
     states = list(model.states())
     if states:
         return states[0]
-        
+
     return None
 
 def find_stimulus(model):
@@ -37,13 +64,13 @@ def find_stimulus(model):
         v = find_variable_by_label(model, label)
         if v:
             return v
-            
+
     # 2. Check common names
     for v in model.variables():
         name = v.name().lower()
         if 'istim' in name or 'i_stim' in name or 'pace' == name:
             return v
-            
+
     return None
 
 def find_ionic_current(model, voltage_var):
@@ -52,19 +79,19 @@ def find_ionic_current(model, voltage_var):
     """
     if not voltage_var:
         return None
-        
+
     # 1. Check for explicit label
     i_ion = find_variable_by_label(model, 'membrane_ionic_current')
     if i_ion:
         return i_ion
-        
+
     # 2. Structural heuristics on dV/dt
     # dot(V) = -(Iion + Istim) / Cm
     try:
         rhs = voltage_var.rhs()
         # Find all variables involved in the RHS of dot(V)
         refs = list(rhs.references())
-        
+
         # Candidate ionic current is often named i_ion, i_total, i_all, etc.
         for ref in refs:
             name = ref.name().lower()
@@ -72,7 +99,7 @@ def find_ionic_current(model, voltage_var):
                 return ref
     except:
         pass
-        
+
     return None
 
 
@@ -95,7 +122,7 @@ def find_tissue(model):
 
 def discover_all(model):
     """
-    Performs discovery on the model and returns a mapping of 
+    Performs discovery on the model and returns a mapping of
     OpenFOAM standard keys to Myokit variable names.
     """
     results = {

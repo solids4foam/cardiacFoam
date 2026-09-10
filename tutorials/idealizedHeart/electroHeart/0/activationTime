@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | cardiacFoam                                     |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      activationTime;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 1 0 0 0 0];
+
+// -1 marks "not yet activated"; the eikonal solve overwrites it. Only the
+// eikonal variant needs this as an input (MUST_READ); the monodomain and
+// hybrid variants compute activationTime as an output and never read it.
+internalField   uniform -1;
+
+boundaryField
+{
+    ".*"
+    {
+        type            zeroGradient;
+    }
+    #includeEtc "caseDicts/setConstraintTypes"
+}

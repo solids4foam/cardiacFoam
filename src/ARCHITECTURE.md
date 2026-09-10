@@ -12,16 +12,40 @@ src/
 ├── verificationModels/   Verification and manufactured-solution models
 ├── activeTensionModels/  Runtime-selectable active-tension ODE models
 ├── couplingModels/       Shared electromechanical signal interfaces
-└── electroModels/        Spatial electrophysiology domains, solvers, couplers
+├── electroModels/        Spatial electrophysiology domains, solvers, couplers
+└── electroMechanicalModels/ Electromechanics wrappers built in full solids4foam mode
 
 ```
 
 Build order from `src/Allwmake`:
 
 ```text
-genericWriter → ionicModels → verificationModels → activeTensionModels → electroModels
+couplingModels lnInclude → genericWriter → ionicModels →
+activeTensionModels → electroModels → verificationModels →
+electroMechanicalModels (full mode only)
 
 ```
+
+`etc/resolveSolids4Foam.sh` selects a built solids4foam installation when one
+is available; otherwise it builds and uses the repository's lightweight
+`physicsModel` compatibility library. Both modes build the electrophysiology
+libraries through `verificationModels`. Only full mode builds
+`electroMechanicalModels`; solid mechanics and coupled electromechanics are
+therefore unavailable in lightweight mode.
+
+## Runtime selection layers
+
+| Layer | Public dictionary surface | Runtime owner |
+|---|---|---|
+| Top-level physics | `constant/physicsProperties`: `type electroModel` | `physicsModel::New()` constructs `electroModel` |
+| Electro workflow | `constant/electroProperties`: `myocardiumSolver` | `electroModel::New()` selects a direct model or spatial wrapper |
+| Spatial assembly | `<myocardiumSolver>Coeffs` | `electrophysiologyModel` and `electrophysicsSystemBuilder` assemble domains and couplers |
+| Myocardium kernel | `monodomainSolver` or `bidomainSolver` | `myocardiumDomain` owns a runtime-selected `myocardiumSolver`; eikonal uses `eikonalMyocardiumDomain` |
+
+The spatial names `monodomainSolver`, `bidomainSolver`, and `eikonalSolver` are
+aliases for `electrophysiologyModel` in the parent `electroModel` table.
+`singleCellSolver` registers directly in that parent table and does not create
+the multi-domain system.
 
 ## Libraries
 
@@ -59,31 +83,40 @@ Runtime-selectable cellular electrophysiology models. The base class is
 
 This library is used by:
 
-- `MyocardiumDomain` reaction-diffusion workflows
+- `myocardiumDomain` reaction-diffusion workflows
 
-- `ConductionSystemDomain` graph-based workflows
+- `conductionSystemDomain` graph-based workflows
 
 - `singleCellSolver`
 
 The `ionicModel/` subfolder now contains both the classic base/factory code and
 batched or GPU-oriented support headers.
 
+**Tissue heterogeneity support:** Ionic models can optionally configure spatial
+heterogeneity of cellular phenotypes (endocardial, mid-myocardial, epicardial, or
+open-ended named/scar regions) through the `ionicHeterogeneity` dictionary block,
+in one of three modes — `transmuralBands` (fixed 3-zone), `namedRegions` (open,
+field-range-based), or `cellZoneRegions` (mesh-topology-based) — plus an optional
+`gradientAxes` scaling composable with any mode. All 12 scalar models (via
+`configuredIonicModel`) support this; batched models support it only when their
+`supportedTissueTypes()` includes all three anatomical types (currently
+`BuenoOrovioBatched`, `TNNPBatched`, `TWorldBatched`, `ToRORd_dynClBatched`). See
+`src/ionicModels/README.md` for configuration details.
+
 ### `verificationModels` — `libverificationModels`
 
 Verification infrastructure for spatial electrophysiology and ECG workflows.
 
+This library depends on `electroModels` (compiled after it) because concrete
+verifiers inherit from base classes (e.g., `electroVerificationModel`, `ecgVerificationModel`, `eikonalVerificationModel`, `couplingVerificationModel`, and `graphVerificationModel`)
+which are defined in `electroModels/core/verificationModels/`.
+
 Main layers:
 
-- `electroVerification/` — base `electroVerificationModel`
-
 - `monodomainVerification/`
-
 - `bidomainVerification/`
-
-- `ecgVerification/` — base `ecgVerificationModel` and ECG-specific verifiers
-
-These are not ionic models. They are separate runtime-selected verifier
-families that hook into myocardium or ECG workflows.
+- `ecgVerification/`
+- `coupledVerification/`
 
 ### `activeTensionModels` — `libactiveTensionModels`
 
@@ -92,12 +125,15 @@ Runtime-selectable active-tension models driven by an upstream
 
 Current concrete models:
 
-- `GoktepeKuhl`
-
 - `NashPanfilov`
 
-The implementation is integration-point based and scalar-state based. It is not
-a tensor-mechanics framework on its own.
+- `LandNiederer` (the original seven-state intact-human model)
+
+- `LandNiedererTWorld`
+
+`LandNiedererTWorld` ships the matching GPU-batched variant. The original
+`LandNiederer` passive branch is diagnostic only because solid mechanics owns
+the passive constitutive response.
 
 ### `couplingModels`
 
@@ -106,7 +142,7 @@ contracts, not the staged electro-domain couplers.
 
 Current contents:
 
-- `common/electromechanicalSignalProvider.H`
+- `electromechanicalSignalProvider.H`
 
 The staged Purkinje, ECG, and bath-style electro couplers live under
 `src/electroModels/electroCouplers/`, not here.
@@ -115,7 +151,8 @@ The staged Purkinje, ECG, and bath-style electro couplers live under
 
 The main spatial electrophysiology stack. It contains:
 
-- top-level orchestration in `core/`
+- top-level orchestration in `core/`, including the abstract base verifiers
+  (`electroVerificationModel`, `ecgVerificationModel`, `eikonalVerificationModel`, `couplingVerificationModel`, and `graphVerificationModel`) inside `core/verificationModels/`
 
 - domain state owners in `electroDomains/`
 
@@ -125,9 +162,9 @@ The main spatial electrophysiology stack. It contains:
 
 - staged inter-domain couplers in `electroCouplers/`
 
-Current top-level electro entry is selected from `myocardiumSolver` in
-`electroProperties`. The assembled multi-domain wrapper is
-`electrophysiologyModel`, registered under:
+The top-level electro entry is selected from `myocardiumSolver` in
+`electroProperties`. That key first dispatches in the parent `electroModel`
+runtime-selection table:
 
 - `monodomainSolver`
 
@@ -135,8 +172,32 @@ Current top-level electro entry is selected from `myocardiumSolver` in
 
 - `eikonalSolver`
 
-`singleCellSolver` is not a separate `src/` library. It is compiled inside
-`electroModels/myocardiumModels/`.
+- `singleCellSolver`
+
+For the spatial entries, the assembled multi-domain wrapper is
+`electrophysiologyModel`. It then performs the secondary dispatch into the
+`myocardiumSolver` table (`monodomainSolver`, `bidomainSolver`) or builds
+`eikonalMyocardiumDomain` for the canonical eikonal workflow. `singleCellSolver`
+is registered directly in the parent `electroModel` table and bypasses the
+myocardium-domain factory. It is not a separate `src/` library; it is compiled
+inside `electroModels/myocardiumModels/`.
+
+### `electroMechanicalModels` — `libelectroMechanicalModels`
+
+Full electromechanical wrappers that are built only when the solids4foam
+dependency is available. Lightweight EP-only builds skip this library.
+
+## Maintained and external boundaries
+
+- Hand-maintained project libraries live under `src/`; their source manifests
+  are the adjacent `Make/files` and `Make/options` files.
+- Generated ionic equation headers are outputs of the project-owned
+  `applications/scripts/cellML2foam` pipeline. Change the generator, mapping,
+  or template contract rather than normalizing generated equations by hand.
+- `modules/physicsModel` is a project-owned compatibility layer used by the
+  lightweight build.
+- `modules/solids4foam` is an external submodule. cardiacFoam owns its use of
+  that interface, not the submodule's implementation.
 
 ## Reading guides
 

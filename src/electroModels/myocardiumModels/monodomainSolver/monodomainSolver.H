@@ -15,10 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    monodomainSolver
+
+Description
+    Monodomain FVM reaction-diffusion kernel.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef MonodomainSolver_H
-#define MonodomainSolver_H
+#ifndef monodomainSolver_H
+#define monodomainSolver_H
 
 #include "myocardiumSolver.H"
 #include "overrideTypeName.H"
@@ -28,10 +36,7 @@ License
 namespace Foam
 {
 
-//- Monodomain FVM reaction-diffusion kernel.
-//  Registered in the myocardiumSolver runtime table under
-//  the key "monodomainSolver".
-class MonodomainSolver
+class monodomainSolver
 :
     public myocardiumSolver
 {
@@ -40,6 +45,8 @@ class MonodomainSolver
     tmp<volTensorField> initialiseConductivity
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const dictionary& electroProperties
     ) const;
 
@@ -47,9 +54,11 @@ public:
 
     OverrideTypeName("monodomainSolver");
 
-    MonodomainSolver
+    monodomainSolver
     (
         const fvMesh& mesh,
+        const fvMesh& supportMesh,
+        const fvMeshSubset* meshSubsetPtr,
         const dictionary& electroProperties
     );
 
@@ -73,13 +82,6 @@ public:
     (
         electroVolumeFieldDomain& domain,
         scalar dt
-    ) override;
-
-    virtual void solveDiffusionImplicit
-    (
-        electroVolumeFieldDomain& domain,
-        scalar dt,
-        pimpleControl& pimple
     ) override;
 };
 

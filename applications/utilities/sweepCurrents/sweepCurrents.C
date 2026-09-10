@@ -16,13 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Application
-    setFibreField
+    sweepCurrents
 
 Description
     Read Ionic Currents dependencies and gating variables evolution with Voltage
 
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 #include "argList.H"
 #include "Time.H"

@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Abstract interface for per-cell electromechanical coupling signals
+    (Vm, Cai) and the CouplingSignal enum.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef ElectromechanicalSignalProvider_H

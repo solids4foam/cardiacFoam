@@ -13,6 +13,7 @@ core/
 ├── electroModel.H/.C                  Top-level physicsModel façade
 ├── electroDomainInterface.H           Domain lifecycle contract (pure abstract)
 ├── electroStateProvider.H             Read-only state sharing interface
+├── electroStateDomain.H/.C            Abstract domain that also exposes state; base for extracellularPotentialDomain
 ├── electroVolumeFieldDomain.H         3D FVM domain contract
 ├── dimVoltage.H                       Shared voltage dimension set
 ├── overrideTypeName.H                 Runtime type-name helper macro
@@ -23,11 +24,17 @@ core/
 │
 ├── advanceSchemes/
 │   ├── electrophysicsAdvanceScheme.H/.C  Abstract time-advance strategy
-│   ├── staggered/                        Single-pass weak coupling
-│   └── pimpleStaggered/                  Iterative PIMPLE strong coupling
+│   └── staggered/                        Single-pass weak coupling
 │
-└── electrophysiologyModel/
-    └── electrophysiologyModel.H/.C    Concrete myocardium-centred entry point
+├── electrophysiologyModel/
+│   └── electrophysiologyModel.H/.C    Concrete myocardium-centred entry point
+│
+└── verificationModels/
+    ├── electroVerificationModel.H/.C  Abstract base for myocardium-side verifiers
+    ├── ecgVerificationModel.H/.C      Abstract base for ECG-side verifiers
+    ├── eikonalVerificationModel.H/.C  Abstract base for eikonal-side verifiers
+    ├── couplingVerificationModel.H/.C Abstract base for coupling verifiers
+    └── graphVerificationModel.H/.C    Abstract base for graph verifiers
 ```
 
 ### Layout rule
@@ -38,6 +45,11 @@ core/
 The flat headers (`electroDomainInterface.H`, `electroStateProvider.H`, etc.)
 are included by all three subfolders and carry no dependencies on each other, so
 they stay at the root level.
+
+`verificationModels/` contains the base verifier interfaces compiled into
+`libelectroModels`. Concrete verifiers in `src/verificationModels/` inherit
+from these bases while preserving the dependency order
+`electroModels -> verificationModels`.
 
 ---
 
@@ -61,9 +73,6 @@ of ionic solve, diffusion solve, and cross-domain coupling exchanges:
 
 - **`staggeredElectrophysicsAdvanceScheme`** — single-pass weak coupling,
   suitable for unidirectional Purkinje-to-myocardium workflows.
-- **`pimpleStaggeredElectrophysicsAdvanceScheme`** — iterative strong coupling
-  using `pimpleControl`, intended for bidirectional Purkinje ↔ myocardium
-  exchange.
 
 ### `electrophysiologyModel/`
 
@@ -72,6 +81,21 @@ Registers under `monodomainSolver`, `bidomainSolver`, and `eikonalSolver` in
 the runtime selection table. Owns the ionic model, optional verification model,
 and output field lists. Delegates spatial domain assembly to
 `electrophysicsSystemBuilder`.
+
+### `verificationModels/`
+
+Abstract base classes for the verification families:
+
+- **`electroVerificationModel`** — runtime-selection base for myocardium-side
+  verifiers. Concrete verifiers in `src/verificationModels/` inherit from it.
+- **`ecgVerificationModel`** — runtime-selection base for ECG-side verifiers.
+  Concrete verifiers in `src/verificationModels/ecgVerification/` inherit from it.
+- **`eikonalVerificationModel`** — runtime-selection base for eikonal activation-time
+  verifiers. Concrete verifiers in `src/verificationModels/eikonalVerification/` inherit from it.
+- **`couplingVerificationModel`** — runtime-selection base for coupling verifiers.
+  Concrete verifiers inherit from it.
+- **`graphVerificationModel`** — runtime-selection base for graph verifiers.
+  Concrete verifiers inherit from it.
 
 ---
 
@@ -82,6 +106,7 @@ and output field lists. Delegates spatial domain assembly to
 | `electroModel.H/.C` | `physicsModel` subclass. Reads `constant/electroProperties`, owns the assembled `electrophysicsSystem`, drives the time loop via `evolve()`. |
 | `electroDomainInterface.H` | Minimal lifecycle contract for all domain types: `time()`, `advance(t0,dt)`, `write()`, `end()`. |
 | `electroStateProvider.H` | Read-only field interface: `VmPtr()`, `phiEPtr()`, `conductivityPtr()`. Consumed by ECG domains. |
+| `electroStateDomain.H/.C` | Abstract domain that both advances in time and exposes read-only state. Base for `extracellularPotentialDomain`. |
 | `electroVolumeFieldDomain.H` | Contract for 3D FVM domains: exposes `mesh()`, `VmRef()`, `Iion()`, `chi()`, `Cm()`. |
 | `dimVoltage.H` | Shared `dimensionSet` for all voltage fields (V, SI). |
 | `overrideTypeName.H` | Drops `override` onto OpenFOAM's `TypeName()` to suppress `-Winconsistent-missing-override`. |

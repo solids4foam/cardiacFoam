@@ -49,14 +49,14 @@ Foam::Gaur::Gaur
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
 {
 
-    // 🔑 First, set tissue using base logic + overrides
+    // First, set tissue using base logic and overrides
     ionicModel::setTissueFromDict();
     forAll(STATES_, i)
     {
@@ -64,7 +64,6 @@ Foam::Gaur::Gaur
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
         GaurinitConsts
         (
             CONSTANTS_.data(),
@@ -77,6 +76,8 @@ Foam::Gaur::Gaur
             setStimulusProtocolFromDict(dict);
         }
     }
+
+    applyIonicConstantOverrides();
 
 }
 
@@ -92,12 +93,72 @@ Foam::Gaur::~Gaur()
 
 Foam::List<Foam::word> Foam::Gaur::supportedTissueTypes() const
 {
-    return {"myocyte"};
+    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+}
+
+
+Foam::scalarField& Foam::Gaur::constants(const label integrationPtI) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::Gaur::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    // Note: unlike ToRORd_dynCl, Gaur's CellML core (GaurinitConsts) does
+    // not branch on tissueFlag at all -- it always returns the same bulk
+    // porcine-fitted baseline. All endo/M/epi (or any namedRegions) tissue
+    // differentiation for Gaur comes entirely from ionicConstantOverrides,
+    // applied below.
+    GaurinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, GaurCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type(),
+        tissueFlag
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::Gaur::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    // See the note in constantsForTissue() above: tissueFlag is unused by
+    // GaurinitConsts, so these initial states are identical regardless of
+    // tissueFlag.
+    GaurinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    return states;
 }
 
 
 // ------------------------------------------------------------------------- //
-//  Solve ODE with mixed singleCell implementation and 1D-3D condition
+//  Solve the cell ODE over [tStart, tEnd], converting time bounds to ms for the model
 // ------------------------------------------------------------------------- //
 void Foam::Gaur::solveODE
 (
@@ -119,26 +180,23 @@ void Foam::Gaur::solveODE
 
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
             STATESI[cell_v] = Vm[integrationPtI]*1000.0;
         }
 
-        // Clamp time step (ms)
         step = min(step, deltaT * 1000.0);
-        // Advance ODE system for all states
+        activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI);
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update algebraics and rates at tEnd (includes Iion and I_stim)
         ::GaurcomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()
@@ -146,11 +204,44 @@ void Foam::Gaur::solveODE
         if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
+    }
 
-        //----can easily be expanded for all variables------//
-        // copyInternalToExternal(STATES_, states, NUM_STATES);
+    clearVmRate();
+}
+
+
+void Foam::Gaur::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[cell_v] = Vm[integrationPtI]*1000.0;
+        A = 0.0;
+        R = 0.0;
+
+        ::GaurcomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Iion_cm];
     }
 }
 
@@ -161,21 +252,24 @@ void Foam::Gaur::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated Gaur code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::GaurcomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
-        tissue(),
         solveVmWithinODESolver()
     ,
             stimulusProtocol()
         );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[cell_v] = activeVmRate();
+    }
 }
 
 // ------------------------------------------------------------------------- //
@@ -205,7 +299,6 @@ void Foam::Gaur::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
     const auto& depMap = GaurDependencyMap();
 
     if (!depMap.found(currentName))
@@ -218,24 +311,19 @@ void Foam::Gaur::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in BO2008)
         STATESI[0] = V;
 
         ::GaurcomputeVariables
@@ -245,7 +333,6 @@ void Foam::Gaur::sweepCurrent
             RATESI.data(),
             STATESI.data(),
             ALGI.data(),
-            tissue(),
             solveVmWithinODESolver()
         ,
             stimulusProtocol()

@@ -1,8 +1,9 @@
 #!/bin/bash
-cd ${0%/*} || exit 1    # run from this directory
+cd "${0%/*}" || exit 1    # run from this directory
 
 # Stop at first error
 set -e
+set -o pipefail
 
 # Check if OpenFOAM has been sourced
 if [[ -z "${WM_PROJECT}" ]]
@@ -19,7 +20,12 @@ else
     fi
 fi
 
-# Check and define SOLIDS4FOAM_INST_DIR
+# Check and define SOLIDS4FOAM_INST_DIR.
+# Clear the resolver's one-shot guard first so each top-level build re-resolves
+# from scratch. Otherwise a leftover _SOLIDS4FOAM_RESOLVED in the calling shell
+# (e.g. from a manual 'source etc/resolveSolids4Foam.sh') would make the
+# resolver a no-op and reuse a stale SOLIDS4FOAM_INST_DIR.
+unset _SOLIDS4FOAM_RESOLVED
 source "./etc/resolveSolids4Foam.sh"
 
 # Parse arguments for library compilation
@@ -36,8 +42,8 @@ fi
 
 # Check if the build succeeded
 echo; echo "Checking if the installation was a success:"
-N_ERRORS_1=$(find . -name log.Allwmake -exec grep -h "Error " {} + 2>/dev/null | wc -l)
-N_ERRORS_2=$(find . -name log.Allwmake -exec grep -h "Stop." {} + 2>/dev/null | wc -l)
+N_ERRORS_1=$({ find . -name log.Allwmake -exec grep -h "Error " {} + 2>/dev/null || true; } | wc -l)
+N_ERRORS_2=$({ find . -name log.Allwmake -exec grep -h "Stop." {} + 2>/dev/null || true; } | wc -l)
 if [[ $N_ERRORS_1 -gt 0 ]] || [[ $N_ERRORS_2 -gt 0 ]]
 then
     echo "** BUILD ERROR **"

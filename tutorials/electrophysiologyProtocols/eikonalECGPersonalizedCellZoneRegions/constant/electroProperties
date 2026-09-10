@@ -1,0 +1,144 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// cellZoneRegions counterpart of ../eikonalECGPersonalizedNamedRegions:
+// identical mesh, stimulus, and personalizedTemplates config, but
+// ionicHeterogeneity uses mode cellZoneRegions with 3 mesh cellZones
+// (system/topoSetDict, built via `topoSet` in Allrun) whose cell-centered
+// x-ranges reproduce ../eikonalECGPersonalized's transmuralBands boundaries
+// (t=0.3 -> x=0.006, t=0.7 -> x=0.014) as closely as a crisp, unblended
+// whole-cell partition can. Unlike the namedRegions tutorial, this is NOT
+// expected to reproduce that tutorial's ECG output bit-for-bit --
+// cellZoneRegions has no blending at all, so cells inside the
+// transmuralBands transition zone get a hard 0/1 assignment here instead
+// of a smooth weight. What IS expected to match exactly: each generated
+// per-region template's peak Vm, since endocardialCells/mCells/
+// epicardialCells baselines resolve to identical ionic constants
+// regardless of which mode reaches them.
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivitySource uniform;
+    conductivity  [ -1 -3 3 0 0 2 0 ]  (0.1334 0 0 0.01761 0 0.01761);
+
+    chi           [ 0 -1 0 0 0 0 0 ]   140000;
+    cm            [ -1 -4 4 0 0 2 0 ]  0.01;
+    c0            [ 0 0 -0.5 0 0 0 0 ]  0.8;
+
+    eikonalAdvectionDiffusionApproach true;
+
+    // Activation origin: a small corner box.
+    stimulusLocationMin (0     0     0    );
+    stimulusLocationMax (0.002 0.002 0.002);
+
+    ionicHeterogeneity
+    {
+        mode              cellZoneRegions;
+
+        regions
+        {
+            endocardialCells
+            {
+                cellZone endoZone;
+            }
+            mCells
+            {
+                cellZone midZone;
+            }
+            epicardialCells
+            {
+                cellZone epiZone;
+            }
+        }
+    }
+
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver eikonalECG;
+
+            sampling
+            {
+                start  0;
+                end    0.6;
+                deltaT 1e-4;
+            }
+
+            personalizedTemplates
+            {
+                ionicModelConfig
+                {
+                    // NOTE: the personalizedTemplates spec's reference
+                    // example names TWorldcompactBatched. Its batched CPU
+                    // kernel previously crashed with SIGFPE inside
+                    // TWorldcomputeVariables() under this generator because
+                    // batchedSubsteps defaulted to 1 (see
+                    // src/ionicModels/ionicModel/batchedIonicModel.H:186),
+                    // forcing the outer dt=1e-4 to be used as a single
+                    // too-coarse fixed step for TWorld's stiffer dynamics.
+                    // Setting ionicModelConfig.batchedSubsteps below fixes
+                    // that. The singleCellStimulus.stim_amplitude value must
+                    // also be sized for TWorld's real-mV/real-current scale
+                    // (repo convention: 60.0, see
+                    // tutorials/electrophysiologyProtocols/singleCell/constant/electroProperties
+                    // and .../singleCell/setup/studies/tworldVsGaur/**/TWorld_*/constant/electroProperties);
+                    // the smaller BuenoOrovio-scale amplitude left a
+                    // TWorld cell under threshold, failing
+                    // eikonalTemplateGenerator.C's validateTemplate() amplitude check.
+                    ionicModel TWorldcompactBatched;
+                    tissue     endocardialCells;
+                    solver     RKF45;
+                    absTol     1e-6;
+                    relTol     1e-4;
+                    batchedSubsteps 100;
+
+                    ionicConstantOverrides
+                    {
+                        global { }
+                    }
+
+                    singleCellStimulus
+                    {
+                        stim_start      20;    // ms
+                        stim_period_S1  1000;  // ms
+                        stim_duration   1;      // ms
+                        stim_amplitude  60.0;
+                        nstim1          10;     // overwritten to nBeats below
+                        nstim2          0;      // MUST be exactly 0
+                    }
+                }
+
+                nBeats   10;
+                duration 0.60;
+                dt       1e-4;
+            }
+
+            electrodePositions
+            {
+                E1 (0.03  0.01  0.01 );
+                E2 (-0.01 0.01  0.01 );
+                E3 (0.01  0.03  0.01 );
+                E4 (0.01  0.01  0.03 );
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

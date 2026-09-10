@@ -20,8 +20,8 @@ src/genericWriter/
 
 ## Purpose
 
-This library centralizes small reusable pieces that would otherwise be repeated
-inside ionic, electro, ECG, Purkinje, or active-tension code.
+This library centralizes small reusable pieces shared by ionic, electro, ECG,
+Purkinje, and active-tension code.
 
 ## Main components
 

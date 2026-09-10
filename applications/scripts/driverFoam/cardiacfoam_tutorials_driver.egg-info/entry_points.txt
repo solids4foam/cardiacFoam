@@ -1,3 +1,0 @@
-[console_scripts]
-driverFoam = openfoam_driver.cli:main
-foamctl = openfoam_driver.cli:main

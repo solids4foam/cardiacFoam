@@ -1,7 +1,7 @@
 # ecgModels
 
 This directory contains runtime-selectable ECG evaluation kernels used by
-`ECGDomain`. These models are downstream consumers of myocardium state: they
+`ecgDomain`. These models are downstream consumers of myocardium state: they
 read the finalized electrical solution after the tissue advance and produce ECG
 signals or derived potentials without feeding current back into the tissue.
 
@@ -12,9 +12,10 @@ src/electroModels/ecgModels/
 ├── pseudoECGSolver/
 │   ├── pseudoECGSolver.H
 │   └── pseudoECGSolver.C
-├── bidomainBathECGSolver/
-│   ├── bidomainBathECGSolver.H
-│   └── bidomainBathECGSolver.C
+├── torsoECG/
+├── eikonalECG/        # MMS verification construct / activation-time ECG surrogate
+│   ├── torsoECG.H
+│   └── torsoECG.C
 └── README.md
 ```
 
@@ -22,31 +23,35 @@ src/electroModels/ecgModels/
 
 **Concrete solver implementations:**
 
-- **`PseudoECGSolver`** (ECG post-processor)
+- **`pseudoECGSolver`** (ECG post-processor)
   - Registered as `pseudoECG`.
   - Computes pseudo-ECG signals using the Gima-Rudy dipole model.
-  - Reads upstream myocardium state through `ECGDomain`.
+  - Reads upstream myocardium state through `ecgDomain`.
   - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
-- **`BidomainBathECGSolver`** (bath extracellular potential solver)
-  - Registered as `bidomainBathECG`.
-  - Solves steady-state Laplacian: `∇·(σ_bath·∇φE) = -I_interface`
-  - Reads myocardium transmembrane current through `BathDomain`.
-  - Abstract interface: `electroDomains/bathDomain/bathECGSolver.H/C`
+- **`torsoECG`** (electrode sampler on the unified bath potential)
+  - Registered as `torsoECG`.
+  - Samples the globally solved `phiE` field at electrode positions on the
+    union (heart + bath) mesh; parallel-safe via list reduction.
+  - The global `phiE` solve is owned by `extracellularPotentialDomain` — see
+    [../electroDomains/extracellularPotentialDomain/](../electroDomains/extracellularPotentialDomain/).
+  - Selected by routing the ECG-domain state provider to the configured
+    `bathPotentialDomain` inside `bidomainSolverCoeffs` (done in
+    `electrophysicsSystemBuilder::configureECGDomains`).
+  - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
 
 ## Architectural pattern
 
-- **Abstract solver interfaces** live in domain folders (`electroDomains/`):
-  - `ecgDomain/ecgSolver.H/C`
-  - `bathDomain/bathECGSolver.H/C`
-  
+- **Abstract solver interface** lives in the domain folder:
+  - `electroDomains/ecgDomain/ecgSolver.H/C`
+
 - **Concrete solver implementations** live here in `ecgModels/`:
   - `pseudoECGSolver/`
-  - `bidomainBathECGSolver/`
+  - `torsoECG/`
 
 ## Execution role
 
-`ECGDomain` is a downstream domain in the `electrophysicsSystem`:
+`ecgDomain` is a downstream domain in the `electrophysicsSystem`:
 
 - it advances after the myocardium
 - it consumes already-updated tissue state
@@ -56,5 +61,18 @@ See [../electroDomains/README.md](../electroDomains/README.md) for the
 domain-level contract and [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
 for the timestep sequence.
 
-Bath-related solver code is still present in this folder, but bath is not part
-of the active `core` orchestration path at the moment.
+`torsoECG` is wired by `electrophysicsSystemBuilder` when an ECG domain selects
+`torsoECG` and a `bidomainSolverCoeffs.bathPotentialDomain` block provides the
+global `phiE` state.
+
+- `eikonalECG`
+  - Registered as `eikonalECG`, but **not a general-purpose ECG model** in the
+    sense that `pseudoECG` and `torsoECG` are. It is a manufactured-solution
+    verification construct and an activation-time surrogate.
+  - Reconstructs the voltage gradient analytically from tabulated endo/mid/epi
+    template derivatives and the eikonal activation gradient, then forms the
+    same anisotropic lead-field sum as `pseudoECG`. The voltage is a template
+    lookup, not a solved field, so the result is a surrogate trace.
+  - Primary use is `tutorials/manufacturedSolutions/eikonalECG/`, where the
+    manufactured-template path drives the MMS studies.
+  - See [eikonalECG/README.md](eikonalECG/README.md).

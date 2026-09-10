@@ -44,24 +44,23 @@ EXE_INC = \
     -IelectroDomains \
     -IelectroDomains/conductionSystemDomain \
     -IelectroDomains/ecgDomain \
+    -IelectroDomains/extracellularPotentialDomain \
     -IelectroDomains/myocardiumDomain \
     -IconductionSystemModels \
     -ImyocardiumModels \
     -IecgModels \
+    -IecgModels/eikonalECG \
+    -IecgModels/torsoECG \
     -IelectroCouplers \
     -IelectroCouplers/pvjCoupler \
     -IelectroCouplers/pvjCoupler/eikonal \
     -IelectroCouplers/pvjCoupler/reactionDiffusion \
     -Icore \
-    -IadvanceSchemes \
-    -IadvanceSchemes/staggered \
-    -IadvanceSchemes/pimpleStaggered \
+    -Icore/verificationModels \
     -I../ionicModels/lnInclude \
-    -I../verificationModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
     -I../couplingModels/lnInclude \
-    -I../../modules/physicsModel/src/solids4FoamModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
@@ -73,7 +72,6 @@ EXE_INC = \
 LIB_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
-    -lverificationModels \
     -lionicModels \
     -lgenericWriter \
     -lactiveTensionModels \

@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electrophysicsSystemBuilder
+
+Description
+    Builder functions for assembling the electrophysics system components.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef electrophysicsSystemBuilder_H
@@ -32,11 +40,6 @@ class electroVerificationModel;
 
 namespace electrophysicsSystemBuilder
 {
-
-// Terminology used by the orchestration layer:
-//   primary domain        = myocardium
-//   conduction domains    = pre-myocardium graph / Purkinje domains
-//   ECG domains           = post-myocardium ECG domains
 
 void configureMyocardiumDomain
 (
@@ -65,10 +68,18 @@ void configureConductionDomains
     scalar                initialDeltaT
 );
 
+void configureBathPotentialDomain
+(
+    electrophysicsSystem& system,
+    const fvMesh&         mesh,
+    const dictionary&     electroProperties
+);
+
 void configureECGDomains
 (
     electrophysicsSystem&       system,
-    const electroStateProvider& stateProvider,
+    const electroStateProvider& myocardiumStateProvider,
+    const electroStateProvider* potentialStateProviderPtr,
     const dictionary&           electroProperties
 );
 

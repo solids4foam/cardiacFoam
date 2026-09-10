@@ -23,11 +23,11 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(ElectroDomainCoupler, 0);
-defineRunTimeSelectionTable(ElectroDomainCoupler, dictionary);
+defineTypeNameAndDebug(electroDomainCoupler, 0);
+defineRunTimeSelectionTable(electroDomainCoupler, dictionary);
 
 
-autoPtr<ElectroDomainCoupler> ElectroDomainCoupler::New
+autoPtr<electroDomainCoupler> electroDomainCoupler::New
 (
     tissueCouplingEndpoint& primaryDomain,
     electroDomainInterface&       secondaryDomain,
@@ -61,10 +61,20 @@ autoPtr<ElectroDomainCoupler> ElectroDomainCoupler::New
             << exit(FatalError);
     }
 
-    return autoPtr<ElectroDomainCoupler>
+    autoPtr<electroDomainCoupler> coupler
     (
         ctorPtr(primaryDomain, secondaryDomain, dict)
     );
+
+    if (dict.found("verificationModel"))
+    {
+        coupler->verificationModelPtr_ = couplingVerificationModel::New
+        (
+            dict.subDict("verificationModel")
+        );
+    }
+
+    return coupler;
 }
 
 } // End namespace Foam

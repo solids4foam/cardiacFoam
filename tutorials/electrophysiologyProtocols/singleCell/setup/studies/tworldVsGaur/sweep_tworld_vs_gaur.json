@@ -1,0 +1,34 @@
+{
+  "base": {
+    "entry": "singleCell",
+    "case_dir_name": "electrophysiologyProtocols/singleCell",
+    "setup_dir_name": "setup",
+    "stim_start_ms": 20,
+    "n_s1": 8,
+    "end_time_buffer_s": 0.25,
+    "write_after_time_s": 0
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "ionic_model": ["Gaur", "Gaur", "Gaur", "TWorld", "TWorld", "TWorld"],
+      "tissue": ["myocyte", "myocyte", "myocyte", "endocardialCells", "endocardialCells", "endocardialCells"],
+      "s1_interval_ms": [1000, 500, 300, 1000, 500, 300],
+      "ionic_export": [
+        ["Vm", "cai", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IK1_IK1", "AV_ITo_ITo", "AV_Jrel", "AV_Jup"],
+        ["Vm", "cai", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IK1_IK1", "AV_ITo_ITo", "AV_Jrel", "AV_Jup"],
+        ["Vm", "cai", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IK1_IK1", "AV_ITo_ITo", "AV_Jrel", "AV_Jup"],
+        ["Vm", "cai", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IK1_IK1", "AV_Ito_Ito", "AV_J_SRCarel", "AV_Jserca"],
+        ["Vm", "cai", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IK1_IK1", "AV_Ito_Ito", "AV_J_SRCarel", "AV_Jserca"],
+        ["Vm", "cai", "AV_ICaL_ICaL", "AV_IKr_IKr", "AV_IK1_IK1", "AV_Ito_Ito", "AV_J_SRCarel", "AV_Jserca"]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": ["ionic_model", "tissue", "s1_interval_ms"]
+      }
+    ]
+  }
+}

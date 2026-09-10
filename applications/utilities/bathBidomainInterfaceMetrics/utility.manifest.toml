@@ -1,0 +1,81 @@
+# applications/utilities/bathBidomainInterfaceMetrics/utility.manifest.toml
+
+name = "bathBidomainInterfaceMetrics"
+description = "Report manufactured bath-bidomain region and interface convergence metrics."
+category = "verification"
+
+purpose = """
+Computes manufactured heart, bath, interface, and exterior-boundary diagnostics
+from a serial or reconstructed bath-bidomain result, and writes them as a CSV
+convergence table. Cell norms are volume weighted; interface and boundary norms
+are area weighted. One-sided interface fluxes are reconstructed independently
+from cell gradients, so the reported flux jump tests constitutive
+reconstruction rather than restating the conservative assembled face flux. It
+also reconstructs the intracellular interface leakage Gi*grad(Vm + phiE).n,
+whose manufactured value is zero.
+
+Scope note: this utility is specific to the bath-bidomain manufactured
+solution. It hardcodes that problem's field and cellZone names and is not a
+general interface-metrics tool.
+"""
+
+inputs = [
+  "<time>/phiE",
+  "<time>/VmGlobal",
+  "<time>/sigmaTotal",
+  "constant/polyMesh",
+]
+
+outputs = [
+  "postProcessing/bathBidomainInterfaceMetrics.csv",
+]
+
+requires_mesh = true
+example = "bathBidomainInterfaceMetrics -latestTime -case ./manufacturedBathBidomain"
+
+[[flags]]
+name = "-writeFaceErrors"
+description = "Also write the SIGNED per-face assembled-flux error. The aggregate norms apply mag() before summing, so they cannot distinguish an error that is small because two contributions oppose each other face by face from one that is simply small; this dump keeps the signs."
+takes_value = false
+argument_kind = "switch"
+
+[[flags]]
+name = "-exactFields"
+description = "Overwrite phiE with the manufactured exact solution before computing interface diagnostics, isolating extracellular interface flux construction from solve and coupling-loop error. Substitutes phiE ONLY, so the intracellular leakage columns (built from phiI = phiE + VmGlobal) remain hybrid and must not be read as exact-field results."
+takes_value = false
+argument_kind = "switch"
+
+[[flags]]
+name = "-latestTime"
+description = "Select only the latest time directory (standard OpenFOAM timeSelector option)."
+takes_value = false
+argument_kind = "switch"
+
+[[flags]]
+name = "-time"
+description = "Select an explicit time range or list (standard OpenFOAM timeSelector option)."
+takes_value = true
+argument_kind = "word"
+
+[[produces]]
+artifact_id = "bath_bidomain_interface_metrics"
+path_pattern = "postProcessing/bathBidomainInterfaceMetrics.csv"
+format = "csv_probe"
+description = "Region, interface, and exterior-boundary error norms for the manufactured bath-bidomain solution, one row per selected time."
+produced_by = "bathBidomainInterfaceMetrics"
+
+[[produces]]
+artifact_id = "bath_bidomain_face_errors"
+path_pattern = "postProcessing/bathBidomainFaceErrors.csv"
+format = "csv_probe"
+description = "Signed per-face assembled-flux error. Written only with -writeFaceErrors."
+produced_by = "bathBidomainInterfaceMetrics"
+optional = true
+
+[[produces]]
+artifact_id = "bath_bidomain_face_errors_exact"
+path_pattern = "postProcessing/bathBidomainFaceErrorsExactField.csv"
+format = "csv_probe"
+description = "Signed per-face assembled-flux error with phiE replaced by the manufactured exact solution. Written only with -writeFaceErrors -exactFields."
+produced_by = "bathBidomainInterfaceMetrics"
+optional = true

@@ -1,0 +1,120 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver  monodomainSolver;
+
+monodomainSolverCoeffs
+{
+    conductivitySource uniform;
+    conductivity [ -1 -3 3 0 0 2 0 ] (0.111453302 0 0 0.121585420 0 0.030396355);
+    chi  [ 0 -1 0 0 0 0 0 ] 3;
+    cm   [ -1 -4 4 0 0 2 0 ] 2;
+
+    ionicModel monodomainFDAManufactured;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (u1 u2 u3);
+            debug (V u1 u2 u3 Iion);
+        }
+    }
+
+    dimension "3D";
+
+    verificationModel
+    {
+        type manufacturedFDAMonodomainVerifier;
+    }
+
+    solutionAlgorithm implicit;
+    solver RKF45;
+    maxSteps 1000000000;
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    externalStimulus
+    {
+        stimulusLocationMin (0 0 5.5e-3);
+        stimulusLocationMax (1.5e-3 1.5e-3 7e-3);
+        stimulusDuration [ 0 0 1 0 0 0 0 ] 0;
+        stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
+        stimulusStartTime 0;
+    }
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver monodomain1DSolver;
+                graphFile purkinjeGraph;
+                purkinjeConductivity 0.111453302;
+
+                ionicModel monodomainFDAManufactured;
+                dimension "1D";
+
+                chi 3;
+                cm 2;
+                vm1DRest -0.084;
+
+                rootStimulus
+                {
+                    node 0;
+                    startTime 0.0;
+                    duration 0.0;
+                    intensity 0.0;
+                }
+
+                verificationModel
+                {
+                    type manufacturedGraphVerifier;
+                }
+
+                solver RKF45;
+                maxSteps 1000000000;
+
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        couplingA
+        {
+            electroDomainCoupler reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            
+            verificationModel
+            {
+                type coupled1D3DMonodomainVerifier;
+            }
+
+            rPvj 1.0;
+            pvjRadius 0.11;
+            pvjKernel linear;
+            pvjCouplingScheme explicit;
+            couplingMode unidirectional;
+            debugCoupling true;
+        }
+    }
+}
+
+// ************************************************************************* //

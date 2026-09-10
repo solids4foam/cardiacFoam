@@ -96,6 +96,38 @@ label ionicSelector::dimensionFlag(const word& d)
     return (d == "1D") ? 1 : (d == "2D") ? 2 : (d == "3D") ? 3 : -1;
 }
 
+
+label ionicSelector::selectSex(const dictionary& dict,
+                               const List<word>& supportedSexTypes)
+{
+    if (!dict.found("sex"))
+    {
+        return 0;   // neutral by default
+    }
+
+    word s;
+    dict.lookup("sex") >> s;
+
+    if (!supportedSexTypes.contains(s))
+    {
+        FatalErrorInFunction
+            << "Unsupported sex '" << s
+            << "' allowed: " << supportedSexTypes
+            << exit(FatalError);
+    }
+
+    return sexFlag(s);
+}
+
+
+//- Map sex name to flag integer
+label ionicSelector::sexFlag(const word& s)
+{
+    return (s == "male")   ? 1
+         : (s == "female") ? 2
+                           : 0;   // "neutral" or unrecognised → 0
+}
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam

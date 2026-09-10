@@ -1,7 +1,7 @@
 # conductionSystemModels
 
 This directory contains runtime-selectable solver kernels used by
-`ConductionSystemDomain`. The domain owns the graph topology, PVJ metadata,
+`conductionSystemDomain`. The domain owns the graph topology, PVJ metadata,
 ionic-model state, and terminal-coupling buffers; the classes here implement
 the numerical update applied to that graph state.
 
@@ -11,32 +11,43 @@ the numerical update applied to that graph state.
 src/electroModels/conductionSystemModels/
 ├── monodomain1DSolver/   # 1D cable-equation graph solver
 ├── eikonalSolver1D/      # Activation-time graph solver
+├── restitutionEikonalSolver1D/  # Restitution-aware activation solver
 └── README.md
 ```
 
 ## Available solvers
 
-- `Monodomain1DSolver`
+- `monodomain1DSolver`
   - Registered as `monodomain1DSolver`.
   - Advances graph-backed Purkinje state using ionic reaction terms plus an
     implicit cable-equation diffusion step.
-  - In the current nested implementation, the diffusion solve assumes a tree
-    topology prepared by `conductionGraph` and uses graph traversal data built
-    by the domain.
+  - The diffusion solve assumes a tree topology prepared by `conductionGraph`.
 
-- `EikonalSolver1D`
-  - Registered as `eikonalSolver`.
+- `eikonalSolver1D`
+  - Registered as `eikonalSolver1D`.
   - Computes nodal activation times only, using edge lengths and a prescribed
     wave speed `c0`.
-  - Intended for reduced-order conduction studies where full ionic state is
-    unnecessary.
+  - Supports reduced-order conduction studies without full ionic state.
+
+- `restitutionEikonalSolver1D`
+  - Registered as `restitutionEikonalSolver1D`.
+  - Tracks refractory state, recovery time, diastolic interval, action
+    potential duration, and per-node activation history across timesteps.
+  - Uses a tabulated CV(DI) restitution curve through `restitutionModel`.
+    APD is **not** restituted: it is held at the constant `apdNominal`
+    (default `restitutionTemplates::purkinjeAPDnominal` = 0.290 s, the
+    Stewart 2009 steady-state APD90). The CV curve and DI axis are the
+    calibrated output of the S1-S2 protocol documented in
+    `tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/Purkinje_S1_S2_Calibration.md`.
+  - Reports diagnostic fields for block, wavebreak, short-DI events, and
+    minimum DI.
 
 ## Relationship to graph/domain code
 
-The solver kernels depend on state owned by `ConductionSystemDomain`, including:
+The solver kernels depend on state owned by `conductionSystemDomain`, including:
 
 - `conductionGraph`
-- nodal `Vm1D`, `Iion1D`, and `activationTime`
+- nodal `Vm1D`, `Iion1D`, `activationTime`, and solver diagnostic fields
 - PVJ coupling currents prepared by electro couplers
 - the runtime-selected ionic model for the graph nodes
 

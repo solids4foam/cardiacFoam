@@ -16,17 +16,16 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::conductionSystemSolver
+    conductionSystemSolver
 
 Description
     Abstract base class for conduction-system solvers.
 
-    Concrete implementations are
-    registered in the runtime selection table under the dictionary key
-    "conductionSystemSolver".
-
 SourceFiles
     conductionSystemSolver.C
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef conductionSystemSolver_H
@@ -36,12 +35,15 @@ SourceFiles
 #include "fvMesh.H"
 #include "runTimeSelectionTables.H"
 #include "scalar.H"
+#include "scalarField.H"
+#include "wordList.H"
+#include "PtrList.H"
 
 namespace Foam
 {
 
 class dictionary;
-class ConductionSystemDomain;
+class conductionSystemDomain;
 
 class conductionSystemSolver
 {
@@ -73,10 +75,32 @@ public:
 
     virtual void advance
     (
-        ConductionSystemDomain& domain,
+        conductionSystemDomain& domain,
         scalar t0,
         scalar dt
     ) = 0;
+
+    virtual void diagnosticFields
+    (
+        wordList& names,
+        PtrList<scalarField>& fields
+    ) const
+    {}
+
+    virtual bool acceptsRepeatedTerminalActivationTimes() const
+    {
+        return false;
+    }
+
+    virtual bool writesGraphVm() const
+    {
+        return false;
+    }
+
+    virtual bool writesGraphIion() const
+    {
+        return false;
+    }
 };
 
 } // End namespace Foam

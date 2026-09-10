@@ -1,0 +1,32 @@
+# cellML2foam Python path and subprocess contract tests
+
+name: cellML2foam tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "applications/scripts/cellML2foam/**"
+      - ".github/workflows/cellML2foamTests.yml"
+
+jobs:
+  cellml2foam-tests:
+    name: cellML2foam contract tests
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout cardiacFoam
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: python -m pip install pytest
+
+      - name: Run cellML2foam test suite
+        run: python -m pytest applications/scripts/cellML2foam/tests/ -q

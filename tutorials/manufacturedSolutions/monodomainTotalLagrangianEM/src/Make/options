@@ -1,0 +1,20 @@
+CARDIACFOAM_ROOT := ../../../..
+SOLIDS4FOAM_ROOT := $(CARDIACFOAM_ROOT)/modules/solids4foam
+
+sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
+sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options
+
+EXE_INC = \
+    $(VERSION_SPECIFIC_INC) \
+    -I$(CARDIACFOAM_ROOT)/src/verificationModels \
+    -I$(CARDIACFOAM_ROOT)/src/verificationModels/electromechanicsVerification \
+    -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
+    -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/numerics/compatibilityFunctions \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude
+
+LIB_INC = $(EXE_INC)
+
+EXE_LIBS = \
+    -lfiniteVolume \
+    -lsolids4FoamModels

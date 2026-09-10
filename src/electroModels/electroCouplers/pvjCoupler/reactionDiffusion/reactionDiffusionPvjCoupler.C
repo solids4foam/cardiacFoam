@@ -24,16 +24,16 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(ReactionDiffusionPvjCoupler, 0);
+defineTypeNameAndDebug(reactionDiffusionPvjCoupler, 0);
 addToRunTimeSelectionTable
 (
-    ElectroDomainCoupler,
-    ReactionDiffusionPvjCoupler,
+    electroDomainCoupler,
+    reactionDiffusionPvjCoupler,
     dictionary
 );
 
 
-void ReactionDiffusionPvjCoupler::couplingCurrentAtPvjs
+void reactionDiffusionPvjCoupler::couplingCurrentAtPvjs
 (
     const scalarField& networkVm,
     const scalarField& tissueVm,
@@ -51,12 +51,17 @@ void ReactionDiffusionPvjCoupler::couplingCurrentAtPvjs
     current.setSize(networkVm.size());
     forAll(current, i)
     {
-        current[i] = (networkVm[i] - tissueVm[i])/R_pvj_;
+        current[i] = (networkVm[i] - tissueVm[i])/R_pvj_[i];
     }
 }
 
 
-void ReactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
+void reactionDiffusionPvjCoupler::evaluateCoupling
+(
+    scalar primaryTime,
+    scalar secondaryTime,
+    const char* phaseName
+)
 {
     mapper_.gatherVm3DPvjs(primaryDomain_.Vm(), tissueVmBuffer_);
     networkTerminalDomain_.terminalVm(networkVmBuffer_);
@@ -72,7 +77,7 @@ void ReactionDiffusionPvjCoupler::evaluateCoupling(const char* phaseName) const
 }
 
 
-void ReactionDiffusionPvjCoupler::reportCouplingDiagnostics
+void reactionDiffusionPvjCoupler::reportCouplingDiagnostics
 (
     const char* phaseName
 ) const
@@ -95,36 +100,62 @@ void ReactionDiffusionPvjCoupler::reportCouplingDiagnostics
 }
 
 
-ReactionDiffusionPvjCoupler::ReactionDiffusionPvjCoupler
+reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
     electroDomainInterface& secondaryDomain,
     const dictionary& dict
 )
 :
-    PVJCoupler(primaryDomain, secondaryDomain, dict),
-    R_pvj_(dict.get<scalar>("rPvj")),
+    pvjCoupler(primaryDomain, secondaryDomain, dict),
+    R_pvj_(),
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
+    couplingScheme_
+    (
+        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
+    ),
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
-    if (reportSetup_)
+    if (couplingScheme_ != "explicit" && couplingScheme_ != "implicit")
     {
-        Info << "Reaction-diffusion PVJ coupling model: R_pvj=" << R_pvj_
-             << ", pvjRadius=" << pvjRadius_
-             << ", couplingMode=" << couplingModeName(couplingMode_)
-             << ", debugCoupling=" << debugCoupling_
-             << endl;
+        FatalErrorInFunction
+            << "Unknown pvjCouplingScheme '" << couplingScheme_
+            << "'. Valid options are 'explicit' and 'implicit'."
+            << exit(FatalError);
+    }
+
+    const scalarField* pRes = networkTerminalDomain_.terminalResistances();
+    if (pRes)
+    {
+        R_pvj_ = *pRes;
+    }
+    else
+    {
+        R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
     }
 }
 
 
-void ReactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
+void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 {
-    (void)t0;
-    (void)dt;
+    pvjCoupler::prepareSecondaryCoupling(t0, dt);
 
-    evaluateCoupling("secondary");
+    evaluateCoupling(t0, t0, "secondary");
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->updateManufacturedSource
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            t0,
+            t0,
+            couplingScheme_ == "implicit",
+            couplingMode_ == bidirectional,
+            "secondary"
+        );
+    }
 
     if (couplingMode_ == unidirectional)
     {
@@ -139,18 +170,58 @@ void ReactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 }
 
 
-void ReactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
+void reactionDiffusionPvjCoupler::depositPrimaryCoupling() const
 {
-    (void)t0;
-    (void)dt;
+    if (couplingScheme_ == "explicit")
+    {
+        mapper_.depositCoupling
+        (
+            terminalCurrentBuffer_,
+            primaryDomain_.sourceField()
+        );
+        return;
+    }
 
-    evaluateCoupling("primary");
+    volScalarField* implicitSourceCoeff =
+        primaryDomain_.implicitSourceCoeffPtr();
 
-    mapper_.depositCoupling
+    if (!implicitSourceCoeff)
+    {
+        FatalErrorInFunction
+            << "pvjCouplingScheme implicit requires the primary tissue "
+            << "domain to expose an implicit source coefficient field."
+            << exit(FatalError);
+    }
+
+    mapper_.depositImplicitCoupling
     (
-        terminalCurrentBuffer_,
-        primaryDomain_.sourceField()
+        networkVmBuffer_,
+        R_pvj_,
+        primaryDomain_.sourceField(),
+        *implicitSourceCoeff
     );
+}
+
+
+void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
+{
+    evaluateCoupling(t0, t0 + dt, "primary");
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->updateManufacturedSource
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            t0,
+            t0 + dt,
+            couplingScheme_ == "implicit",
+            couplingMode_ == bidirectional,
+            "primary"
+        );
+    }
+
+    depositPrimaryCoupling();
 
     networkTerminalDomain_.setTerminalCoupling
     (

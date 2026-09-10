@@ -1,0 +1,66 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/electro";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver    monodomainSolver;
+
+monodomainSolverCoeffs
+{
+    conductivitySource field;
+    chi   [ 0 -1 0 0 0 0 0 ] 140000;
+    cm    [ -1 -4 4 0 0 2 0 ] 0.01;
+
+    ionicModel    TNNP;
+    tissue    epicardialCells;
+
+    ionicHeterogeneity
+    {
+        field             t;
+        mode              transmuralBands;
+        endoMInterface    0.3;
+        mEpiInterface     0.7;
+        transitionWidth   0;
+        transitionMode    hard;
+        smoothing         smoothstep;
+    }
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Ca_i);
+        }
+    }
+
+    solutionAlgorithm    explicit;
+
+    solver RKF45;
+    maxSteps 1000000000;
+
+    externalStimulus
+    {
+        // This box contains 26 cell centres at the mesh apex. The supplied
+        // apicobasal coordinate is smallest there. All values are SI after
+        // Allrun scales the mesh to adult-heart dimensions.
+        stimulusLocationMin (7.56e-2 -4.0e-3 3.0e-3);
+        stimulusLocationMax (8.00e-2 2.0e-3 6.0e-3);
+        stimulusDuration [ 0 0 1 0 0 0 0 ] 2e-3;
+        stimulusIntensity [ 0 -3 0 0 0 1 0 ] 50000;
+        // Allow the ionic and mechanical states to remain at rest for 2 ms
+        // before the apical pacing pulse begins.
+        stimulusStartTime 2e-3;
+    }
+}
+
+// ************************************************************************* //

@@ -15,20 +15,26 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the Bueno-Orovio 2008 minimal
+    ventricular model. Converted from CellML.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "heaviside.H"
 #include "BuenoOrovio_2008Names.H"
 #include "stimulusIO.H"
 
-const char* BuenoOrovioSTATES_NAMES[NUM_STATES] = {
+static const char* BuenoOrovioSTATES_NAMES[NUM_STATES] = {
     "u", // Membrane voltage
     "v", // Fast sodium activation variable
     "w", // Slow sodium activation variable
     "s"  // Slow inactivation variable
 
 };
-const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "Jfi",       // 0
     "Jso",       // 1
     "Jsi",       // 2
@@ -44,7 +50,7 @@ const char* BuenoOrovioALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "wInfty"     // 11
 };
 
-const char* BuenoOrovioCONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* BuenoOrovioCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "uO",
     "uU",
     "thetaV",
@@ -81,7 +87,6 @@ BuenoOrovioDependencyMap()
     static const Foam::HashTable<Foam::wordList> dep
     (
         {
-        // Canonical BO2008 names
         {"Jfi", Foam::wordList({"Jfi", "v", "RATES_v"})},
         {"Jso", Foam::wordList({"Jso", "tauO", "tauSo"})},
         {"Jsi", Foam::wordList({"Jsi", "w", "s", "RATES_s"})},
@@ -90,7 +95,6 @@ BuenoOrovioDependencyMap()
         {"w", Foam::wordList({"w", "wInfty", "tauWMinus", "RATES_w"})},
         {"s", Foam::wordList({"s", "tauS", "RATES_s"})},
 
-        // CellML / alternative current naming fallbacks
         {"I_fi", Foam::wordList({"Jfi", "v", "RATES_v"})},
         {"I_so", Foam::wordList({"Jso", "tauO", "tauSo"})},
         {"I_si", Foam::wordList({"Jsi", "w", "s", "RATES_s"})},
@@ -113,7 +117,7 @@ inline Foam::scalar computeIstim
 
 
 
-void
+inline void
 BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
 
@@ -155,7 +159,6 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
         CONSTANTS[tauWInfty] = (tissueFlag == 1) ? 0.07 : (tissueFlag == 2) ? 0.01 : 0.0273;
         CONSTANTS[wInftyStar] = (tissueFlag == 1) ? 0.94 : (tissueFlag == 2) ? 0.5 : 0.78;
 
-        // Initial values for the gating variables
         STATES[u] = 0;
         STATES[v] = 1.0;
         STATES[w] = 1.0;
@@ -163,11 +166,10 @@ BuenoOrovioinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tiss
 };
 
 
-void
+inline void
 BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     using Foam::heaviside;
-        //Time Constants currents
         ALGEBRAIC[tauSo] = CONSTANTS[tauSo1]
                     + (CONSTANTS[tauSo2] - CONSTANTS[tauSo1])
                     * (1.0 + tanh(CONSTANTS[kSo] * (STATES[u] - CONSTANTS[uSo]))) / 2.0;
@@ -175,7 +177,6 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
         ALGEBRAIC[tauO] = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaO])) * CONSTANTS[tauO1]
                     + heaviside(STATES[u] - CONSTANTS[thetaO]) * CONSTANTS[tauO2];
 
-        // Calculate the three currents
         ALGEBRAIC[Jfi] = -STATES[v] * heaviside(STATES[u] - CONSTANTS[thetaV])
                     * (STATES[u] - CONSTANTS[thetaV]) * (CONSTANTS[uU] - STATES[u]) / CONSTANTS[tauFi];
 
@@ -187,7 +188,6 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
         ALGEBRAIC[Jion] = ALGEBRAIC[Jfi] + ALGEBRAIC[Jso] + ALGEBRAIC[Jsi];
 
-        // Time constants for gating variables
         ALGEBRAIC[tauVMinus] = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaVMinus])) * CONSTANTS[tauV1Minus]
                         + heaviside(STATES[u] - CONSTANTS[thetaVMinus]) * CONSTANTS[tauV2Minus];
 
@@ -204,7 +204,6 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
                     * (1.0 - STATES[u] / CONSTANTS[tauWInfty])
                     + heaviside(STATES[u] - CONSTANTS[thetaO]) * CONSTANTS[wInftyStar];
 
-        // Calculate the rates of change for the gating variables
         RATES[v] = (1.0 - heaviside(STATES[u] - CONSTANTS[thetaV]))
                 * (ALGEBRAIC[vInfty] - STATES[v]) / ALGEBRAIC[tauVMinus]
                 - heaviside(STATES[u] - CONSTANTS[thetaV]) * STATES[v] / CONSTANTS[tauVPlus];
@@ -226,7 +225,6 @@ BuenoOroviocomputeVariables(double VOI, double* CONSTANTS, double* RATES, double
 
 
 
-        //std::cout << "CURRENTS " << __LINE__ << std::endl;
 
 
 

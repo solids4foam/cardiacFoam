@@ -1,0 +1,43 @@
+# applications/utilities/runPurkinjeGraph/utility.manifest.toml
+
+name = "runPurkinjeGraph"
+description = "Advance a Purkinje graph conductionSystemDomain in isolation without myocardium coupling."
+category = "verification"
+
+purpose = """
+Diagnostic utility that constructs the conductionSystemDomain specified in
+constant/electroProperties and time-steps it forward without creating any
+myocardium solver, ECG domain, or deformation coupling. Time-step size, end time
+and write scheduling are taken from system/controlDict; the utility has no
+command-line overrides for them. Time directories are written at the case
+writeInterval. This is useful
+for validating 1D Purkinje graph connectivity, initial conditions, and ionic
+evolution before running the full coupled solver.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "constant/purkinjeGraph",
+  "system/controlDict",
+]
+
+outputs = [
+  "{time}/",
+]
+
+requires_mesh = true
+example = "runPurkinjeGraph -case ./purkinje_run -conductionDomain purkinjeNetwork"
+
+[[flags]]
+name = "-conductionDomain"
+description = "Name of the conductionNetworkDomains entry to run (defaults to the first entry)."
+takes_value = true
+argument_kind = "word"
+
+[[produces]]
+artifact_id = "purkinje_time_dirs"
+path_pattern = "{time}/"
+format = "openfoam_time_dirs"
+description = "OpenFOAM time directories containing Purkinje graph field outputs at each write interval."
+produced_by = "runPurkinjeGraph"
+time_indexed = true

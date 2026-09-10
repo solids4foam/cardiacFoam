@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    manufacturedFDAMonodomainVerifier
+
+Description
+    Manufactured FDA monodomain verifier.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedFDAMonodomainVerifier_H
@@ -28,7 +36,6 @@ namespace Foam
 
 class manufacturedFDAMonodomainVerifier : public electroVerificationModel
 {
-    bool useExplicitAlgorithm_;
     mutable bool errorsReported_;
 
 public:

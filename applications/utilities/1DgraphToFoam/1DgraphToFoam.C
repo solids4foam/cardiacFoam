@@ -21,6 +21,9 @@ Application
 Description
     Convert a legacy ASCII VTK 1D graph stored as UNSTRUCTURED_GRID/POLYDATA
     lines into a Foam dictionary while preserving point and line metadata.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "argList.H"
@@ -248,9 +251,13 @@ label rootNodeFromFields
 {
     label rootNode = -1;
 
+    label targetRootVal = 1;
+    if (labelRoles && labelRoles->name() == "NodeType") targetRootVal = 0;
+    else if (scalarRoles && scalarRoles->name() == "NodeType") targetRootVal = 0;
+
     for (label nodeI = 0; nodeI < nPoints; ++nodeI)
     {
-        if (roleAt(nodeI, labelRoles, scalarRoles) == 1)
+        if (roleAt(nodeI, labelRoles, scalarRoles) == targetRootVal)
         {
             if (rootNode != -1)
             {
@@ -284,10 +291,9 @@ scalar edgeConductanceFromFields
     static const wordList conductanceNames
     {
         "conductance",
-        "diffusivity",
+        "conductivity",
         "D",
-        "sigma",
-        "conductivity"
+        "sigma"
     };
 
     const IOField<scalar>* conductance =
@@ -332,7 +338,7 @@ pointField writeConductionSolverContract
             << exit(FatalError);
     }
 
-    const wordList nodeRoleNames{"nodeRole", "node_role", "role"};
+    const wordList nodeRoleNames{"nodeRole", "node_role", "role", "NodeType"};
     const IOField<label>* labelRoles =
         findField<label>(pointData, nodeRoleNames);
     const IOField<scalar>* scalarRoles =

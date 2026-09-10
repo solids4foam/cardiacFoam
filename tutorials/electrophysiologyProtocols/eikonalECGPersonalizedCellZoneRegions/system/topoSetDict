@@ -1,0 +1,73 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Partitions the same 8x8x8 cube blockMeshDict already builds into 3
+// cellZones along its transmural x-axis, at the identical boundaries
+// (t=0.3 -> x=0.006, t=0.7 -> x=0.014) that ../eikonalECGPersonalizedNamedRegions
+// uses for its namedRegions ranges -- so each zone's cell-centered t range
+// matches that tutorial's region ranges as closely as a whole-cell (crisp,
+// unblended) partition can. Cell-centered x values for the 8-cell x-axis
+// are (i+0.5)*0.0025 for i=0..7, i.e. 0.00125, 0.00375, 0.00625, 0.00875,
+// 0.01125, 0.01375, 0.01625, 0.01875 -- so a split at x=0.005/0.015 puts
+// cells i=0,1 in endoZone, i=2..5 in midZone, i=6,7 in epiZone.
+
+actions
+(
+    {
+        name    endoZoneCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        box     (-1 -1 -1) (0.005 1 1);
+    }
+    {
+        name    endoZone;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     endoZoneCells;
+    }
+    {
+        name    midZoneCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        box     (0.005 -1 -1) (0.015 1 1);
+    }
+    {
+        name    midZone;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     midZoneCells;
+    }
+    {
+        name    epiZoneCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        box     (0.015 -1 -1) (1 1 1);
+    }
+    {
+        name    epiZone;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        set     epiZoneCells;
+    }
+);
+
+// ************************************************************************* //

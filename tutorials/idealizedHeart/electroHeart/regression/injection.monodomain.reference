@@ -1,0 +1,4 @@
+# Monodomain variant: monodomainSolver + monodomain1DSolver.
+#
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         0.02   2    0.0193572     1e-4

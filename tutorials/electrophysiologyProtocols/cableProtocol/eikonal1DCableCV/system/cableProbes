@@ -1,0 +1,21 @@
+type            probes;
+libs            ("libsampling.so");
+enabled         true;
+
+writeControl    timeStep;
+writeInterval   1;
+
+fields
+(
+    Vm
+    activationTime
+);
+
+probeLocations
+(
+    (0.002  5e-05 5e-05)
+    (0.005  5e-05 5e-05)
+    (0.010  5e-05 5e-05)
+    (0.015  5e-05 5e-05)
+    (0.018  5e-05 5e-05)
+);

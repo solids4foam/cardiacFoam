@@ -18,10 +18,11 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "Trovato.H"
-#include "Trovato_2019.H"
+#include "Trovato_2020.H"
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicModelFamilyInfo.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
@@ -37,6 +38,25 @@ namespace Foam
     (
         ionicModel, Trovato, dictionary
     );
+
+    const ionicModelFamilyInfo& TrovatoFamilyInfo()
+    {
+        static const ionicModelFamilyInfo info
+        {
+            NUM_CONSTANTS,
+            NUM_STATES,
+            NUM_ALGEBRAIC,
+            TrovatoCONSTANTS_NAMES,
+            TrovatoSTATES_NAMES,
+            TrovatoALGEBRAIC_NAMES,
+            membrane_v,
+            1000.0,
+            1000.0,
+            0.0,
+            nullptr
+        };
+        return info;
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -49,14 +69,14 @@ Foam::Trovato::Trovato
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
     RATES_(num)
 {
 
-    // 🔑 First, set tissue using base logic + overrides
+    // First, set tissue using base logic and overrides
     ionicModel::setTissueFromDict();
     forAll(STATES_, i)
     {
@@ -64,7 +84,6 @@ Foam::Trovato::Trovato
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from generated code
         TrovatoinitConsts
         (
             CONSTANTS_.data(),
@@ -77,6 +96,8 @@ Foam::Trovato::Trovato
             setStimulusProtocolFromDict(dict);
         }
     }
+
+    applyIonicConstantOverrides();
 
 }
 
@@ -92,12 +113,64 @@ Foam::Trovato::~Trovato()
 
 Foam::List<Foam::word> Foam::Trovato::supportedTissueTypes() const
 {
-    return {"myocyte"};
+    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+}
+
+
+Foam::scalarField& Foam::Trovato::constants(const label integrationPtI) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::Trovato::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    TrovatoinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, TrovatoCONSTANTS_NAMES, NUM_CONSTANTS, dict(), type(),
+        tissueFlag
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::Trovato::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    TrovatoinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    return states;
 }
 
 
 // ------------------------------------------------------------------------- //
-//  Solve ODE with mixed singleCell implementation and 1D-3D condition
+//  Solve the cell ODE over [tStart, tEnd], converting time bounds to ms for the model
 // ------------------------------------------------------------------------- //
 void Foam::Trovato::solveODE
 (
@@ -119,22 +192,20 @@ void Foam::Trovato::solveODE
 
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
             STATESI[membrane_v] = Vm[integrationPtI]*1000.0;
         }
 
-        // Clamp time step (ms)
         step = min(step, deltaT * 1000.0);
-        // Advance ODE system for all states
+        activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI);
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update algebraics and rates at tEnd (includes Iion and I_stim)
         ::TrovatocomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
@@ -146,11 +217,45 @@ void Foam::Trovato::solveODE
         if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm] ;
+    }
 
-        //----can easily be expanded for all variables------//
-        // copyInternalToExternal(STATES_, states, NUM_STATES);
+    clearVmRate();
+}
+
+
+void Foam::Trovato::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[membrane_v] = Vm[integrationPtI]*1000.0;
+        A = 0.0;
+        R = 0.0;
+
+        ::TrovatocomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver()
+        ,
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Iion_cm];
     }
 }
 
@@ -161,13 +266,12 @@ void Foam::Trovato::derivatives
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated Trovato code
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
     ::TrovatocomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
@@ -176,6 +280,11 @@ void Foam::Trovato::derivatives
     ,
             stimulusProtocol()
         );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[membrane_v] = activeVmRate();
+    }
 }
 
 // ------------------------------------------------------------------------- //
@@ -205,7 +314,6 @@ void Foam::Trovato::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
     const auto& depMap = TrovatoDependencyMap();
 
     if (!depMap.found(currentName))
@@ -218,24 +326,19 @@ void Foam::Trovato::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage (dimensionless in BO2008)
         STATESI[0] = V;
 
         ::TrovatocomputeVariables

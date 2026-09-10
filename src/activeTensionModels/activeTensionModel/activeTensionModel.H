@@ -15,6 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::activeTensionModel
+
+Description
+    Virtual base class for active tension models that couple
+    electrophysiology to mechanical contraction.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    activeTensionModel.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef activeTensionModel_H
@@ -50,7 +62,7 @@ protected:
 
     //- Drive signal value for the current integration point.
     //  Set by the base calculateTension() loop before each solveAtPoint() call
-    //  so th at derivatives() can read it during ODE sub-steps.
+    //  so that derivatives() can read it during ODE sub-steps.
     scalar currentDriveSignal_;
 
     //- Time at start of current timestep (set by base before loop)
@@ -92,6 +104,31 @@ protected:
     {
         return nullptr;
     }
+
+public:
+
+    virtual bool supportsRestartState() const
+    {
+        return false;
+    }
+
+    virtual bool readRestartState(const fvMesh&)
+    {
+        return false;
+    }
+
+    virtual void writeRestartState(const fvMesh&) const
+    {}
+
+    virtual void refreshRestartState(const fvMesh&)
+    {}
+
+    virtual bool restartTension(scalarField&) const
+    {
+        return false;
+    }
+
+protected:
 
     virtual label ioNumConstants() const
     {
@@ -194,8 +231,9 @@ public:
     // Requirements declared by derived models
     struct Requirements
     {
-        bool needVm  = false;
-        bool needCai = false;
+        bool needVm      = false;
+        bool needCai     = false;
+        bool needsLambda = false;
     };
 
     // Derived models declare their required inputs
@@ -444,12 +482,57 @@ public:
     //  Active-tension feedback accepts Vm or Cai.
     virtual CouplingSignal driveSignal() const = 0;
 
+    //- Scale the canonical coupling signal for this model.
+    //  Models whose kernel converts the signal internally leave this at 1.0;
+    //  models whose kernel expects the converted unit override it here. Both
+    //  are valid - see the input-convention block at the top of each model's
+    //  maths header for which contract that model follows.
+    virtual scalar driveSignalScaleFactor() const
+    {
+        return 1.0;
+    }
+
+    scalar scaledDriveSignal(const scalar value) const
+    {
+        return value * driveSignalScaleFactor();
+    }
+
+    //- Multiplier converting OpenFOAM time (seconds) into this model's own
+    //  time unit, e.g. 1000 for a model formulated in ms.
+    //  Deliberately pure virtual, mirroring batchedIonicModel: a defaulted
+    //  1.0 cannot distinguish "this model runs on the OpenFOAM clock" from
+    //  "nobody thought about it", and that ambiguity has already cost us
+    //  once. Every model states its own scale, even when that scale is 1.0.
+    virtual scalar timeScaleFactor() const = 0;
+
+    //- Convert an OpenFOAM time or interval into model time.
+    scalar scaledTime(const scalar seconds) const
+    {
+        return seconds * timeScaleFactor();
+    }
+
+    //- Read the model-scaled coupling signal.
+    scalar coupledDriveSignal(const label integrationPtI) const
+    {
+        return scaledDriveSignal
+        (
+            provider().signal(integrationPtI, driveSignal())
+        );
+    }
+
+    //- Pre-condition the model to its resting steady state.
+    //  Called by the coupling harness after the signal provider is wired,
+    //  passing the ionic model's initial (resting) Ca_i in mM.
+    //  Base implementation is a no-op; derived classes that need Ca_i
+    //  preconditioning (e.g. LandNiederer) should override.
+    virtual void preconditionToRestingState(const scalarField& /*restingCai*/) {}
+
     //- Advance ODE and write active tension for a single integration point.
     //  Called by the base calculateTension() loop.
     //  Derived classes must NOT call provider() directly — driveVal is already resolved.
     //
     //  i        : integration-point (cell) index
-    //  driveVal : coupling signal value at this cell (Vm / Cai)
+    //  driveVal : coupling signal in this model's declared input units
     //  lambda   : stretch at this cell (ignored by models that don't use it)
     //  Ta       : output — active tension at this cell
     virtual void solveAtPoint

@@ -1,0 +1,35 @@
+# applications/utilities/listCellModelsVariables/utility.manifest.toml
+
+name = "listCellModelsVariables"
+description = "List ionic and active-tension model variables for a configured cardiacFoam case."
+
+purpose = """
+Reads constant/physicsProperties and constant/electroProperties to determine
+the active physics setup, then instantiates the configured ionicModel and
+optional activeTensionModel to list their state variables, algebraic variables,
+constants (with initial values), and rate variables. The same report is echoed to
+the terminal and written to postProcessing/listCellModelsVariables.txt for later
+reference when configuring outputVariables in the solver.
+"""
+
+inputs = [
+  "constant/physicsProperties",
+  "constant/electroProperties",
+]
+
+outputs = [
+  "postProcessing/listCellModelsVariables.txt",
+]
+
+requires_mesh = false
+
+example = "listCellModelsVariables -case ./myCardiacCase"
+
+category = "verification"
+
+[[produces]]
+artifact_id = "list_cell_models_variables_report"
+path_pattern = "postProcessing/listCellModelsVariables.txt"
+format = "openfoam_log"
+description = "Text report listing state, algebraic, constant, and rate variables for the configured ionic/active-tension models."
+produced_by = "listCellModelsVariables"

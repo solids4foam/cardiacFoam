@@ -1,0 +1,11 @@
+# tutorials/idealizedHeart/mesh/ is the single shared copy of the idealized
+# heart's anatomy - the polyMesh, the 0/ anatomy fields, and the Purkinje
+# graph - consumed by electroHeart, electroMechHeart, pathos/conductionBlock
+# and pathos/ionicPathology. The whole directory is the LFS unit so that a
+# new asset dropped in here is covered by construction rather than by
+# remembering to extend a per-subdirectory glob.
+#
+# NB: anything checked out from here arrives as a ~130-byte pointer file
+# unless LFS is fetched. CI must check out with `lfs: true`; a local clone
+# needs `git lfs install && git lfs pull`.
+tutorials/idealizedHeart/mesh/** filter=lfs diff=lfs merge=lfs -text

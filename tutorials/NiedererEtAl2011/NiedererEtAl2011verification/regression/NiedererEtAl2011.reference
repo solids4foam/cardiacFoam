@@ -1,0 +1,7 @@
+# file                                time    col  expected      tolerance
+Niedererpoints/0/activationTime      0.015    2    0.00119338    1e-4
+Niedererpoints/0/activationTime      0.015    4    -1            1e-4
+Niedererpoints/0/activationTime      0.015    6    0.0112286     1e-4
+Niedererpoints/0/activationTime      0.015    10   -1            1e-4
+Niedererpoints/0/activationTime      0.015    5    -1            1e-4
+Niedererpoints/0/activationTime      0.015    9    -1            1e-4

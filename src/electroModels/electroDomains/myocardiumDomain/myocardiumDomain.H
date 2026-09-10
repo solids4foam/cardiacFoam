@@ -15,10 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    myocardiumDomain
+
+Description
+    Concrete myocardium domain.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef MyocardiumDomain_H
-#define MyocardiumDomain_H
+#ifndef myocardiumDomain_H
+#define myocardiumDomain_H
 
 #include "myocardiumDomainInterface.H"
 #include "electromechanicalSignalProvider.H"
@@ -34,7 +42,7 @@ License
 namespace Foam
 {
 
-class MyocardiumDomain
+class myocardiumDomain
 :
     public myocardiumDomainInterface,
     public electroVolumeFieldDomain
@@ -45,10 +53,16 @@ protected:
     const fvMesh& supportMesh_;
     autoPtr<myocardiumSolver> diffusionSolverPtr_;
     volScalarField Vm_;
+    // Registered grad(Vm), looked up by name by "corrected" boundary conditions.
+    volVectorField gradVm_;
     volScalarField sourceField_;
+    volScalarField implicitSourceCoeff_;
     volScalarField Iion_;
+    volScalarField IionOld_;
+    volScalarField IionOldOld_;
+    volScalarField VmPrev_;
+    volScalarField VmRate_;
     volScalarField activationTime_;
-    boolList calculateActivationTime_;
     PtrList<volScalarField>& outFields_;
     wordList preProcessFieldNames_;
     PtrList<volScalarField> preProcessFields_;
@@ -61,7 +75,9 @@ protected:
     const dimensionedScalar Cm_;
     ExternalStimulusProtocol externalStimulus_;
     Switch useExplicitAlgorithm_;
-    Switch reportSetup_;
+    word timeCouplingScheme_;
+    scalar activationThreshold_;
+    bool setDeltaT_;
 
     void updateExternalStimulusCurrent
     (
@@ -70,18 +86,40 @@ protected:
         scalar t0
     ) const;
 
-    void updateActivationTime
-    (
-        volScalarField& activationTime,
-        boolList& calculateActivationTime,
-        const volScalarField& Vm
-    ) const;
+    void updateActivationTime();
+
+    //- Refresh gradVm_ before a diffusion solve.
+    void updateGradVm();
+
+    //- Advance the ionic ODE over [t0, t0+dt] and update Iion_.
+    void solveIonicCurrent(scalar t0, scalar dt);
+
+    //- Recompute Iion_ at the freshly solved Vm_ without advancing the state
+    void refreshIonicCurrent(scalar t);
 
     void validateNoIonicStimulusInMonodomain() const;
 
     void bindBidomainField(volScalarField& phiE);
 
     void initialiseProcessing();
+
+    //- Is the semi-implicit (SBDF2) coupling selected?
+    bool usesSbdf2Scheme() const
+    {
+        return timeCouplingScheme_ == "sbdf2";
+    }
+
+    //- Is there enough Iion history for the second-order source extrapolation?
+    bool usesSbdf2Coupling() const
+    {
+        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 3;
+    }
+
+    //- Is there enough Vm history to build the linear Vm extrapolant?
+    bool usesSbdf2VmRate() const
+    {
+        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 2;
+    }
 
 public:
 
@@ -90,7 +128,7 @@ public:
     //- Factory: derives the solver type from the Coeffs subdict name and
     //  delegates to the injecting constructor below.
     //  ("monodomainSolverCoeffs" → selects "monodomainSolver", etc.)
-    static autoPtr<MyocardiumDomain> New
+    static autoPtr<myocardiumDomain> New
     (
         const fvMesh& mesh,
         const dictionary& electroProperties,
@@ -107,7 +145,7 @@ public:
         const dictionary& electroProperties
     );
 
-    MyocardiumDomain
+    myocardiumDomain
     (
         const fvMesh& supportMesh,
         const dictionary& electroProperties,
@@ -120,7 +158,7 @@ public:
         autoPtr<fvMeshSubset> meshSubsetPtr
     );
 
-    virtual ~MyocardiumDomain() = default;
+    virtual ~myocardiumDomain() = default;
 
     virtual const fvMesh& mesh() const override
     {
@@ -167,6 +205,11 @@ public:
         return &Vm_;
     }
 
+    virtual const volScalarField* activationTimePtr() const override
+    {
+        return &activationTime_;
+    }
+
     virtual const volScalarField* phiEPtr() const override
     {
         return diffusionSolverPtr_->phiEPtr();
@@ -190,6 +233,21 @@ public:
     virtual volScalarField& sourceField() override
     {
         return sourceField_;
+    }
+
+    virtual ionicModel* ionicModelPtr() override
+    {
+        return &ionicModel_;
+    }
+
+    virtual volScalarField* implicitSourceCoeffPtr() override
+    {
+        return &implicitSourceCoeff_;
+    }
+
+    virtual const volScalarField* implicitSourceCoeffPtr() const override
+    {
+        return &implicitSourceCoeff_;
     }
 
     virtual const volScalarField& activationTime() const override
@@ -217,6 +275,16 @@ public:
         return Iion_;
     }
 
+    virtual const volScalarField* IionOldPtr() const override
+    {
+        return usesSbdf2Coupling() ? &IionOld_ : nullptr;
+    }
+
+    virtual const volScalarField* IionOldOldPtr() const override
+    {
+        return usesSbdf2Coupling() ? &IionOldOld_ : nullptr;
+    }
+
     virtual const dimensionedScalar& chi() const override
     {
         return chi_;
@@ -240,7 +308,40 @@ public:
 
     virtual void write() override;
 
+    virtual bool supportsSplitReactionDiffusion() const override
+    {
+        return true;
+    }
+
+    virtual void solveReactionStep(scalar t0, scalar dt) override;
+
+    virtual void solveDiffusionStep
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    ) override;
+
+    virtual void solveDiffusionStepOnce
+    (
+        scalar t0,
+        scalar dt,
+        pimpleControl* pimplePtr
+    ) override;
+
+    virtual void finalizeDiffusionStep() override;
+
+    virtual void bindExternalPhiE
+    (
+        const volScalarField& phiE,
+        const labelUList& heartCellMap
+    ) override;
+
+    virtual void unbindExternalPhiE() override;
+
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const override;
+
+    virtual bool applyModelTimeControls(Time& runTime) override;
 
     virtual bool shouldPostProcess() const override;
 

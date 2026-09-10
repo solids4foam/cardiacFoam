@@ -28,13 +28,84 @@ namespace Foam
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-defineTypeNameAndDebug(ECGDomain, 0);
+defineTypeNameAndDebug(ecgDomain, 0);
 
 
 // * * * * * * * * * * * * Private Helpers * * * * * * * * * * * * * * * * * //
 
 namespace
 {
+
+word selectedECGSolverType(const dictionary& dict)
+{
+    return dict.lookupOrDefault<word>("ecgSolver", "pseudoECG");
+}
+
+
+word outputFileName(const word& solverType)
+{
+    if (solverType == "eikonalECG")
+    {
+        return word("eikonalECG.dat");
+    }
+
+    return
+        solverType == "torsoECG"
+      ? word("torsoECG.dat")
+      : word("pseudoECG.dat");
+}
+
+
+dictionary withInheritedManufacturedBidomain
+(
+    const dictionary& dict,
+    const dictionary* inheritedManufacturedBidomainPtr,
+    const dictionary* inheritedPotentialDomainPtr
+)
+{
+    dictionary merged(dict);
+
+    if
+    (
+        inheritedManufacturedBidomainPtr
+     && !merged.found("manufacturedBidomain")
+    )
+    {
+        merged.add("manufacturedBidomain", *inheritedManufacturedBidomainPtr);
+    }
+
+    if (inheritedPotentialDomainPtr)
+    {
+        if
+        (
+            !merged.found("groundPatches")
+         && inheritedPotentialDomainPtr->found("groundPatches")
+        )
+        {
+            merged.add
+            (
+                "groundPatches",
+                inheritedPotentialDomainPtr->subDict("groundPatches")
+            );
+        }
+
+        if
+        (
+            !merged.found("surfaceCurrentPatches")
+         && inheritedPotentialDomainPtr->found("surfaceCurrentPatches")
+        )
+        {
+            merged.add
+            (
+                "surfaceCurrentPatches",
+                inheritedPotentialDomainPtr->subDict("surfaceCurrentPatches")
+            );
+        }
+    }
+
+    return merged;
+}
+
 
 void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
 {
@@ -50,17 +121,24 @@ void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
 
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void ECGDomain::readElectrodes(const dictionary& dict)
+void ecgDomain::readElectrodes(const dictionary& dict)
 {
     electrodeNames_.clear();
     electrodePositions_.clear();
 
-    if (!dict.found("electrodePositions"))
+    const dictionary* eDictPtr = dict.findDict("electrodePositions");
+
+    if (!eDictPtr)
+    {
+        eDictPtr = inheritedElectrodePositionsPtr_;
+    }
+
+    if (!eDictPtr)
     {
         return;
     }
 
-    const dictionary& eDict = dict.subDict("electrodePositions");
+    const dictionary& eDict = *eDictPtr;
     const wordList names(eDict.toc());
 
     electrodeNames_.setSize(names.size());
@@ -82,7 +160,7 @@ void ECGDomain::readElectrodes(const dictionary& dict)
 }
 
 
-const volScalarField& ECGDomain::Vm() const
+const volScalarField& ecgDomain::Vm() const
 {
     const volScalarField* VmPtr = stateProvider_.VmPtr();
 
@@ -98,7 +176,23 @@ const volScalarField& ECGDomain::Vm() const
 }
 
 
-const volTensorField& ECGDomain::conductivity() const
+const volScalarField& ecgDomain::activationTime() const
+{
+    const volScalarField* activationTimePtr = stateProvider_.activationTimePtr();
+
+    if (!activationTimePtr)
+    {
+        FatalErrorInFunction
+            << "ECG model requires an activation-time field, "
+            << "but the selected electroStateProvider does not expose one."
+            << exit(FatalError);
+    }
+
+    return *activationTimePtr;
+}
+
+
+const volTensorField& ecgDomain::conductivity() const
 {
     const volTensorField* conductivityPtr = stateProvider_.conductivityPtr();
 
@@ -114,43 +208,95 @@ const volTensorField& ECGDomain::conductivity() const
 }
 
 
+const volScalarField& ecgDomain::phiE() const
+{
+    const volScalarField* phiEPtr = stateProvider_.phiEPtr();
+
+    if (!phiEPtr)
+    {
+        FatalErrorInFunction
+            << "ECG model requires an extracellular potential field, "
+            << "but the selected electroStateProvider does not expose phiE."
+            << exit(FatalError);
+    }
+
+    return *phiEPtr;
+}
+
+
 // * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * * //
 
-ECGDomain::ECGDomain
+ecgDomain::ecgDomain
 (
     const electroStateProvider& stateProvider,
     const dictionary& dict,
-    const word& domainName
+    const word& domainName,
+    const dictionary* inheritedElectrodePositionsPtr,
+    const dictionary* inheritedManufacturedBidomainPtr,
+    const dictionary* inheritedPotentialDomainPtr
 )
 :
-    outputPtr_(),
-    solverPtr_(ECGSolver::New(dict)),
-    verificationModelPtr_(),
-    numericValues_(),
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
+    domainName_(domainName),
+    solverType_(selectedECGSolverType(dict)),
+    outputPtr_(),
+    solverPtr_(ecgSolver::New(dict)),
+    verificationModelPtr_(),
+    numericValues_(),
+    inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
+    inheritedManufacturedBidomainPtr_(inheritedManufacturedBidomainPtr),
+    inheritedPotentialDomainPtr_(inheritedPotentialDomainPtr),
     electrodeNames_(),
     electrodePositions_()
 {
-    Info<< domainName << " state source: electrophysiology provider"
+    Info<< domainName << " ECG solver: " << solverType_
+        << " on mesh '" << mesh_.name() << "'" << nl
+        << "  state source: electrophysiology provider"
         << nl << endl;
 
-    // Validate state access
-    (void)Vm();
-    (void)conductivity();
+    if (solverType_ == "pseudoECG")
+    {
+        (void)Vm();
+        (void)conductivity();
+    }
+    else if (solverType_ == "eikonalECG")
+    {
+        (void)activationTime();
+        (void)conductivity();
+    }
+    else if (solverType_ == "torsoECG")
+    {
+        (void)phiE();
+    }
 
     readElectrodes(dict);
 
-    // Open output file
-    const fileName outDir(mesh_.time().path() / "postProcessing");
-    outputPtr_ =
-        ecgModelIO::openTimeSeries(outDir, "pseudoECG.dat", electrodeNames_);
+    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
+    if (!solverPtr_->writesOwnTimeSeries())
+    {
+        outputPtr_ =
+            ecgModelIO::openTimeSeries
+            (
+                outDir,
+                outputFileName(solverType_),
+                electrodeNames_
+            );
+    }
 
-    // Optional verification model
+    const dictionary verificationDict =
+        withInheritedManufacturedBidomain
+        (
+            dict,
+            inheritedManufacturedBidomainPtr_,
+            inheritedPotentialDomainPtr_
+        );
+
     verificationModelPtr_ = ecgVerificationModel::New
     (
-        stateProvider,
-        dict,
+        *this,
+        domainName_,
+        verificationDict,
         electrodeNames_,
         electrodePositions_
     );
@@ -159,28 +305,25 @@ ECGDomain::ECGDomain
 }
 
 
-ECGDomain::~ECGDomain() = default;
+ecgDomain::~ecgDomain() = default;
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void ECGDomain::evolve
+void ecgDomain::evolve
 (
     scalar t0,
     scalar dt
 )
 {
-    (void)t0;
-    (void)dt;
+    solverPtr_->solve(*this, t0, dt, numericValues_);
 
-    solverPtr_->compute(*this, numericValues_);
-
-    if (verificationModelPtr_.valid())
+    if (!solverPtr_->writesOwnTimeSeries() && verificationModelPtr_.valid())
     {
         verificationModelPtr_->record(numericValues_);
     }
 
-    if (mesh_.time().outputTime())
+    if (!solverPtr_->writesOwnTimeSeries() && mesh_.time().outputTime())
     {
         ecgModelIO::writeRow
         (
@@ -190,7 +333,7 @@ void ECGDomain::evolve
 }
 
 
-bool ECGDomain::read(const dictionary& dict)
+bool ecgDomain::read(const dictionary& dict)
 {
     const wordList previousElectrodeNames(electrodeNames_);
 
@@ -218,7 +361,18 @@ bool ECGDomain::read(const dictionary& dict)
         }
     }
 
-    const word requestedType(ecgVerificationModel::selectedType(dict));
+    const dictionary verificationDict =
+        withInheritedManufacturedBidomain
+        (
+            dict,
+            inheritedManufacturedBidomainPtr_,
+            inheritedPotentialDomainPtr_
+        );
+
+    const word requestedType
+    (
+        ecgVerificationModel::selectedType(verificationDict)
+    );
 
     if (requestedType.empty())
     {
@@ -238,14 +392,15 @@ bool ECGDomain::read(const dictionary& dict)
             electrodePositions_
         );
 
-        return verificationModelPtr_->read(dict);
+        return verificationModelPtr_->read(verificationDict);
     }
 
     finalizeVerificationModel(verificationModelPtr_);
     verificationModelPtr_ = ecgVerificationModel::New
     (
-        stateProvider_,
-        dict,
+        *this,
+        domainName_,
+        verificationDict,
         electrodeNames_,
         electrodePositions_
     );
@@ -254,7 +409,20 @@ bool ECGDomain::read(const dictionary& dict)
 }
 
 
-void ECGDomain::end()
+void ecgDomain::recordVerification
+(
+    scalar sampleTime,
+    const scalarField& values
+)
+{
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->record(sampleTime, values);
+    }
+}
+
+
+void ecgDomain::end()
 {
     if (verificationModelPtr_.valid())
     {
