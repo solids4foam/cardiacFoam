@@ -78,8 +78,12 @@ findPseudoECGFile()
 
 findManufacturedPseudoECGSummary()
 {
-    findFirstMatch 'postProcessing/manufacturedEikonalECGSummary.dat' \
-        || findFirstMatch 'processor*/postProcessing/manufacturedEikonalECGSummary.dat'
+    # The verifier writes manufacturedEikonalECGSummary_<domainName>.dat, where
+    # domainName is the ecgDomains sub-dict name from electroProperties ('ECG'
+    # here). Match the suffix rather than hardcoding the domain name, so
+    # renaming the domain in the case does not silently break this lookup.
+    findFirstMatch 'postProcessing/manufacturedEikonalECGSummary_*.dat' \
+        || findFirstMatch 'processor*/postProcessing/manufacturedEikonalECGSummary_*.dat'
 }
 
 absDiff()
