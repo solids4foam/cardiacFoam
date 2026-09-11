@@ -1,5 +1,5 @@
 CARDIACFOAM_ROOT := ../../../..
-SOLIDS4FOAM_ROOT := $(CARDIACFOAM_ROOT)/modules/solids4foam
+SOLIDS4FOAM_ROOT := $(if $(SOLIDS4FOAM_INST_DIR),$(SOLIDS4FOAM_INST_DIR),$(CARDIACFOAM_ROOT)/modules/solids4foam)
 
 sinclude $(SOLIDS4FOAM_ROOT)/etc/wmake-options
 sinclude $(SOLIDS4FOAM_ROOT)/../etc/wmake-options

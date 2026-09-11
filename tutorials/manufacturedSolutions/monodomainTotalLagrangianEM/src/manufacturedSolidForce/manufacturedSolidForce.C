@@ -106,7 +106,7 @@ bool manufacturedSolidForce::read(const dictionary& dict)
     // Manufactured displacement amplitude. Read from the same entry the
     // displacement BC uses so the two impose the same manufactured solution.
     amplitude_ =
-        emCoeffs.subDict("electromechanicalVerificationModel")
+        emCoeffs.subDict("verificationModel")
        .get<vector>("amplitude");
 
     // Passive material parameters are deduced from the solid-region

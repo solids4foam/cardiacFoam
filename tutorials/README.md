@@ -26,7 +26,7 @@ not merely the presence of an `Allrun` script.
 | `manufacturedSolutions/bathBidomain` | Verify bidomain-with-bath fields and ECG ownership | `bathBidomainFDAManufactured` and optional `torsoECG` | lightweight or full | `Alltest-regression` | global bath fields and manufactured error/ECG summaries |
 | `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
 | `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | not covered | coupled convergence summaries under `outputs/` |
-| `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | not covered | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
+| `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `Alltest-regression` (expected skip in lightweight mode) | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
 
 ## Common script pattern
 
@@ -49,5 +49,11 @@ CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression
 CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam ./tutorials/Alltest-regression
 ```
 
-The electromechanical Niederer regression is the only expected skip in
-lightweight mode. Any other exit-77 skip fails the aggregate run.
+Two cases need cardiacFoam built with solids4foam: the electromechanical
+Niederer slab and the electromechanics manufactured solution
+(`manufacturedSolutions/monodomainTotalLagrangianEM`). In lightweight mode
+their regression scripts exit 77 and the runner reports an expected skip;
+any other exit-77 skip fails the aggregate run. In `with-solids4foam` mode no
+skip is expected, so a missing solids4foam build fails these two cases instead
+of skipping them. CI runs lightweight mode only, so these two cases are
+exercised only by a `with-solids4foam` run.

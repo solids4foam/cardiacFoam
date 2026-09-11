@@ -38,11 +38,9 @@ Author
 namespace Foam
 {
 
-//- Single source of truth for the manufactured displacement amplitude.
-//  Both the boundary condition and the manufactured body force read it from
-//  here so they can never disagree about which manufactured solution they are
-//  imposing. The amplitude lives in the (top-level) electroMechanicalProperties
-//  electromechanicalVerificationModel sub-dictionary.
+//- Manufactured displacement amplitude, read from the verificationModel
+//  sub-dictionary of the electromechanical model's coefficients in
+//  electroMechanicalProperties: the same entry that selects the verifier.
 inline vector manufacturedElectromechanicsAmplitude(const objectRegistry& db)
 {
     IOdictionary emProps
@@ -61,7 +59,7 @@ inline vector manufacturedElectromechanicsAmplitude(const objectRegistry& db)
     const word emModel(emProps.get<word>("electroMechanicalModel"));
     const dictionary& emCoeffs = emProps.subDict(emModel + "Coeffs");
 
-    return emCoeffs.subDict("electromechanicalVerificationModel")
+    return emCoeffs.subDict("verificationModel")
        .get<vector>("amplitude");
 }
 

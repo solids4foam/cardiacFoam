@@ -49,7 +49,7 @@ static vector readManufacturedAmplitude(const objectRegistry& db)
     const word emModel(emProps.get<word>("electroMechanicalModel"));
     const dictionary& emCoeffs = emProps.subDict(emModel + "Coeffs");
 
-    return emCoeffs.subDict("electromechanicalVerificationModel")
+    return emCoeffs.subDict("verificationModel")
        .get<vector>("amplitude");
 }
 
