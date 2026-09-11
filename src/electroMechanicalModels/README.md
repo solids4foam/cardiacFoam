@@ -1,61 +1,23 @@
 # electroMechanicalModels
 
-This library builds `libelectroMechanicalModels`, the electro-mechanics coupling
-layer for full solids4foam builds. It is **not compiled** in lightweight
-electro-only builds (see `etc/resolveSolids4Foam.sh`).
+The electromechanics part of the core: it couples the electrophysiology to a solid, using solids4foam as the solid backend. Built only in full mode.
 
-## Current contents
+## What's available
+
+- `sequentialElectroMechanical`: each timestep it advances the electrophysiology, computes the active tension `Ta` with the chosen active-tension model, and advances the solid, in one pass with no outer correctors. `electroMechanicalModel` is its base class; it follows solids4foam's `fluidSolidInterface` pattern, which is also the intended route to fluid–structure interaction.
+
+The solid needs the fibre fields `f0` and `f0f`. [setFibreField](../../applications/utilities/setFibreField/README.md) writes both; if `f0` comes from elsewhere, [interpolateFibreField](../../applications/utilities/interpolateFibreField/README.md) derives `f0f` from it.
+
+## Folders
 
 ```text
 src/electroMechanicalModels/
-├── electroMechanicalModel/       # Abstract base class and runtime selection
-├── sequentialElectroMechanical/  # Concrete sequential (weakly coupled) scheme
-└── Make/
+├── electroMechanicalModel/       # base class
+└── sequentialElectroMechanical/  # the sequential, weakly coupled scheme
 ```
 
-## Core class: `Foam::electroMechanicalModel`
+## What this does not own
 
-Defined in `electroMechanicalModel/electroMechanicalModel.H`.
-
-- Inherits `physicsModel` (the top-level cardiacFoam/solids4foam entry point).
-- Owns an `electroModel` and a `solidModel` in separate mesh regions.
-- Declares the runtime selection table for concrete coupling schemes.
-- Follows the `fluidSolidInterface` pattern from solids4foam.
-
-Key virtual interface:
-
-- `evolve()` — advance one time step (pure virtual, implemented by derived classes)
-- `writeFields(const Time&)` — write fields for both sub-models
-- `setDeltaT(Time&)` — propagate time-step updates
-- `end()` — cleanup
-
-## Available coupling scheme
-
-- **`sequentialElectroMechanical`** (registered as `sequentialElectroMechanical`)
-  - Weakly coupled: no outer correctors per time step.
-  - Sequence: electro `evolve()` → compute active tension from ionic Cai signal
-    → inject `Ta` field into solid mesh → solid `evolve()`.
-  - `Ta` is computed as a linear function of Cai above a threshold:
-    `Ta = kTa * max(Cai - CaiThreshold, 0)`.
-  - `kTa` and `CaiThreshold` are read from the solver dictionary.
-
-## Build mode
-
-This library is compiled only when `etc/resolveSolids4Foam.sh` finds a valid
-solids4foam installation. In electro-only builds, `libelectroMechanicalModels`
-is not built and `electroMechanicalModel` is not available as a `physicsModel`
-type.
-
-## Selected by
-
-```text
-physicsProperties:
-    type    electroMechanicalModel;
-```
-
-and then:
-
-```text
-electroMechanicalProperties:
-    electroMechanicalModel  sequentialElectroMechanical;
-```
+- The active-tension models: [activeTensionModels](../activeTensionModels/README.md).
+- The electrophysiology: [electroModels](../electroModels/README.md).
+- The solid solver and its constitutive law (`electroMechanicalLaw`): solids4foam.

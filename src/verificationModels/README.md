@@ -1,77 +1,24 @@
 # verificationModels
 
-This folder builds `libverificationModels`, the verification library for
-electrophysiology and ECG workflows.
+Built-in verification: verifiers that compare a run with a manufactured solution and report the error. They are runtime-selected like every other model, so verification runs in the normal solver.
 
-## Current contents
+## What's available
 
-```text
-src/verificationModels/
-├── monodomainVerification/   # Monodomain manufactured/reference verifiers
-├── bidomainVerification/     # Bidomain manufactured/reference verifiers
-├── bathBidomainVerification/ # Bath-bidomain manufactured/reference verifiers
-├── eikonalVerification/      # Eikonal manufactured/reference verifiers
-├── ecgVerification/          # ECG verifier family (concrete verifiers only)
-├── electromechanicsVerification/ # Electromechanics verifiers
-├── coupledVerification/      # Coupled domain verifiers
-├── Make/
-└── README.md
-```
+| Folder | Verifiers |
+|---|---|
+| `monodomainVerification/` | `manufacturedFDAMonodomainVerifier`, `manufacturedGraphVerifier`, `manufacturedAnisotropicMonodomainVerifier` |
+| `bidomainVerification/` | `manufacturedFDABidomainVerifier` |
+| `bathBidomainVerification/` | `manufacturedFDABathBidomainVerifier` |
+| `eikonalVerification/` | `manufacturedEikonalVerifier` |
+| `ecgVerification/` | `manufacturedPseudoECGVerifier`, `manufacturedBathBidomainECGVerifier`, `manufacturedEikonalECGVerifier` |
+| `coupledVerification/` | `coupled1D3DMonodomainVerifier` |
+| `electromechanicsVerification/` | `manufacturedElectromechanicsVerifier` |
 
-## Purpose
+Cases that run them are in [tutorials/manufacturedSolutions](../../tutorials/manufacturedSolutions/README.md).
 
-The code in this folder provides runtime-selected verification models and
-reference helpers used to validate:
+**Deep dive:** [VERIFICATION_MODELS_ARCHITECTURE.md](VERIFICATION_MODELS_ARCHITECTURE.md) explains how this library is built inside.
 
-- monodomain workflows
-- bidomain workflows
-- ECG workflows
+## What this does not own
 
-## Main abstractions
-
-- `electroVerificationModel`
-  Abstract base for myocardium-side verification hooks. Compiled in
-  `electroModels/core/verificationModels/`.
-- `ecgVerificationModel`
-  Abstract base for ECG-side verification hooks. Compiled in
-  `electroModels/core/verificationModels/`.
-- `eikonalVerificationModel`
-  Abstract base for eikonal activation-time verification hooks. Compiled in
-  `electroModels/core/verificationModels/`.
-- `couplingVerificationModel`
-  Abstract base for coupled domain verification hooks. Compiled in
-  `electroModels/core/verificationModels/`.
-- `graphVerificationModel`
-  Abstract base for graph verification hooks. Compiled in
-  `electroModels/core/verificationModels/`.
-
-## Concrete families
-
-- `monodomainVerification/`
-  Manufactured monodomain references and verifiers
-- `bidomainVerification/`
-  Manufactured bidomain references and verifiers
-- `eikonalVerification/`
-  Manufactured eikonal references and verifiers
-- `ecgVerification/`
-  ECG verification helpers such as pseudo-ECG manufactured verification
-- `coupledVerification/`
-  Coupled domain manufactured references and verifiers
-
-Registered verifier types include:
-
-- `manufacturedFDAMonodomainVerifier`
-- `manufacturedAnisotropicMonodomainVerifier`
-- `manufacturedFDABidomainVerifier`
-- `manufacturedFDABathBidomainVerifier`
-- `manufacturedEikonalVerifier`
-- `manufacturedPseudoECGVerifier`
-- `bathECGManufacturedVerifier`
-- `manufacturedEikonalECGVerifier`
-- `manufacturedGraphVerifier`
-- `coupled1D3DMonodomainVerifier`
-
-## What this folder does not own
-
-This folder does not own the myocardium or ECG solvers themselves. It provides
-verification-side models that are called from those workflows.
+- The abstract verifier bases. They live in `electroModels/core/verificationModels`, which is why this library builds after `electroModels`.
+- The manufactured cell models: [ionicModels](../ionicModels/README.md).

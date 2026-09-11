@@ -1,80 +1,20 @@
 # cardiacFoam
 
-`cardiacFoam` is an OpenFOAM toolbox for cardiac electrophysiology and electromechanics. It implements PDE-ODE solvers for tissue-level propagation, single-cell ODE integration, eikonal activation models, ECG computation, and operator-split electromechanical coupling.
+[![Build and test](https://github.com/solids4foam/cardiacFoam/actions/workflows/buildAndTest.yml/badge.svg)](https://github.com/solids4foam/cardiacFoam/actions/workflows/buildAndTest.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-It runs in two modes:
+cardiacFoam is an OpenFOAM toolbox for cardiac electrophysiology and electromechanics. It covers the range from a single cell to the ventricles: action potentials from 12 published cell models, activation across tissue (monodomain, bidomain or eikonal), Purkinje networks, ECGs, and, with solids4foam, active tension and contraction. Every model is chosen by name in the case's dictionaries.
 
-- **Full mode** — with a `solids4foam` installation (`modules/solids4foam`). Enables electromechanical coupling and solid mechanics workflows.
-- **Electro-only mode** — with the lightweight `modules/physicsModel` shipped in this repository. No solid mechanics dependency required.
+It combines two parts: the electrophysiology libraries in this repository and [solids4foam](https://github.com/solids4foam/solids4foam) for the solid mechanics. Electrophysiology runs on its own; electromechanics is electrophysiology plus solids4foam.
 
-## Repository layout
+## Get it
 
-```text
-cardiacFoam/
-├── src/
-│   ├── electroModels/          # Electro solvers (monodomain, bidomain, eikonal, ECG, conduction system)
-│   ├── ionicModels/            # Ionic ODE models (serial and GPU-batched variants)
-│   ├── activeTensionModels/    # Active tension models for electromechanical coupling
-│   ├── electroMechanicalModels/# Operator-split electromechanical coupling (solids4foam builds only)
-│   ├── couplingModels/         # Signal interfaces between electro and solid solvers
-│   ├── verificationModels/     # Manufactured-solution verification utilities
-│   └── genericWriter/          # Shared I/O and stimulus parsing
-├── applications/
-│   ├── solvers/cardiacFoam/    # Main solver executable
-│   ├── utilities/              # Pre/post-processing utilities (mesh, fibres, ECG, Purkinje, ...)
-│   └── scripts/
-│       └── cellML2foam/        # CellML → ionic model code generation pipeline
-├── modules/
-│   ├── physicsModel/           # Lightweight physicsModel fallback (electro-only builds)
-│   └── solids4foam/            # solids4foam submodule (full builds)
-├── tutorials/                  # Reference and research cases
-└── etc/resolveSolids4Foam.sh   # Build-mode selection helper
+```bash
+git clone https://github.com/solids4foam/cardiacFoam.git
+cd cardiacFoam
 ```
 
-Each subdirectory carries its own `README.md` (and `ARCHITECTURE.md` where relevant) with component-level detail.
-
-## Runtime architecture
-
-For a spatial electrophysiology case, the selection and ownership flow is:
-
-```text
-cardiacFoam
-  -> physicsModel::New()                 constant/physicsProperties
-  -> electroModel::New()                 constant/electroProperties
-  -> electrophysiologyModel              multi-domain orchestration
-  -> myocardiumDomain
-  -> myocardiumSolver                    PDE kernel
-```
-
-`physicsModel` selects `electroModel` through the `type` entry.
-`electroModel` then reads the public `myocardiumSolver` key. The spatial runtime
-names `monodomainSolver`, `bidomainSolver`, and `eikonalSolver` all enter the
-`electrophysiologyModel` assembly path; `singleCellSolver` is a direct
-`electroModel` implementation and bypasses the multi-domain builder. Domain
-objects own fields and state, solver objects own numerical kernels, and `core/`
-owns orchestration. See [`src/electroModels/ARCHITECTURE.md`](src/electroModels/ARCHITECTURE.md).
-
-## What the code contains
-
-**Electro solvers** (`src/electroModels/`) — dictionary-driven runtime selection across four domains: myocardium PDE-ODE (monodomain, bidomain), eikonal activation, ECG forward problem, and 1D conduction-system models (Purkinje, restitution-aware eikonal). See [`src/electroModels/README.md`](src/electroModels/README.md).
-
-**Ionic models** (`src/ionicModels/`) — a library of human and animal cardiac cell models. Every model ships a serial variant and a GPU-batched variant for tissue-scale simulations. Manufactured-solution verification models are included for FDA-style solver validation. See [`src/ionicModels/README.md`](src/ionicModels/README.md).
-
-**Active tension models** (`src/activeTensionModels/`) — active stress generation models (Nash–Panfilov, Land–Niederer) with serial and GPU-batched variants, and a manufactured-solution verification layer for coupled electromechanics. See [`src/activeTensionModels/README.md`](src/activeTensionModels/README.md).
-
-**Electromechanical coupling** (`src/electroMechanicalModels/`, `src/couplingModels/`) — sequential operator-split coupling of the electro and solid solvers. Requires a solids4foam build. See [`src/electroMechanicalModels/README.md`](src/electroMechanicalModels/README.md).
-
-**Utilities** (`applications/utilities/`) — mesh and fibre setup, Purkinje graph runner, ECG recomputation, ionic heterogeneity probing, current sweep, VTK conversion, and more. Each utility has its own README.
-
-**Tutorials** (`tutorials/`) — organised into three groups:
-
-| Group | Contents |
-|---|---|
-| `electrophysiologyProtocols/` | Single-cell ODE runs, restitution curves, heterogeneity probes, rotor dynamics |
-| `manufacturedSolutions/` | MMS verification cases for all solver variants incl. electromechanics |
-| `NiedererEtAl2011/` | Benchmark cases: tissue propagation, Purkinje, electromechanics |
-
-See [`tutorials/README.md`](tutorials/README.md).
+You need OpenFOAM **v2312, v2406, v2412, v2506 or v2512**, sourced in your shell. Electromechanics also needs solids4foam; see [Build modes](#build-modes).
 
 ## Build
 
@@ -82,22 +22,58 @@ See [`tutorials/README.md`](tutorials/README.md).
 ./Allwmake
 ```
 
-Requires an OpenFOAM environment. For GPU-batched ionic models, see [`src/ionicModels/IONIC_MODEL_ARCHITECTURE.md`](src/ionicModels/IONIC_MODEL_ARCHITECTURE.md). For build-mode selection (full vs electro-only), see [`etc/resolveSolids4Foam.sh`](etc/resolveSolids4Foam.sh).
-
-Electromechanical tutorials require a full solids4foam build and will not run in electro-only mode.
-
-The repository owns the code under `src/`, `applications/`, the lightweight
-`modules/physicsModel` fallback, and the CellML generator/templates. Generated
-ionic-model equation headers should be changed through that generation path.
-`modules/solids4foam` is an external submodule and is not maintained as
-cardiacFoam source.
-
-## Regression
+## Run a first case
 
 ```bash
-tutorials/Alltest-regression
+cd tutorials/electrophysiologyProtocols/singleCell
+./Allrun
 ```
 
-## Notes
+This runs a single TWorld endocardial cell, paced twice at 1000 ms, for 2 s of simulated time. The voltage trace is written to `postProcessing/TWorld_endocardialCells_S1_1000.txt`, and `./Allclean` resets the case. All the other cases are listed in [tutorials](tutorials/README.md).
 
-This is active research software. APIs, dictionaries, and model interfaces evolve as the toolbox is extended.
+## Simulate the ventricles
+
+`tutorials/idealizedHeart/electroHeart` simulates electrophysiology on an idealized biventricular geometry (123,617 cells), with a Purkinje network and a pseudo-ECG. Its mesh is stored with Git LFS, and the case reads `../mesh`, so copy the whole `idealizedHeart` folder and set the run length on your copy:
+
+```bash
+git lfs install && git lfs pull
+mkdir -p "$FOAM_RUN" && cp -r tutorials/idealizedHeart "$FOAM_RUN"/
+cd "$FOAM_RUN"/idealizedHeart/electroHeart
+foamDictionary system/controlDict.monodomain -entry endTime -set 0.6
+./Allrun parallel
+```
+
+The tutorial stops at 0.04 s so that its regression test stays short; the `foamDictionary` line sets a longer run, 0.6 s here. At a `deltaT` of 2e-5 that is 30,000 steps, so `./Allrun parallel` splits it over 6 processors, which takes roughly 10 minutes on a recent laptop. Leave out `parallel` to run in serial.
+
+## Where to go next
+
+- [tutorials/](tutorials/README.md): runnable cases, verification studies and benchmarks.
+- [src/](src/README.md): the libraries and what each one is for.
+- [applications/utilities/](applications/utilities/README.md): tools for preparing and post-processing cases.
+- [src/verificationModels/](src/verificationModels/README.md) and [tutorials/manufacturedSolutions/](tutorials/manufacturedSolutions/README.md): how the numerics are verified.
+
+## Build modes
+
+`./Allwmake` chooses the mode through `etc/resolveSolids4Foam.sh`:
+
+- **Full.** Used when `SOLIDS4FOAM_INST_DIR` points at a built solids4foam or, if that variable is unset, when a built copy is found in `modules/solids4foam`, `~/solids4foam` or `$WM_PROJECT_USER_DIR/solids4foam`. Everything builds, including electromechanics.
+- **Lightweight.** Used when no built solids4foam is found, or when you set `FORCE_LIGHTWEIGHT_PHYSICSMODEL=1`. Everything except electromechanics builds.
+
+To use the bundled solids4foam:
+
+```bash
+git submodule update --init --recursive
+(cd modules/solids4foam && ./Allwmake)
+```
+
+## Testing
+
+```bash
+CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression
+```
+
+For a full build, use `CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam`. The mode must match how you built.
+
+## Licence and citation
+
+cardiacFoam is active research software, released under the [GNU GPL v3](LICENSE). If you use it in published work, please cite: **cardiacFOAM**.

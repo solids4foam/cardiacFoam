@@ -16,8 +16,8 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Self-contained ODE equations for the Gaur 2021 sinoatrial
-    node model. Converted from CellML.
+    Self-contained ODE equations for the Gaur 2021 pig ventricular
+    myocyte model. Converted from CellML.
 
 Author
     Simao Nieto de Castro, UCD.

@@ -1,45 +1,20 @@
 # couplingModels
 
-This folder contains shared coupling-side interfaces used across libraries.
-It does not contain the staged Purkinje, ECG, or bath electro-domain couplers.
+The link between the two kinds of cell-level model. It holds headers only; there is no compiled library.
 
-## Current contents
+## What's available
+
+- `electromechanicalSignalProvider.H`: the `ElectromechanicalSignalProvider` contract. `ionicModel` implements it and `activeTensionModel` reads from it, so a tension model gets `Vm` or `Cai` without depending on a particular cell model.
+- `restartStateIO.H`: saves and restores internal model state as binary files in the time directory, for restarts.
+
+## Folders
 
 ```text
 src/couplingModels/
 ├── electromechanicalSignalProvider.H
-├── lnInclude/
-└── README.md
-
+└── restartStateIO.H
 ```
 
-## Purpose
+## What this does not own
 
-The main role of this folder is to define the
-`ElectromechanicalSignalProvider` contract used by:
-
-- `ionicModel`
-
-- `activeTensionModel`
-
-That interface lets one component query scalar signals such as:
-
-- `Vm`
-
-- `Cai`
-
-without depending on a concrete ionic-model implementation.
-
-## What this folder does not own
-
-This folder does not own:
-
-- Purkinje-to-myocardium electro couplers
-
-- ECG or bath couplers
-
-- staged domain-coupling runtime selection
-
-Those pieces live in:
-
-- [`../electroModels/electroCouplers/README.md`](../electroModels/electroCouplers/README.md)
+- The couplers between electrical domains (Purkinje, ECG, bath): [electroModels/electroCouplers](../electroModels/electroCouplers/README.md).
