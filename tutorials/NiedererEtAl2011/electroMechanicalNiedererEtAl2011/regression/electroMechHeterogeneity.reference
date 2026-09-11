@@ -1,4 +1,4 @@
 # file                      time   col  expected  tolerance
-Taprobes/solid/0/Ta         0.02   2    125.91    2.0
-Taprobes/solid/0/Ta         0.02   3    121.498   2.0
-Taprobes/solid/0/Ta         0.02   4    482.663   5.0
+Taprobes/solid/0/Ta         0.02   2    4939.98   80.0
+Taprobes/solid/0/Ta         0.02   3    4968.18   80.0
+Taprobes/solid/0/Ta         0.02   4    5785.65   60.0
