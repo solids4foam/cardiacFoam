@@ -178,6 +178,10 @@ tutorials/idealizedHeart/electroMechHeart/0/solid/tm
 # fibres f0/f0f (MUST_READ by electroMechanicalLaw) and D carrying the
 # manufactured displacement condition. Small, hand-authored, not anatomy data.
 !tutorials/manufacturedSolutions/monodomainTotalLagrangianEM/0/solid/
+# ...and the electromechanical Niederer slab's 0/solid fields (D, f0, f0f):
+# the same kind of small hand-authored case data. They were committed before
+# the rule above applied; the exception keeps a re-created file visible.
+!tutorials/NiedererEtAl2011/electroMechanicalNiedererEtAl2011/0/solid/
 
 # idealizedHeart/mesh/constant/polyMesh: the one canonical, curated
 # mesh shared by electroHeart and electroMechHeart (see
