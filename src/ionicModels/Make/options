@@ -6,7 +6,6 @@ EXE_INC = \
     -I$(PWD)/../couplingModels \
     -I$(PWD)/../couplingModels/lnInclude \
     -I$(PWD)/../genericWriter/lnInclude \
-    -I$(PWD)/../verificationModels \
     $(if $(CARDIAC_ENABLE_CUDA),-DHAS_CUDA -I$(CUDA_HOME)/include)
 
 
