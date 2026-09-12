@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the Peris-Yague 2022
+    cardiac cell model. Implemented directly from paper equations.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "PerisYague_2022Names.H"
@@ -22,7 +28,7 @@ License
 #include "dictionary.H"
 #include <cmath>
 
-const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
+static const char* PerisYagueSTATES_NAMES[NUM_STATES] = {
     "membrane_V",
     "sodium_Nai",
     "potassium_Ki",
@@ -47,7 +53,7 @@ const char* PerisYague_2022STATES_NAMES[NUM_STATES] = {
     "ryr_w"
 };
 
-const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* PerisYagueALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_ICaL",
     "AV_IK1",
     "AV_IKr",
@@ -95,12 +101,14 @@ const char* PerisYague_2022ALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
 
     "AV_ryr_w_inf",
     "AV_ryr_w_tau",
+    "AV_ical_fCa_inf",
+    "AV_ryr_u_inf",
 
     "Iion_cm",
     "Istim"
 };
 
-const char* PerisYague_2022CONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* PerisYagueCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_CMDN_max",
     "AC_CSQN_max",
     "AC_Ca_up_max",
@@ -156,7 +164,7 @@ const char* PerisYague_2022CONSTANTS_NAMES[NUM_CONSTANTS] = {
 };
 
 static inline const Foam::HashTable<Foam::wordList>&
-PerisYague_2022DependencyMap()
+PerisYagueDependencyMap()
 {
     static const Foam::HashTable<Foam::wordList> dep
     (
@@ -198,7 +206,7 @@ PerisYague_2022DependencyMap()
     return dep;
 }
 
-inline Foam::scalar PerisYague_2022computeIstim
+inline Foam::scalar PerisYaguecomputeIstim
 (
     Foam::scalar t,
     const Foam::StimulusProtocol& stimulus
@@ -208,9 +216,8 @@ inline Foam::scalar PerisYague_2022computeIstim
 }
 
 void
-PerisYague_2022initConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
+PerisYagueinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus)
 {
-    // Table S1
     CONSTANTS[AC_R] = 8.3143;
     CONSTANTS[AC_T] = 310.0;
     CONSTANTS[AC_F] = 96.4867;
@@ -268,7 +275,6 @@ PerisYague_2022initConsts(double* CONSTANTS, double* RATES, double *STATES, int 
     CONSTANTS[AC_sigma] = (exp(CONSTANTS[AC_Nao] / 67.3) - 1.0) / 7.0;
     CONSTANTS[AC_ECaL] = 65.0;
 
-    // Table S2 Initial Values
     STATES[membrane_V] = -76.0;
     STATES[sodium_Nai] = 11.17;
     STATES[potassium_Ki] = 139.0;
@@ -288,13 +294,13 @@ PerisYague_2022initConsts(double* CONSTANTS, double* RATES, double *STATES, int 
     STATES[ical_f] = 0.999;
     STATES[ical_fCa] = 0.775;
     STATES[iclca_qCa] = 0.0;
-    STATES[ryr_u] = 0.0235;
+    STATES[ryr_u] = 2.35e-4;   // quiescent: u ≈ 0 at rest; 0.0235 was 100× too large,
     STATES[ryr_v] = 1.0;
     STATES[ryr_w] = 0.999;
 }
 
 void
-PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
+PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus)
 {
     double V = STATES[membrane_V];
     double Cai = STATES[calcium_Cai];
@@ -304,13 +310,11 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     double CaRel = STATES[calcium_CaRel];
     double CaUp = STATES[calcium_CaUp];
 
-    // Nernst Potentials
     double ENa = CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Nao] / Nai);
     double EK = CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Ko] / Ki);
     double ECa = 0.5 * CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Cao] / Cai);
     double ECl = -CONSTANTS[AC_RTF] * log(CONSTANTS[AC_Clo] / Cli);
 
-    // INa
     double am = (fabs(V + 47.13) < 1e-6) ? 3.2 : 0.32 * (V + 47.13) / (1.0 - exp(-0.1 * (V + 47.13)));
     double bm = 0.08 * exp(-V / 11.0);
     ALGEBRAIC[AV_ina_m_inf] = am / (am + bm);
@@ -330,10 +334,8 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[ina_j] = (ALGEBRAIC[AV_ina_j_inf] - STATES[ina_j]) / ALGEBRAIC[AV_ina_j_tau];
     ALGEBRAIC[AV_INa] = CONSTANTS[AC_gNa] * pow(STATES[ina_m], 3.0) * STATES[ina_h] * STATES[ina_j] * (V - ENa);
 
-    // IK1
     ALGEBRAIC[AV_IK1] = CONSTANTS[AC_gK1] * (V - EK - 5.0) / (1.0 + exp(0.063 * (V + 70.0)));
 
-    // IKr
     double axr = 0.0003 * (V + 14.1) / (1.0 - exp(-(V + 14.1) / 5.0));
     double bxr = 7.3898e-5 * (V - 3.3328) / (exp((V - 3.3328) / 5.1237) - 1.0);
     ALGEBRAIC[AV_ikr_xr_inf] = axr / (axr + bxr);
@@ -341,7 +343,6 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[ikr_xr] = (ALGEBRAIC[AV_ikr_xr_inf] - STATES[ikr_xr]) / ALGEBRAIC[AV_ikr_xr_tau];
     ALGEBRAIC[AV_IKr] = CONSTANTS[AC_gKr] * STATES[ikr_xr] * (V - EK) / (1.0 + exp((V + 15.0) / 22.4));
 
-    // IKs
     double axs = 4e-5 * (V - 18.80816) / (1.0 - exp(-(V - 18.80816) / 17.0));
     double bxs = 3.5e-5 * (V - 18.80816) / (exp((V - 18.80816) / 9.0) - 1.0);
     ALGEBRAIC[AV_iks_xs_inf] = 1.0 / sqrt(1.0 + exp(-(V - 19.9) / 12.7));
@@ -349,7 +350,6 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[iks_xs] = (ALGEBRAIC[AV_iks_xs_inf] - STATES[iks_xs]) / ALGEBRAIC[AV_iks_xs_tau];
     ALGEBRAIC[AV_IKs] = CONSTANTS[AC_gKs] * pow(STATES[iks_xs], 2.0) * (V - EK);
 
-    // IKur
     ALGEBRAIC[AV_gKur] = CONSTANTS[AC_gKur_amp] * (0.005 + 0.05 / (1.0 + exp(-(V - 15.0) / 13.0)));
     ALGEBRAIC[AV_ikur_ua_inf] = 1.0 / (1.0 + exp(-(V + 30.3) / 9.6));
     double aua = 0.65 / (exp(-(V + 10.0) / 8.5) + exp(-(V - 30.0) / 59.0));
@@ -366,7 +366,6 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[ikur_uis] = (ALGEBRAIC[AV_ikur_uis_inf] - STATES[ikur_uis]) / ALGEBRAIC[AV_ikur_uis_tau];
     ALGEBRAIC[AV_IKur] = ALGEBRAIC[AV_gKur] * pow(STATES[ikur_ua], 3.0) * (0.25 * STATES[ikur_uif] + 0.75 * STATES[ikur_uis]) * (V - EK);
 
-    // ICaL
     ALGEBRAIC[AV_ical_d_inf] = 1.0 / (1.0 + exp(-(V + 5.0) / 8.0));
     ALGEBRAIC[AV_ical_d_tau] = (fabs(V + 5.0) < 1e-6) ? 1.0 : (1.0 - exp(-(V + 5.0) / 6.24)) / (0.035 * (V + 5.0) * (1.0 + exp(-(V + 5.0) / 6.24)));
     RATES[ical_d] = (ALGEBRAIC[AV_ical_d_inf] - STATES[ical_d]) / ALGEBRAIC[AV_ical_d_tau];
@@ -376,27 +375,23 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[ical_f] = (ALGEBRAIC[AV_ical_f_inf] - STATES[ical_f]) / ALGEBRAIC[AV_ical_f_tau];
 
     double fCa_inf = 1.0 / (1.0 + Cai / 0.00035);
+    ALGEBRAIC[AV_ical_fCa_inf] = fCa_inf;
     RATES[ical_fCa] = (fCa_inf - STATES[ical_fCa]) / CONSTANTS[AC_ical_fCa_tau];
     ALGEBRAIC[AV_ICaL] = CONSTANTS[AC_gCaL] * STATES[ical_d] * STATES[ical_f] * STATES[ical_fCa] * (V - 65.0);
 
-    // INaK
     ALGEBRAIC[AV_fNaK] = 1.0 / (1.0 + 0.1245 * exp(-0.1 * V * CONSTANTS[AC_FRT]) + 0.0365 * CONSTANTS[AC_sigma] * exp(-V * CONSTANTS[AC_FRT]));
     ALGEBRAIC[AV_INaK] = CONSTANTS[AC_INaK_max] * ALGEBRAIC[AV_fNaK] * CONSTANTS[AC_Ko] / (CONSTANTS[AC_Ko] + CONSTANTS[AC_KmKo]) / (1.0 + pow(CONSTANTS[AC_KmNai] / Nai, 1.5));
 
-    // INaCa
     double B1_NaCa = exp(CONSTANTS[AC_gamma] * V * CONSTANTS[AC_FRT]) * pow(Nai, 3.0) * CONSTANTS[AC_Cao] - exp((CONSTANTS[AC_gamma] - 1.0) * V * CONSTANTS[AC_FRT]) * pow(CONSTANTS[AC_Nao], 3.0) * Cai;
     double B2_NaCa = (pow(CONSTANTS[AC_KmNa], 3.0) + pow(CONSTANTS[AC_Nao], 3.0)) * (CONSTANTS[AC_KmCa] + CONSTANTS[AC_Cao]) * (1.0 + CONSTANTS[AC_ksat] * exp((CONSTANTS[AC_gamma] - 1.0) * V * CONSTANTS[AC_FRT]));
     ALGEBRAIC[AV_INaCa] = CONSTANTS[AC_INaCa_max] * B1_NaCa / B2_NaCa;
 
-    // Background Currents
     ALGEBRAIC[AV_IbNa] = CONSTANTS[AC_gbNa] * (V - ENa);
     ALGEBRAIC[AV_IbCa] = CONSTANTS[AC_gbCa] * (V - ECa);
     ALGEBRAIC[AV_IbK] = CONSTANTS[AC_gbK] * (V - EK);
 
-    // IpCa
     ALGEBRAIC[AV_IpCa] = CONSTANTS[AC_IpCa_max] * Cai / (0.0005 + Cai);
 
-    // Calcium Handling
     double Irel = CONSTANTS[AC_krel] * pow(STATES[ryr_u], 2.0) * STATES[ryr_v] * STATES[ryr_w] * (CaRel - Cai);
     double Itr = (CaUp - CaRel) / CONSTANTS[AC_tau_tr];
     double Iup = CONSTANTS[AC_I_up_max] / (1.0 + CONSTANTS[AC_K_up] / Cai);
@@ -414,13 +409,13 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[ryr_w] = (ALGEBRAIC[AV_ryr_w_inf] - STATES[ryr_w]) / ALGEBRAIC[AV_ryr_w_tau];
 
     double u_inf = 1.0 / (1.0 + exp(-(Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
+    ALGEBRAIC[AV_ryr_u_inf] = u_inf;
     RATES[ryr_u] = (u_inf - STATES[ryr_u]) / CONSTANTS[AC_cajsr_u_tau];
 
     double v_inf = 1.0 - 1.0 / (1.0 + exp(-(Fn - 0.2 * CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
     double v_tau = 1.91 + 2.09 / (1.0 + exp(-(Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
     RATES[ryr_v] = (v_inf - STATES[ryr_v]) / v_tau;
 
-    // dCa/dt
     double B1 = (2.0 * ALGEBRAIC[AV_INaCa] - (ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IbCa])) * CONSTANTS[AC_Cm] / (2.0 * CONSTANTS[AC_V_i] * CONSTANTS[AC_F]) + (CONSTANTS[AC_V_up] * (Iup_leak - Iup) + Irel * CONSTANTS[AC_V_rel]) / CONSTANTS[AC_V_i];
     double B2 = 1.0 + CONSTANTS[AC_TRPN_max] * CONSTANTS[AC_Km_TRPN] / pow(Cai + CONSTANTS[AC_Km_TRPN], 2.0) + CONSTANTS[AC_CMDN_max] * CONSTANTS[AC_Km_CMDN] / pow(Cai + CONSTANTS[AC_Km_CMDN], 2.0);
     RATES[calcium_Cai] = B1 / B2;
@@ -428,15 +423,13 @@ PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, do
     RATES[calcium_CaRel] = (Itr - Irel) * pow(1.0 + CONSTANTS[AC_CSQN_max] * CONSTANTS[AC_Km_CSQN] / pow(CaRel + CONSTANTS[AC_Km_CSQN], 2.0), -1.0);
     RATES[calcium_CaUp] = Iup - (Iup_leak + Itr * CONSTANTS[AC_V_rel] / CONSTANTS[AC_V_up]);
 
-    // Concentrations d/dt
     RATES[sodium_Nai] = (-3.0 * ALGEBRAIC[AV_INaK] - (3.0 * ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_INa])) * CONSTANTS[AC_Cm] / (CONSTANTS[AC_V_i] * CONSTANTS[AC_F]);
     RATES[potassium_Ki] = (2.0 * ALGEBRAIC[AV_INaK] - (ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs])) * CONSTANTS[AC_Cm] / (CONSTANTS[AC_V_i] * CONSTANTS[AC_F]);
     RATES[chloride_Cli] = ALGEBRAIC[AV_IClCa] * CONSTANTS[AC_Cm] / (CONSTANTS[AC_V_i] * CONSTANTS[AC_F]);
 
-    // Total Iion
     ALGEBRAIC[Iion_cm] = ALGEBRAIC[AV_INa] + ALGEBRAIC[AV_IK1] + ALGEBRAIC[AV_IKur] + ALGEBRAIC[AV_IKr] + ALGEBRAIC[AV_IKs] + ALGEBRAIC[AV_ICaL] + ALGEBRAIC[AV_IpCa] + ALGEBRAIC[AV_INaK] + ALGEBRAIC[AV_INaCa] + ALGEBRAIC[AV_IbNa] + ALGEBRAIC[AV_IbCa] + ALGEBRAIC[AV_IClCa];
 
-    ALGEBRAIC[Istim] = PerisYague_2022computeIstim(VOI, stimulus);
+    ALGEBRAIC[Istim] = PerisYaguecomputeIstim(VOI, stimulus);
     RATES[membrane_V] = 0.0;
     if (solveVmWithinODESolver)
     {

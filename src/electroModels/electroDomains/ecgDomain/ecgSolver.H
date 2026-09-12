@@ -15,10 +15,18 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    ecgSolver
+
+Description
+    Abstract base class for ECG solvers.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef ECGSolver_H
-#define ECGSolver_H
+#ifndef ecgSolver_H
+#define ecgSolver_H
 
 #include "autoPtr.H"
 #include "runTimeSelectionTables.H"
@@ -28,18 +36,18 @@ namespace Foam
 {
 
 class dictionary;
-class ECGDomain;
+class ecgDomain;
 
-class ECGSolver
+class ecgSolver
 {
 public:
 
-    TypeName("ECGSolver");
+    TypeName("ecgSolver");
 
     declareRunTimeSelectionTable
     (
         autoPtr,
-        ECGSolver,
+        ecgSolver,
         dictionary,
         (
             const dictionary& dict
@@ -47,15 +55,22 @@ public:
         (dict)
     );
 
-    ECGSolver() = default;
+    ecgSolver() = default;
 
-    static autoPtr<ECGSolver> New(const dictionary& dict);
+    static autoPtr<ecgSolver> New(const dictionary& dict);
 
-    virtual ~ECGSolver() = default;
+    virtual ~ecgSolver() = default;
 
-    virtual void compute
+    virtual bool writesOwnTimeSeries() const
+    {
+        return false;
+    }
+
+    virtual void solve
     (
-        const ECGDomain& domain,
+        ecgDomain& domain,
+        scalar t0,
+        scalar dt,
         scalarField& values
     ) = 0;
 };

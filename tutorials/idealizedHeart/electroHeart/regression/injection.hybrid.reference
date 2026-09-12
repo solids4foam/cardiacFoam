@@ -1,0 +1,8 @@
+# Hybrid variant: monodomainSolver + restitutionEikonalSolver1D.
+#
+# This probe reads -1 through t=0.03 and activates at t=0.035, then holds
+# 0.0313331 flat for the rest of the run - measured, see this tutorial's
+# history. Sampled at the run's own endTime, comfortably past activation.
+#
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         0.04   2    0.0313331     1e-4

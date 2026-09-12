@@ -1,5 +1,8 @@
 #!/bin/bash
-cd ${0%/*} || exit 1    # run from this directory
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Stop at first error
+set -e
 
 wclean couplingModels
 wclean genericWriter
@@ -12,4 +15,3 @@ wclean HFDIBDEM
 wclean prescribedSinusoidalMeshMotion
 wclean hemoMetrics
 wclean movingVentricleRadialFvMotionSolver
-

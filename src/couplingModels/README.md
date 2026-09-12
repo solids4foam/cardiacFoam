@@ -7,8 +7,7 @@ It does not contain the staged Purkinje, ECG, or bath electro-domain couplers.
 
 ```text
 src/couplingModels/
-├── common/
-│   └── electromechanicalSignalProvider.H
+├── electromechanicalSignalProvider.H
 ├── lnInclude/
 └── README.md
 

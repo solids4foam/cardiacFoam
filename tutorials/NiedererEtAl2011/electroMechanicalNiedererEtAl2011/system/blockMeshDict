@@ -1,0 +1,71 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+scale   0.001;
+
+vertices
+(
+    (0 0 0)
+    (20 0 0)
+    (20 3 0)
+    (0 3 0)
+    (0 0 7)
+    (20 0 7)
+    (20 3 7)
+    (0 3 7)
+);
+
+blocks
+(
+    // deltaX = 1.0 mm
+    hex (0 1 2 3 4 5 6 7) (40 6 14) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    // x=0 face: fixed to prevent rigid body motion.
+    // Fibers run along x so the slab shortens toward x=20mm.
+    xFixed
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+
+    // All other faces: traction-free, allowing free contraction.
+    freeFaces
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)
+            (2 6 5 1)
+            (1 5 4 0)
+            (0 3 2 1)
+            (4 5 6 7)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the Stewart 2009 Purkinje
+    cell model. Converted from CellML.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "Stewart_2009Names.H"

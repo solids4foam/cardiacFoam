@@ -33,7 +33,6 @@ autoPtr<activeTensionModel> activeTensionModel::New
 {
     const word modelType(dict.lookup("activeTensionModel"));
 
-    Info<< "Selecting activeTensionModel: " << modelType << nl << endl;
 
     auto cstrIter = dictionaryConstructorTablePtr_->find(modelType);
 
@@ -319,12 +318,9 @@ void activeTensionModel::calculateTension
     currentT_  = t;
     currentDt_ = dt;
 
-    const ElectromechanicalSignalProvider& p = provider();
-    const CouplingSignal sig = driveSignal();
-
     forAll(Ta, i)
     {
-        currentDriveSignal_ = p.signal(i, sig);
+        currentDriveSignal_ = coupledDriveSignal(i);
         solveAtPoint(i, currentDriveSignal_, lambda[i], Ta[i]);
     }
 }

@@ -1,5 +1,8 @@
 #!/bin/bash
-cd ${0%/*} || exit 1    # run from this directory
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Stop at first error
+set -e
 
 # Stop at first error so a failed solver is not silently skipped
 set -e

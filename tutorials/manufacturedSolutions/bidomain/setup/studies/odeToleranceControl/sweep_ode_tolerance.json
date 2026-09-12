@@ -1,0 +1,30 @@
+{
+  "base": {
+    "entry": "manufacturedBidomain",
+    "case_dir_name": "manufacturedSolutions/bidomain",
+    "setup_dir_name": "setup",
+    "solver_types": ["implicit"],
+    "piecewise_sweep": false,
+    "mesh_family": "hex",
+    "convergence_axis": "temporal",
+    "ode_abs_tolerance": 1e-12,
+    "ode_rel_tolerance": 1e-10,
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/odeToleranceControl/results/sweepCases"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "dimensions": ["1D", "2D"],
+      "number_cells": [640, 640],
+      "dt_values": [0.0001401345, 0.0001401345]
+    },
+    "dependent": [
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": ["dimensions", "number_cells", "dt_values"]
+      }
+    ]
+  }
+}

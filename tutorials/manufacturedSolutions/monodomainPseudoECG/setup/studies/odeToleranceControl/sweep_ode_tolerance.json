@@ -1,0 +1,48 @@
+{
+  "base": {
+    "entry": "manufacturedMonodomainPseudoECG",
+    "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
+    "setup_dir_name": "setup",
+    "cases_root": "tutorials",
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": false,
+    "mesh_family": "hex",
+    "convergence_axis": "temporal",
+    "ecg_enabled": true,
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/odeToleranceControl/results/sweepCases"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "dimensions": [
+        "1D",
+        "2D",
+        "3D"
+      ],
+      "number_cells": [
+        640,
+        640,
+        160
+      ],
+      "dt_values": [
+        0.0001401345,
+        0.0001401345,
+        0.0001401345
+      ]
+    },
+    "dependent": [
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "dimensions",
+          "number_cells",
+          "dt_values"
+        ]
+      }
+    ]
+  }
+}

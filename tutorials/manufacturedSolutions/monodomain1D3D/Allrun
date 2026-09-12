@@ -1,0 +1,9 @@
+#!/bin/bash
+
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+N_CELLS="${N_CELLS:-80}"
+sed "s/NCELLS/${N_CELLS}/g" system/blockMeshDict.3D > system/blockMeshDict.3D.active
+runApplication blockMesh -dict system/blockMeshDict.3D.active
+rm -f system/blockMeshDict.3D.active
+runApplication cardiacFoam

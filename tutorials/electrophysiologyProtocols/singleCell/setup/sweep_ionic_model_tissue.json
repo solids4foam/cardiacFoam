@@ -1,0 +1,114 @@
+{
+  "base": {
+    "entry": "singleCell",
+    "case_dir_name": "electrophysiologyProtocols/singleCell",
+    "setup_dir_name": "setup"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "ionic_model": [
+        "AlievPanfilov",
+        "BuenoOrovio",
+        "BuenoOrovio",
+        "BuenoOrovio",
+        "Courtemanche",
+        "Fabbri",
+        "Gaur",
+        "Grandi",
+        "Stewart",
+        "TNNP",
+        "TNNP",
+        "TNNP",
+        "ToRORd_dynCl",
+        "ToRORd_dynCl",
+        "ToRORd_dynCl",
+        "Trovato",
+        "TWorld",
+        "TWorld",
+        "TWorld",
+        "PerisYague",
+        "AlievPanfilovcompactBatched",
+        "BuenoOroviocompactBatched",
+        "BuenoOroviocompactBatched",
+        "BuenoOroviocompactBatched",
+        "CourtemanchecompactBatched",
+        "FabbricompactBatched",
+        "GaurcompactBatched",
+        "GrandicompactBatched",
+        "PerisYaguecompactBatched",
+        "StewartcompactBatched",
+        "TNNPcompactBatched",
+        "TNNPcompactBatched",
+        "TNNPcompactBatched",
+        "ToRORd_dynClcompactBatched",
+        "ToRORd_dynClcompactBatched",
+        "ToRORd_dynClcompactBatched",
+        "TrovatocompactBatched",
+        "TWorldcompactBatched",
+        "TWorldcompactBatched",
+        "TWorldcompactBatched"
+      ],
+      "tissue": [
+        "myocyte",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "myocyte",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "myocyte",
+        "myocyte",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "myocyte",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells",
+        "myocyte",
+        "epicardialCells",
+        "mCells",
+        "endocardialCells"
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "ionic_model",
+          "tissue"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "ionic_model",
+          "tissue"
+        ]
+      }
+    ]
+  }
+}

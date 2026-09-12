@@ -19,6 +19,7 @@ License
 
 #include "myocardiumDomain.H"
 #include "fvc.H"
+#include "nonOrthogonalCorrectorLoop.H"
 
 namespace Foam
 {
@@ -106,7 +107,7 @@ void writeMappedCellField
 } // End anonymous namespace
 
 
-autoPtr<MyocardiumDomain> MyocardiumDomain::New
+autoPtr<myocardiumDomain> myocardiumDomain::New
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties,
@@ -128,9 +129,9 @@ autoPtr<MyocardiumDomain> MyocardiumDomain::New
     const fvMesh& myocardiumMesh =
         resolveMyocardiumMesh(supportMesh, meshSubsetPtr);
 
-    return autoPtr<MyocardiumDomain>
+    return autoPtr<myocardiumDomain>
     (
-        new MyocardiumDomain
+        new myocardiumDomain
         (
             supportMesh,
             electroProperties,
@@ -142,6 +143,8 @@ autoPtr<MyocardiumDomain> MyocardiumDomain::New
             myocardiumSolver::New
             (
                 myocardiumMesh,
+                supportMesh,
+                meshSubsetPtr.valid() ? &meshSubsetPtr() : nullptr,
                 solverType,
                 electroProperties
             ),
@@ -151,7 +154,7 @@ autoPtr<MyocardiumDomain> MyocardiumDomain::New
 }
 
 
-label MyocardiumDomain::configuredCellCount
+label myocardiumDomain::configuredCellCount
 (
     const fvMesh& mesh,
     const dictionary& electroProperties
@@ -177,7 +180,7 @@ label MyocardiumDomain::configuredCellCount
 }
 
 
-MyocardiumDomain::MyocardiumDomain
+myocardiumDomain::myocardiumDomain
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties,
@@ -207,6 +210,19 @@ MyocardiumDomain::MyocardiumDomain
         dimensionedScalar("Vm", dimVoltage, -0.084),
         "zeroGradient"
     ),
+    gradVm_
+    (
+        IOobject
+        (
+            "grad(" + Vm_.name() + ")",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedVector("0", dimVoltage/dimLength, vector::zero)
+    ),
     sourceField_
     (
         IOobject
@@ -219,6 +235,25 @@ MyocardiumDomain::MyocardiumDomain
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("zero", dimCurrent/dimVolume, 0.0),
+        "zeroGradient"
+    ),
+    implicitSourceCoeff_
+    (
+        IOobject
+        (
+            "implicitSourceCoeff",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar
+        (
+            "zero",
+            dimCurrent/(dimVolume*dimVoltage),
+            0.0
+        ),
         "zeroGradient"
     ),
     Iion_
@@ -235,6 +270,60 @@ MyocardiumDomain::MyocardiumDomain
         dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
         "zeroGradient"
     ),
+    IionOld_
+    (
+        IOobject
+        (
+            "ionicCurrentOld",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+        "zeroGradient"
+    ),
+    IionOldOld_
+    (
+        IOobject
+        (
+            "ionicCurrentOldOld",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+        "zeroGradient"
+    ),
+    VmPrev_
+    (
+        IOobject
+        (
+            "VmPrevious",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        Vm_
+    ),
+    VmRate_
+    (
+        IOobject
+        (
+            "VmRate",
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedScalar("zero", dimVoltage/dimTime, 0.0),
+        "zeroGradient"
+    ),
     activationTime_
     (
         IOobject
@@ -246,13 +335,8 @@ MyocardiumDomain::MyocardiumDomain
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-        dimensionedScalar("zero", dimTime, 0.0),
+        dimensionedScalar("unactivated", dimTime, -1.0),
         "zeroGradient"
-    ),
-    calculateActivationTime_
-    (
-        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).nCells(),
-        true
     ),
     outFields_(outFields),
     preProcessFieldNames_(),
@@ -275,20 +359,43 @@ MyocardiumDomain::MyocardiumDomain
             "solutionAlgorithm", "implicit"
         ) == "explicit"
     ),
-    reportSetup_(electroProperties_.lookupOrDefault<Switch>("reportSetup", false))
+    timeCouplingScheme_
+    (
+        electroProperties_.lookupOrDefault<word>("timeCouplingScheme", "godunov")
+    ),
+    activationThreshold_
+    (
+        electroProperties_.lookupOrDefault<scalar>("activationThreshold", 0.0)
+    ),
+    setDeltaT_(true)
 {
-    if (reportSetup_)
+    if (timeCouplingScheme_ != "godunov" && timeCouplingScheme_ != "sbdf2")
     {
-        Info<< "MyocardiumDomain initial Vm[min,max]=["
-            << gMin(Vm_) << ", " << gMax(Vm_) << "] V" << nl << endl;
+        FatalErrorInFunction
+            << "timeCouplingScheme must be 'godunov' or 'sbdf2'; got "
+            << timeCouplingScheme_
+            << exit(FatalError);
+    }
 
-        if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
-        {
-            Info<< "Constructed MyocardiumDomain on submesh '"
-                << mesh().name() << "' from cellZone '"
-                << electroProperties_.lookupOrDefault<word>("cellZone", word::null)
-                << "'." << nl << endl;
-        }
+    if
+    (
+        usesSbdf2Scheme()
+     && (
+            !ionicModel_.supportsVmRateCoupling()
+         || !ionicModel_.supportsIonicCurrentEvaluation()
+        )
+    )
+    {
+        FatalErrorInFunction
+            << "timeCouplingScheme 'sbdf2' requires an ionic model that "
+            << "supports both second-order couplings, but "
+            << ionicModel_.type()
+            << " reports supportsVmRateCoupling="
+            << Switch(ionicModel_.supportsVmRateCoupling())
+            << " supportsIonicCurrentEvaluation="
+            << Switch(ionicModel_.supportsIonicCurrentEvaluation())
+            << ". Use timeCouplingScheme 'godunov' with this model."
+            << exit(FatalError);
     }
 
     if (diffusionSolverPtr_->phiEPtr())
@@ -300,11 +407,16 @@ MyocardiumDomain::MyocardiumDomain
         validateNoIonicStimulusInMonodomain();
     }
 
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->bindSourceField(sourceField_);
+    }
+
     initialiseProcessing();
 }
 
 
-void MyocardiumDomain::updateExternalStimulusCurrent
+void myocardiumDomain::updateExternalStimulusCurrent
 (
     volScalarField& externalStimulusCurrent,
     const ExternalStimulusProtocol& externalStimulus,
@@ -342,16 +454,17 @@ void MyocardiumDomain::updateExternalStimulusCurrent
 }
 
 
-void MyocardiumDomain::updateActivationTime
-(
-    volScalarField& activationTime,
-    boolList& calculateActivationTime,
-    const volScalarField& Vm
-) const
+void myocardiumDomain::updateGradVm()
 {
-    const scalarField& VmI = Vm.primitiveField();
-    const scalarField& VmOldI = Vm.oldTime().primitiveField();
-    scalarField& activationTimeI = activationTime.primitiveFieldRef();
+    gradVm_ = fvc::grad(Vm_);
+}
+
+
+void myocardiumDomain::updateActivationTime()
+{
+    const scalarField& VmI = Vm_.primitiveField();
+    const scalarField& VmOldI = Vm_.oldTime().primitiveField();
+    scalarField& activationTimeI = activationTime_.primitiveFieldRef();
 
     const scalar oldTime =
         mesh().time().value() - mesh().time().deltaTValue();
@@ -359,22 +472,25 @@ void MyocardiumDomain::updateActivationTime
 
     forAll(activationTimeI, cellI)
     {
-        if (calculateActivationTime[cellI] && VmI[cellI] > SMALL)
+        if
+        (
+            VmOldI[cellI] <= activationThreshold_
+         && VmI[cellI] > activationThreshold_
+        )
         {
-            calculateActivationTime[cellI] = false;
-
             const scalar w =
-                (0.0 - VmOldI[cellI])/(VmI[cellI] - VmOldI[cellI]);
+                (activationThreshold_ - VmOldI[cellI])
+               /(VmI[cellI] - VmOldI[cellI]);
 
             activationTimeI[cellI] = oldTime + w*deltaT;
         }
     }
 
-    activationTime.correctBoundaryConditions();
+    activationTime_.correctBoundaryConditions();
 }
 
 
-void MyocardiumDomain::validateNoIonicStimulusInMonodomain() const
+void myocardiumDomain::validateNoIonicStimulusInMonodomain() const
 {
     const StimulusProtocol& ionicStim = ionicModel_.stimulusProtocol();
     if
@@ -394,7 +510,7 @@ void MyocardiumDomain::validateNoIonicStimulusInMonodomain() const
 }
 
 
-void MyocardiumDomain::bindBidomainField(volScalarField& phiE)
+void myocardiumDomain::bindBidomainField(volScalarField& phiE)
 {
     if (verificationModelPtr_)
     {
@@ -403,7 +519,7 @@ void MyocardiumDomain::bindBidomainField(volScalarField& phiE)
 }
 
 
-void MyocardiumDomain::initialiseProcessing()
+void myocardiumDomain::initialiseProcessing()
 {
     if (verificationModelPtr_)
     {
@@ -461,41 +577,89 @@ void MyocardiumDomain::initialiseProcessing()
             postProcessFields_
         );
 
-        if (reportSetup_)
-        {
-            Info << "Using verification model "
-                 << verificationModelPtr_->type() << "." << endl;
-        }
-
-        if (reportSetup_ && !preProcessFieldNames_.empty())
-        {
-            Info << "Running preProcess with fields " << preProcessFieldNames_
-                 << "." << endl;
-        }
-
         verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
     }
 }
 
 
-void MyocardiumDomain::advance(scalar t0, scalar dt)
+void myocardiumDomain::advance(scalar t0, scalar dt)
 {
     advance(t0, dt, nullptr);
 }
 
 
-void MyocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
+void myocardiumDomain::prepareTimeStep(scalar t0, scalar dt)
 {
-    (void)dt;
     // Reset the source field and apply the 3D external box stimulus.
     // Called by the advance scheme BEFORE any domain coupling deposits
     // current into sourceField_.  Keeping this here ensures that coupling
     // current added by preparePrimaryCoupling survives into the FVM solve.
     updateExternalStimulusCurrent(sourceField_, externalStimulus_, t0);
+
+    IionOldOld_ = IionOld_;
+    IionOld_ = Iion_;
+
+    if (usesSbdf2Scheme())
+    {
+        const scalar deltaT0 = mesh().time().deltaT0Value();
+
+        if (usesSbdf2VmRate() && deltaT0 > VSMALL)
+        {
+            VmRate_ =
+                (Vm_ - VmPrev_)
+              / dimensionedScalar("deltaT0", dimTime, deltaT0);
+        }
+        else
+        {
+            VmRate_ =
+                dimensionedScalar("zero", VmRate_.dimensions(), 0.0);
+        }
+
+        VmPrev_ = Vm_;
+    }
+
+    if (verificationModelPtr_)
+    {
+        const volTensorField* conductivityPtr =
+            diffusionSolverPtr_->conductivityPtr();
+
+        if (conductivityPtr)
+        {
+            verificationModelPtr_->addManufacturedPdeSource
+            (
+                sourceField_,
+                *conductivityPtr,
+                t0 + dt
+            );
+        }
+    }
+
+    implicitSourceCoeff_ = dimensionedScalar
+    (
+        "zero",
+        implicitSourceCoeff_.dimensions(),
+        0.0
+    );
+    implicitSourceCoeff_.correctBoundaryConditions();
 }
 
 
-void MyocardiumDomain::advance
+void myocardiumDomain::solveIonicCurrent(scalar t0, scalar dt)
+{
+    ionicModel_.solveODE(t0, dt, Vm_, Iion_);
+
+    Iion_.correctBoundaryConditions();
+}
+
+
+void myocardiumDomain::refreshIonicCurrent(scalar t)
+{
+    ionicModel_.evaluateIonicCurrent(t, Vm_, Iion_);
+    Iion_.correctBoundaryConditions();
+}
+
+
+void myocardiumDomain::advance
 (
     scalar t0,
     scalar dt,
@@ -506,16 +670,23 @@ void MyocardiumDomain::advance
     // and then augmented by the PVJ coupler (preparePrimaryCoupling).
     // Do NOT reset it here.
 
-    ionicModel_.solveODE(t0, dt, Vm_, Iion_);
-    Iion_.correctBoundaryConditions();
-
-    if (pimplePtr)
+    if (usesSbdf2VmRate() && ionicModel_.supportsVmRateCoupling())
     {
-        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
+        ionicModel_.setVmRate(VmRate_);
     }
-    else if (useExplicitAlgorithm_)
+
+    solveIonicCurrent(t0, dt);
+    ionicModel_.clearVmRate();
+
+    updateGradVm();
+
+    if (useExplicitAlgorithm_)
     {
         diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
+    }
+    else if (pimplePtr)
+    {
+        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
     }
     else
     {
@@ -525,11 +696,144 @@ void MyocardiumDomain::advance
             << exit(FatalError);
     }
 
-    updateActivationTime(activationTime_, calculateActivationTime_, Vm_);
+    // Move Iion onto its own time level now that Vm(t0+dt) is known
+    if (usesSbdf2Scheme())
+    {
+        refreshIonicCurrent(t0 + dt);
+    }
+
+    updateActivationTime();
 }
 
 
-scalar MyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
+void myocardiumDomain::solveReactionStep(scalar t0, scalar dt)
+{
+    solveIonicCurrent(t0, dt);
+}
+
+
+void myocardiumDomain::solveDiffusionStep
+(
+    scalar t0,
+    scalar dt,
+    pimpleControl* pimplePtr
+)
+{
+    (void)t0;
+
+    updateGradVm();
+
+    if (useExplicitAlgorithm_)
+    {
+        diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
+    }
+    else if (pimplePtr)
+    {
+        diffusionSolverPtr_->solveDiffusionImplicit(*this, dt, *pimplePtr);
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "solveDiffusionStep() requires a pimpleControl instance "
+               "for implicit algorithms."
+            << exit(FatalError);
+    }
+}
+
+
+// Called twice per step by the bath-PDE predictor/corrector (the outer
+// Vm(phiE^n) -> phiE^n+1 -> Vm(phiE^n+1) sweep owned by the advance scheme).
+// Each call here is only the inner, single-stage non-orthogonal reassembly
+// for that one Vm solve; it does not itself predict or correct anything.
+void myocardiumDomain::solveDiffusionStepOnce
+(
+    scalar t0,
+    scalar dt,
+    pimpleControl* pimplePtr
+)
+{
+    (void)t0;
+
+    if (useExplicitAlgorithm_)
+    {
+        FatalErrorInFunction
+            << "The bath-PDE predictor/corrector requires "
+            << "solutionAlgorithm implicit."
+            << exit(FatalError);
+    }
+    else if (pimplePtr)
+    {
+        correctNonOrthogonalLoop
+        (
+            *pimplePtr,
+            [&]()
+            {
+                updateGradVm();
+                diffusionSolverPtr_->solveDiffusionImplicit(*this, dt);
+            }
+        );
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "solveDiffusionStepOnce() requires a pimpleControl instance "
+               "for implicit algorithms."
+            << exit(FatalError);
+    }
+}
+
+
+void myocardiumDomain::finalizeDiffusionStep()
+{
+    updateActivationTime();
+}
+
+
+void myocardiumDomain::bindExternalPhiE
+(
+    const volScalarField& phiE,
+    const labelUList& heartCellMap
+)
+{
+    diffusionSolverPtr_->bindExternalPhiE(phiE, heartCellMap);
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->bindBidomainField
+        (
+            const_cast<volScalarField&>(phiE),
+            heartCellMap
+        );
+
+        verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
+    }
+
+}
+
+
+void myocardiumDomain::unbindExternalPhiE()
+{
+    diffusionSolverPtr_->unbindExternalPhiE();
+
+    if (verificationModelPtr_)
+    {
+        if (const volScalarField* phiEPtr = diffusionSolverPtr_->phiEPtr())
+        {
+            verificationModelPtr_->bindBidomainField
+            (
+                *const_cast<volScalarField*>(phiEPtr)
+            );
+        }
+        else
+        {
+            verificationModelPtr_->unbindBidomainField();
+        }
+    }
+
+}
+
+
+scalar myocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 {
     surfaceVectorField n("n", mesh().Sf());
     n /= mesh().magSf();
@@ -550,7 +854,33 @@ scalar MyocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
 }
 
 
-bool MyocardiumDomain::shouldPostProcess() const
+bool myocardiumDomain::applyModelTimeControls(Time& runTime)
+{
+    if (!useExplicitAlgorithm_ || !setDeltaT_)
+        return false;
+
+    setDeltaT_ = false;
+
+    const scalar maxCo =
+        runTime.controlDict().lookupOrDefault<scalar>("maxCo", 0.1);
+
+    const scalar stableMaxDeltaT = suggestExplicitDeltaT(maxCo);
+
+    if (runTime.deltaTValue() > stableMaxDeltaT)
+    {
+        Info << "Capping deltaT from " << runTime.deltaTValue()
+             << " to " << stableMaxDeltaT
+             << " (explicit stability limit, maxCo = " << maxCo << ")"
+             << endl;
+        runTime.setDeltaT(stableMaxDeltaT);
+        return true;
+    }
+
+    return false;
+}
+
+
+bool myocardiumDomain::shouldPostProcess() const
 {
     if (verificationModelPtr_)
     {
@@ -560,7 +890,7 @@ bool MyocardiumDomain::shouldPostProcess() const
 }
 
 
-void MyocardiumDomain::exportStates()
+void myocardiumDomain::exportStates()
 {
     if (!outFields_.empty())
     {
@@ -569,7 +899,7 @@ void MyocardiumDomain::exportStates()
 }
 
 
-void MyocardiumDomain::exportPostProcessFields()
+void myocardiumDomain::exportPostProcessFields()
 {
     if (!postProcessFields_.empty())
     {
@@ -578,7 +908,7 @@ void MyocardiumDomain::exportPostProcessFields()
 }
 
 
-void MyocardiumDomain::write()
+void myocardiumDomain::write()
 {
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {
@@ -586,6 +916,7 @@ void MyocardiumDomain::write()
 
         writeMappedCellField(Vm_, supportMesh_, cellMap);
         writeMappedCellField(sourceField_, supportMesh_, cellMap);
+        writeMappedCellField(implicitSourceCoeff_, supportMesh_, cellMap);
         writeMappedCellField(Iion_, supportMesh_, cellMap);
         writeMappedCellField(activationTime_, supportMesh_, cellMap);
 
@@ -649,7 +980,7 @@ void MyocardiumDomain::write()
 }
 
 
-void MyocardiumDomain::postProcess()
+void myocardiumDomain::postProcess()
 {
     if (!shouldPostProcess())
     {

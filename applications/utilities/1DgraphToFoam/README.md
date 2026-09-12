@@ -11,7 +11,7 @@ Recommended VTK data layout:
 - Store node roles in `POINT_DATA`, for example `nodeRole`:
   `0 = internal`, `1 = root`, `2 = terminal`.
 - Store edge material data in `CELL_DATA` attached to line cells, for example
-  `diffusivity`, `radius`, `fiberGroup`, or `branchId`.
+  `conductivity`, `radius`, `fiberGroup`, or `branchId`.
 
 Example:
 
@@ -34,5 +34,5 @@ The output contains:
 - `edgeFields`: preserved line `CELL_DATA`, mapped through `edgeVtkCellMap`.
 
 For `conductionEdges`, conductance is read from the first available scalar
-`CELL_DATA` field in this order: `conductance`, `diffusivity`, `D`, `sigma`,
+`CELL_DATA` field in this order: `conductance`, `conductivity`, `D`, `sigma`,
 `conductivity`. If none is present, the utility writes `1.0`.

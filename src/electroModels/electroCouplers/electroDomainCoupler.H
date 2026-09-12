@@ -15,37 +15,46 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    electroDomainCoupler
+
+Description
+    Shared context for coupling models that exchange data between domains.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef ElectroDomainCoupler_H
-#define ElectroDomainCoupler_H
+#ifndef electroDomainCoupler_H
+#define electroDomainCoupler_H
 
 #include "autoPtr.H"
 #include "electroDomainCouplingEndpoints.H"
 #include "runTimeSelectionTables.H"
+#include "couplingVerificationModel.H"
 
 namespace Foam
 {
 
 class electroDomainInterface;
 
-//- Shared context for coupling models that exchange data between domains.
-class ElectroDomainCoupler
+class electroDomainCoupler
 {
 protected:
 
     const fvMesh& mesh_;
     tissueCouplingEndpoint& primaryDomain_;
     electroDomainInterface& secondaryDomain_;
+    autoPtr<couplingVerificationModel> verificationModelPtr_;
 
 public:
 
-    TypeName("ElectroDomainCoupler");
+    TypeName("electroDomainCoupler");
 
     declareRunTimeSelectionTable
     (
         autoPtr,
-        ElectroDomainCoupler,
+        electroDomainCoupler,
         dictionary,
         (
             tissueCouplingEndpoint& primaryDomain,
@@ -55,7 +64,7 @@ public:
         (primaryDomain, secondaryDomain, dict)
     );
 
-    ElectroDomainCoupler
+    electroDomainCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface&       secondaryDomain
@@ -66,9 +75,9 @@ public:
         secondaryDomain_(secondaryDomain)
     {}
 
-    virtual ~ElectroDomainCoupler() = default;
+    virtual ~electroDomainCoupler() = default;
 
-    static autoPtr<ElectroDomainCoupler> New
+    static autoPtr<electroDomainCoupler> New
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface&       secondaryDomain,
@@ -83,6 +92,10 @@ public:
         scalar dt
     )
     {
+        if (t0 == 0)
+        {
+            preProcessCoupling();
+        }
         (void)t0;
         (void)dt;
     }
@@ -128,7 +141,27 @@ public:
     virtual void write() {}
 
     //- Optional teardown hook.
-    virtual void end() {}
+    virtual void end()
+    {
+        postProcessCoupling();
+    }
+
+    //- Verification hooks
+    virtual void preProcessCoupling()
+    {
+        if (verificationModelPtr_)
+        {
+            verificationModelPtr_->preProcess(primaryDomain_, secondaryDomain_);
+        }
+    }
+
+    virtual void postProcessCoupling()
+    {
+        if (verificationModelPtr_)
+        {
+            verificationModelPtr_->postProcess(primaryDomain_, secondaryDomain_);
+        }
+    }
 };
 
 } // End namespace Foam

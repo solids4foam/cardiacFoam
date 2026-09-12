@@ -26,12 +26,12 @@ License
 namespace Foam
 {
 
-PVJMapper::PVJMapper
+pvjMapper::pvjMapper
 (
     const fvMesh& mesh,
     const pointField& terminalLocations,
     scalar radius,
-    bool reportSetup
+    const word& kernelType
 )
 :
     mesh_(mesh),
@@ -39,6 +39,7 @@ PVJMapper::PVJMapper
     radius_(radius),
     terminalCellIDs_(terminalLocations.size(), -1),
     terminalCellSets_(terminalLocations.size()),
+    terminalCellWeights_(terminalLocations.size()),
     sphereVolumes_(terminalLocations.size(), 0.0)
 {
     const vectorField& centres = mesh_.C();
@@ -113,16 +114,30 @@ PVJMapper::PVJMapper
         }
 
         DynamicList<label> cellsInRadius;
+        DynamicList<scalar> cellsInRadiusWeights;
         forAll(centres, cellI)
         {
-            if (mag(centres[cellI] - terminalLocations_[i]) <= radius_)
+            const scalar r = mag(centres[cellI] - terminalLocations_[i]);
+            if (r <= radius_)
             {
+                scalar w = 1.0;
+                if (kernelType == "gaussian")
+                {
+                    w = std::exp(-4.5 * r * r / (radius_ * radius_ + VSMALL));
+                }
+                else if (kernelType == "linear")
+                {
+                    w = 1.0 - r / (radius_ + VSMALL);
+                }
+
                 cellsInRadius.append(cellI);
-                sphereVolumes_[i] += cellVolumes[cellI];
+                cellsInRadiusWeights.append(w);
+                sphereVolumes_[i] += w * cellVolumes[cellI];
             }
         }
 
         terminalCellSets_[i] = cellsInRadius;
+        terminalCellWeights_[i] = cellsInRadiusWeights;
         label nLocalCells = terminalCellSets_[i].size();
         label nGlobalCells = nLocalCells;
         reduce(nGlobalCells, sumOp<label>());
@@ -142,6 +157,8 @@ PVJMapper::PVJMapper
                 terminalCellIDs_[i] = nearestCellI;
                 terminalCellSets_[i].setSize(1);
                 terminalCellSets_[i][0] = nearestCellI;
+                terminalCellWeights_[i].setSize(1);
+                terminalCellWeights_[i][0] = 1.0;
                 sphereVolumes_[i] = cellVolumes[nearestCellI];
             }
             else
@@ -164,46 +181,36 @@ PVJMapper::PVJMapper
             }
         }
 
-        if (reportSetup && Pstream::master())
-        {
-            Info<< "PVJ mapping " << i
-                << ": location=" << terminalLocations_[i]
-                << ", pvjRadius=" << radius_
-                << ", nearestCellDistance=" << globalNearestDistance
-                << ", equivalentCellLength=" << nearestCellLength
-                << ", mappedCells=" << nGlobalCells
-                << ", mappedVolume=" << sphereVolumes_[i]
-                << ", sourcePerAmp=" << 1.0/sphereVolumes_[i]
-                << nl;
-        }
-    }
-
-    if (reportSetup && Pstream::master())
-    {
-        Info<< endl;
     }
 }
 
 
-void PVJMapper::gatherVm3DPvjs
+void pvjMapper::gatherVm3DPvjs
 (
     const volScalarField& Vm,
     scalarField& values
 ) const
 {
     values.setSize(terminalLocations_.size());
-    values = -GREAT;
+    values = 0.0;
 
     forAll(values, i)
     {
-        if (terminalCellIDs_[i] >= 0)
+        scalar localWeightedSum = 0.0;
+        forAll(terminalCellSets_[i], localI)
         {
-            values[i] = Vm[terminalCellIDs_[i]];
+            const label cellI = terminalCellSets_[i][localI];
+            localWeightedSum += Vm[cellI] * mesh_.V()[cellI] * terminalCellWeights_[i][localI];
         }
 
-        reduce(values[i], maxOp<scalar>());
+        values[i] = localWeightedSum;
+        reduce(values[i], sumOp<scalar>());
 
-        if (values[i] <= -GREAT/2.0)
+        if (sphereVolumes_[i] > SMALL)
+        {
+            values[i] /= sphereVolumes_[i];
+        }
+        else
         {
             values[i] = 0.0;
         }
@@ -211,7 +218,7 @@ void PVJMapper::gatherVm3DPvjs
 }
 
 
-void PVJMapper::volumetricSource
+void pvjMapper::volumetricSource
 (
     const scalarField& couplingCurrent,
     scalarField& source
@@ -233,7 +240,7 @@ void PVJMapper::volumetricSource
 }
 
 
-void PVJMapper::depositCoupling
+void pvjMapper::depositCoupling
 (
     const scalarField& couplingCurrent,
     volScalarField& sourceField
@@ -247,7 +254,7 @@ void PVJMapper::depositCoupling
     {
         forAll(terminalCellSets_[i], localI)
         {
-            source[terminalCellSets_[i][localI]] += volumetric[i];
+            source[terminalCellSets_[i][localI]] += volumetric[i] * terminalCellWeights_[i][localI];
         }
     }
 
@@ -255,7 +262,52 @@ void PVJMapper::depositCoupling
 }
 
 
-void PVJMapper::depositActivationTimes
+void pvjMapper::depositImplicitCoupling
+(
+    const scalarField& networkVm,
+    const scalarField& resistance,
+    volScalarField& sourceField,
+    volScalarField& implicitSourceCoeff
+) const
+{
+    if
+    (
+        networkVm.size() != sphereVolumes_.size()
+     || resistance.size() != sphereVolumes_.size()
+    )
+    {
+        FatalErrorInFunction
+            << "Expected " << sphereVolumes_.size()
+            << " PVJ implicit coupling values but received "
+            << networkVm.size() << " voltages and "
+            << resistance.size() << " resistances."
+            << exit(FatalError);
+    }
+
+    scalarField& source = sourceField.primitiveFieldRef();
+    scalarField& coeff = implicitSourceCoeff.primitiveFieldRef();
+
+    forAll(terminalCellSets_, i)
+    {
+        const scalar sourcePerVoltage =
+            1.0/(resistance[i]*sphereVolumes_[i]);
+
+        forAll(terminalCellSets_[i], localI)
+        {
+            const label cellI = terminalCellSets_[i][localI];
+            const scalar weight = terminalCellWeights_[i][localI];
+
+            source[cellI] += networkVm[i]*sourcePerVoltage*weight;
+            coeff[cellI] += sourcePerVoltage*weight;
+        }
+    }
+
+    sourceField.correctBoundaryConditions();
+    implicitSourceCoeff.correctBoundaryConditions();
+}
+
+
+void pvjMapper::depositActivationTimes
 (
     const scalarField& terminalActivationTime,
     volScalarField& activationTimeField
@@ -300,7 +352,7 @@ void PVJMapper::depositActivationTimes
 }
 
 
-void PVJMapper::gatherActivationTimes
+void pvjMapper::gatherActivationTimes
 (
     const volScalarField& activationTimeField,
     scalarField& terminalActivationTime

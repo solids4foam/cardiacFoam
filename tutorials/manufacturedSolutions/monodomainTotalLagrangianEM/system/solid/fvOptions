@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system/solid";
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+manufacturedBodyForce
+{
+    type            manufacturedSolidForce;
+    active          yes;
+
+    selectionMode   all;
+    fieldNames      (D);
+
+    // All physics parameters are deduced at run time from the authoritative
+    // dictionaries, so they cannot drift from the solver:
+    //   - amplitude, Tmax, V0, gamma, TaScale
+    //       <- constant/electroMechanicalProperties
+    //   - E, nu
+    //       <- constant/solid/mechanicalProperties (passiveMechanicalLaw)
+}
+
+// ************************************************************************* //

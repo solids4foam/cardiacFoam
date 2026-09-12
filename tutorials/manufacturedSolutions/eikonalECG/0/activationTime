@@ -1,0 +1,39 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | cardiacFoam                                     |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      activationTime;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 1 0 0 0 0];
+
+// -1 marks "not yet activated"; the solve overwrites it.
+internalField   uniform -1;
+
+boundaryField
+{
+    ".*"
+    {
+        // Values are overwritten every step by
+        // manufacturedEikonalVerifier::applyConstraints, which writes the
+        // exact manufactured solution onto every non-empty patch face. Only
+        // the TYPE matters here: a Dirichlet type keeps those values, whereas
+        // zeroGradient would extrapolate them away from the interior and
+        // silently invalidate the verification.
+        type            fixedValue;
+        value           uniform 0;
+    }
+    #includeEtc "caseDicts/setConstraintTypes"
+}
+
+// ************************************************************************* //

@@ -61,6 +61,32 @@ void Foam::electrophysicsSystem::prepareECGCouplings
 }
 
 
+void Foam::electrophysicsSystem::preparePotentialDomain
+(
+    scalar t0,
+    scalar dt
+)
+{
+    if (potentialDomain_.valid())
+    {
+        potentialDomain_().prepareTimeStep(t0, dt);
+    }
+}
+
+
+void Foam::electrophysicsSystem::advancePotentialDomain
+(
+    scalar t0,
+    scalar dt
+)
+{
+    if (potentialDomain_.valid())
+    {
+        potentialDomain_().advance(t0, dt);
+    }
+}
+
+
 void Foam::electrophysicsSystem::advanceECGDomains
 (
     scalar t0,
@@ -70,6 +96,15 @@ void Foam::electrophysicsSystem::advanceECGDomains
     forAll(ecgDomains_, i)
     {
         ecgDomains_[i].advance(t0, dt);
+    }
+}
+
+
+void Foam::electrophysicsSystem::writePotentialDomain()
+{
+    if (potentialDomain_.valid() && potentialDomain_().time().outputTime())
+    {
+        potentialDomain_().write();
     }
 }
 

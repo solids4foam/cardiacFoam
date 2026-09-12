@@ -24,11 +24,11 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(ECGSolver, 0);
-defineRunTimeSelectionTable(ECGSolver, dictionary);
+defineTypeNameAndDebug(ecgSolver, 0);
+defineRunTimeSelectionTable(ecgSolver, dictionary);
 
 
-autoPtr<ECGSolver> ECGSolver::New(const dictionary& dict)
+autoPtr<ecgSolver> ecgSolver::New(const dictionary& dict)
 {
     const word solverType
     (
@@ -48,7 +48,7 @@ autoPtr<ECGSolver> ECGSolver::New(const dictionary& dict)
             << exit(FatalError);
     }
 
-    return autoPtr<ECGSolver>(ctorPtr(dict));
+    return autoPtr<ecgSolver>(ctorPtr(dict));
 }
 
 } // End namespace Foam

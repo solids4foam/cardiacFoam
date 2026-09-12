@@ -1,0 +1,34 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+// Active-tension probes on the transmural column under the stimulus footprint
+// (x,y = 0.75 mm, 0.75 mm). One probe at the centre of each tissue band:
+//   probe 0 (col 2): endo  band centre, t = 0.15  (z = 1.05 mm)
+//   probe 1 (col 3): M     band centre, t = 0.50  (z = 3.50 mm)
+//   probe 2 (col 4): epi   band centre, t = 0.85  (z = 5.95 mm)
+
+type            probes;
+region          electro;
+libs            ("libsampling.so");
+enabled         true;
+
+writeControl    writeTime;
+
+fields
+(
+    Ca_i
+);
+
+probeLocations
+(
+    (0.00075 0.00075 0.00105)
+    (0.00075 0.00075 0.00350)
+    (0.00075 0.00075 0.00595)
+);
+
+// ************************************************************************* //

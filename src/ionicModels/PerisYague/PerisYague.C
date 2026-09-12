@@ -22,6 +22,7 @@ License
 #include "HashTable.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ionicModel.H"
+#include "ionicModelFamilyInfo.H"
 #include "ionicModelIO.H"
 #include "stimulusIO.H"
 #include "volFields.H"
@@ -32,16 +33,35 @@ License
 
 namespace Foam
 {
-    defineTypeNameAndDebug(PerisYague_2022, 0);
+    defineTypeNameAndDebug(PerisYague, 0);
     addToRunTimeSelectionTable
     (
-        ionicModel, PerisYague_2022, dictionary
+        ionicModel, PerisYague, dictionary
     );
+
+    const ionicModelFamilyInfo& PerisYagueFamilyInfo()
+    {
+        static const ionicModelFamilyInfo info
+        {
+            NUM_CONSTANTS,
+            NUM_STATES,
+            NUM_ALGEBRAIC,
+            PerisYagueCONSTANTS_NAMES,
+            PerisYagueSTATES_NAMES,
+            PerisYagueALGEBRAIC_NAMES,
+            membrane_V,
+            1000.0,
+            1000.0,
+            0.0,
+            nullptr
+        };
+        return info;
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::PerisYague_2022::PerisYague_2022
+Foam::PerisYague::PerisYague
 (
     const dictionary& dict,
     const label num,
@@ -49,7 +69,7 @@ Foam::PerisYague_2022::PerisYague_2022
     const Switch solveVmWithinODESolver
 )
 :
-    ionicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
+    configuredIonicModel(dict, num, initialDeltaT, solveVmWithinODESolver),
     STATES_(num),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
@@ -63,8 +83,7 @@ Foam::PerisYague_2022::PerisYague_2022
         ALGEBRAIC_.set(i,   new scalarField(NUM_ALGEBRAIC,  0.0));
         RATES_.set(i,       new scalarField(NUM_STATES,     0.0));
 
-        // Initialise constants, states and rates from equations file
-        ::PerisYague_2022initConsts
+        ::PerisYagueinitConsts
         (
             CONSTANTS_.data(),
             RATES_[i].data(),
@@ -77,24 +96,79 @@ Foam::PerisYague_2022::PerisYague_2022
         }
 
     }
+
+    applyIonicConstantOverrides();
 }
 
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
 
-Foam::PerisYague_2022::~PerisYague_2022()
+Foam::PerisYague::~PerisYague()
 {}
 
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-Foam::List<Foam::word> Foam::PerisYague_2022::supportedTissueTypes() const
+Foam::List<Foam::word> Foam::PerisYague::supportedTissueTypes() const
 {
-    return {"myocyte"};
+    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
 }
 
-void Foam::PerisYague_2022::solveODE
+
+Foam::scalarField& Foam::PerisYague::constants(const label integrationPtI) const
+{
+    if (!HETEROGENEOUS_CONSTANTS_.empty())
+    {
+        return HETEROGENEOUS_CONSTANTS_[integrationPtI];
+    }
+    return CONSTANTS_;
+}
+
+
+Foam::scalarField Foam::PerisYague::constantsForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    PerisYagueinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    ionicModelIO::applyConstantOverrides
+    (
+        constants, PerisYagueCONSTANTS_NAMES, NUM_CONSTANTS, dict(),
+        type(), tissueFlag
+    );
+
+    return constants;
+}
+
+
+Foam::scalarField Foam::PerisYague::initialStatesForTissue
+(
+    const label tissueFlag
+) const
+{
+    scalarField constants(NUM_CONSTANTS, 0.0);
+    scalarField rates(NUM_STATES, 0.0);
+    scalarField states(NUM_STATES, 0.0);
+
+    PerisYagueinitConsts
+    (
+        constants.data(), rates.data(), states.data(), tissueFlag, dict()
+    );
+
+    return states;
+}
+
+
+void Foam::PerisYague::solveODE
 (
     const scalar stepStartTime,
     const scalar deltaT,
@@ -114,22 +188,20 @@ void Foam::PerisYague_2022::solveODE
 
         scalar& step = ionicModel::step()[integrationPtI];
 
-        // If Vm is solved by the PDE, feed that Vm (in mV) into the cell model
         if (!solveVmWithinODESolver())
         {
             STATESI[0] = Vm[integrationPtI]*1000.0;
         }
 
-        // Clamp time step (ms)
         step = min(step, deltaT * 1000.0);
-        // Advance ODE system for all states
+        activeIntegrationPoint_ = integrationPtI;
+        setActiveVmRate(integrationPtI);
         odeSolver().solve(tStart, tEnd, STATESI, step);
 
-        // Update algebraics and rates at tEnd (includes Iion and I_stim)
-        ::PerisYague_2022computeVariables
+        ::PerisYaguecomputeVariables
         (
             tEnd,
-            CONSTANTS_.data(),
+            constants(integrationPtI).data(),
             RATESI.data(),
             STATESI.data(),
             ALGEBRAICI.data(),
@@ -140,25 +212,60 @@ void Foam::PerisYague_2022::solveODE
         if (integrationPtI == sampleCell)
         {debugPrintFields(integrationPtI, tStart, tEnd, step);}
 
-        // Total ionic current density used by PDE
         Im[integrationPtI] = ALGEBRAICI[Iion_cm];
+    }
+
+    clearVmRate();
+}
+
+
+void Foam::PerisYague::evaluateIonicCurrent
+(
+    const scalar t,
+    const scalarField& Vm,
+    scalarField& Im
+)
+{
+    scalarField S(NUM_STATES, 0.0);
+    scalarField A(NUM_ALGEBRAIC, 0.0);
+    scalarField R(NUM_STATES, 0.0);
+
+    forAll(STATES_, integrationPtI)
+    {
+        S = STATES_[integrationPtI];
+        S[0] = Vm[integrationPtI]*1000.0;
+        A = 0.0;
+        R = 0.0;
+
+        ::PerisYaguecomputeVariables
+        (
+            t,
+            constants(integrationPtI).data(),
+            R.data(),
+            S.data(),
+            A.data(),
+            tissue(),
+            solveVmWithinODESolver(),
+            stimulusProtocol()
+        );
+
+        Im[integrationPtI] = A[Iion_cm];
     }
 }
 
-void Foam::PerisYague_2022::derivatives
+void Foam::PerisYague::derivatives
 (
     const scalar t,
     const scalarField& y,
     scalarField& dydt
 ) const
 {
-    // Must match NUM_ALGEBRAIC from the generated equations file
     scalarField ALGEBRAIC_TMP(NUM_ALGEBRAIC, 0.0);
 
-    ::PerisYague_2022computeVariables
+    ::PerisYaguecomputeVariables
     (
         t,
-        CONSTANTS_.data(),
+        constants(activeIntegrationPoint_).data(),
         dydt.data(),                              // RATES (output)
         const_cast<scalarField&>(y).data(),       // STATES (input)
         ALGEBRAIC_TMP.data(),                     // ALGEBRAIC (scratch)
@@ -166,24 +273,29 @@ void Foam::PerisYague_2022::derivatives
         solveVmWithinODESolver(),
         stimulusProtocol()
     );
+
+    if (!solveVmWithinODESolver())
+    {
+        dydt[0] = activeVmRate();
+    }
 }
 
-const char* const* Foam::PerisYague_2022::ioStateNames() const
+const char* const* Foam::PerisYague::ioStateNames() const
 {
-    return PerisYague_2022STATES_NAMES;
+    return PerisYagueSTATES_NAMES;
 }
 
-const char* const* Foam::PerisYague_2022::ioConstantNames() const
+const char* const* Foam::PerisYague::ioConstantNames() const
 {
-    return PerisYague_2022CONSTANTS_NAMES;
+    return PerisYagueCONSTANTS_NAMES;
 }
 
-const char* const* Foam::PerisYague_2022::ioAlgebraicNames() const
+const char* const* Foam::PerisYague::ioAlgebraicNames() const
 {
-    return PerisYague_2022ALGEBRAIC_NAMES;
+    return PerisYagueALGEBRAIC_NAMES;
 }
 
-void Foam::PerisYague_2022::sweepCurrent
+void Foam::PerisYague::sweepCurrent
 (
     const word& currentName,
     scalar Vmin,
@@ -192,8 +304,7 @@ void Foam::PerisYague_2022::sweepCurrent
     const fileName& outputFile
 ) const
 {
-    // Retrieve dependency variables
-    const auto& depMap = PerisYague_2022DependencyMap();
+    const auto& depMap = PerisYagueDependencyMap();
 
     if (!depMap.found(currentName))
     {
@@ -205,27 +316,22 @@ void Foam::PerisYague_2022::sweepCurrent
 
     const wordList& deps = depMap[currentName];
     OFstream os(outputFile);
-    // Write sweep header: V,<deps...>
     ionicModelIO::writeSweepHeader(os, deps);
 
-    // Working arrays from integration point 0
     scalarField STATESI = STATES_[0];
     scalarField RATESI(NUM_STATES, 0.0);
     scalarField ALGI(NUM_ALGEBRAIC, 0.0);
     ionicModelIO::SelectedMapCache sweepPlanCache;
 
-    // Voltage sweep
     for (label i = 0; i < nPts; ++i)
     {
         scalar V = Vmin + (Vmax - Vmin) * scalar(i) / (nPts - 1);
 
-        // Reset all states to baseline
         STATESI = STATES_[0];
 
-        // Overwrite membrane voltage
         STATESI[0] = V;
 
-        ::PerisYague_2022computeVariables
+        ::PerisYaguecomputeVariables
         (
             0.0,                       // VOI
             CONSTANTS_.data(),
@@ -240,15 +346,15 @@ void Foam::PerisYague_2022::sweepCurrent
         ionicModelIO::writeOneSweepRow
         (
             os, V, deps, STATESI, ALGI,
-            PerisYague_2022STATES_NAMES, NUM_STATES,
-            PerisYague_2022ALGEBRAIC_NAMES, NUM_ALGEBRAIC,
+            PerisYagueSTATES_NAMES, NUM_STATES,
+            PerisYagueALGEBRAIC_NAMES, NUM_ALGEBRAIC,
             RATESI,
             sweepPlanCache
         );
     }
 }
 
-Foam::wordList Foam::PerisYague_2022::availableSweepCurrents() const
+Foam::wordList Foam::PerisYague::availableSweepCurrents() const
 {
-    return PerisYague_2022DependencyMap().toc();
+    return PerisYagueDependencyMap().toc();
 }

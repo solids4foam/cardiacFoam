@@ -1,0 +1,33 @@
+# applications/utilities/sweepCurrents/utility.manifest.toml
+
+name = "sweepCurrents"
+description = "Sweep ionic currents and gating variables against membrane voltage for a configured ionic model."
+category = "post-processing"
+
+purpose = """
+Reads constant/sweepCurrents (which specifies the ionicModel, tissue type,
+voltage range, and the list of currents to sweep) and for each requested current
+evaluates the current and its gating/dependency variables across a uniform Vm
+grid from Vmin to Vmax. Each current's sweep is written as a CSV file to
+postProcessing/<model>_<tissue>_<current>_sweep.txt. Set listCurrentsOnly true
+to print available current names without running any sweep, which is useful for
+exploring a new ionic model.
+"""
+
+inputs = [
+  "constant/sweepCurrents",
+]
+
+outputs = [
+  "postProcessing/<model>_<tissue>_<current>_sweep.txt",
+]
+
+requires_mesh = false
+example = "sweepCurrents -case ./singleCell_run"
+
+[[produces]]
+artifact_id = "current_sweep_csv"
+path_pattern = "postProcessing/<model>_<tissue>_<current>_sweep.txt"
+format = "csv_sweep"
+description = "CSV file of ionic current and gating variable values over a Vm sweep range."
+produced_by = "sweepCurrents"

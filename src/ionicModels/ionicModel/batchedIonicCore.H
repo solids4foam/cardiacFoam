@@ -22,6 +22,9 @@ Description
     Compact storage core for batched GPU-oriented ionic models. It owns the
     SoA state/rate/algebraic/support buffers and the cell gather/scatter
     helpers used by the host-side execution wrapper.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef batchedIonicCore_H
@@ -214,6 +217,26 @@ public:
     scalarField& statesField() const
     {
         return statesSoA_;
+    }
+
+    inline scalar* statesSoAData() const
+    {
+        return statesSoA_.data();
+    }
+
+    inline scalar* ratesSoAData() const
+    {
+        return ratesSoA_.data();
+    }
+
+    inline scalar* supportSoAData() const
+    {
+        return nHotPathSupport_ > 0 ? supportSoA_.data() : nullptr;
+    }
+
+    inline scalar* algebraicsSoAData() const
+    {
+        return algebraicsSoA_.size() ? algebraicsSoA_.data() : nullptr;
     }
 };
 

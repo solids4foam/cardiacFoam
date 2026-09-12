@@ -15,33 +15,65 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    pseudoECGSolver
+
+Description
+    Pseudo-ECG solver.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef PseudoECGSolver_H
-#define PseudoECGSolver_H
+#ifndef pseudoECGSolver_H
+#define pseudoECGSolver_H
 
 #include "ecgSolver.H"
+#include "OFstream.H"
+#include "autoPtr.H"
 #include "overrideTypeName.H"
 
 namespace Foam
 {
 
-class ECGDomain;
+class ecgDomain;
 
-class PseudoECGSolver
+class pseudoECGSolver
 :
-    public ECGSolver
+    public ecgSolver
 {
+    scalar sigmaE_;
+    bool reportedConductivitySource_;
+    bool leadVectorsCalculated_;
+    List<List<vector>> leadVectors_;
+
+    //- True when a 'sampling' sub-dict is present: the solver then owns its
+    //  own time-series file, written at deltaT_ independently of writeInterval.
+    bool hasOwnSampling_;
+    scalar startTime_;
+    scalar endTime_;
+    scalar deltaT_;
+    scalar nextSampleTime_;
+    autoPtr<OFstream> outputPtr_;
+
+    void calculateLeadVectors(const ecgDomain& domain);
+
 public:
 
     OverrideTypeName("pseudoECG");
 
-    explicit PseudoECGSolver(const dictionary&)
-    {}
+    explicit pseudoECGSolver(const dictionary& dict);
 
-    virtual void compute
+    virtual bool writesOwnTimeSeries() const override
+    {
+        return hasOwnSampling_;
+    }
+
+    virtual void solve
     (
-        const ECGDomain& domain,
+        ecgDomain& domain,
+        scalar t0,
+        scalar dt,
         scalarField& values
     ) override;
 };

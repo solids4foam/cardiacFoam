@@ -15,58 +15,25 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
-\*---------------------------------------------------------------------------*/
-
-#ifndef electroStateProvider_H
-#define electroStateProvider_H
-
-#include "volFields.H"
-
-namespace Foam
-{
-
-/*---------------------------------------------------------------------------*\
-                       Class electroStateProvider
-                       ~~~~~~~~~~~~~~~~~~~~~~~
+Class
+    electroStateProvider
 
 Description
     Abstract read-only state interface that enables one-way coupling between
     electrophysiology domains while maintaining clean separation of concerns.
 
-    This interface is the cornerstone of the domain separation architecture:
-    - **Post-primary domains** (e.g., ECG) read electrophysiology state
-      without providing feedback to the primary domain (myocardium)
-    - **Dependency inversion**: Domains depend on this abstract interface,
-      not on concrete solver implementations (monodomain, bidomain, etc.)
-    - **Optional state channels**: Via pointer-based opt-in pattern, domains
-      gracefully handle missing fields (e.g., phiE unavailable in monodomain)
-
-Design Pattern: Pointer-Based Opt-In
-    Methods return const X* (pointer) instead of const X& (reference).
-    Returning nullptr signals "this state channel is not available."
-    Consumers check for nullptr before dereferencing.
-
-    Example usage:
-        const auto* VmPtr = stateProvider.VmPtr();
-        if (VmPtr) {
-            // Safe to use transmembrane voltage
-            compute_ecg(*VmPtr);
-        }
-
-Benefits
-    - Breaks cyclic dependencies between myocardium and ECG domains
-    - Enables independent evolution schedules (ECG reads, doesn't block)
-    - Improves testability (mock providers for unit tests)
-    - Supports future solvers automatically (just inherit this interface)
-
-Implementers
-    Producers:   electroModel, MyocardiumDomain
-    Consumers:   ECGDomain, ecgVerificationModel
-
-See also
-    ARCHITECTURE.md — Comprehensive domain separation design rationale
-
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
+
+#ifndef electroStateProvider_H
+#define electroStateProvider_H
+
+#include "dimensionedScalar.H"
+#include "volFields.H"
+
+namespace Foam
+{
 
 class electroStateProvider
 {
@@ -100,12 +67,32 @@ public:
         return nullptr;
     }
 
+    virtual const volScalarField* activationTimePtr() const
+    {
+        return nullptr;
+    }
+
     virtual const volScalarField* phiEPtr() const
     {
         return nullptr;
     }
 
     virtual const volTensorField* conductivityPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const dimensionedScalar* chiPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const dimensionedScalar* CmPtr() const
+    {
+        return nullptr;
+    }
+
+    virtual const dimensionedScalar* c0Ptr() const
     {
         return nullptr;
     }

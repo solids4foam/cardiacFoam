@@ -21,6 +21,9 @@ Application
 Description
     Advance a graph-backed Purkinje conductionSystemDomain without myocardium
     coupling. This is a diagnostic utility for checking 1D graph evolution.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
@@ -108,18 +111,6 @@ int main(int argc, char *argv[])
         "word",
         "Name of the conductionNetworkDomains entry to run"
     );
-    argList::addOption
-    (
-        "nSteps",
-        "label",
-        "Number of graph-only time steps to run"
-    );
-    argList::addOption
-    (
-        "deltaT",
-        "scalar",
-        "Override time-step size for this graph-only diagnostic"
-    );
 
     #include "setRootCase.H"
     #include "createTime.H"
@@ -150,32 +141,19 @@ int main(int argc, char *argv[])
             selectedDomainName
         );
 
-    const scalar deltaT =
-        args.getOrDefault<scalar>("deltaT", runTime.deltaTValue());
-
-    const label nSteps = args.getOrDefault<label>("nSteps", 10000);
-
-    if (nSteps < 0)
-    {
-        FatalErrorInFunction
-            << "nSteps must be non-negative. Received " << nSteps << "."
-            << exit(FatalError);
-    }
-
-    runTime.setDeltaT(deltaT);
-
     Info<< nl
         << "Running Purkinje graph domain '" << selectedDomainName << "'"
         << " without myocardium coupling" << nl
-        << "  nSteps: " << nSteps << nl
-        << "  deltaT: " << runTime.deltaTValue() << nl
+        << "  deltaT:  " << runTime.deltaTValue() << nl
+        << "  endTime: " << runTime.endTime().value() << nl
         << endl;
 
-    autoPtr<ConductionSystemDomain> conductionDomain
+    autoPtr<conductionSystemDomain> conductionDomain
     (
-        ConductionSystemDomain::New
+        conductionSystemDomain::New
         (
             mesh,
+            selectedDomainName,
             domainDict,
             runTime.deltaTValue()
         )
@@ -183,16 +161,17 @@ int main(int argc, char *argv[])
 
     conductionDomain->write();
 
-    for (label stepI = 0; stepI < nSteps; ++stepI)
+    while (runTime.run())
     {
-        const scalar t0 = runTime.value();
-        const scalar dt = runTime.deltaTValue();
-
-        conductionDomain->advance(t0, dt);
-
         ++runTime;
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
+
+        conductionDomain->advance
+        (
+            runTime.value() - runTime.deltaTValue(),
+            runTime.deltaTValue()
+        );
 
         if (runTime.outputTime())
         {

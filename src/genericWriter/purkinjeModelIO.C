@@ -1,4 +1,10 @@
 /*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Copyright (C) 2011-2023 OpenFOAM Foundation
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
 License
     This file is part of cardiacFoam.
 
@@ -20,6 +26,7 @@ License
 #include "purkinjeModelIO.H"
 #include "OSspecific.H"
 #include <fstream>
+#include "ionicVariableCompatibility.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -27,6 +34,64 @@ namespace Foam
 {
 
 // * * * * * * * * * * * * * * * Static Functions  * * * * * * * * * * * * * //
+
+purkinjeModelIO::ResolvedTokens purkinjeModelIO::filterTokens
+(
+    const wordList& userExport,
+    const char* const stateNames[],
+    int nStates,
+    const char* const algNames[],
+    int nAlg
+)
+{
+    ResolvedTokens res;
+    DynamicList<word> networkTokens(userExport.size());
+    DynamicList<word> ionicTokens(userExport.size());
+    DynamicList<word> unknownTokens;
+
+    for (const word& var : userExport)
+    {
+        if (var == "Vm" || var == "Iion" || var == "activationTime" ||
+            var == "IcouplingSource" || var == "IcouplingCurrent")
+        {
+            networkTokens.append(var);
+        }
+        else
+        {
+            bool isVmDummy = false;
+            label stateIdx = -1;
+            label algIdx = -1;
+            label rateIdx = -1;
+
+            bool resolved = ionicVariableCompatibility::resolveVariable
+            (
+                var,
+                stateNames,
+                nStates,
+                algNames,
+                nAlg,
+                isVmDummy,
+                stateIdx,
+                algIdx,
+                rateIdx
+            );
+
+            if (resolved && (stateIdx >= 0 || algIdx >= 0))
+            {
+                ionicTokens.append(var);
+            }
+            else
+            {
+                unknownTokens.append(var);
+            }
+        }
+    }
+
+    res.networkTokens = networkTokens;
+    res.ionicTokens = ionicTokens;
+    res.unknownTokens = unknownTokens;
+    return res;
+}
 
 autoPtr<OFstream> purkinjeModelIO::openTimeSeries
 (
@@ -105,11 +170,14 @@ void purkinjeModelIO::writeVTK
     const pointField&  nodeLocations,
     const labelList&   edgeNodeA,
     const labelList&   edgeNodeB,
-    const scalarField& Vm1D,
-    const scalarField& Iion1D,
-    const labelList&   pvjNodes,
-    const scalarField& terminalSource
-)
+            const scalarField& Vm1D,
+            const scalarField& Iion1D,
+            const labelList&   pvjNodes,
+            const scalarField& terminalSource,
+            bool                includeVmIion,
+            const PtrList<scalarField>& ionicFields,
+            const wordList&             ionicFieldNames
+        )
 {
     if (nodeLocations.empty())
     {
@@ -154,24 +222,29 @@ void purkinjeModelIO::writeVTK
     // ---- Point data fields ----
     os  << "\nPOINT_DATA " << nNodes << "\n";
 
-    // Vm natively in Volts
-    os  << "SCALARS Vm_V float 1\n"
-        << "LOOKUP_TABLE default\n";
-    forAll(Vm1D, i)
+    if (includeVmIion)
     {
-        os  << Vm1D[i] << "\n";
+        // Vm natively in Volts
+        os  << "SCALARS Vm_V float 1\n"
+            << "LOOKUP_TABLE default\n";
+        forAll(Vm1D, i)
+        {
+            os  << Vm1D[i] << "\n";
+        }
+
+        // Ionic current
+        os  << "SCALARS Iion float 1\n"
+            << "LOOKUP_TABLE default\n";
+        forAll(Iion1D, i)
+        {
+            os  << Iion1D[i] << "\n";
+        }
     }
 
-    // Ionic current
-    os  << "SCALARS Iion float 1\n"
-        << "LOOKUP_TABLE default\n";
-    forAll(Iion1D, i)
-    {
-        os  << Iion1D[i] << "\n";
-    }
-
-    // Volumetric coupling source — non-zero only at PVJ nodes
-    if (pvjNodes.size() && terminalSource.size() == pvjNodes.size())
+    // Volumetric coupling source — non-zero only at PVJ nodes. Eikonal
+    // couplers work on arrival time, not a volumetric source, so this is
+    // meaningless (permanently zero) when there is no ionic model.
+    if (includeVmIion && pvjNodes.size() && terminalSource.size() == pvjNodes.size())
     {
         scalarField pvjField(nNodes, 0.0);
         forAll(pvjNodes, k)
@@ -187,19 +260,15 @@ void purkinjeModelIO::writeVTK
         }
     }
 
-    // PVJ marker — 1 at terminal nodes, 0 elsewhere (useful for selection in
-    // ParaView with Threshold filter)
+    // ---- Dynamic Ionic Fields ----
+    forAll(ionicFields, fI)
     {
-        scalarField pvjMarker(nNodes, 0.0);
-        forAll(pvjNodes, k)
-        {
-            pvjMarker[pvjNodes[k]] = 1.0;
-        }
-        os  << "SCALARS isPVJ float 1\n"
+        os  << "SCALARS " << ionicFieldNames[fI] << " float 1\n"
             << "LOOKUP_TABLE default\n";
-        forAll(pvjMarker, i)
+        const scalarField& field = ionicFields[fI];
+        forAll(field, i)
         {
-            os  << pvjMarker[i] << "\n";
+            os << field[i] << "\n";
         }
     }
 }

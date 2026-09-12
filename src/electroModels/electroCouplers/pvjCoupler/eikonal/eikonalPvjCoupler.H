@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    eikonalPvjCoupler
+
+Description
+    Eikonal PVJ coupler.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef eikonalPvjCoupler_H
@@ -26,19 +34,17 @@ License
 namespace Foam
 {
 
-class EikonalPvjCoupler
+class eikonalPvjCoupler
 :
-    public PVJCoupler
+    public pvjCoupler
 {
     mutable scalarField terminalActivationBuffer_;
-
-    void ensureSupportedMode() const;
 
 public:
 
     OverrideTypeName("eikonalPvjCoupler");
 
-    EikonalPvjCoupler
+    eikonalPvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,

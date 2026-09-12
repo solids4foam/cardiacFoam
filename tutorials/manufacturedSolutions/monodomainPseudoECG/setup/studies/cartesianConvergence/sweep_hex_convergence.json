@@ -1,0 +1,214 @@
+{
+  "base": {
+    "entry": "manufacturedMonodomainPseudoECG",
+    "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
+    "setup_dir_name": "setup",
+    "cases_root": "tutorials",
+    "postprocess_strict_artifacts": false,
+    "ecg_enabled": true,
+    "archive_dir_name": "setup/studies/cartesianConvergence/results/sweepCases"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "conductivity": [
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355)",
+        "[ -1 -3 3 0 0 2 0 ] ( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 )",
+        "[ -1 -3 3 0 0 2 0 ] ( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 )",
+        "[ -1 -3 3 0 0 2 0 ] ( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 )",
+        "[ -1 -3 3 0 0 2 0 ] ( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 )"
+      ],
+      "verification_model_type": [
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedAnisotropicMonodomainVerifier",
+        "manufacturedAnisotropicMonodomainVerifier",
+        "manufacturedAnisotropicMonodomainVerifier",
+        "manufacturedAnisotropicMonodomainVerifier"
+      ],
+      "dimensions": [
+        [
+          "1D"
+        ],
+        [
+          "1D"
+        ],
+        [
+          "1D"
+        ],
+        [
+          "1D"
+        ],
+        [
+          "2D"
+        ],
+        [
+          "2D"
+        ],
+        [
+          "2D"
+        ],
+        [
+          "2D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ],
+        [
+          "3D"
+        ]
+      ],
+      "number_cells": [
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ],
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ],
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ],
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ]
+      ],
+      "dt_values": [
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000140174
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000140174
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000140174
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000140174
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "dimensions",
+          "number_cells",
+          "dt_values",
+          "verification_model_type"
+        ]
+      }
+    ]
+  }
+}

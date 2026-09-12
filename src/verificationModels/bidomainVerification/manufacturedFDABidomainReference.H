@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    manufacturedFDABidomainReference
+
+Description
+    Manufactured FDA bidomain reference solution.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedFDABidomainReference_H

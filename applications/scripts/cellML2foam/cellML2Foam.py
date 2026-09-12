@@ -1,4 +1,31 @@
 #!/usr/bin/env python3
+#----------------------------------------------------------------------------#
+# License
+#     This file is part of cardiacFoam.
+#
+#     cardiacFoam is free software: you can redistribute it and/or modify it
+#     under the terms of the GNU General Public License as published by the
+#     Free Software Foundation, either version 3 of the License, or (at your
+#     option) any later version.
+#
+#     cardiacFoam is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Script
+#     cellML2Foam
+#
+# Description
+#     Provides CLI interface for converting CellML models to OpenFOAM code.
+#
+# Author
+#     Simao Nieto de Castro, UCD.
+#----------------------------------------------------------------------------#
+
 
 import argparse
 import sys
@@ -35,23 +62,23 @@ def print_manual_steps_notice(model_id):
 POST-GENERATION CHECKLIST FOR: {model_id}
 ============================================================
 
-The model has been generated, but manual verification of 
+The model has been generated, but manual verification of
 physiological semantics is required:
 
 1) Verify the ALGEBRAIC[Iion_cm] mapping:
-   Ensure Iion_cm in {model_id}.H correctly represents 
+   Ensure Iion_cm in {model_id}.H correctly represents
    the sum of all ionic currents:
-   
+
    ALGEBRAIC[Iion_cm] = ALGEBRAIC[sum_of_currents];
 
 2) Clean up redundant symbols:
    - Remove unused Myokit-generated RATES[0] (Vm derivative)
-   - Remove stimulus protocol symbols if desired (e.g. pace, 
+   - Remove stimulus protocol symbols if desired (e.g. pace,
      t_end, t_amplitude) from Names.H and .H files.
 
 3) Configure Tissue Flags (if applicable):
    If you use local tissue-specific data, map them to:
-   
+
    tissueFlag == 1 : endo
    tissueFlag == 2 : mid
    tissueFlag == 3 : epi
@@ -127,6 +154,7 @@ def main():
             start=start,
             end=args.to,
             model=args.model,
+            outdir=args.outdir,
             verbose=args.verbose,
         )
 
@@ -134,7 +162,7 @@ def main():
             # Reconstruct stages for the banner if it returned a dict
             stages_list = ["openfoam"] # Minimalist hint
             foam_banner(args, start, stages_list)
-            
+
             # Only create ionic folder if we reached openfoam
             if args.to == "openfoam":
                 if args.model is None:

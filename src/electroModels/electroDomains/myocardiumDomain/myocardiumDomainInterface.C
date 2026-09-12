@@ -21,8 +21,11 @@ License
 #include "myocardiumDomain.H"
 #include "eikonalMyocardiumDomain.H"
 #include "ionicModel.H"
+#include "ionicHeterogeneity.H"
 #include "electroVerificationModel.H"
 #include "error.H"
+#include "fvMeshSubset.H"
+#include "volFields.H"
 
 namespace Foam
 {
@@ -37,6 +40,162 @@ word myocardiumSolverType(const dictionary& electroProperties)
     return coeffDictName.endsWith("Coeffs")
         ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
         : coeffDictName;
+}
+
+
+scalarField readTransmuralDistance
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties,
+    const dictionary& heterogeneityDict
+)
+{
+    scalarField fullValues;
+
+    const word mode = heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+
+    if (mode == "cellZoneRegions")
+    {
+        fullValues.setSize(mesh.nCells(), -1.0);
+        const dictionary& regionsDict = heterogeneityDict.subDict("regions");
+
+        // Parse cellZone regions with the shared validator.
+        const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
+            ionicHeterogeneity::parseNamedCellZoneRegions(regionsDict);
+
+        forAll(regions, regionIndex)
+        {
+            const word& zoneName = regions[regionIndex].cellZone;
+            const label zoneId = mesh.cellZones().findZoneID(zoneName);
+
+            if (zoneId < 0)
+            {
+                FatalErrorInFunction
+                    << "ionicHeterogeneity region '"
+                    << regions[regionIndex].name << "' specifies cellZone '"
+                    << zoneName << "' but it does not exist on mesh '"
+                    << mesh.name() << "'."
+                    << exit(FatalError);
+            }
+
+            const labelList& zoneCells = mesh.cellZones()[zoneId];
+            forAll(zoneCells, i)
+            {
+                if (fullValues[zoneCells[i]] >= 0.0)
+                {
+                    FatalErrorInFunction
+                        << "ionicHeterogeneity cellZoneRegions: cell "
+                        << zoneCells[i] << " belongs to more than one "
+                        << "region's cellZone ('"
+                        << regions[regionIndex].name << "' and an earlier "
+                        << "region both claim it)."
+                        << exit(FatalError);
+                }
+
+                fullValues[zoneCells[i]] = scalar(regionIndex);
+            }
+        }
+    }
+    else
+    {
+        const word fieldName =
+            heterogeneityDict.lookupOrDefault<word>("field", "t");
+
+        const volScalarField transmuralField
+        (
+            IOobject
+            (
+                fieldName,
+                mesh.time().timeName(),
+                mesh,
+                IOobject::MUST_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh
+        );
+        fullValues = transmuralField.primitiveField();
+    }
+
+    if (!electroProperties.found("cellZone"))
+    {
+        return fullValues;
+    }
+
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+
+    if (zoneId < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot find myocardium cellZone '" << cellZoneName
+            << "' on mesh '" << mesh.name() << "'."
+            << exit(FatalError);
+    }
+
+    fvMeshSubset subset(mesh);
+    subset.setCellSubset(mesh.cellZones()[zoneId]);
+
+    const labelUList& cellMap = subset.cellMap();
+    scalarField mappedValues(cellMap.size(), 0.0);
+
+    forAll(cellMap, subCellI)
+    {
+        mappedValues[subCellI] = fullValues[cellMap[subCellI]];
+    }
+
+    return mappedValues;
+}
+
+
+scalarField readNamedScalarField
+(
+    const fvMesh& mesh,
+    const dictionary& electroProperties,
+    const word& fieldName
+)
+{
+    const volScalarField namedField
+    (
+        IOobject
+        (
+            fieldName,
+            mesh.time().timeName(),
+            mesh,
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh
+    );
+    scalarField fullValues = namedField.primitiveField();
+
+    if (!electroProperties.found("cellZone"))
+    {
+        return fullValues;
+    }
+
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+
+    if (zoneId < 0)
+    {
+        FatalErrorInFunction
+            << "Cannot find myocardium cellZone '" << cellZoneName
+            << "' on mesh '" << mesh.name() << "'."
+            << exit(FatalError);
+    }
+
+    fvMeshSubset subset(mesh);
+    subset.setCellSubset(mesh.cellZones()[zoneId]);
+
+    const labelUList& cellMap = subset.cellMap();
+    scalarField mappedValues(cellMap.size(), 0.0);
+
+    forAll(cellMap, subCellI)
+    {
+        mappedValues[subCellI] = fullValues[cellMap[subCellI]];
+    }
+
+    return mappedValues;
 }
 
 } // End anonymous namespace
@@ -63,7 +222,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
 
         return autoPtr<myocardiumDomainInterface>
         (
-            new EikonalMyocardiumDomain(mesh, electroProperties)
+            new eikonalMyocardiumDomain(mesh, electroProperties)
         );
     }
 
@@ -71,16 +230,60 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         ionicModel::New
         (
             electroProperties,
-            MyocardiumDomain::configuredCellCount(mesh, electroProperties),
+            myocardiumDomain::configuredCellCount(mesh, electroProperties),
             initialDeltaT
         );
+
+    if (electroProperties.found("ionicHeterogeneity"))
+    {
+        const dictionary& heterogeneityDict =
+            electroProperties.subDict("ionicHeterogeneity");
+
+        if
+        (
+            heterogeneityDict.found("mode")
+         || heterogeneityDict.found("field")
+        )
+        {
+            const scalarField transmuralDistance =
+                readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
+
+            ionicModelPtr->configureIonicHeterogeneity
+            (
+                transmuralDistance,
+                heterogeneityDict
+            );
+        }
+
+        if (heterogeneityDict.found("gradientAxes"))
+        {
+            const dictionary& axesDict =
+                heterogeneityDict.subDict("gradientAxes");
+
+            forAllConstIter(dictionary, axesDict, iter)
+            {
+                const word axisName(iter().keyword());
+                const dictionary& axisDict = axesDict.subDict(axisName);
+                const word fieldName(axisDict.lookup("field"));
+
+                const scalarField axisField =
+                    readNamedScalarField(mesh, electroProperties, fieldName);
+
+                ionicModelPtr->configureGradientAxisHeterogeneity
+                (
+                    axisField,
+                    axisDict
+                );
+            }
+        }
+    }
 
     verificationModelPtr =
         electroVerificationModel::New(electroProperties);
 
     return autoPtr<myocardiumDomainInterface>
     (
-        MyocardiumDomain::New
+        myocardiumDomain::New
         (
             mesh,
             electroProperties,

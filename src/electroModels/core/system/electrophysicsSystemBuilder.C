@@ -21,20 +21,17 @@ License
 #include "conductionSystemDomain.H"
 #include "ecgDomain.H"
 #include "electroDomainCoupler.H"
+#include "extracellularPotentialDomain.H"
 #include "electrophysicsAdvanceScheme.H"
 #include "error.H"
 
 #include "DynamicList.H"
+#include "HashTable.H"
 
 namespace Foam
 {
 namespace electrophysicsSystemBuilder
 {
-
-// Terminology used by the orchestration layer:
-//   primary domain        = myocardium
-//   conduction domains    = pre-myocardium graph / Purkinje domains
-//   ECG domains           = post-myocardium ECG domains
 
 namespace
 {
@@ -104,6 +101,22 @@ void collectConductionCouplingDicts
     );
 }
 
+
+word myocardiumSolverType(const dictionary& electroProperties)
+{
+    if (electroProperties.found("myocardiumSolver"))
+    {
+        return word(electroProperties.lookup("myocardiumSolver"));
+    }
+
+    const word coeffDictName = electroProperties.dictName();
+
+    return coeffDictName.endsWith("Coeffs")
+      ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
+      : word("unset");
+}
+
+
 } // End anonymous namespace
 
 
@@ -150,6 +163,40 @@ void configureAdvanceScheme
 }
 
 
+void configureBathPotentialDomain
+(
+    electrophysicsSystem& system,
+    const fvMesh&         mesh,
+    const dictionary&     electroProperties
+)
+{
+    system.clearPotentialDomain();
+
+    if (!electroProperties.found("bathPotentialDomain"))
+    {
+        return;
+    }
+
+    if (!system.hasMyocardium())
+    {
+        FatalErrorInFunction
+            << "configureBathPotentialDomain requires the myocardium domain "
+            << "to be configured first."
+            << exit(FatalError);
+    }
+
+    system.setPotentialDomain
+    (
+        new extracellularPotentialDomain
+        (
+            mesh,
+            system.myocardium(),
+            electroProperties.subDict("bathPotentialDomain")
+        )
+    );
+}
+
+
 void configureConductionDomains
 (
     electrophysicsSystem& system,
@@ -175,7 +222,7 @@ void configureConductionDomains
         return;
     }
 
-    HashTable<ConductionSystemDomain*> conductionDomainsByName
+    HashTable<conductionSystemDomain*> conductionDomainsByName
     (
         conductionDomainNames.size()
     );
@@ -192,17 +239,18 @@ void configureConductionDomains
                 << exit(FatalError);
         }
 
-        autoPtr<ConductionSystemDomain> conductionDomain
+        autoPtr<conductionSystemDomain> conductionDomain
         (
-            ConductionSystemDomain::New
+            conductionSystemDomain::New
             (
                 mesh,
+                domainName,
                 *conductionDomainDicts[i],
                 initialDeltaT
             )
         );
 
-        ConductionSystemDomain* domainPtr = conductionDomain.ptr();
+        conductionSystemDomain* domainPtr = conductionDomain.ptr();
         conductionDomainsByName.insert(domainName, domainPtr);
         system.appendConductionDomain(domainPtr);
     }
@@ -241,12 +289,12 @@ void configureConductionDomains
                 << exit(FatalError);
         }
 
-        ConductionSystemDomain& conductionDomain =
+        conductionSystemDomain& conductionDomain =
             *conductionDomainsByName[linkedConductionDomain];
 
         system.appendConductionCoupling
         (
-            ElectroDomainCoupler::New
+            electroDomainCoupler::New
             (
                 system.myocardium(),
                 conductionDomain,
@@ -260,36 +308,175 @@ void configureConductionDomains
 void configureECGDomains
 (
     electrophysicsSystem&       system,
-    const electroStateProvider& stateProvider,
+    const electroStateProvider& myocardiumStateProvider,
+    const electroStateProvider* potentialStateProviderPtr,
     const dictionary&           electroProperties
 )
 {
-    system.endECGDomains();
-    system.clearECGDomains();
     system.endECGCouplings();
     system.clearECGCouplings();
+    system.endECGDomains();
+    system.clearECGDomains();
 
     DynamicList<word> ecgDomainNames;
     DynamicList<const dictionary*> ecgDomainDicts;
+    const dictionary* sharedElectrodePositionsPtr = nullptr;
+    const dictionary* manufacturedBidomainPtr =
+        electroProperties.findDict("manufacturedBidomain");
+    const dictionary* bathPotentialDomainPtr =
+        electroProperties.findDict("bathPotentialDomain");
 
-    appendSubDictionaries
-    (
-        electroProperties,
-        "ecgDomains",
-        ecgDomainNames,
-        ecgDomainDicts
-    );
+    if (electroProperties.found("ecgDomains"))
+    {
+        const dictionary& ecgDomainsDict =
+            electroProperties.subDict("ecgDomains");
+
+        sharedElectrodePositionsPtr =
+            ecgDomainsDict.findDict("electrodePositions");
+
+        forAllConstIter(dictionary, ecgDomainsDict, iter)
+        {
+            const entry& e = iter();
+
+            if (!e.isDict() || e.keyword() == "electrodePositions")
+            {
+                continue;
+            }
+
+            ecgDomainNames.append(e.keyword());
+            ecgDomainDicts.append(&e.dict());
+        }
+    }
+
+    HashTable<ecgDomain*> ecgDomainsByName(ecgDomainNames.size());
 
     forAll(ecgDomainNames, i)
     {
-        system.appendECGDomain
+        const word& domainName = ecgDomainNames[i];
+        const dictionary& domainDict = *ecgDomainDicts[i];
+        const word ecgSolverType
         (
-            new ECGDomain
+            domainDict.lookupOrDefault<word>("ecgSolver", "pseudoECG")
+        );
+
+        if (ecgDomainsByName.found(domainName))
+        {
+            FatalErrorInFunction
+                << "Duplicate ECG domain name '" << domainName
+                << "' while configuring post-myocardium domains."
+                << exit(FatalError);
+        }
+
+        const electroStateProvider* stateProviderPtr = nullptr;
+
+        if (ecgSolverType == "pseudoECG")
+        {
+            stateProviderPtr = &myocardiumStateProvider;
+        }
+        else if (ecgSolverType == "eikonalECG")
+        {
+            const word solverType(myocardiumSolverType(electroProperties));
+
+            if (solverType != "eikonalSolver")
+            {
+                FatalErrorInFunction
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver eikonalECG, but "
+                    << "myocardiumSolver is '" << solverType
+                    << "'. eikonalECG requires myocardiumSolver "
+                    << "eikonalSolver because it reconstructs Vm from "
+                    << "the activation-time field."
+                    << exit(FatalError);
+            }
+
+            stateProviderPtr = &myocardiumStateProvider;
+        }
+        else if (ecgSolverType == "torsoECG")
+        {
+            const word solverType(myocardiumSolverType(electroProperties));
+
+            if (solverType != "bidomainSolver")
+            {
+                FatalErrorInFunction
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver torsoECG, but "
+                    << "myocardiumSolver is '" << solverType
+                    << "'. torsoECG requires myocardiumSolver "
+                    << "bidomainSolver because it samples the "
+                    << "extracellular potential phiE."
+                    << exit(FatalError);
+            }
+
+            if (!potentialStateProviderPtr)
+            {
+                FatalErrorInFunction
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver torsoECG, but no "
+                    << "bathPotentialDomain is configured inside "
+                    << "bidomainSolverCoeffs. Add:" << nl
+                    << "bidomainSolverCoeffs" << nl
+                    << "{" << nl
+                    << "    bathPotentialDomain" << nl
+                    << "    {" << nl
+                    << "        bathCellZones (...);" << nl
+                    << "        ..." << nl
+                    << "    }" << nl
+                    << "}" << exit(FatalError);
+            }
+
+            stateProviderPtr = potentialStateProviderPtr;
+        }
+        else
+        {
+            FatalErrorInFunction
+                << "ECG domain '" << domainName
+                << "' selects ecgSolver '" << ecgSolverType
+                << "', but provider routing is only defined for "
+                << "pseudoECG, eikonalECG, and torsoECG."
+                << exit(FatalError);
+        }
+
+        ecgDomain* domainPtr =
+            new ecgDomain
             (
-                stateProvider,
-                *ecgDomainDicts[i],
-                ecgDomainNames[i]
-            )
+                *stateProviderPtr,
+                domainDict,
+                domainName,
+                sharedElectrodePositionsPtr,
+                manufacturedBidomainPtr,
+                bathPotentialDomainPtr
+            );
+
+        ecgDomainsByName.insert(domainName, domainPtr);
+        system.appendECGDomain(domainPtr);
+    }
+
+    forAll(ecgDomainNames, i)
+    {
+        const dictionary& domainDict = *ecgDomainDicts[i];
+
+        if (!domainDict.found("coupling"))
+        {
+            continue;
+        }
+
+        if (!system.hasMyocardium())
+        {
+            FatalErrorInFunction
+                << "ECG domain '" << ecgDomainNames[i]
+                << "' configures a coupling block, but no myocardium domain "
+                << "is available as the primary coupling endpoint."
+                << exit(FatalError);
+        }
+
+        system.appendECGCoupling
+        (
+            electroDomainCoupler::New
+            (
+                system.myocardium(),
+                *ecgDomainsByName[ecgDomainNames[i]],
+                domainDict.subDict("coupling")
+            ).ptr()
         );
     }
 }

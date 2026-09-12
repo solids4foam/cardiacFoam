@@ -25,17 +25,17 @@ License
 namespace Foam
 {
 
-defineTypeNameAndDebug(Monodomain1DSolver, 0);
+defineTypeNameAndDebug(monodomain1DSolver, 0);
 addToRunTimeSelectionTable
 (
     conductionSystemSolver,
-    Monodomain1DSolver,
+    monodomain1DSolver,
     dictionary
 );
 
-void Monodomain1DSolver::advance
+void monodomain1DSolver::advance
 (
-    ConductionSystemDomain& domain,
+    conductionSystemDomain& domain,
     scalar t0,
     scalar dt
 )
@@ -44,15 +44,36 @@ void Monodomain1DSolver::advance
     scalarField& Iion = domain.ionicCurrent();
     const label N = Vm.size();
 
-    // ---- Step 1: Reaction (First Half-Step) ----
-    // Integrate ODEs for dt/2
-    domain.ionicModelRef().solveODE(t0, dt / 2.0, Vm, Iion);
+    const label localStart = domain.localStartNode();
+    const label nLocal = domain.nLocalNodes();
+
+    // ---- Step 1: Reaction Step ----
+    scalarField localVm(nLocal);
+    for (label i = 0; i < nLocal; ++i)
+    {
+        localVm[i] = Vm[localStart + i];
+    }
+
+    scalarField localIion(nLocal, 0.0);
+
+    // Integrate ODEs for the full timestep for the local partition
+    if (nLocal > 0)
+    {
+        domain.ionicModelRef().solveODE(t0, dt, localVm, localIion);
+    }
+
+    Iion = 0.0;
+    for (label i = 0; i < nLocal; ++i)
+    {
+        Iion[localStart + i] = localIion[i];
+    }
+    reduce(Iion.begin(), Iion.size(), sumOp<scalar>(), UPstream::msgType(), UPstream::worldComm);
 
     // ---- Step 2: Applied current ----
     appliedCurrentBuffer_.setSize(N);
     domain.assembleAppliedCurrent(t0, appliedCurrentBuffer_);
 
-    // ---- Step 3: Diffusion (Full-Step PDE) using O(N) Hines Algorithm ----
+    // ---- Step 3: Diffusion Step using O(N) Hines Algorithm ----
     //
     // Finite-volume cable equation on a graph:
     //
@@ -180,9 +201,16 @@ void Monodomain1DSolver::advance
         Vm[c] = (rhs[c] - parentCoeff[c] * Vm[p]) / diag[c];
     }
 
-    // ---- Step 4: Reaction (Second Half-Step) ----
-    // Integrate ODEs for the remaining dt/2 using the newly diffused Vm
-    domain.ionicModelRef().solveODE(t0 + (dt / 2.0), dt / 2.0, Vm, Iion);
+    // Record first activation time for each node that crosses the threshold.
+    scalarField& actTime = domain.activationTime();
+    const scalar tNew = t0 + dt;
+    for (label i = 0; i < N; i++)
+    {
+        if (actTime[i] < 0.0 && Vm[i] >= activationVmThreshold_)
+        {
+            actTime[i] = tNew;
+        }
+    }
 
     domain.reportAdvanceDiagnostics(t0, dt);
 }

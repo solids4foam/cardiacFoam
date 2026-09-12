@@ -1,0 +1,61 @@
+# applications/utilities/recomputePseudoECG/utility.manifest.toml
+
+name = "recomputePseudoECG"
+description = "Recompute pseudo-ECG signals from stored Vm fields without re-running the simulation."
+category = "post-processing"
+
+purpose = """
+Post-processing utility that iterates over stored time directories, reads the
+Vm field and the active myocardium conductivity tensor, and recomputes the
+pseudo-ECG dipole integral for each electrode defined in
+constant/electroProperties. Produces a
+postProcessing/pseudoECG.dat file identical in format to the one written by
+cardiacFoam during a normal run. Use this to correct electrode positions or
+try new electrode configurations without rerunning the 3-D solver.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "constant/polyMesh/",
+  "0/conductivity or active <solver>Coeffs conductivity entry",
+  "<time>/Vm",
+]
+
+outputs = [
+  "postProcessing/pseudoECG.dat",
+]
+
+requires_mesh = true
+example = "recomputePseudoECG -case ./LBBB -output postProcessing/pseudoECG_corrected.dat"
+
+[[flags]]
+name = "-output"
+description = "Output file path (default: postProcessing/pseudoECG.dat)."
+takes_value = true
+argument_kind = "path"
+
+[[flags]]
+name = "-vmField"
+description = "Name of the membrane potential field to read from each time directory (default: Vm)."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-sigmaField"
+description = "Name of the conductivity tensor field in 0/ (default: conductivity)."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-time"
+description = "OpenFOAM time selector string, e.g. '0.1:0.5' or 'latest'."
+takes_value = true
+argument_kind = "word"
+
+[[produces]]
+artifact_id = "pseudoECG_dat"
+path_pattern = "postProcessing/pseudoECG.dat"
+format = "csv_probe"
+description = "Pseudo-ECG time series: one row per time step, columns are time V1 V2 V3 V4 V5 V6."
+produced_by = "recomputePseudoECG"
+time_indexed = false

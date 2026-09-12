@@ -32,7 +32,7 @@ Author
 #ifndef Grandi_H
 #define Grandi_H
 
-#include "ionicModel.H"
+#include "configuredIonicModel.H"
 #include "OFstream.H"
 #include "volFields.H"
 #include "Grandi_2011Names.H"
@@ -49,7 +49,7 @@ namespace Foam
 
 class Grandi
 :
-    public ionicModel
+    public configuredIonicModel
 {
     // Private Data
 
@@ -64,6 +64,10 @@ class Grandi
 
         //- Rates
         mutable PtrList<scalarField> RATES_;
+
+
+        //- Active integration point for derivatives() (no index argument)
+        mutable label activeIntegrationPoint_ = 0;
 
 
     // Private Member Functions
@@ -91,6 +95,11 @@ protected:
         }
 
         virtual const scalarField* ioConstantsPtr() const override
+        {
+            return &CONSTANTS_;
+        }
+
+        virtual scalarField* ioMutableConstantsPtr() const override
         {
             return &CONSTANTS_;
         }
@@ -123,8 +132,25 @@ protected:
         OverrideTypeName("Grandi");
 
 
-        //override the only available tissue in this model
+        //- Tissue types supported by this model. "myocyte" preserves the
+        //  existing homogeneous-run behavior; the anatomical three enable
+        //  ionicHeterogeneity (transmuralBands or namedRegions).
         virtual List<word> supportedTissueTypes() const override;
+
+        //- Per-point constants accessor (heterogeneous when configured)
+        scalarField& constants(const label integrationPtI) const;
+
+        //- Full constants array for a tissue flag (endo 3, M 2, epi 1)
+        virtual scalarField constantsForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
+        virtual scalarField initialStatesForTissue
+        (
+            const label tissueFlag
+        ) const override;
+
         virtual List<word> supportedDimensions() const override
         {
             return {}; //No dimensions flag
@@ -135,7 +161,6 @@ protected:
         // Constructors
 
             //- Construct given a dictionary, the number of integration points and a
-            //  initial time step for the ODE solver
             Grandi
             (
                 const dictionary& dict,
@@ -163,13 +188,31 @@ protected:
 
 
             //- Number of ODE's to solve
-            virtual label nEqns() const override
+            //- Vm is advanced linearly across the step from the supplied rate
+    virtual bool supportsVmRateCoupling() const override
+    {
+        return true;
+    }
+
+    //- Iion can be recomputed at any Vm from the stored state
+    virtual bool supportsIonicCurrentEvaluation() const override
+    {
+        return true;
+    }
+
+    virtual void evaluateIonicCurrent
+    (
+        const scalar t,
+        const scalarField& Vm,
+        scalarField& Im
+    ) override;
+
+    virtual label nEqns() const override
             {
                 return NUM_STATES;
             }
 
             //- Derivatives of each ODE with respect to the primary unknown in that
-            //  equation
             virtual void derivatives
             (
                 const scalar t,

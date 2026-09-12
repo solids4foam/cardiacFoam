@@ -19,6 +19,7 @@ License
 
 #include "myocardiumSolver.H"
 #include "error.H"
+#include "nonOrthogonalCorrectorLoop.H"
 
 namespace Foam
 {
@@ -34,11 +35,13 @@ defineRunTimeSelectionTable(myocardiumSolver, dictionary);
 autoPtr<myocardiumSolver> myocardiumSolver::New
 (
     const fvMesh& mesh,
+    const fvMesh& supportMesh,
+    const fvMeshSubset* meshSubsetPtr,
     const word& solverType,
     const dictionary& coeffs
 )
 {
-    Info<< nl << "Selecting myocardiumSolver " << solverType << endl;
+
 
     auto* ctorPtr = dictionaryConstructorTable(solverType);
 
@@ -53,7 +56,53 @@ autoPtr<myocardiumSolver> myocardiumSolver::New
         ) << exit(FatalIOError);
     }
 
-    return autoPtr<myocardiumSolver>(ctorPtr(mesh, coeffs));
+    return autoPtr<myocardiumSolver>
+    (
+        ctorPtr(mesh, supportMesh, meshSubsetPtr, coeffs)
+    );
+}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+void myocardiumSolver::bindExternalPhiE
+(
+    const volScalarField& phiE,
+    const labelUList& heartCellMap
+)
+{
+    (void)phiE;
+    (void)heartCellMap;
+
+    FatalErrorInFunction
+        << "The selected myocardiumSolver cannot bind an external phiE field."
+        << exit(FatalError);
+}
+
+
+void myocardiumSolver::unbindExternalPhiE()
+{
+    FatalErrorInFunction
+        << "The selected myocardiumSolver cannot unbind an external phiE field."
+        << exit(FatalError);
+}
+
+
+void myocardiumSolver::solveDiffusionImplicit
+(
+    electroVolumeFieldDomain& domain,
+    scalar dt,
+    pimpleControl& pimple
+)
+{
+    while (pimple.loop())
+    {
+        correctNonOrthogonalLoop
+        (
+            pimple,
+            [&]() { solveDiffusionImplicit(domain, dt); }
+        );
+    }
 }
 
 } // End namespace Foam

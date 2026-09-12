@@ -1,0 +1,158 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// cardiacFoam fvSolution — three canonical configurations:
+//
+//   A. monodomainSolver / singleCellSolver  [ACTIVE]
+//   B. eikonalSolver                        [see below]
+//   C. bidomainSolver                       [see below]
+//
+// Copy this file to your case's system/ directory and uncomment the block
+// that matches your myocardiumSolver choice.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A. monodomainSolver / singleCellSolver
+//    Active below — use as-is for these solver types.
+// ─────────────────────────────────────────────────────────────────────────────
+
+solvers
+{
+    "Vm|VmFinal|u|uFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-11;
+        relTol          0.0;
+    }
+
+    "psi|psiFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-11;
+        relTol          0.1;
+    }
+}
+
+PIMPLE
+{
+    nOuterCorrectors    1000;
+
+    residualControl
+    {
+        "Vm|psi"
+        {
+            relTol          0.0;
+            tolerance       1e-6;
+        }
+    }
+}
+
+relaxationFactors
+{
+    equations
+    {
+        psi     0.9;
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B. eikonalSolver
+//    No Vm evolution — activationTime is solved as a steady elliptic problem.
+//    The asymmetric_activationTime block handles the advection-diffusion form
+//    when eikonalAdvectionDiffusionApproach = true.
+//    Replace the entire solvers/PIMPLE/relaxationFactors block with:
+//
+// solvers
+// {
+//     "activationTime|activationTimeFinal"
+//     {
+//         solver          PCG;
+//         preconditioner  diagonal;
+//         tolerance       1e-11;
+//         relTol          0.1;
+//     }
+//
+//     asymmetric_activationTime
+//     {
+//         solver          PBiCGStab;
+//         preconditioner  DILU;
+//         tolerance       1e-11;
+//         relTol          0.0;
+//     }
+// }
+//
+// PIMPLE
+// {
+//     nOuterCorrectors    5000;
+//
+//     residualControl
+//     {
+//         activationTime
+//         {
+//             relTol          0.0;
+//             tolerance       1e-11;
+//         }
+//     }
+// }
+//
+// relaxationFactors
+// {
+//     equations
+//     {
+//         activationTime     0.9;
+//     }
+// }
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C. bidomainSolver
+//    Adds a phiE solver; tighter tolerances; fewer PIMPLE iterations because
+//    the bidomain system converges quickly with the operator-splitting scheme.
+//    Replace the entire solvers/PIMPLE/relaxationFactors block with:
+//
+// solvers
+// {
+//     "Vm|VmFinal|u|uFinal"
+//     {
+//         solver          PCG;
+//         preconditioner  DIC;
+//         tolerance       1e-15;
+//         relTol          0.0;
+//     }
+//
+//     "phiE|phiEFinal|phiI|phiIFinal"
+//     {
+//         solver          PCG;
+//         preconditioner  DIC;
+//         tolerance       1e-15;
+//         relTol          0.0;
+//     }
+// }
+//
+// PIMPLE
+// {
+//     nOuterCorrectors    2;
+// }
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ************************************************************************* //

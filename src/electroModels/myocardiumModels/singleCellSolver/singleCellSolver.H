@@ -16,38 +16,25 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    SingleCellSolver
+    singleCellSolver
 
 Description
     Single-cell electrophysiology solver based on OpenFOAM.
 
-    This solver advances a single cardiac cell model in time using a
-    run-time selectable ionic model. In contrast to electrophysiologyModel,
-    no spatial voltage PDE is solved; instead, the transmembrane voltage
-    Vm is integrated directly as part of the ionic model ODE system.
-
-    The solver is primarily intended for:
-      - single-cell action potential simulations,
-      - testing and validation of ionic models,
-      - debugging and development of electrophysiology model components.
-
-    External stimulation is prescribed via a stimulus protocol dictionary.
-    Output is written as time series of states, algebraic variables and rates
-    using ionicModelIO.
-
 Author
-    Simao Nieto de Castro, UCD.
-    Philip Cardiff, UCD.
+    Simao Nieto de Castro. All rights reserved.
+    Philip Cardiff, UCD. All rights reserved.
 
 SourceFiles
-    SingleCellSolver.C
+    singleCellSolver.C
 \*---------------------------------------------------------------------------*/
 
-#ifndef SingleCellSolver_H
-#define SingleCellSolver_H
+#ifndef singleCellSolver_H
+#define singleCellSolver_H
 
 #include "electroModel.H"
 #include "ionicModel.H"
+#include "activeTensionModel.H"
 #include "electroVerificationModel.H"
 #include "scalarField.H"
 #include "overrideTypeName.H"
@@ -60,10 +47,10 @@ namespace electroModels
 {
 
 /*---------------------------------------------------------------------------*\
-                        Class SingleCellSolver Declaration
+                        Class singleCellSolver Declaration
 \*---------------------------------------------------------------------------*/
 
-class SingleCellSolver
+class singleCellSolver
 :
     public electroModel
 {
@@ -73,6 +60,18 @@ class SingleCellSolver
     //- Optional ionic-model pre/post processor selected from the ionic model
     //  type
     autoPtr<electroVerificationModel> verificationModelPtr_;
+
+    //- Run-time selectable active tension model
+    autoPtr<activeTensionModel> activeTensionModelPtr_;
+
+    //- Output file pointer for active tension
+    autoPtr<OFstream> outputTaPtr_;
+
+    //- Fibre stretch for active tension
+    scalarField lambdaField_;
+
+    //- Active tension output values
+    scalarField TaField_;
 
     //- Processor-declared fields used for pre-processing data exchange
     wordList preProcessFieldNames_;
@@ -95,10 +94,10 @@ class SingleCellSolver
     scalarField dummyIonicCurrentField_;
 
     //- Disallow default bitwise copy construct
-    SingleCellSolver(const SingleCellSolver&);
+    singleCellSolver(const singleCellSolver&);
 
     //- Disallow default bitwise assignment
-    void operator=(const SingleCellSolver&);
+    void operator=(const singleCellSolver&);
 
 
 public:
@@ -109,18 +108,18 @@ public:
     // Constructors
 
         //- Construct from components
-        SingleCellSolver
+        singleCellSolver
         (
             Time& runTime,
             const word& region = dynamicFvMesh::defaultRegion
         );
 
     //- Destructor
-    virtual ~SingleCellSolver() {}
+    virtual ~singleCellSolver() {}
 
     // Member Functions
 
-        //- SingleCellSolver is ODE-only; deltaT is driven by controlDict.
+        //- singleCellSolver is ODE-only; deltaT is driven by controlDict.
         //  Override to prevent the base class from dereferencing the empty
         //  domainSystem_.
         virtual void setDeltaT(Time& runTime) override

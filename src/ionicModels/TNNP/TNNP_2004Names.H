@@ -15,6 +15,11 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Index enums and function prototypes for the TNNP 2004 model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
@@ -64,6 +69,17 @@ enum CONSTANTS_INDEX {
     K_buf_sr,
     V_sr,
     tau_fCa,
+
+    sInfPrefactor,
+    sInfShift,
+    sInfScale,
+    tauSGaussAmp,
+    tauSGaussShift,
+    tauSGaussWidth,
+    tauSSigmoidAmp,
+    tauSSigmoidShift,
+    tauSSigmoidScale,
+    tauSOffset,
 
     NUM_CONSTANTS};
 
@@ -170,7 +186,7 @@ enum ALGEBRAIC_INDEX {
 void
 TNNPinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+TNNPcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 void
-TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+TNNPcomputeRates(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
 

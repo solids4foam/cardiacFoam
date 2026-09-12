@@ -106,6 +106,10 @@ public:
 
         virtual void setDeltaT(Time& runTime) override;
 
+        virtual bool readRestartState() override;
+
+        virtual void writeRestartState() const override;
+
     //- Destructor
     virtual ~electrophysiologyModel() = default;
 };

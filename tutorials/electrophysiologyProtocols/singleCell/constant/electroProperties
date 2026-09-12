@@ -1,0 +1,84 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+myocardiumSolver singleCellSolver;
+singleCellSolverCoeffs
+{
+
+    // Cell model selection
+
+    ionicModel    TWorld;
+    tissue    endocardialCells;
+
+
+    // Time integration settings
+
+    solver          RKF45;
+    maxSteps        1000000000;
+
+
+    // Stimulus protocol
+    singleCellStimulus
+    {
+        stim_start      20;
+        stim_duration   1;
+        stim_amplitude  60;
+        stim_period_S1  1000;
+        nstim1          2;
+        stim_period_S2  0;
+        nstim2          0;
+    }
+
+
+
+    // optional I/O control
+
+    writeAfterTime  0;
+    writeFrequency  0.001;
+
+    outputVariables
+    {
+        ionic
+        {
+            // Model-neutral baseline. There is no export list valid for
+            // every ionic model -- listCellModelsVariables confirms the state
+            // names differ per model (TWorld's voltage is `v`, Gaur's is
+            // `cell_v`), and the AV_* currents differ too: AV_Ito_Ito and
+            // AV_J_SRCarel exist in TWorld, AV_ITo_ITo and AV_Jrel do not.
+            // Those belong in a study's `ionic_export` override -- see
+            // setup/studies/tworldVsGaur -- not in the tutorial baseline.
+            //
+            // `Vm` MUST be listed -- it is not written unconditionally.
+            // Measured on a real run: `export (cai)` yields a trace whose
+            // header is exactly `time cai`, with no Vm column, which would
+            // fail regression/singleCell.reference. An EMPTY `export ()` is
+            // the dump-everything mode instead (~513 columns).
+            //
+            // `Vm` is the OUTPUT name for the model's voltage state, which
+            // listCellModelsVariables reports as `v` (only `RATES_v` keeps the
+            // internal spelling in the dump). So a name absent from the model
+            // inventory can still be the right thing to export.
+            export (Vm cai);
+            debug ();
+        }
+        activeTension
+        {
+            export (AV_Ta);
+        }
+    }
+
+    activeTensionModel LandNiedererTWorld;
+}

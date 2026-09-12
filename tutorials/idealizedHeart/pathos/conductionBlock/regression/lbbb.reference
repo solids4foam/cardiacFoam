@@ -1,0 +1,2 @@
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         0.02   2    -1            1e-4

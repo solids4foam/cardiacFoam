@@ -1,0 +1,71 @@
+# applications/utilities/setFieldDimensions/utility.manifest.toml
+
+name = "setFieldDimensions"
+description = "Assign correct SI dimensions to dimensionless fields produced by newVtkUnstructuredToFoam."
+category = "field-setup"
+
+purpose = """
+newVtkUnstructuredToFoam writes every CELL_DATA field with dimensions
+[0 0 0 0 0 0 0] (dimensionless) because the VTK format carries no unit
+information. Most imported fields (fiber, sheet, uvc_transmural, tags) are
+genuinely dimensionless and need no change. However conductivity — the
+per-cell conductivity tensor — must carry SI conductivity units S/m to
+maintain dimensional consistency in the solver.
+
+This utility patches only the 'dimensions' header line in each field file.
+It never reads or rewrites the internalField or boundaryField data, so it is
+fast even on very large meshes (millions of cells).
+
+Built-in catalogue (applied when -field is omitted):
+  conductivity              [-1 -3 3 0 0 2 0]  conductivity tensor  (S/m)
+  bodyAndOrgansConductivity [-1 -3 3 0 0 2 0]  torso conductivity   (S/m)
+
+Typical post-VTK-import sequence:
+  newVtkUnstructuredToFoam  myHeart.vtk        -case ./myCase
+  transformPoints -scale '(0.001 0.001 0.001)' -case ./myCase
+  setFieldDimensions                           -case ./myCase
+  checkMeshGeometry                            -case ./myCase
+  checkMesh                                    -case ./myCase
+"""
+
+inputs = [
+  "0/<fieldName>",
+]
+
+outputs = [
+  "0/*",
+]
+
+requires_mesh = false
+example = "setFieldDimensions -case ./myCase"
+
+[[flags]]
+name = "-field"
+description = "Process only this named field. If omitted, all fields in the built-in catalogue that exist in the time directory are processed."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-dim"
+description = "Dimension set to apply, e.g. \"[-1 -3 3 0 0 2 0]\". Required when -field names a field not in the built-in catalogue."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-time"
+description = "Time directory to process (default: 0)."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-dryRun"
+description = "Print proposed changes without writing any file."
+takes_value = false
+argument_kind = "switch"
+
+[[produces]]
+artifact_id = "dimensioned_fields"
+path_pattern = "0/*"
+format = "openfoam_log"
+description = "Field files with corrected dimension headers. Only the dimensions line is modified; all field data is preserved."
+produced_by = "setFieldDimensions"

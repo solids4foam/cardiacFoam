@@ -105,6 +105,12 @@ Breaks cyclic dependencies: ECG reads state without a callback to myocardium.
 and `eikonalSolver` — the same top-level wrapper is used for all
 myocardium-centred spatial workflows.
 
+Inside `electrophysiologyModel`, `myocardiumDomainInterface::New(...)` performs
+the secondary myocardium-domain dispatch. `monodomainSolver` and
+`bidomainSolver` resolve through the `myocardiumSolver` table; `eikonalSolver`
+builds `eikonalMyocardiumDomain`. `singleCellSolver` is registered directly in
+the parent `electroModel` table and does not enter this secondary dispatch.
+
 ---
 
 ## Top-level model files
@@ -120,9 +126,17 @@ electrophysiology system.
 
 - Owns the assembled `electrophysicsSystem`
 
-- Exposes `evolve(timeValue, deltaT)` called by the main solver each timestep
+- Exposes `evolve()` called by the main solver each timestep (the `physicsModel`
+  interface takes no arguments; timing comes from the shared `Time` object)
 
 - Collects per-phase performance timings
+
+---
+
+### `electrophysiologyModel/printElectrophysiologySummary.H`
+
+Startup banner and configuration summary parser.
+Included in the `electrophysiologyModel` constructor to echo the selected solver hierarchy, advance scheme, active ionic models, tissue heterogeneities, and spatial dimensions to the terminal prior to execution.
 
 ---
 
@@ -149,14 +163,11 @@ just holds the assembled pieces.
 
 ### `system/electrophysicsSystemBuilder.H/C` (namespace)
 
-Dictionary-driven factory. Replaces hard-coded solver branching with
-runtime configuration:
+Dictionary-driven factory.
 
 ```cpp
-// Instead of: if (type == "monodomain") { new monodomainSolver... }
 auto myocardium = myocardiumDomainInterface::New(mesh, electroProperties);
-system.setMyocardium(myocardium);  // works with any registered type
-
+system.setMyocardium(myocardium);
 ```
 
 Builder functions:
@@ -164,7 +175,7 @@ Builder functions:
 | Function | Responsibility |
 |---|---|
 | `configureMyocardiumDomain(...)` | Instantiate myocardium domain via factory |
-| `configureAdvanceScheme(...)` | Select staggered vs pimpleStaggered |
+| `configureAdvanceScheme(...)` | Select the runtime advance scheme |
 | `configureConductionDomains(...)` | Load Purkinje graph(s) and instantiate domains |
 | `configureConductionCouplings(...)` | Instantiate PVJ couplers |
 | `configureECGDomains(...)` | Instantiate ECG solver(s) |
@@ -173,10 +184,7 @@ Builder functions:
 Current rules:
 
 - `conductionNetworkDomains` and `domainCouplings` are optional
-
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
-
-- The old single-domain fallback and `primaryDomain` field were removed
 
 ---
 
@@ -202,7 +210,7 @@ Build every entry in `ecgDomains`. ECG domains consume myocardium state through
 
 `electrophysicsAdvanceScheme` is a runtime-selected orchestration strategy.
 
-**Staged order (both schemes):**
+**Staged order:**
 
 1. Prepare myocardium timestep
 2. Prepare conduction couplings (`prepareSecondaryCoupling`)
@@ -224,25 +232,6 @@ system.prepareMyocardiumCouplings(t0, dt);
 myocardium.advance(t0, dt, pimplePtr);
 system.prepareECGCouplings(t0, dt);
 system.advanceECGDomains(t0, dt);
-
-```
-
-### `advanceSchemes/pimpleStaggeredElectrophysicsAdvanceScheme`
-
-Iterative strong coupling via OpenFOAM's PIMPLE corrector loop. The
-conduction/myocardium block repeats until convergence before ECG advances.
-Requires `solutionAlgorithm implicit` in electroProperties.
-Suitable for bidirectional Purkinje ↔ myocardium exchange.
-
-```cpp
-while (pimplePtr->loop()) {
-    system.prepareConductionCouplings(t0, dt);
-    system.advanceConductionDomains(t0, dt);
-    system.prepareMyocardiumCouplings(t0, dt);
-    myocardium.advance(t0, dt, pimplePtr);
-    system.prepareECGCouplings(t0, dt);
-    system.advanceECGDomains(t0, dt);
-}
 
 ```
 
@@ -295,6 +284,7 @@ domainCouplings
         electroDomainCoupler    reactionDiffusionPvjCoupler;
         conductionNetworkDomain purkinjeNetwork;
         couplingMode            unidirectional;
+        pvjCouplingScheme       implicit; // optional: explicit | implicit
         pvjRadius               6e-4;
         rPvj                    500.0;
     }
@@ -318,25 +308,21 @@ domainCouplings
 
 ```
 
-`bidirectional` is parsed but explicitly rejected as in development for
-`eikonalPvjCoupler`.
+`bidirectional` is implemented for `eikonalPvjCoupler`: it gathers myocardial
+activation times onto the network terminals via `mapper_.gatherActivationTimes`.
 
 ---
 
-## Extension guidance
+## Extension rules
 
-The intended rule when extending `core`:
+When extending `core`:
 
 - `core` owns orchestration only
+- Domain layers own domain-family selection and state
+- Solver folders own numerical kernels
+- Coupler folders own exchange laws
 
-- domain layers own domain-family selection and state
-
-- solver folders own numerical kernels
-
-- coupler folders own exchange laws
-
-New solver-family branching should go into a domain-layer factory, not into the
-builder.
+New solver-family branching belongs in a domain-layer factory, not in the builder.
 
 ---
 
@@ -355,7 +341,7 @@ builder.
 ┌─────────────────────────────────────────────────────────────┐
 │ electrophysicsSystem (domain container)                     │
 │  • myocardium (implements electroVolumeFieldDomain)         │
-│  • advanceScheme (staggered or pimpleStaggered)             │
+│  • advanceScheme                                            │
 │  • conductionDomains (Purkinje graphs)                      │
 │  • ecgDomains (ECG solvers)                                 │
 │  • couplers (Purkinje↔myocardium, myocardium→ECG)          │
@@ -368,7 +354,6 @@ builder.
 ├──────────────────────────────┤ • configureConduction()      │
 │ Implementations:             │ • configureECG()             │
 │ • staggered (weak)           │ • configureCouplers()        │
-│ • pimpleStaggered (strong)   │                              │
 └──────────────────────────────┴──────────────────────────────┘
 
 ```
@@ -379,14 +364,14 @@ builder.
 
 electroModel.H
   ├─ electroStateProvider.H
+  ├─ electroStateDomain.H
   ├─ system/electrophysicsSystem.H
   │  ├─ electroDomainInterface.H
   │  │  ├─ myocardiumDomain (implements)
   │  │  ├─ ConductionSystemDomain (implements)
   │  │  └─ ECGDomain (implements)
   │  ├─ advanceSchemes/electrophysicsAdvanceScheme.H
-  │  │  ├─ advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H
-  │  │  └─ advanceSchemes/pimpleStaggered/pimpleStaggeredElectrophysicsAdvanceScheme.H
+  │  │  └─ advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H
   │  └─ ElectroDomainCoupler.H
   └─ system/electrophysicsSystemBuilder.H
      ├─ electroVolumeFieldDomain.H

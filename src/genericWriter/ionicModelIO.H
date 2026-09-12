@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    ionicModelIO
+
+Description
+    Static utility class for ionic model I/O operations.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef ionicModelIO_H
@@ -107,8 +115,13 @@ public:
         OFstream& os,
         const PtrList<scalarField>& STATES,
         const PtrList<scalarField>& ALGEBRAIC,
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg,
+        FullPlanCache& fullPlanCache,
         const PtrList<scalarField>& RATES,
-        VmTransform transformVm
+        VmTransform transformVm = nullptr
     );
 
     static void writeSelected
@@ -134,6 +147,42 @@ public:
         scalar tEnd,
         const dictionary& dict,
         bool utilitiesMode
+    );
+
+    static void applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        label nConstants,
+        const dictionary& dict,
+        const word& modelName
+    );
+
+    static void applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        label tissueFlag
+    );
+
+    static void applyConstantOverrides
+    (
+        scalarField& constants,
+        const char* const constantNames[],
+        label nConstants,
+        const dictionary& dict,
+        const word& modelName,
+        const word& scopeName,
+        const word& baselineScopeName,
+        const wordList& knownScopeNames
+    );
+
+    static word constantOverrideOutputSuffix
+    (
+        const dictionary& dict
     );
 
 

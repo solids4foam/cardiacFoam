@@ -1,0 +1,80 @@
+{
+  "base": {
+    "entry": "manufacturedBathBidomain",
+    "case_dir_name": "manufacturedSolutions/bathBidomain",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": true,
+    "mesh_family": "tet",
+    "numerics_profile": "bath_bidomain_tet",
+    "end_time": 0.02,
+    "run_in_parallel": true,
+    "ecg_enabled": false,
+    "bath_predictor_corrector": true,
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/gradientScheme/results/orthogonalControl",
+    "electro_property_overrides": {
+      "bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation": "distanceWeightedHarmonic"
+    },
+    "fv_scheme_overrides": [
+      {
+        "key": "default",
+        "value": "leastSquares",
+        "scope": [
+          "gradSchemes"
+        ]
+      },
+      {
+        "key": "default",
+        "value": "Gauss linear orthogonal",
+        "scope": [
+          "laplacianSchemes"
+        ]
+      },
+      {
+        "key": "default",
+        "value": "orthogonal",
+        "scope": [
+          "snGradSchemes"
+        ]
+      }
+    ]
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "number_cells": [
+        [
+          20
+        ]
+      ],
+      "dt_values": [
+        [
+          0.00224215
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "number_cells"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "number_cells",
+          "dt_values"
+        ]
+      }
+    ]
+  }
+}

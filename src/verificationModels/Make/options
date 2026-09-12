@@ -1,8 +1,7 @@
 EXE_INC = \
     -I$(LIB_SRC)/ODE/lnInclude \
     -I../ionicModels/lnInclude \
-    -I../electroModels/core \
-    -I../electroModels/electroDomains/ecgDomain \
+    -I../electroModels/lnInclude \
     -I../verificationModels \
     -I../couplingModels/lnInclude \
     -I../genericWriter/lnInclude \
@@ -12,6 +11,7 @@ EXE_INC = \
 
 LIB_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
+    -lelectroModels \
     -lgenericWriter \
     -lionicModels \
     -lfiniteVolume \

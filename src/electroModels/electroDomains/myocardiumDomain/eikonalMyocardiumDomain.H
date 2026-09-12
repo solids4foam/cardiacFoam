@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    eikonalMyocardiumDomain
+
+Description
+    Eikonal myocardium domain.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef eikonalMyocardiumDomain_H
@@ -29,7 +37,9 @@ License
 namespace Foam
 {
 
-class EikonalMyocardiumDomain
+class eikonalVerificationModel;
+
+class eikonalMyocardiumDomain
 :
     public myocardiumDomainInterface
 {
@@ -53,23 +63,31 @@ class EikonalMyocardiumDomain
     surfaceScalarField phiU_;
     volScalarField divPhiU_;
     const Switch eikonalAdvectionDiffusionApproach_;
+    const Switch useGraphPrePopulation_; // Test flag
+    autoPtr<eikonalVerificationModel> verificationModelPtr_;
 
     tmp<volTensorField> initialiseConductivity() const;
 
-    EikonalMyocardiumDomain(const EikonalMyocardiumDomain&) = delete;
-    void operator=(const EikonalMyocardiumDomain&) = delete;
+    void preInitialiseFromSeeds
+    (
+        const labelList& constrainedCells,
+        const scalarField& constrainedValues
+    );
+
+    eikonalMyocardiumDomain(const eikonalMyocardiumDomain&) = delete;
+    void operator=(const eikonalMyocardiumDomain&) = delete;
 
 public:
 
     using myocardiumDomainInterface::advance;
 
-    EikonalMyocardiumDomain
+    eikonalMyocardiumDomain
     (
         const fvMesh& supportMesh,
         const dictionary& electroProperties
     );
 
-    virtual ~EikonalMyocardiumDomain() = default;
+    virtual ~eikonalMyocardiumDomain();
 
     virtual const fvMesh& mesh() const override
     {
@@ -131,9 +149,29 @@ public:
         return &Vm_;
     }
 
+    virtual const volScalarField* activationTimePtr() const override
+    {
+        return &activationTime_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return &conductivity_;
+    }
+
+    virtual const dimensionedScalar* chiPtr() const override
+    {
+        return &chi_;
+    }
+
+    virtual const dimensionedScalar* CmPtr() const override
+    {
+        return &Cm_;
+    }
+
+    virtual const dimensionedScalar* c0Ptr() const override
+    {
+        return &c0_;
     }
 
     virtual const volTensorField* intracellularConductivityPtr() const override
@@ -159,18 +197,14 @@ public:
 
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const override;
 
-    virtual bool shouldPostProcess() const override
-    {
-        return false;
-    }
+    virtual bool shouldPostProcess() const override;
 
     virtual void exportStates() override
     {}
 
-    virtual void postProcess() override
-    {}
+    virtual void postProcess() override;
 
-    virtual bool applyModelTimeControls(Time& runTime) const override;
+    virtual bool applyModelTimeControls(Time& runTime) override;
 };
 
 } // End namespace Foam

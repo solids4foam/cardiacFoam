@@ -120,9 +120,18 @@ Foam::electrophysiologyModel::electrophysiologyModel
         runTime.deltaTValue()
     );
 
+    readRestartState();
+
     electrophysicsSystemBuilder::configureAdvanceScheme
     (
         domainSystem_,
+        electroProperties()
+    );
+
+    electrophysicsSystemBuilder::configureBathPotentialDomain
+    (
+        domainSystem_,
+        mesh(),
         electroProperties()
     );
 
@@ -135,6 +144,32 @@ Foam::electrophysiologyModel::electrophysiologyModel
     );
 
     configureECGDomains();
+
+#   include "printElectrophysiologySummary.H"
+}
+
+
+bool Foam::electrophysiologyModel::readRestartState()
+{
+    if (ionicModelPtr_.valid())
+    {
+        const bool loaded = ionicModelPtr_->readRestartState(mesh());
+        if (loaded)
+        {
+            ionicModelPtr_->refreshRestartState(mesh());
+        }
+        return loaded;
+    }
+    return false;
+}
+
+
+void Foam::electrophysiologyModel::writeRestartState() const
+{
+    if (ionicModelPtr_.valid())
+    {
+        ionicModelPtr_->writeRestartState(mesh());
+    }
 }
 
 

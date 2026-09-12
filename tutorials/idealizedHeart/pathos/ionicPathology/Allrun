@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# -------------------------
+# Variant selection
+# -------------------------
+# One purkinjeGraph (unmodified), two ionic-pathology variants of
+# electroProperties. No default - pick one explicitly.
+variant=""
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        ischemia|brugada) variant="$arg" ;;
+        parallel)         parallelRun=true ;;
+    esac
+done
+
+if [ -z "$variant" ]; then
+    cat <<'EOF'
+Usage: ./Allrun <ischemia|brugada> [parallel]
+
+ionicPathology has no default pathology - pick one explicitly:
+  ./Allrun ischemia    acute ischemia (TNNP ionicConstantOverrides)
+  ./Allrun brugada     Brugada syndrome type-1 (TNNP ionicConstantOverrides)
+
+(For the healthy baseline, unmodified, run ../../electroHeart instead.)
+EOF
+    exit 1
+fi
+
+ln -sf "electroProperties.$variant" constant/electroProperties
+echo "Active ionic-pathology variant: $variant (constant/electroProperties -> electroProperties.$variant)"
+
+# -------------------------
+# Mesh and anatomy field preparation
+# -------------------------
+
+# The mesh and its anatomy fields are the single copy shared with the
+# sibling electroHeart/electroMechHeart/conductionBlock
+# cases, kept once in ../../mesh/ to avoid tracking the same ~10MB mesh twice
+# in git. The mesh in ../../mesh/ is already scaled to adult-heart-scale SI
+# metres - just copy it in. The graph itself is not modified by either
+# pathology variant here (unlike conductionBlock), so it's copied straight
+# in under its normal name.
+# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
+# checkout made without LFS), fail here with a readable message instead of
+# letting cardiacFoam die later on an unparsable mesh.
+if head -c 40 ../../mesh/constant/polyMesh/points 2>/dev/null \
+    | grep -q "git-lfs.github.com"; then
+    echo "ERROR: ../../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
+    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+    exit 1
+fi
+
+cp -a ../../mesh/constant/polyMesh constant/polyMesh
+
+# git does not track empty directories, so a case whose 0/ holds nothing
+# tracked has no 0/ at all in a fresh checkout and every copy below fails
+# with "No such file or directory" - the solver then dies and the
+# regression reports "missing output file". Create the destinations first.
+mkdir -p 0
+
+# Only Conductivity and tm are read by this case: Conductivity by name in
+# monodomainSolver, and tm by setExprFields below to derive t. fiber,
+# sheet, sheetNormal, tv and apicobasal are referenced by neither the
+# solver nor this case's dictionaries - apicobasal is needed only where a
+# gradientAxes block exists, which this case does not have.
+cp ../../mesh/0/tm 0/tm
+cp ../../mesh/0/Conductivity 0/Conductivity
+cp ../../mesh/constant/purkinjeGraph constant/purkinjeGraph
+
+# tm is 0 at epicardium and 1 at endocardium in this mesh. The ionic
+# heterogeneity band lookup requires the opposite orientation (0 at
+# endocardium, 1 at epicardium), so derive t = 1 - tm for it to read.
+runApplication setExprFields
+
+# -------------------------
+# Run solver
+# -------------------------
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi
+
+if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
+    echo "Skipping pseudoECG plot generation (CF_SKIP_PLOTS=1)."
+else
+    python3 plot_pseudo_ecg.py --case-dir .
+fi

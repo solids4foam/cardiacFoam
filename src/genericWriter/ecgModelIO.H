@@ -16,22 +16,13 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::ecgModelIO
+    ecgModelIO
 
 Description
     Static utility class for ECG model I/O operations.
 
-    Provides file-writing helpers used by ecgModel subclasses:
-
-      - openTimeSeries : create a column-header .dat file
-      - writeRow       : append one timestep row
-      - loadSurface    : load a torso STL and prepare VTK output directory
-      - writeSurfaceVtk: write face-centred potential as VTK ASCII POLYDATA
-
-    The class has no member data; all methods are static.
-
 Author
-    Simão Nieto de Castro, UCD.
+    Simao Nieto de Castro. All rights reserved.
     Philip Cardiff, UCD.
 
 SourceFiles

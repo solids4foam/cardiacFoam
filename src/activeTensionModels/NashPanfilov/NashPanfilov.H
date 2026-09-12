@@ -15,6 +15,17 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    Foam::NashPanfilov
+
+Description
+    Nash-Panfilov (2004) active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
+
+SourceFiles
+    NashPanfilov.C
 \*---------------------------------------------------------------------------*/
 
 #ifndef NashPanfilov_H
@@ -28,6 +39,7 @@ License
 #include "dictionary.H"
 #include "NashPanfilov_2004Names.H"
 #include "overrideTypeName.H"
+#include "restartStateIO.H"
 
 namespace Foam
 {
@@ -98,6 +110,12 @@ protected:
         return CouplingSignal::VM;
     }
 
+    //- Aliev-Panfilov dimensionless time: t* = t_ms / 12.9.
+    virtual scalar timeScaleFactor() const override
+    {
+        return 1000.0/12.9;
+    }
+
     virtual void solveAtPoint
     (
         label i,
@@ -113,6 +131,31 @@ public:
     NashPanfilov(const dictionary& dict, const label num);
 
     virtual ~NashPanfilov() = default;
+
+    virtual bool supportsRestartState() const override
+    {
+        return true;
+    }
+
+    virtual bool readRestartState(const fvMesh& mesh) override
+    {
+        return restartStateIO::readStates
+        (
+            mesh, type(), NUM_STATES, STATES_
+        );
+    }
+
+    virtual void writeRestartState(const fvMesh& mesh) const override
+    {
+        restartStateIO::writeStates
+        (
+            mesh, type(), NUM_STATES, STATES_
+        );
+    }
+
+    virtual void refreshRestartState(const fvMesh& mesh) override;
+
+    virtual bool restartTension(scalarField& Ta) const override;
 
     virtual Requirements requirements() const override
     {

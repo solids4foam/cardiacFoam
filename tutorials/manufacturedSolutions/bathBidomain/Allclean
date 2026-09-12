@@ -1,0 +1,40 @@
+#!/bin/bash
+
+cd "${0%/*}" || exit 1
+
+shopt -s extglob nullglob
+
+# Time directories. The first pattern only matches purely-numeric names, so it
+# clears integer times; the second clears fractional ones.
+rm -rf !("0"|*[^0-9]*)
+rm -rf 0 0.*
+
+rm -rf processor*
+rm -rf logs postProcessing
+
+# Solver logs. `log.*` alone misses the ones named the other way round
+# (native.log, petsc.log), which is why they used to survive a clean.
+rm -f log.* *.log
+
+# constant/ holds two tracked dictionaries; everything else in it is generated:
+# polyMesh by blockMesh or gmshToFoam, C/Cx/Cy/Cz by writeCellCentres, and
+# skewness by the mesh-quality diagnostics. Roughly half a gigabyte per run.
+rm -rf constant/polyMesh
+rm -f constant/C constant/Cx constant/Cy constant/Cz constant/skewness
+
+# gmsh intermediates for the tet variant: the .geo is rendered from its
+# template under setup/studies/tetConvergence/, meshed to .msh, then imported
+# by gmshToFoam. Neither survives a clean.
+rm -f *.msh
+rm -f setup/studies/tetConvergence/*.geo
+
+# Entry-based sweeps materialise into this same case root, one directory per
+# case named <dimension>_<cells>_<deltaT>. They contain non-digits, so the
+# time-directory patterns above never matched them.
+rm -rf [0-9]D_*
+
+# Interface metrics written beside the case by bathBidomainInterfaceMetrics.
+# Reference data lives in reference/ and is not touched.
+rm -f bathBidomainInterfaceMetrics*.csv
+rm -f bathBidomainFaceErrors*.csv
+rm -f phiE_solver_performance.txt summary.dat

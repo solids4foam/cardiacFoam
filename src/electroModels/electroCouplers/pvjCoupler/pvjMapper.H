@@ -15,33 +15,42 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    pvjMapper
+
+Description
+    Mapper for PVJ coupling.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
-#ifndef PVJMapper_H
-#define PVJMapper_H
+#ifndef pvjMapper_H
+#define pvjMapper_H
 
 #include "volFields.H"
 
 namespace Foam
 {
 
-class PVJMapper
+class pvjMapper
 {
     const fvMesh& mesh_;
     pointField terminalLocations_;
     scalar radius_;
     labelList terminalCellIDs_;
     List<labelList> terminalCellSets_;
+    List<scalarList> terminalCellWeights_;
     scalarField sphereVolumes_;
 
 public:
 
-    PVJMapper
+    pvjMapper
     (
         const fvMesh& mesh,
         const pointField& terminalLocations,
         scalar radius,
-        bool reportSetup = false
+        const word& kernelType = "uniform"
     );
 
     void gatherVm3DPvjs
@@ -60,6 +69,14 @@ public:
     (
         const scalarField& couplingCurrent,
         volScalarField& sourceField
+    ) const;
+
+    void depositImplicitCoupling
+    (
+        const scalarField& networkVm,
+        const scalarField& resistance,
+        volScalarField& sourceField,
+        volScalarField& implicitSourceCoeff
     ) const;
 
     void depositActivationTimes

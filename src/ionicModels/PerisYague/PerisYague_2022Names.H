@@ -15,11 +15,15 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Index enums and function prototypes for the Peris-Yague 2022 model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
 #include "stimulusIO.H"
-#include "dictionary.H"
 
 enum CONSTANT_INDEX {
     AC_CMDN_max,
@@ -106,7 +110,6 @@ enum STATE_INDEX {
 
 enum ALGEBRAIC_INDEX
 {
-    // --- Currents ---
     AV_ICaL,
     AV_IK1,
     AV_IKr,
@@ -121,7 +124,6 @@ enum ALGEBRAIC_INDEX
     AV_IbK,        // NEW (if used)
     AV_IpCa,
 
-    // --- INa gating ---
     AV_ina_m_inf,
     AV_ina_m_tau,
     AV_ina_h_inf,
@@ -129,13 +131,11 @@ enum ALGEBRAIC_INDEX
     AV_ina_j_inf,
     AV_ina_j_tau,
 
-    // --- ICaL gating ---
     AV_ical_d_inf,
     AV_ical_d_tau,
     AV_ical_f_inf,
     AV_ical_f_tau,
 
-    // --- IKur gating ---
     AV_ikur_ua_inf,
     AV_ikur_ua_tau,
     AV_ikur_uif_inf, // NEW
@@ -144,26 +144,22 @@ enum ALGEBRAIC_INDEX
     AV_ikur_uis_tau, // NEW
     AV_gKur,
 
-    // --- IKr gating ---
     AV_ikr_xr_inf,
     AV_ikr_xr_tau,
 
-    // --- IKs gating ---
     AV_iks_xs_inf,
     AV_iks_xs_tau,
 
-    // --- IClCa gating ---
     AV_iclca_qCa_inf, // NEW
     AV_iclca_qCa_tau, // NEW
 
-    // --- Other V-dependent ---
     AV_fNaK,
 
-    // --- RyR gating ---
     AV_ryr_w_inf,
     AV_ryr_w_tau,
+    AV_ical_fCa_inf,         // gInf for fCa gate (depends on Cai)
+    AV_ryr_u_inf,            // gInf for ryr_u gate (depends on Fn)
 
-    // --- Totals / stimulus ---
     Iion_cm,
     Istim,
 
@@ -171,6 +167,6 @@ enum ALGEBRAIC_INDEX
 };
 
 void
-PerisYague_2022initConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
+PerisYagueinitConsts(double* CONSTANTS, double* RATES, double *STATES, int tissueFlag, const Foam::dictionary& stimulus);
 void
-PerisYague_2022computeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);
+PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC,int tissueFlag, bool solveVmWithinODESolver, const Foam::StimulusProtocol& stimulus);

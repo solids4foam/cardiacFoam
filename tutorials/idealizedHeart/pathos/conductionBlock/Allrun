@@ -1,0 +1,147 @@
+#!/bin/bash
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# -------------------------
+# Variant selection
+# -------------------------
+# One purkinjeGraph, two bundle-branch-block variants. Both are always
+# derived (cheap, deterministic, ~1s) so either can be selected without
+# re-running Allrun; a symlink picks which one cardiacFoam actually reads.
+variant=""
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        lbbb|rbbb) variant="$arg" ;;
+        parallel)  parallelRun=true ;;
+    esac
+done
+
+if [ -z "$variant" ]; then
+    cat <<'EOF'
+Usage: ./Allrun <lbbb|rbbb> [parallel]
+
+conductionBlock has no default pathology - pick one explicitly:
+  ./Allrun lbbb       left bundle branch block
+  ./Allrun rbbb       right bundle branch block
+
+(For the healthy baseline, unmodified, run ../../electroHeart instead.)
+EOF
+    exit 1
+fi
+
+# -------------------------
+# Mesh and anatomy field preparation
+# -------------------------
+
+# The mesh and its anatomy fields are the single copy shared with the
+# sibling electroHeart/electroMechHeart cases, kept once in
+# ../../mesh/ to avoid tracking the same ~10MB mesh twice in git. The mesh in
+# ../../mesh/ is already scaled to adult-heart-scale SI metres - just copy it in.
+# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
+# checkout made without LFS), fail here with a readable message instead of
+# letting cardiacFoam die later on an unparsable mesh.
+if head -c 40 ../../mesh/constant/polyMesh/points 2>/dev/null \
+    | grep -q "git-lfs.github.com"; then
+    echo "ERROR: ../../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
+    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+    exit 1
+fi
+
+cp -a ../../mesh/constant/polyMesh constant/polyMesh
+
+# git does not track empty directories, so a case whose 0/ holds nothing
+# tracked has no 0/ at all in a fresh checkout and every copy below fails
+# with "No such file or directory" - the solver then dies and the
+# regression reports "missing output file". Create the destinations first.
+mkdir -p 0
+
+# Only Conductivity and tm are read by this case: Conductivity by name in
+# monodomainSolver, and tm by setExprFields below to derive t. fiber,
+# sheet, sheetNormal, tv and apicobasal are referenced by neither the
+# solver nor this case's dictionaries - apicobasal is needed only where a
+# gradientAxes block exists, which this case does not have.
+cp ../../mesh/0/tm 0/tm
+cp ../../mesh/0/Conductivity 0/Conductivity
+cp ../../mesh/constant/purkinjeGraph constant/purkinjeGraph.healthy
+
+# tm is 0 at epicardium and 1 at endocardium in this mesh. The ionic
+# heterogeneity band lookup requires the opposite orientation (0 at
+# endocardium, 1 at epicardium), so derive t = 1 - tm for it to read.
+runApplication setExprFields
+
+# -------------------------
+# Bundle-branch-block graph variants
+# -------------------------
+#
+# constant/purkinjeGraph is a tree: rootNode's two direct branches are the
+# left- and right-bundle roots, verified once by BFS-partitioning the
+# graph from each of rootNode's neighbours and checking which partition
+# contains the node coincident with the LV/RV growth seed. Zeroing either
+# bridge edge's conductance fully disconnects that whole ventricle's tree
+# from the root (it's a tree - no alternate path exists), the same
+# structural-block technique tutorials/PATHOS/*/make_bundle_block_graphs.py
+# uses, just re-derived for this graph's own node numbering instead of
+# reusing that script's hardcoded (and mesh-specific) indices.
+#
+# LBB bridge = conductionEdges[0]  = 4(0 22375 ...)  -> LV subtree
+# RBB bridge = conductionEdges[22] = 4(0 22396 ...)  -> RV subtree
+severBundleBranch()
+{
+    local inFile="$1" outFile="$2" edgeIndex="$3" expectedPrefix="$4"
+
+    awk -v target="$edgeIndex" -v expected="$expectedPrefix" '
+        BEGIN { inBlock=0; count=-1; matched=0 }
+        /^conductionEdges$/ { inBlock=1; print; next }
+        inBlock==1 && /^\(/ { inBlock=2; print; next }
+        inBlock==2 && /^\)/ { inBlock=0; print; next }
+        inBlock==2 && /^4\(/ {
+            count++
+            if (count == target) {
+                if (index($0, expected) != 1) {
+                    print "SAFETY CHECK FAILED: edge " target " is \x27" $0 "\x27, expected prefix \x27" expected "\x27 - the baseline purkinjeGraph likely changed; re-derive these edge indices before proceeding." > "/dev/stderr"
+                    exit 1
+                }
+                line = $0
+                sub(/ [^ ]+\)$/, " 0)", line)
+                print line
+                matched = 1
+                next
+            }
+            print
+            next
+        }
+        { print }
+        END {
+            if (matched != 1) {
+                print "SAFETY CHECK FAILED: never reached edge index " target > "/dev/stderr"
+                exit 1
+            }
+        }
+    ' "$inFile" > "$outFile"
+}
+
+severBundleBranch constant/purkinjeGraph.healthy constant/purkinjeGraph.lbbb 0  "4(0 22375"
+severBundleBranch constant/purkinjeGraph.healthy constant/purkinjeGraph.rbbb 22 "4(0 22396"
+
+ln -sf "purkinjeGraph.$variant" constant/purkinjeGraph
+echo "Active conduction-block variant: $variant (constant/purkinjeGraph -> purkinjeGraph.$variant)"
+
+# -------------------------
+# Run solver
+# -------------------------
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi
+
+if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
+    echo "Skipping pseudoECG plot generation (CF_SKIP_PLOTS=1)."
+else
+    python3 plot_pseudo_ecg.py --case-dir .
+fi

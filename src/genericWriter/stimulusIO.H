@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    stimulusIO
+
+Description
+    Static utility class for stimulus protocol I/O operations.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef stimulusIO_H
@@ -25,6 +33,7 @@ License
 #include "word.H"
 #include "OFstream.H"
 #include "boundBox.H"
+#include "StimulusProtocolPOD.H"
 
 namespace Foam
 {
@@ -123,6 +132,20 @@ public:
     );
 
     static word protocolSuffix(const dictionary& dict);
+
+    static inline StimulusProtocolPOD toPOD(const StimulusProtocol& s)
+    {
+        StimulusProtocolPOD p;
+        p.stimStart = static_cast<double>(s.stimStart);
+        p.stimPeriodS1 = static_cast<double>(s.stimPeriodS1);
+        p.stimDuration = static_cast<double>(s.stimDuration);
+        p.stimAmplitude = static_cast<double>(s.stimAmplitude);
+        p.stimPeriodS2 = static_cast<double>(s.stimPeriodS2);
+        p.nStim1 = static_cast<int>(s.nStim1);
+        p.nStim2 = static_cast<int>(s.nStim2);
+        p._pad0 = 0;
+        return p;
+    }
 
 };
 

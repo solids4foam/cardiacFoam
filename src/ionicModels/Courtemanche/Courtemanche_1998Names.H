@@ -15,11 +15,15 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Index enums and function prototypes for the Courtemanche 1998 model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #pragma once
 #include "stimulusIO.H"
-#include "dictionary.H"
 
 
 
@@ -105,7 +109,6 @@ enum STATE_INDEX {
 
 enum ALGEBRAIC_INDEX
 {
-    // --- Currents ---
     AV_ICaL,
     AV_IK1,
     AV_IKr,
@@ -119,7 +122,6 @@ enum ALGEBRAIC_INDEX
     AV_IpCa,
     AV_Ito,
 
-    // --- INa gating ---
     AV_ina_m_inf,
     AV_ina_m_tau,
     AV_ina_h_inf,
@@ -127,41 +129,35 @@ enum ALGEBRAIC_INDEX
     AV_ina_j_inf,
     AV_ina_j_tau,
 
-    // --- ICaL gating ---
     AV_ical_d_inf,
     AV_ical_d_tau,
     AV_ical_f_inf,
     AV_ical_f_tau,
 
-    // --- Ito gating ---
     AV_ito_oa_inf,
     AV_ito_oa_tau,
     AV_ito_oi_inf,
     AV_ito_oi_tau,
 
-    // --- IKur gating ---
     AV_ikur_ua_inf,
     AV_ikur_ua_tau,
     AV_ikur_ui_inf,
     AV_ikur_ui_tau,
     AV_gKur,
 
-    // --- IKr gating ---
     AV_ikr_xr_inf,
     AV_ikr_xr_tau,
 
-    // --- IKs gating ---
     AV_iks_xs_inf,
     AV_iks_xs_tau,
 
-    // --- Other V-dependent ---
     AV_fNaK,
 
-    // --- CaJSR gating ---
     AV_cajsr_w_inf,
     AV_cajsr_w_tau,
+    AV_ical_fCa_inf,         // gInf for fCa gate (depends on Cai)
+    AV_cajsr_u_inf,          // gInf for cajsr_u gate (depends on Fn)
 
-    // --- Totals / stimulus ---
     Iion_cm,
     Istim,
 

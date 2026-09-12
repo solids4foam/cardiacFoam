@@ -50,6 +50,42 @@ const char* const* Foam::NashPanfilov::ioAlgebraicNames() const
     return NashPanfilovALGEBRAIC_NAMES;
 }
 
+void Foam::NashPanfilov::refreshRestartState(const fvMesh& mesh)
+{
+    forAll(STATES_, i)
+    {
+        scalarField& rates = RATES_[i];
+        scalarField& algebraic = ALGEBRAIC_[i];
+        const scalar drive = coupledDriveSignal(i);
+        scalar u =
+            (drive - CONSTANTS_[AC_Vr])
+          / (CONSTANTS_[AC_Vp] - CONSTANTS_[AC_Vr]);
+        u = max(scalar(0.0), min(u, scalar(1.0)));
+        algebraic[AV_u] = u;
+        NashPanfilovcomputeVariables
+        (
+            scaledTime(mesh.time().value()),
+            CONSTANTS_.data(),
+            rates.data(),
+            STATES_[i].data(),
+            algebraic.data()
+        );
+    }
+}
+
+bool Foam::NashPanfilov::restartTension(scalarField& Ta) const
+{
+    if (Ta.size() != STATES_.size())
+    {
+        return false;
+    }
+    forAll(Ta, i)
+    {
+        Ta[i] = STATES_[i][::Ta];
+    }
+    return true;
+}
+
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -81,24 +117,50 @@ Foam::NashPanfilov::NashPanfilov
 
     Info<< nl << "Initialize NashPanfilov constants:" << nl;
     Info<< "NashPanfilov couplingSignal: Vm" << nl;
+
+    scalarField protoStates(NUM_STATES, 0.0);
+    scalarField protoRates(NUM_STATES, 0.0);
+
+    NashPanfilovinitConsts
+    (
+        CONSTANTS_.data(),
+        protoRates.data(),
+        protoStates.data()
+    );
+
+    if (dict.found("constants"))
+    {
+        const dictionary& cDict = dict.subDict("constants");
+        for (label k = 0; k < NUM_CONSTANTS; ++k)
+        {
+            const word name(NashPanfilovCONSTANTS_NAMES[k]);
+            if (cDict.found(name))
+            {
+                CONSTANTS_[k] = cDict.get<scalar>(name);
+            }
+        }
+    }
+
+    if (dict.found("initialStates"))
+    {
+        const dictionary& sDict = dict.subDict("initialStates");
+        for (label k = 0; k < NUM_STATES; ++k)
+        {
+            const word name(NashPanfilovSTATES_NAMES[k]);
+            if (sDict.found(name))
+            {
+                protoStates[k] = sDict.get<scalar>(name);
+            }
+        }
+    }
+
     forAll(STATES_, integrationPtI)
     {
-        STATES_.set(integrationPtI,    new scalarField(NUM_STATES,    0.0));
+        STATES_.set(integrationPtI,    new scalarField(protoStates));
         ALGEBRAIC_.set(integrationPtI, new scalarField(NUM_ALGEBRAIC, 0.0));
         RATES_.set(integrationPtI,     new scalarField(NUM_STATES,    0.0));
-
-        NashPanfilovinitConsts
-        (
-            CONSTANTS_.data(),
-            RATES_[integrationPtI].data(),
-            STATES_[integrationPtI].data()
-        );
     }
     Info<< CONSTANTS_ << nl;
-
-    label i0 = rand() % STATES_.size();
-    Info<< "initial states:" << nl;
-    Info<< STATES_[i0] << nl;
 }
 
 
@@ -129,9 +191,9 @@ void Foam::NashPanfilov::solveAtPoint
 
     // Nash-Panfilov ODE was derived in the same normalized time used by
     // Aliev-Panfilov (t* = t_ms / 12.9), so convert OpenFOAM seconds first.
-    const scalar tStart = currentT_ * 1000.0 / 12.9;
-    const scalar tEnd   = (currentT_ + currentDt_) * 1000.0 / 12.9;
-    scalar step         = currentDt_ * 1000.0 / 12.9;
+    const scalar tStart = scaledTime(currentT_);
+    const scalar tEnd   = scaledTime(currentT_ + currentDt_);
+    scalar step         = scaledTime(currentDt_);
 
     odeSolver_->solve(tStart, tEnd, STATESI, step);
 

@@ -1,0 +1,14 @@
+# Hybrid slab reference values
+# 
+# Configuration: eikonal 1-D Purkinje + monodomain 3-D myocardium
+# Coupler: eikonalMonodomainPvjCoupler
+#
+# Purkinje 1-D eikonal (Dijkstra) activation times at key nodes.
+# These are identical to the pure eikonal case since the 1D solver is eikonal.
+# Differences from monodomain case arise from how the coupling integrates
+# the eikonal Purkinje activation times into the monodomain myocardium solve.
+
+# kind               key     metric          expected            tolerance
+eikonalPurkinjeAT   node0   activationTime  0.00000000e+00      1e-6
+eikonalPurkinjeAT   node8   activationTime  6.82346100e-03      1e-6
+eikonalPurkinjeAT   node15  activationTime  8.32345950e-03      1e-6

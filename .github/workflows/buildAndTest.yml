@@ -41,17 +41,89 @@ jobs:
             solids4foam_dir: "/lib/solids4foam"
             buildflags: "-j"
 
-        mode: [with-solids4foam, lightweight]
+        mode: [lightweight]
 
     container:
       image: ${{ matrix.container-image.image }}
       options: --user 0
 
     steps:
+      # actions/checkout's `lfs: true` shells out to the git-lfs binary, and
+      # the solids4foam images do not ship it - without this the checkout
+      # fails with "Unable to locate executable file: git-lfs". Must run
+      # before the checkout that needs it.
+      - name: Install Git LFS
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq git-lfs
+          git lfs install
+          git lfs version
+
       - name: Checkout cardiacFoam
         uses: actions/checkout@v4
         with:
           submodules: false
+          # The idealizedHeart tutorials share one Git-LFS-tracked mesh
+          # (tutorials/idealizedHeart/mesh/{0,constant/polyMesh}). Without
+          # this, those paths check out as ~130-byte LFS pointer files,
+          # cardiacFoam cannot read the mesh, and every regression that
+          # consumes it fails as "missing output file".
+          lfs: true
+
+      - name: Mark workspace as a safe directory for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Fail fast and unambiguously if the mesh did not actually materialise.
+      # Without this the first symptom is a regression reporting "missing
+      # output file" twenty minutes into the run, which points at the solver
+      # rather than at the checkout.
+      - name: Verify Git LFS assets resolved
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Workspace: $PWD"
+          git lfs ls-files -n > /tmp/lfs-files.txt
+          total=$(wc -l < /tmp/lfs-files.txt | tr -d ' ')
+          echo "$total file(s) tracked by Git LFS"
+
+          bad=0
+          while IFS= read -r f; do
+              if [ ! -f "$f" ]; then
+                  echo "  MISSING  $f"
+                  bad=$((bad + 1))
+              elif head -c 40 "$f" | grep -q "git-lfs.github.com"; then
+                  echo "  POINTER  $f"
+                  bad=$((bad + 1))
+              fi
+          done < /tmp/lfs-files.txt
+
+          if [ "$bad" -ne 0 ]; then
+              echo
+              echo "$bad LFS file(s) did not resolve to real content."
+              echo "The idealizedHeart regressions would fail as 'missing output file'."
+              exit 1
+          fi
+          echo "All $total resolved to real content."
+
+          # The tutorials reach the shared mesh by relative path from their own
+          # case directory (electroHeart uses ../mesh, pathos/* use ../../mesh),
+          # so assert it is present where those paths land, not merely somewhere.
+          echo
+          for f in \
+              tutorials/idealizedHeart/mesh/constant/polyMesh/points \
+              tutorials/idealizedHeart/mesh/constant/polyMesh/faces \
+              tutorials/idealizedHeart/mesh/constant/purkinjeGraph \
+              tutorials/idealizedHeart/mesh/0/Conductivity \
+              tutorials/idealizedHeart/mesh/0/fiber
+          do
+              printf '  %10s bytes  %s\n' "$(wc -c < "$f" | tr -d ' ')" "$f"
+          done
+
+          test -f tutorials/idealizedHeart/electroHeart/../mesh/constant/polyMesh/points
+          test -f tutorials/idealizedHeart/pathos/conductionBlock/../../mesh/constant/polyMesh/points
+          echo
+          echo "Shared mesh resolves correctly from both case directories."
 
       - name: Build cardiacFoam
         shell: bash -l {0}
@@ -71,16 +143,20 @@ jobs:
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
-      - name: Tutorial smoke regression
-        if: matrix.mode == 'lightweight'
+      - name: Tutorial regression
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
 
-          unset SOLIDS4FOAM_INST_DIR
-          export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
+            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
+            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
+          else
+            unset SOLIDS4FOAM_INST_DIR
+            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
+          fi
 
-          ./tutorials/Alltest-regression smoke
+          CARDIAC_REGRESSION_BUILD_MODE="${{ matrix.mode }}" ./tutorials/Alltest-regression
 
       - name: PETSc sanity check
         shell: bash -l {0}

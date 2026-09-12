@@ -1,0 +1,13 @@
+{
+  "base": {
+    "entry": "cable1DRestitution",
+    "archive_dir_name": "outputsRestitution"
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {
+      "dx_values": [[0.1]],
+      "s2_intervals_ms": [[700.0], [500.0]]
+    }
+  }
+}

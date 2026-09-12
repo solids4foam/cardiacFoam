@@ -1,0 +1,25 @@
+{
+  "base": {
+    "entry": "cable1DRestitution",
+    "archive_dir_name": "outputsStewartAutomaticityDt1e6",
+    "ionic_models": ["Stewart"],
+    "ionic_model_tissue_map": {
+      "Stewart": ["myocyte"]
+    },
+    "n_s1": 5,
+    "n_s2": 0,
+    "end_time_buffer_s": 1.5,
+    "parallel": true,
+    "electro_property_overrides": {
+      "$ELECTRO_MODEL_COEFFS.outputVariables.ionic.debug": "()"
+    }
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {
+      "dt_values": [[0.001]],
+      "dx_values": [[0.1]],
+      "s2_intervals_ms": [[500.0]]
+    }
+  }
+}

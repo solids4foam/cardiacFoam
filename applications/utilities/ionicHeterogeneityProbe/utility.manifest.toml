@@ -1,0 +1,59 @@
+# applications/utilities/ionicHeterogeneityProbe/utility.manifest.toml
+
+name = "ionicHeterogeneityProbe"
+description = "Probe BuenoOrovio transmural heterogeneity setup with synthetic 0-D ODE samples."
+
+purpose = """
+Runs the BuenoOrovio ionic model at nSamples transmural-distance values (0–1)
+without constructing a mesh, writing Vm trace CSV files and action-potential
+metrics (RMP, peak, APD30/50/70/90, maxdV/dt) to postProcessing/ionicHeterogeneityProbe/.
+Adjacent-sample waveform smoothness and APD envelope checks are also performed,
+producing smoothness_report.csv and APD_envelope_report.csv. Returns exit code 1
+if any sample or transition fails, allowing use as a CI gate.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "constant/ionicHeterogeneityProbe",
+]
+
+outputs = [
+  "postProcessing/ionicHeterogeneityProbe/Vm_traces.csv",
+  "postProcessing/ionicHeterogeneityProbe/AP_metrics.csv",
+  "postProcessing/ionicHeterogeneityProbe/smoothness_report.csv",
+  "postProcessing/ionicHeterogeneityProbe/APD_envelope_report.csv",
+]
+
+requires_mesh = false
+
+example = "ionicHeterogeneityProbe -case ./singleCell_run"
+
+category = "verification"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_vm_traces"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/Vm_traces.csv"
+format = "csv_probe"
+description = "Membrane voltage traces for each transmural sample point."
+produced_by = "ionicHeterogeneityProbe"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_ap_metrics"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/AP_metrics.csv"
+format = "csv_probe"
+description = "Action-potential metrics (RMP, peak, APD30/50/70/90, maxdV/dt) per sample."
+produced_by = "ionicHeterogeneityProbe"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_smoothness_report"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/smoothness_report.csv"
+format = "json_summary"
+description = "Adjacent-sample waveform smoothness check results."
+produced_by = "ionicHeterogeneityProbe"
+
+[[produces]]
+artifact_id = "ionic_heterogeneity_apd_envelope_report"
+path_pattern = "postProcessing/ionicHeterogeneityProbe/APD_envelope_report.csv"
+format = "json_summary"
+description = "APD envelope (transmural gradient) validation results."
+produced_by = "ionicHeterogeneityProbe"

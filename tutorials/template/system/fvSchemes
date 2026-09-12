@@ -1,0 +1,118 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+// cardiacFoam fvSchemes — three canonical configurations:
+//
+//   A. monodomainSolver / singleCellSolver / eikonalSolver+Purkinje  [ACTIVE]
+//   B. eikonalSolver (standalone, no Vm evolution)               [see below]
+//   C. bidomainSolver                                            [see below]
+//
+// Copy this file to your case's system/ directory and uncomment the block
+// that matches your myocardiumSolver choice.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A. monodomainSolver / singleCellSolver
+//    Active below — use as-is for these solver types.
+// ─────────────────────────────────────────────────────────────────────────────
+
+ddtSchemes
+{
+    default         backward;   // 2nd-order implicit BDF2
+    //default       Euler;      // 1st-order alternative (faster, less accurate)
+    //default       CrankNicolson 1.0;
+}
+
+gradSchemes
+{
+    default         leastSquares;
+}
+
+divSchemes
+{
+    default         none;
+    div(phiU,psi)   Gauss linear;   // Purkinje advection; safe to include for monodomain too
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B. eikonalSolver
+//    The eikonal equation is steady-state (no ddt); replace ddtSchemes with:
+//
+// ddtSchemes
+// {
+//     default         none;
+// }
+//
+//    All other blocks (grad, div, laplacian, interp, snGrad) are identical
+//    to configuration A above.
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// C. bidomainSolver
+//    Bidomain couples Vm and phiE with different div terms; replace the
+//    ddtSchemes, gradSchemes, and divSchemes blocks with:
+//
+// ddtSchemes
+// {
+//     default         none;
+//     ddt(Vm)         backward;
+// }
+//
+// gradSchemes
+// {
+//     default         Gauss linear;
+// }
+//
+// divSchemes
+// {
+//     default                                              none;
+//     div((conductivityIntracellular&grad(Vm)))            Gauss linear;
+//     div((conductivityIntracellular&grad(phiE)))          Gauss linear;
+// }
+//
+//    laplacian, interpolation, and snGrad blocks are identical to A.
+//    For bath-bidomain, add explicit laplacian entries per field:
+//
+// laplacianSchemes
+// {
+//     default                                           Gauss linear corrected;
+//     laplacian(conductivityIntracellular,Vm)           Gauss linear corrected;
+//     laplacian(GiPlusGe,phiE)                          Gauss linear corrected;
+//     laplacian(sigmaTotalf,phiE)                       Gauss linear corrected;
+// }
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ************************************************************************* //

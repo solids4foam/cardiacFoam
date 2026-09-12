@@ -1,0 +1,50 @@
+# applications/utilities/checkMeshGeometry/utility.manifest.toml
+
+name = "checkMeshGeometry"
+description = "Detect mesh point units and rescale a region to SI metres."
+category = "mesh"
+
+purpose = """
+Reads constant/<region>/polyMesh points, reports the bounding box, and detects
+whether the mesh is in metres, millimetres, or micrometres by order of
+magnitude. Detect-only by default (never mutates). Pass -rescale to apply the
+auto-detected factor, or -scale <factor> to apply an explicit one; either
+rewrites the region to SI metres. This is the deterministic remediation for the
+strict planner's mesh_not_si diagnostic.
+"""
+
+inputs = [
+  "constant/polyMesh",
+]
+
+outputs = [
+  "constant/polyMesh",
+]
+
+requires_mesh = true
+example = "checkMeshGeometry -region purkinje -scale 1e-3 -case ./coupled_run"
+
+[[flags]]
+name = "-rescale"
+description = "Apply the auto-detected scale factor and rewrite the mesh (default: report only)."
+takes_value = false
+argument_kind = "switch"
+
+[[flags]]
+name = "-region"
+description = "Mesh region to operate on (default: region0)."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-scale"
+description = "Apply this explicit scale factor instead of auto-detecting units."
+takes_value = true
+argument_kind = "scalar"
+
+[[produces]]
+artifact_id = "polymesh_scaled"
+path_pattern = "constant/polyMesh"
+format = "openfoam_log"
+description = "Rescaled (or unchanged) OpenFOAM polyMesh directory in SI metres."
+produced_by = "checkMeshGeometry"

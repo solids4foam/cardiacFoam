@@ -73,14 +73,20 @@ class ionicModel
         //- Flag for tissue type
         mutable label tissue_;
 
+        //- Flag for biological sex (0=neutral, 1=male, 2=female)
+        mutable label sex_;
+
         //- Flag for enable the update of the transmembrane voltage within the
-        //  the ionic model ODE solver. For example, if calling for a single
-        //  cell, then the governing voltage PDE becomes an ODE so you would
-        //  enable this flag
         mutable Switch solveVmWithinODESolver_;
 
         //- External stimulus protocol (separate from model constants)
         StimulusProtocol stimulus_;
+
+        //- dVm/dt (V/s) for the current step, or null to hold Vm frozen
+        const scalarField* VmRatePtr_;
+
+        //- dVm/dt of the active integration point, in model state/time units
+        scalar activeVmRate_;
 
 
     // Private Member Functions
@@ -94,6 +100,8 @@ class ionicModel
     protected:
         virtual void setTissueFromDict();
         void setTissue(label t) { tissue_ = t; }
+        virtual void setSexFromDict();
+        void setSex(label s) { sex_ = s; }
         void setStimulusProtocolFromDict(const dictionary& dict)
         {
             stimulus_ = stimulusIO::loadStimulusProtocol(dict);
@@ -109,9 +117,8 @@ class ionicModel
         mutable ionicModelIO::ExportedNamesCache exportedNamesCache_;
         mutable ionicModelIO::ExportedNamesCache debugNamesCache_;
 
-        // Optional metadata hooks for generic I/O in the base class.
+    public:
         // Derived models can override these and then rely on base
-        // write/export/debug implementations.
         virtual const PtrList<scalarField>* ioStatesPtr() const
         {
             return nullptr;
@@ -131,6 +138,29 @@ class ionicModel
         {
             return nullptr;
         }
+
+        virtual scalarField* ioMutableConstantsPtr() const
+        {
+            return nullptr;
+        }
+
+        virtual bool supportsRestartState() const
+        {
+            return false;
+        }
+
+        virtual bool readRestartState(const fvMesh&)
+        {
+            return false;
+        }
+
+        virtual void writeRestartState(const fvMesh&) const
+        {}
+
+        virtual void refreshRestartState(const fvMesh&)
+        {}
+
+
 
         virtual label ioNumConstants() const
         {
@@ -162,6 +192,23 @@ class ionicModel
             return 0;
         }
 
+        virtual void setManufacturedSourceTerm
+        (
+            const scalarField& sourceTerm,
+            scalar chi,
+            scalar Cm,
+            label sourceStart = 0
+        )
+        {
+            (void)sourceTerm;
+            (void)chi;
+            (void)Cm;
+            (void)sourceStart;
+        }
+
+        virtual void clearManufacturedSourceTerm()
+        {}
+
         virtual ionicModelIO::VmTransform ioVmTransform() const
         {
             return nullptr;
@@ -172,13 +219,22 @@ class ionicModel
             return ioStateNames() && ioNumStates() > 0;
         }
 
+    protected:
+
+        void applyIonicConstantOverrides() const;
+
 public:
+
+    //- Configuration dictionary for this model instance.
+    const dictionary& dict() const
+    {
+        return dict_;
+    }
 
     //- Runtime type information
     TypeName("ionicModel");
 
 
-    // Declare run-time constructor selection table
 
         //- Ionic model run-time selection table
         declareRunTimeSelectionTable
@@ -195,7 +251,6 @@ public:
             (dict, nIntegrationPoints, initialDeltaT, solveVmWithinODESolver)
         );
 
-    // Selectors
 
         //- Create a ionic model
         static autoPtr<ionicModel> New
@@ -209,7 +264,6 @@ public:
     // Constructors
 
         //- Construct given a dictionary, the number of integration points and a
-        //  initial time step for the ODE solver
         ionicModel
         (
             const dictionary& dict,
@@ -225,12 +279,10 @@ public:
 
     // Member Functions
 
-    /// --- ElectromechanicalSignalProvider interface ---
     bool hasSignal(CouplingSignal s) const override;
     scalar signal(label i, CouplingSignal s) const override;
 
 
-    // Solver Functions
         //- ODE solver
         ODESolver& odeSolver()
         {
@@ -255,11 +307,119 @@ public:
             scalarField& Im
         ) = 0;
 
+
+    // Semi-implicit (SBDF2) reaction-diffusion coupling
+
+        //- Does solveODE honour a supplied Vm rate?
+        virtual bool supportsVmRateCoupling() const
+        {
+            return false;
+        }
+
+        //- Can Iion be recomputed at a given Vm without advancing the state?
+        virtual bool supportsIonicCurrentEvaluation() const
+        {
+            return false;
+        }
+
+        //- Recompute Im from the current ODE state at the supplied Vm
+        virtual void evaluateIonicCurrent
+        (
+            const scalar t,
+            const scalarField& Vm,
+            scalarField& Im
+        )
+        {
+            (void)t;
+            (void)Vm;
+            (void)Im;
+
+            NotImplemented;
+        }
+
+        //- Supply dVm/dt (V/s) for the step about to be integrated
+        void setVmRate(const scalarField& dVmdt)
+        {
+            VmRatePtr_ = &dVmdt;
+        }
+
+        //- Drop the supplied rate; Vm reverts to being held frozen
+        void clearVmRate()
+        {
+            VmRatePtr_ = nullptr;
+            activeVmRate_ = 0.0;
+        }
+
+        bool hasVmRate() const
+        {
+            return VmRatePtr_ != nullptr;
+        }
+
+        //- dVm/dt at integration point i in V/s, zero if none supplied
+        scalar VmRateSI(const label i) const
+        {
+            return VmRatePtr_ ? (*VmRatePtr_)[i] : 0.0;
+        }
+
+        //- dVm/dt of the active point, in this model's state and time units
+        scalar activeVmRate() const
+        {
+            return activeVmRate_;
+        }
+
+    protected:
+
+        //- Latch the Vm rate for integration point i under the given scalings
+        void setActiveVmRate
+        (
+            const label i,
+            const scalar stateScale = 1.0,
+            const scalar timeScale = 1.0
+        )
+        {
+            activeVmRate_ = VmRateSI(i)*stateScale/timeScale;
+        }
+
+    public:
+
+        virtual void configureIonicHeterogeneity
+        (
+            const scalarField& transmuralDistance,
+            const dictionary& heterogeneityDict
+        );
+
+        virtual void configureGradientAxisHeterogeneity
+        (
+            const scalarField& fieldValues,
+            const dictionary& dict
+        );
+
+        //- Configure region-based heterogeneity through
+        //  ionicHeterogeneityOrchestrator.
+        void configureTransmuralBandHeterogeneity
+        (
+            const scalarField& transmuralDistance,
+            const dictionary& heterogeneityDict,
+            PtrList<scalarField>& heterogeneousConstants,
+            PtrList<scalarField>* heterogeneousInitialStates = nullptr
+        ) const;
+
+        //- Configure one gradientAxes axis's heterogeneity.
+        void configureGradientAxisHeterogeneityImpl
+        (
+            const scalarField& fieldValues,
+            const dictionary& dict,
+            PtrList<scalarField>& heterogeneousConstants
+        ) const;
+
+        virtual scalarField constantsForTissue(const label tissueFlag) const;
+
+        virtual scalarField initialStatesForTissue(const label tissueFlag) const;
+
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;
 
         //- Derivatives of each ODE with respect to the primary unknown in that
-        //  equation - right side of the equation
         virtual void derivatives
         (
             const scalar t,
@@ -284,7 +444,6 @@ public:
         };
 
 
-    // Read and Get
 
         //- Getter for tissue flag
         label tissue() const
@@ -292,16 +451,21 @@ public:
             return tissue_;
         }
 
+        //- Getter for sex flag
+        label sex() const
+        {
+            return sex_;
+        }
+
+        virtual word sexName() const
+        {
+            const label s = sex_;
+            return (s == 1) ? "male" :
+                   (s == 2) ? "female" :
+                              "neutral";
+        }
+
         //- Return the resting membrane potential in SI units (V), derived
-        //  directly from the model's own initial conditions as set by
-        //  initConsts.  This is the 1D analogue of the 3D domain reading Vm
-        //  from the '0/Vm' field file: no external specification is required.
-        //
-        //  For dimensionless models (BuenoOrovio, AlievPanfilov) the
-        //  ioVmTransform() function is applied to convert STATES[0] → mV
-        //  before converting to V.  For all standard CellML models that store
-        //  Vm directly in mV, the transform is nullptr and STATES[0] is used
-        //  as-is.  Falls back to -0.084 V if the model provides no state data.
         virtual scalar vmRest() const
         {
             const auto* statesPtr = ioStatesPtr();
@@ -383,6 +547,17 @@ public:
             wordList result(nConstants);
             for (label i = 0; i < nConstants; ++i)
             {
+                if (!names[i] || names[i][0] == '\0')
+                {
+                    FatalErrorInFunction
+                        << "Invalid constant metadata for ionic model "
+                        << type() << ": constant index " << i
+                        << " has no name. Fix the model's CONSTANTS_NAMES "
+                        << "array so every NUM_CONSTANTS entry has a real "
+                        << "semantic name."
+                        << exit(FatalError);
+                }
+
                 result[i] = word(names[i]);
             }
             return result;
@@ -452,10 +627,14 @@ public:
             return (*algebraicPtr)[integrationPtI];
         }
 
-        // Tissue/variant metadata used by model-side setup code.
         virtual List<word> supportedTissueTypes() const
         {
             return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+        }
+
+        virtual List<word> supportedSexTypes() const
+        {
+            return {};   // empty = model does not support sex selection
         }
 
         //- Optional verification family tag for manufactured/reference tests.
@@ -487,9 +666,6 @@ public:
         }
 
 
-    // Print, Export and Write
-        // Write and export from internal variables functions
-        // singleCell
         virtual void writeHeader(OFstream& os) const
         {
             if (!hasIOMetadata())
@@ -574,13 +750,17 @@ public:
                     os,
                     *statesPtr,
                     *algebraicPtr,
+                    ioStateNames(),
+                    ioNumStates(),
+                    ioAlgebraicNames(),
+                    ioNumAlgebraic(),
+                    fullWritePlanCache_,
                     *ratesPtr,
                     ioVmTransform()
                 );
             }
         }
 
-        // 3D vol fields(defined for states, algebraic and rates.)
         virtual void exportStates
         (
             PtrList<volScalarField>& outFields
@@ -637,7 +817,6 @@ public:
             const PtrList<volScalarField>& inFields
         );
 
-        // Printing function
         virtual void debugPrintFields
         (
             label cellI,
@@ -689,7 +868,6 @@ public:
             );
         }
 
-        // Return names of variables to export
         virtual wordList exportedFieldNames() const
         {
             if (!variableExport_.size())

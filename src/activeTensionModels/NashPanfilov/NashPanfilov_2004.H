@@ -15,6 +15,12 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the Nash-Panfilov 2004
+    active tension model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #include "NashPanfilov_2004Names.H"
@@ -28,8 +34,7 @@ static const char* NashPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_Vr",
     "AC_Vth",
     "AC_e0",
-    "AC_kTa",
-    "AC_a"
+    "AC_kTa"
 };
 
 static const char* NashPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
@@ -39,20 +44,7 @@ static const char* NashPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
 };
 
 
-static inline const Foam::HashTable<Foam::wordList>&
-NashPanfilovDependencyMap()
-{
-   static const Foam::HashTable<Foam::wordList> dep
-    (
-        {
-        }
-    );
-
-    return dep;
-}
-
-
-void
+inline void
 NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES)
 {
     CONSTANTS[AC_Vp] = 20.0;
@@ -64,8 +56,11 @@ NashPanfilovinitConsts(double* CONSTANTS, double* RATES, double* STATES)
     STATES[Ta] = 0.0;
 }
 
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE
+#endif
 
-void
+CARDIAC_HOST_DEVICE inline void
 NashPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, double* STATES, double* ALGEBRAIC)
 {
     ALGEBRAIC[AV_e] = ((ALGEBRAIC[AV_u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);

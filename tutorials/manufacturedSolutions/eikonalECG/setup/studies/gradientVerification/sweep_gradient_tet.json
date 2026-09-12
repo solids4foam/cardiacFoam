@@ -1,0 +1,49 @@
+{
+  "base": {
+    "entry": "manufacturedEikonalECG",
+    "case_dir_name": "manufacturedSolutions/eikonalECG",
+    "setup_dir_name": "setup",
+    "dimensions": ["3D"],
+    "solver_types": ["eikonal"],
+    "mesh_family": "tet",
+    "gradient_reconstruction": true,
+    "postprocess_strict_artifacts": false,
+    "run_in_parallel": false,
+    "archive_dir_name": "setup/studies/gradientVerification/results/sweepCases"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "grad_scheme": [
+        "gauss_linear",
+        "gauss_linear",
+        "gauss_linear",
+        "gauss_linear",
+        "least_squares",
+        "least_squares",
+        "least_squares",
+        "least_squares"
+      ],
+      "number_cells": [
+        [10],
+        [20],
+        [40],
+        [80],
+        [10],
+        [20],
+        [40],
+        [80]
+      ],
+      "output_dir_name": [
+        "gaussLinear_10",
+        "gaussLinear_20",
+        "gaussLinear_40",
+        "gaussLinear_80",
+        "leastSquares_10",
+        "leastSquares_20",
+        "leastSquares_40",
+        "leastSquares_80"
+      ]
+    }
+  }
+}

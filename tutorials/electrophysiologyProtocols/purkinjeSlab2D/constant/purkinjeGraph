@@ -1,0 +1,30 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      purkinjeGraph;
+}
+
+rootNode
+0;
+
+pvjNodes
+(1);
+
+pvjLocations
+(
+    (0.01 0.025 0.00005)
+);
+
+conductionEdges
+(
+    (0 1 0.05 1)
+);
+
+points
+(
+    (0.001 0.025 0.00005)
+    (0.01 0.025 0.00005)
+);

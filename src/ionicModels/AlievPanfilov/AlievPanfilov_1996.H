@@ -15,23 +15,29 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Description
+    Self-contained ODE equations for the Aliev-Panfilov 1996
+    phenomenological cardiac cell model.
+
+Author
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 
 #include "AlievPanfilov_1996Names.H"
 #include "stimulusIO.H"
 
-const char* AlievPanfilovSTATES_NAMES[NUM_STATES] = {
+static const char* AlievPanfilovSTATES_NAMES[NUM_STATES] = {
     "u",
     "recovery_r"
 };
-const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
+static const char* AlievPanfilovALGEBRAIC_NAMES[NUM_ALGEBRAIC] = {
     "AV_eps",
     "Istim",
     "Iion_cm"
 };
 
-const char* AlievPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
+static const char* AlievPanfilovCONSTANTS_NAMES[NUM_CONSTANTS] = {
     "AC_Vp",
     "AC_Vr",
     "AC_Vth",
@@ -102,12 +108,6 @@ AlievPanfilovcomputeVariables(double VOI, double* CONSTANTS, double* RATES, doub
 
     ALGEBRAIC[Iion_cm] = CONSTANTS[AC_k] * STATES[u] * (STATES[u] - CONSTANTS[AC_a]) * (STATES[u] - 1.0) + STATES[recovery_r] * STATES[u];
 
-    //Tension Variables
-    //STATES[active_tension_Ta] = 0;
-    //CONSTANTS[AC_kTa] = 8.0;
-    //CONSTANTS[AC_e0] = 1.0;
-    //ALGEBRAIC[AV_e] = ((STATES[u] < 0.05) ? 1.0 * CONSTANTS[AC_e0] : 10.0 * CONSTANTS[AC_e0]);
-    //RATES[active_tension_Ta] = ALGEBRAIC[AV_e] * (CONSTANTS[AC_kTa] * STATES[u] - STATES[active_tension_Ta]);
 
 
     ALGEBRAIC[Istim] = computeIstim(VOI, stimulus);

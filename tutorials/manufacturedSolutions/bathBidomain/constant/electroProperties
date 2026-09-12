@@ -1,0 +1,72 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver bidomainSolver;
+
+bidomainSolverCoeffs
+{
+    conductivitySource uniform;
+    cellZone        myocardium;
+    bathPredictorCorrector yes;
+    conductivityIntracellular [ -1 -3 3 0 0 2 0 ] ( 0.111453302 0 0 0.121585420 0 0.030396355 );
+    conductivityExtracellular [ -1 -3 3 0 0 2 0 ] ( 0.046165469 0 0 0.050362330 0 0.012590582 );
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    ionicModel      bathBidomainFDAManufactured;
+    // The complete bath workflow uses first-order Lie--Godunov splitting.
+    // Archive it explicitly: temporal verification must record the complete
+    // advance rather than infer its order from the PDE substep.
+    timeCouplingScheme godunov;
+    outputVariables
+    {
+        ionic
+        {
+            export          ( V u1 u2 u3 Iion );
+            debug           ( V u1 u2 u3 Iion );
+        }
+    }
+    verificationModel
+    {
+        type            manufacturedFDABathBidomainVerifier;
+        k               0.7071067811865476;
+        alpha           0.01;
+        fdaBathVariant  electrodePair;
+    }
+    dimension       "1D";
+    solutionAlgorithm implicit;
+    solver          RKF45;
+    maxSteps        1000000000;
+    bathPotentialDomain
+    {
+        bathCellZones   ( bath );
+        bathConductivityField bodyAndOrgansConductivity;
+        interfaceConductivityInterpolation distanceWeightedHarmonic;
+        groundPatches
+        {
+        }
+        surfaceCurrentPatches
+        {
+            xMax            0.01;
+            xMin            -0.01;
+        }
+        phiERefPoint    ( -0.9 0.05 0.05 );
+        phiEReferenceValue 0;
+    }
+}
+
+
+// ************************************************************************* //

@@ -15,6 +15,14 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Class
+    reactionDiffusionPvjCoupler
+
+Description
+    Reaction-diffusion PVJ coupler.
+
+Author
+    Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
 
 #ifndef reactionDiffusionPvjCoupler_H
@@ -27,12 +35,13 @@ License
 namespace Foam
 {
 
-class ReactionDiffusionPvjCoupler
+class reactionDiffusionPvjCoupler
 :
-    public PVJCoupler
+    public pvjCoupler
 {
-    scalar R_pvj_;
+    scalarField R_pvj_;
     Switch debugCoupling_;
+    word couplingScheme_;
     mutable scalarField tissueVmBuffer_;
     mutable scalarField networkVmBuffer_;
 
@@ -43,15 +52,22 @@ class ReactionDiffusionPvjCoupler
         scalarField& current
     ) const;
 
-    void evaluateCoupling(const char* phaseName) const;
+    void evaluateCoupling
+    (
+        scalar primaryTime,
+        scalar secondaryTime,
+        const char* phaseName
+    );
 
     void reportCouplingDiagnostics(const char* phaseName) const;
+
+    void depositPrimaryCoupling() const;
 
 public:
 
     OverrideTypeName("reactionDiffusionPvjCoupler");
 
-    ReactionDiffusionPvjCoupler
+    reactionDiffusionPvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,
         electroDomainInterface& secondaryDomain,

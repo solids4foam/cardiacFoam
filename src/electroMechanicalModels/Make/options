@@ -31,11 +31,12 @@ endif
 
 EXE_INC = \
     $(VERSION_SPECIFIC_INC) \
-    -I../../modules/physicsModel/src/solids4FoamModels/lnInclude \
     -I../electroModels/lnInclude \
     -I../ionicModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../couplingModels/lnInclude \
+    -I../activeTensionModels/lnInclude \
+    -I../verificationModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/solids4FoamModels/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/blockCoupledSolids4FoamTools/lnInclude \
     -I$(SOLIDS4FOAM_ROOT)/src/RBFMeshMotionSolver/lnInclude \
@@ -53,6 +54,8 @@ LIB_LIBS = \
     -L$(FOAM_MODULE_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
     -lelectroModels \
+    -lactiveTensionModels \
+    -lverificationModels \
     -lionicModels \
     -lgenericWriter \
     -lfiniteVolume \

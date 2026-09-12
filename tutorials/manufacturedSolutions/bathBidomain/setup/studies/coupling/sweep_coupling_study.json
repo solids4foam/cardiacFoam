@@ -1,0 +1,110 @@
+{
+  "base": {
+    "entry": "manufacturedBathBidomain",
+    "case_dir_name": "manufacturedSolutions/bathBidomain",
+    "setup_dir_name": "setup",
+    "dimensions": [
+      "3D"
+    ],
+    "solver_types": [
+      "implicit"
+    ],
+    "piecewise_sweep": true,
+    "mesh_family": "tet",
+    "numerics_profile": "bath_bidomain_tet",
+    "end_time": 0.02,
+    "run_in_parallel": true,
+    "ecg_enabled": false,
+    "fda_bath_variant": "groundElectrode",
+    "postprocess_strict_artifacts": false,
+    "archive_dir_name": "setup/studies/coupling/results/sweepCases",
+    "electro_property_overrides": {
+      "bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation": "distanceWeightedHarmonic"
+    }
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "bath_predictor_corrector": [
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true
+      ],
+      "number_cells": [
+        [
+          10
+        ],
+        [
+          10
+        ],
+        [
+          20
+        ],
+        [
+          20
+        ],
+        [
+          40
+        ],
+        [
+          40
+        ],
+        [
+          80
+        ],
+        [
+          80
+        ]
+      ],
+      "dt_values": [
+        [
+          0.00892857
+        ],
+        [
+          0.00892857
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.00224215
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.000560538
+        ],
+        [
+          0.0001401345
+        ],
+        [
+          0.0001401345
+        ]
+      ]
+    },
+    "dependent": [
+      {
+        "name": "caseId",
+        "derive": "case_id_template",
+        "of": [
+          "number_cells",
+          "bath_predictor_corrector"
+        ]
+      },
+      {
+        "name": "output_dir_name",
+        "derive": "output_dir_name_template",
+        "of": [
+          "number_cells",
+          "bath_predictor_corrector"
+        ]
+      }
+    ]
+  }
+}

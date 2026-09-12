@@ -1,0 +1,42 @@
+# applications/utilities/setTorsoOrganConductivityField/utility.manifest.toml
+
+name = "setTorsoOrganConductivityField"
+description = "Create a scalar conductivity volScalarField from named mesh cellZones for torso/bath ECG domains."
+
+purpose = """
+Reads system/setTorsoOrganConductivityFieldDict (or a user-supplied path via
+-dict) which maps named mesh cellZone labels to scalar conductivity values.
+Each cell is assigned exactly one conductivity value; overlapping zone assignments
+are fatal. A defaultSigma may be provided as a fallback for cells not covered by
+any zone. The resulting volScalarField (default name: bodyAndOrgansConductivity)
+is written to the current time directory and is ready for use as the conductivity
+field in an ECG torso domain.
+"""
+
+inputs = [
+  "system/setTorsoOrganConductivityFieldDict",
+  "constant/polyMesh",
+]
+
+outputs = [
+  "0/bodyAndOrgansConductivity",
+]
+
+requires_mesh = true
+
+example = "setTorsoOrganConductivityField -case ./torso_run"
+
+category = "field-setup"
+
+[[flags]]
+name = "-dict"
+description = "Alternative dictionary path (default: system/setTorsoOrganConductivityFieldDict)."
+takes_value = true
+argument_kind = "path"
+
+[[produces]]
+artifact_id = "body_organs_conductivity_field"
+path_pattern = "0/bodyAndOrgansConductivity"
+format = "openfoam_log"
+description = "Scalar volScalarField of per-cell conductivity values ready for use as an ECG torso domain conductivity field."
+produced_by = "setTorsoOrganConductivityField"
