@@ -28,6 +28,12 @@ tutorials/fluidSolidInteraction-preCICE/tutorials
 *.bak[0-9][0-9]
 *.orig
 *.orig[0-9][0-9]
+
+# ...but 0.orig/ is an OpenFOAM convention, not a merge-conflict backup:
+# it holds a case's tracked initial conditions, which Allrun restores into
+# 0/ via restore0Dir and Allclean's cleanCase0 deletes. Without this
+# exception a new case's initial conditions are silently left untracked.
+!0.orig/
 \#*\#
 
 # file-browser settings - anywhere
