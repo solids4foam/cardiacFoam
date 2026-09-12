@@ -33,6 +33,7 @@ REGRESSION_TESTS=(
     "electrophysiologyProtocols/rotorInstability"
     "idealizedHeart/electroHeart"
     "idealizedHeart/pathos/conductionBlock"
+    "pimpleHFDIBFoam/immersedCylinderSmoke"
 )
 
 failures=0

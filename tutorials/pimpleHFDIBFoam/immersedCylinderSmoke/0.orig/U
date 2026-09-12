@@ -1,0 +1,81 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  8
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           volVectorField;
+    object          U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [ 0 1 -1 0 0 0 0 ];
+
+internalField   uniform ( 1 0 0 );
+
+boundaryField
+{
+    inlet
+    {
+        // Poiseuille profile, Umean = 1 (Re = U*D/nu = 1*1/0.05 = 20).
+        // ux = (6*Umean/H^2)*(eta*H - eta^2), eta = y - yMin, evaluated at
+        // the 25 inlet face centres of this case's blockMeshDict. Written out
+        // rather than computed by a codedFixedValue so the regression test
+        // needs no run-time compilation. The list is tied to this mesh: if
+        // blockMeshDict changes, OpenFOAM will reject the length mismatch.
+        type            fixedValue;
+        value           nonuniform List<vector>
+25
+(
+(0 0 0)
+(0.24346452 0 0)
+(0.46538351 0 0)
+(0.66575697 0 0)
+(0.84458489 0 0)
+(1.0018673 0 0)
+(1.1356791 0 0)
+(1.2469993 0 0)
+(1.3380796 0 0)
+(1.4089198 0 0)
+(1.4595199 0 0)
+(1.48988 0 0)
+(1.5 0 0)
+(1.48988 0 0)
+(1.4595199 0 0)
+(1.4089198 0 0)
+(1.3380796 0 0)
+(1.2469993 0 0)
+(1.1356791 0 0)
+(1.0018673 0 0)
+(0.84458489 0 0)
+(0.66575697 0 0)
+(0.46538351 0 0)
+(0.24346452 0 0)
+(0 0 0)
+);
+    }
+    outlet
+    {
+        type            zeroGradient;
+    }
+    bottomWall
+    {
+        type            noSlip;
+    }
+    topWall
+    {
+        type            noSlip;
+    }
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+}
+
+
+// ************************************************************************* //

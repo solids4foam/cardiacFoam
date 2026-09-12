@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+cd "${0%/*}" || exit 1    # run from this directory
+# Source tutorial run functions first: RunFunctions reads variables that may
+# be unset (DYLD_LIBRARY_PATH on macOS), so it is not compatible with "set -u"
+. "${WM_PROJECT_DIR}"/bin/tools/RunFunctions
+
+# Stop on the first failure; runApplication returns the application status
+set -e
+
+# Fail with a useful message rather than a confusing OpenFOAM error
+if ! command -v pimpleHFDIBFoam > /dev/null 2>&1
+then
+    echo "ERROR: pimpleHFDIBFoam not found in PATH." >&2
+    echo "       Build it first with ./Allwmake at the repository root." >&2
+    exit 1
+fi
+
+if [ ! -f constant/triSurface/cylinder.stl ]
+then
+    echo "ERROR: constant/triSurface/cylinder.stl is missing." >&2
+    echo "       The immersed body geometry is tracked; restore it with git." >&2
+    exit 1
+fi
+
+# Recreate 0/ from the tracked initial conditions
+restore0Dir
+
+runApplication blockMesh
+
+runApplication "$(getApplication)"
+
+#------------------------------------------------------------------------------
