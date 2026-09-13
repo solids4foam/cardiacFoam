@@ -52,7 +52,13 @@ while (( $# > 0 )); do
 done
 
 json_string() {
-    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g'
+    # Pure parameter expansion: BSD sed's N quits without printing on the last
+    # line, so a sed-based escape returns an empty string on macOS.
+    local s="$1"
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    printf '%s' "$s"
 }
 
 append_report_row() {
