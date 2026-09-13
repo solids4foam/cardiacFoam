@@ -27,6 +27,10 @@ not merely the presence of an `Allrun` script.
 | `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
 | `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | not covered | coupled convergence summaries under `outputs/` |
 | `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `Alltest-regression` (expected skip in lightweight mode) | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
+| `idealizedHeart/electroHeart` | Run whole-ventricle electrophysiology with a Purkinje network and pseudo-ECG | `monodomainSolver`, `eikonalSolver` or the hybrid combination, selected at run time | lightweight or full | `Alltest-regression` | activation-time probes and pseudo-ECG series under `postProcessing/` |
+| `idealizedHeart/electroMechHeart` | Couple whole-ventricle electrophysiology to the solid on the same anatomy | `electroMechanicalModel` with monodomain electrophysiology | full only | `Alltest-regression` (expected skip in lightweight mode) | `Ta` and `D` probes on the solid, activation-time and `Vm` probes on the electro region |
+| `idealizedHeart/pathos/conductionBlock` | Model left or right bundle-branch block structurally | `monodomainSolver` with one Purkinje bundle severed, variant selected at run time | lightweight or full | `Alltest-regression` | junction activation-time probes and pseudo-ECG series |
+| `idealizedHeart/pathos/ionicPathology` | Model acute ischemia or Brugada syndrome type-1 | `monodomainSolver` with `ionicConstantOverrides` on `TNNP`, variant selected at run time | lightweight or full | not covered | pseudo-ECG series and monodomain fields |
 
 ## Common script pattern
 

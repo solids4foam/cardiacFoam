@@ -33,6 +33,7 @@ REGRESSION_TESTS=(
     "manufacturedSolutions/monodomainTotalLagrangianEM"
     "electrophysiologyProtocols/rotorInstability"
     "idealizedHeart/electroHeart"
+    "idealizedHeart/electroMechHeart"
     "idealizedHeart/pathos/conductionBlock"
 )
 
@@ -58,6 +59,7 @@ esac
 FULL_SOLIDS4FOAM_ONLY_TESTS=(
     "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
     "manufacturedSolutions/monodomainTotalLagrangianEM"
+    "idealizedHeart/electroMechHeart"
 )
 
 isExpectedSkip()

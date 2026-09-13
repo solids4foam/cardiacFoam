@@ -22,13 +22,14 @@ writeControl    writeTime;
 fields
 (
     Ca_i
+    Vm
+    activationTime
 );
 
 probeLocations
 (
-    (0.00075 0.00075 0.00105)
-    (0.00075 0.00075 0.00350)
-    (0.00075 0.00075 0.00595)
+    (0.077286 -0.000616 0.004096)   // apex, inside the stimulus region
+    (0.024482 0.017758 -0.001906)   // mid-wall, later activation
 );
 
 // ************************************************************************* //
