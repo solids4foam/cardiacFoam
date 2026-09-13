@@ -10,4 +10,4 @@ A surrogate ECG for eikonal runs. Instead of solving for the voltage, it shifts 
 
 It writes `postProcessing/eikonalECG.dat`, with one column per electrode, sampled on its own output time grid rather than at every solver step.
 
-Worked set-ups are in [tutorials/electrophysiologyProtocols/eikonalECGPersonalized](../../../../tutorials/electrophysiologyProtocols/eikonalECGPersonalized/README.md) and [tutorials/manufacturedSolutions/eikonalECG](../../../../tutorials/manufacturedSolutions/eikonalECG/README.md).
+A worked set-up is in [tutorials/manufacturedSolutions/eikonalECG](../../../../tutorials/manufacturedSolutions/eikonalECG/README.md).
