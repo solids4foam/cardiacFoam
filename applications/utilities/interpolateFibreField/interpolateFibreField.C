@@ -25,9 +25,12 @@ Description
     Unlike setFibreField, this does not compute f0 itself from a
     Laplace-solved transmural coordinate and a helix-angle rule: it reads
     whatever f0 is already present (e.g. supplied from an anatomical fibre
-    dataset) and only produces its face-interpolated companion. Meant to
-    be run once per mesh; commit the resulting f0f as source data rather
-    than regenerating it every run.
+    dataset) and only produces its face-interpolated companion.
+
+    Every mechanics run needs f0f. setFibreField writes it for you; when
+    f0 comes from anywhere else, run this utility on the target mesh (and
+    region) before the mechanics solve, and again whenever f0 or the mesh
+    changes. Never reuse an f0f generated for a different mesh.
 
 Author
     Philip Cardiff, UCD (original setFibreField, whose interpolate+

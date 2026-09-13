@@ -1,63 +1,24 @@
 # genericWriter
 
-This folder builds `libgenericWriter`, the shared output and stimulus helper
-library.
+All the output logic, shared by the ionic, active-tension and electro libraries: writing traces and time series, and reading stimuli.
 
-## Current contents
+## What's available
 
-```text
-src/genericWriter/
-├── ionicModelIO.{H,C}
-├── ionicVariableCompatibility.{H,C}
-├── stimulusIO.{H,C}
-├── activeTensionIO.{H,C}
-├── ecgModelIO.{H,C}
-├── purkinjeModelIO.{H,C}
-├── Make/
-└── README.md
+| File | What it does |
+|---|---|
+| `ionicModelIO` | ionic-model output: traces, field export, selected variables |
+| `ionicVariableCompatibility` | matches variable names across models, for export and signal lookup |
+| `stimulusIO` | reads and evaluates stimuli |
+| `StimulusProtocolPOD.H` | a plain-data copy of a stimulus protocol, for batched and GPU ionic models |
+| `activeTensionIO` | active-tension output |
+| `ecgModelIO` | ECG output |
+| `purkinjeModelIO` | Purkinje-network time series |
+| `conductivityFieldIO` | resolves the conductivity used by the tissue solvers |
 
-```
+## Folders
 
-## Purpose
+All files sit directly in `src/genericWriter/`.
 
-This library centralizes small reusable pieces shared by ionic, electro, ECG,
-Purkinje, and active-tension code.
+## What this does not own
 
-## Main components
-
-- `ionicModelIO`
-
-  General ionic-model export, trace writing, field-export planning, and
-  selected-variable handling
-
-- `ionicVariableCompatibility`
-
-  Shared variable-name compatibility and lookup rules used by ionic exports and
-  signal discovery
-
-- `stimulusIO`
-
-  Shared stimulus dictionary parsing and evaluation helpers
-
-- `activeTensionIO`
-
-  Active-tension output helpers
-
-- `ecgModelIO`
-
-  ECG output helpers
-
-- `purkinjeModelIO`
-
-  Purkinje/conduction time-series output helpers
-
-## What this folder does not own
-
-This folder does not own the physics models themselves. It only provides helper
-logic used by:
-
-- `ionicModels`
-
-- `electroModels`
-
-- `activeTensionModels`
+- The physics models themselves. This library only reads inputs and writes outputs for them.

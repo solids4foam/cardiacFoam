@@ -1,92 +1,34 @@
-# activeTensionModels library architecture
+# activeTensionModels
 
-This directory provides runtime-selectable active-tension models built into
-`libactiveTensionModels`.
+Cell-level models of the mechanical response: the same kind of model as the ionic ones, turning voltage or calcium into an active tension `Ta` for the solid. The electromechanics part of the core runs them, and single-cell runs can compute tension too.
 
-These models sit on the electromechanics side of the stack: they consume
-coupling signals from electrophysiology models and evolve active-tension state
-variables for each integration point.
+## What's available
 
-## Directory structure
+| Model | What it is | Reference |
+|---|---|---|
+| `NashPanfilov` / `NashPanfilovBatched` | phenomenological tension, driven by `Vm` | Nash and Panfilov (2004), Progress in Biophysics and Molecular Biology, [doi:10.1016/j.pbiomolbio.2004.01.016](https://doi.org/10.1016/j.pbiomolbio.2004.01.016) |
+| `LandNiederer` / `LandNiedererBatched` | the seven-state intact-human model, driven by `Cai` | Land et al. (2017), Journal of Molecular and Cellular Cardiology, [doi:10.1016/j.yjmcc.2017.03.008](https://doi.org/10.1016/j.yjmcc.2017.03.008) |
+| `LandNiedererTWorld` / `LandNiedererTWorldBatched` | the six-state contraction subsystem of T-World, driven by `Cai` | Tomek et al. (2025), bioRxiv, [doi:10.1101/2025.03.24.645031](https://doi.org/10.1101/2025.03.24.645031) |
+| `ManufacturedElectromechanics` | manufactured-solution model for verification, driven by `Vm` | — |
+
+Each model reads its one signal through `ElectromechanicalSignalProvider` in [couplingModels](../couplingModels/README.md). The batched versions run on the CPU, with an optional CUDA path.
+
+## Folders
 
 ```text
 src/activeTensionModels/
-├── activeTensionModel/   # Base class and runtime selection
-├── verificationModels/
-│   └── ManufacturedElectromechanics/ # Manufactured electromechanics verification model
-├── NashPanfilov/         # Nash-Panfilov phenomenological active tension model
-├── LandNiederer/         # Original Land et al. intact-human model
-├── LandNiedererTWorld/   # TWorld-derived six-state contraction subsystem
-├── *Batched/             # GPU-ready Batched versions of the models (e.g. NashPanfilovBatched)
-├── Make/
-├── lnInclude/
-└── README.md
+├── activeTensionModel/   # base classes and shared helpers
+├── verificationModels/   # ManufacturedElectromechanics
+├── NashPanfilov/
+├── LandNiederer/
+├── LandNiedererTWorld/
+└── <Name>Batched/        # the batched version of each model
 ```
 
-## Core class: `Foam::activeTensionModel`
+**Deep dive:** [ACTIVE_TENSION_MODELS_ARCHITECTURE.md](ACTIVE_TENSION_MODELS_ARCHITECTURE.md) explains how this library is built inside.
 
-Defined in `activeTensionModel/activeTensionModel.H` and implemented in
-`activeTensionModel/activeTensionModel.C`.
+## What this does not own
 
-Main responsibilities:
-
-- Runtime selection via `activeTensionModel::New(...)`.
-- Store the active-tension dictionary and integration-point count.
-- Query an optional `ElectromechanicalSignalProvider` for upstream signals such as `Vm`
-  and `Cai`.
-- Run the base `calculateTension(...)` loop and delegate per-point work to
-  `solveAtPoint(...)`.
-- Provide shared I/O and export helpers through `activeTensionIO`.
-
-## Batched Execution (`Foam::batchedActiveTensionModel`)
-
-Models extending `batchedActiveTensionModel` use a Structure-of-Arrays (SoA) data layout
-to dispatch execution across CPU (OpenMP) or GPU (CUDA) backends. The base
-`calculateTension(...)` loop is overridden to target the selected backend,
-mirroring the `ionicModels` batched pattern.
-
-## Runtime model contract
-
-`libactiveTensionModels` is built in both modes, but spatial electromechanical
-workflows that consume these models require full solids4foam mode. The values in
-the table are the exact registered `activeTensionModel` dictionary selectors.
-
-| Purpose | Runtime name | Backend/build availability | Source boundary | Known equivalence limitation |
-|---|---|---|---|---|
-| Phenomenological tension | `NashPanfilov` | scalar CPU; full EM workflows | maintained wrapper; generated equations/Names metadata | Batched integration uses a different data path |
-| Phenomenological tension | `NashPanfilovBatched` | SoA host, optional CUDA; full EM workflows | maintained wrapper/backend; generated batch equations | Scalar/batched trajectories require tolerance-based comparison |
-| Biophysical tension | `LandNiederer` | scalar CPU; full EM workflows | original seven-state intact-human model | Active output is `AV_Ta`; passive and total tension remain diagnostic outputs |
-| Biophysical tension | `LandNiedererBatched` | SoA host, optional CUDA; full EM workflows | original seven-state intact-human model | Active output is `AV_Ta`; passive and total tension remain diagnostic outputs |
-| Biophysical tension | `LandNiedererTWorld` | scalar CPU; full EM workflows | TWorld six-state contraction subsystem | Applies resting-Cai preconditioning |
-| Biophysical tension | `LandNiedererTWorldBatched` | SoA host, optional CUDA; full EM workflows | TWorld batched backend | Uses explicit batched resting-Cai conditioning; scalar equivalence requires stated tolerances |
-| Electromechanical MMS | `ManufacturedElectromechanics` | scalar CPU; full EM verification | maintained verification implementation and Names metadata | Verification-only; not a physiological tension law |
-
-All production models select their driving electrophysiology signal from
-dictionary input (`couplingSignal`, normally `Vm` or `Cai`) and integrate with
-the `ElectromechanicalSignalProvider` interface used by `ionicModel`.
-The provider contract is `Vm` in mV and `Cai` in mM. Models consume those
-canonical values by default; `driveSignalScaleFactor()` handles a model-local
-input-unit conversion at the shared signal boundary. The original Land 2017
-models use it to convert `Cai` from mM to µM. The TWorld variants leave it at
-`1.0` on purpose — their maths header converts mM→µM internally, so adding a
-scale factor there would double-convert.
-Time is handled by the sibling hook `timeScaleFactor()`, which is pure
-virtual: every model states how OpenFOAM seconds map onto its own time unit,
-even when the answer is `1.0`. See
-[ACTIVE_TENSION_MODELS_ARCHITECTURE.md](ACTIVE_TENSION_MODELS_ARCHITECTURE.md)
-for the per-model table.
-Both scalar Land variants use `preconditioningTime` (default 1000 ms) and
-integrate to the resting steady state over a fixed 100 substeps.
-`LandNiedererTWorldBatched` advances its generated hot path, conditions one
-representative state, and copies that state to every integration point.
-
-### Generated and maintained boundaries
-
-- Runtime wrappers, registration, coupling-signal handling, backend dispatch,
-  preconditioning, and CUDA kernels listed by `Make/files-gpu` are maintained.
-- Model equation and Names headers are generated inputs. Update their generator
-  contract and regenerate instead of editing equations directly.
-- CUDA adds a backend to the three registered batched selectors; it does not add
-  new selector names. Host and CUDA results require explicit parity tolerances.
-- `NiedererHunterSmith` is commented out in `Make/files`; it is not compiled or
-  runtime-selectable and is therefore not advertised as available.
+- The passive mechanical response: the solid owns it. `LandNiederer`'s passive branch is diagnostic output only.
+- The signals it reads: [couplingModels](../couplingModels/README.md).
+- When tension is computed: [electroMechanicalModels](../electroMechanicalModels/README.md).

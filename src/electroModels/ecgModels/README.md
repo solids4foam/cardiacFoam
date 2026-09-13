@@ -1,78 +1,18 @@
 # ecgModels
 
-This directory contains runtime-selectable ECG evaluation kernels used by
-`ecgDomain`. These models are downstream consumers of myocardium state: they
-read the finalized electrical solution after the tissue advance and produce ECG
-signals or derived potentials without feeding current back into the tissue.
+The ECG models, used by `ecgDomain`. They read the electrical state after each step and never feed back into the tissue.
 
-## Current contents
+## What's available
+
+- `pseudoECG` (class `pseudoECGSolver`): a pseudo-ECG from the myocardium, using a dipole lead field (Gima and Rudy, 2002, Circulation Research, [doi:10.1161/01.res.0000016960.61087.86](https://doi.org/10.1161/01.res.0000016960.61087.86)).
+- `torsoECG`: samples the global `phiE` of a heart-and-bath solve at the electrodes.
+- `eikonalECG`: a surrogate ECG for eikonal runs, built from activation times and action-potential templates. See [eikonalECG](eikonalECG/README.md).
+
+## Folders
 
 ```text
 src/electroModels/ecgModels/
 ├── pseudoECGSolver/
-│   ├── pseudoECGSolver.H
-│   └── pseudoECGSolver.C
 ├── torsoECG/
-├── eikonalECG/        # MMS verification construct / activation-time ECG surrogate
-│   ├── torsoECG.H
-│   └── torsoECG.C
-└── README.md
+└── eikonalECG/
 ```
-
-## Available models
-
-**Concrete solver implementations:**
-
-- **`pseudoECGSolver`** (ECG post-processor)
-  - Registered as `pseudoECG`.
-  - Computes pseudo-ECG signals using the Gima-Rudy dipole model.
-  - Reads upstream myocardium state through `ecgDomain`.
-  - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
-
-- **`torsoECG`** (electrode sampler on the unified bath potential)
-  - Registered as `torsoECG`.
-  - Samples the globally solved `phiE` field at electrode positions on the
-    union (heart + bath) mesh; parallel-safe via list reduction.
-  - The global `phiE` solve is owned by `extracellularPotentialDomain` — see
-    [../electroDomains/extracellularPotentialDomain/](../electroDomains/extracellularPotentialDomain/).
-  - Selected by routing the ECG-domain state provider to the configured
-    `bathPotentialDomain` inside `bidomainSolverCoeffs` (done in
-    `electrophysicsSystemBuilder::configureECGDomains`).
-  - Abstract interface: `electroDomains/ecgDomain/ecgSolver.H/C`
-
-## Architectural pattern
-
-- **Abstract solver interface** lives in the domain folder:
-  - `electroDomains/ecgDomain/ecgSolver.H/C`
-
-- **Concrete solver implementations** live here in `ecgModels/`:
-  - `pseudoECGSolver/`
-  - `torsoECG/`
-
-## Execution role
-
-`ecgDomain` is a downstream domain in the `electrophysicsSystem`:
-
-- it advances after the myocardium
-- it consumes already-updated tissue state
-- it does not inject source terms back into the myocardium
-
-See [../electroDomains/README.md](../electroDomains/README.md) for the
-domain-level contract and [../core/ARCHITECTURE.md](../core/ARCHITECTURE.md)
-for the timestep sequence.
-
-`torsoECG` is wired by `electrophysicsSystemBuilder` when an ECG domain selects
-`torsoECG` and a `bidomainSolverCoeffs.bathPotentialDomain` block provides the
-global `phiE` state.
-
-- `eikonalECG`
-  - Registered as `eikonalECG`, but **not a general-purpose ECG model** in the
-    sense that `pseudoECG` and `torsoECG` are. It is a manufactured-solution
-    verification construct and an activation-time surrogate.
-  - Reconstructs the voltage gradient analytically from tabulated endo/mid/epi
-    template derivatives and the eikonal activation gradient, then forms the
-    same anisotropic lead-field sum as `pseudoECG`. The voltage is a template
-    lookup, not a solved field, so the result is a surrogate trace.
-  - Primary use is `tutorials/manufacturedSolutions/eikonalECG/`, where the
-    manufactured-template path drives the MMS studies.
-  - See [eikonalECG/README.md](eikonalECG/README.md).
