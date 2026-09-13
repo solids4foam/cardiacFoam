@@ -14,6 +14,16 @@ CHECK_ONLY=0
 REPORT_PATH=""
 REPORT_ROWS=""
 
+# --check-only and --report exist for an out-of-tree consumer, not for this
+# repository: omniDriver's cardiacfoam plugin runs the case itself and then
+# calls this script as the case's own checker,
+#
+#     bash regression/regressionTest.sh --check-only --report regression/comparison-report.json
+#
+# and reads the JSON it writes. The split is the point: the solver side owns
+# the pass/fail criteria -- this script and its reference file -- while the
+# driver only runs them and repeats the verdict. Nothing in this repository
+# passes either option; Alltest-regression calls the script with no arguments.
 usage() {
     cat <<'EOF'
 Usage: regressionTest.sh [--check-only] [--report PATH]
@@ -52,7 +62,13 @@ while (( $# > 0 )); do
 done
 
 json_string() {
-    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g'
+    # Pure parameter expansion: BSD sed's N quits without printing on the last
+    # line, so a sed-based escape returns an empty string on macOS.
+    local s="$1"
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    printf '%s' "$s"
 }
 
 append_report_row() {
