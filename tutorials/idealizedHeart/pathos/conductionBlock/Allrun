@@ -80,10 +80,7 @@ runApplication setExprFields
 # graph from each of rootNode's neighbours and checking which partition
 # contains the node coincident with the LV/RV growth seed. Zeroing either
 # bridge edge's conductance fully disconnects that whole ventricle's tree
-# from the root (it's a tree - no alternate path exists), the same
-# structural-block technique tutorials/PATHOS/*/make_bundle_block_graphs.py
-# uses, just re-derived for this graph's own node numbering instead of
-# reusing that script's hardcoded (and mesh-specific) indices.
+# from the root (it's a tree - no alternate path exists).
 #
 # LBB bridge = conductionEdges[0]  = 4(0 22375 ...)  -> LV subtree
 # RBB bridge = conductionEdges[22] = 4(0 22396 ...)  -> RV subtree

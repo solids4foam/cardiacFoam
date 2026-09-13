@@ -47,7 +47,7 @@ All of `Vm`, `D`, `λ`, and `Ta` are rigorous manufactured convergence targets a
 
 ### Parameter Sources (Single Source of Truth)
 
-Body force `manufacturedSolidForce` does not hard-code physics parameters; deduces them at runtime from solver dictionaries so they never drift:
+Body force `manufacturedSolidForce` deduces its physics parameters at runtime from solver dictionaries, so they never drift:
 
 - `amplitude`, `Tmax`, `V0`, `gamma`, `TaScale` from `constant/electroMechanicalProperties`
 - `E`, `nu` from `constant/solid/mechanicalProperties` (`passiveMechanicalLaw`)
@@ -72,7 +72,7 @@ Implementation note: coupled verifier dictionary belongs inside `sequentialElect
 ./Allrun parallel
 ```
 
-Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, so tutorial does not need write access to global `FOAM_USER_LIBBIN`.
+Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, keeping the tutorial's build entirely self-contained within the case directory.
 
 ### Driver-Managed Convergence Sweeps (Suggested)
 

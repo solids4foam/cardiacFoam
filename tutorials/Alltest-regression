@@ -23,6 +23,7 @@ mkdir -p "${REG_ROOT}"
 # List of regression test directories (relative to tutorials/)
 REGRESSION_TESTS=(
     "electrophysiologyProtocols/singleCell"
+    "electrophysiologyProtocols/ionicHeterogeneity"
     "NiedererEtAl2011/NiedererEtAl2011verification"
     "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
     "NiedererEtAl2011/purkinjeNiedererEtAl2011"

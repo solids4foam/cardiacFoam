@@ -8,9 +8,9 @@ electro-only NiedererEtAl2011 benchmark to include a solid mechanics region
 coupled to the electrophysiology region.
 
 Unlike the electro-only tutorials, this case requires a full `solids4foam`
-build of `cardiacFoam`. It does not run in lightweight mode, because
-`libelectroMechanicalModels` is only compiled when `cardiacFoam` is built
-against a compiled `solids4foam` installation.
+build of `cardiacFoam`: `libelectroMechanicalModels` compiles only when
+`cardiacFoam` is built against a compiled `solids4foam` installation, so this
+case runs in full build mode only.
 
 The case uses a 20x3x7 mm tissue slab (Niederer et al. 2011 benchmark
 geometry) with:

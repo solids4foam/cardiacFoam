@@ -9,8 +9,8 @@ against an exact analytic field on the tet mesh, comparing `gaussLinear` vs
 paper's qualitative discussion. For the registered `eikonal_gradient_tet`
 Paper I table (`leastSquares` only), see `../gradient_reconstruction/`.
 
-`gradientReconstructionOrder` needs only the mesh and `system/fvSchemes` --
-no cardiacFoam solve is strictly required for it -- but the driverFOAM
+`gradientReconstructionOrder` needs only the mesh and `system/fvSchemes`,
+independently of any cardiacFoam solve -- yet the driverFOAM
 tutorial (`manufactured_eikonal_ecg.py`, `gradient_reconstruction=True`)
 still runs the full mesh -> solve pipeline and appends it as a workflow_dag
 step after the solve, so every case in this study is a complete, auditable

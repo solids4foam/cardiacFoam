@@ -60,8 +60,8 @@ and `monodomainPseudoECG`'s own tet variant.
 `__LC__`, instantiated per resolution by the driverFOAM tutorial
 (`manufactured_eikonal_ecg.py`'s `render_tet_geo`). Every tet study in this
 tutorial (`tetConvergence/sweep_tet_generic.json`, `errorLocalisation/`,
-`gradientVerification/`, `gradient_reconstruction/`) renders from this one
-template -- there is no separate mesh geometry variant. All six boundary
+`gradientVerification/`, `gradient_reconstruction/`) renders from this single
+shared template. All six boundary
 faces lie on the axis-aligned planes `x,y,z in {0,1}`, where the manufactured
 cosine field has zero normal derivative, so the solver's default
 zeroGradient (no-flux) boundary stays compatible with the exact solution.
@@ -90,8 +90,8 @@ exact commands.
 ### Driver-Managed Sweeps
 
 Run this verification suite through driverFOAM. The study manifests below are
-the supported execution paths; historic direct OpenFOAM commands and the
-retired `reproduce_verification.sh` wrapper are not release procedures.
+the supported execution paths, superseding the historic direct OpenFOAM
+commands and the retired `reproduce_verification.sh` wrapper.
 
 Cartesian spatial convergence (1D/2D/3D):
 
@@ -153,6 +153,6 @@ from the nominal Gmsh length parameter alone.
 
 It is important to clarify how the errors are evaluated for the different fields in this verification suite:
 
-1. **Activation Times ($\tau$)**: No quadrature is used here. Because the manufactured activation time is a simple analytical function $\tau(x) = \exp(k \cdot x)$, it can be evaluated exactly at any point. To calculate the error, the solver performs a point-by-point comparison between the numerical activation time solved at each OpenFOAM mesh cell's center and the exact analytical mathematical formula evaluated at that identical cell center point.
+1. **Activation Times ($\tau$)**: This error uses a direct, point-by-point comparison rather than quadrature integration. Because the manufactured activation time is a simple analytical function $\tau(x) = \exp(k \cdot x)$, it can be evaluated exactly at any point. To calculate the error, the solver performs a point-by-point comparison between the numerical activation time solved at each OpenFOAM mesh cell's center and the exact analytical mathematical formula evaluated at that identical cell center point.
 
 2. **The ECG Computation (Where Quadrature is Used)**: Unlike the activation time, the ECG signal is defined mathematically as a volume integral over the entire domain. To get the "exact" baseline reference to compare OpenFOAM against, we calculate the integral of the manufactured analytical gradient field. Because this specific multidimensional integral does not have a simple closed-form algebraic solution, the exact "analytical" reference integral is computed using a highly accurate Gauss-Legendre Quadrature (e.g. $q=96$), which integrates the continuous analytical function down to machine precision. The ECG error is the comparison between OpenFOAM's numerical mesh integration (which simply sums up the cell values $\times$ cell volumes) against this near-perfect reference integral computed using the Gauss-Legendre quadrature.

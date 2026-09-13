@@ -2,9 +2,8 @@
 
 Monodomain tissue simulation modelling left or right bundle branch block via
 a modified Purkinje graph with one bundle severed. No `ionicConstantOverrides`
-are used — the conduction delay is entirely structural, same approach as
-`tutorials/PATHOS/LBBB`/`RBBB`. Two variants of the same case, selected at
-run time; no default — see Execution below.
+are used — the conduction delay is entirely structural. Two variants of the
+same case, selected at run time; no default — see Execution below.
 
 ## Stack
 
@@ -16,8 +15,7 @@ run time; no default — see Execution below.
 - ECG: `ecgDomains.ECG.ecgSolver pseudoECG`
 
 `constant/electroProperties` itself never changes between variants — it
-always reads `graphFile purkinjeGraph;`, same as `tutorials/PATHOS/RBBB`'s
-approach. Only the graph file differs.
+always reads `graphFile purkinjeGraph;`. Only the graph file differs.
 
 ## Mesh and shared anatomy fields
 
@@ -45,12 +43,10 @@ single `awk` pass, no Python dependency), then symlinks
 `purkinjeGraph`'s `rootNode` has exactly two direct branches — the left-
 and right-bundle roots. Zeroing either branch's root-adjacent edge
 conductance fully disconnects that ventricle's tree from the root (it's a
-tree — no alternate path exists). Same structural technique
-`tutorials/PATHOS/*/make_bundle_block_graphs.py` uses; the edge indices
-below were re-derived for this graph's own node numbering (by
+tree — no alternate path exists). The edge indices below were derived by
 BFS-partitioning the graph from each of `rootNode`'s two neighbours and
 checking which partition contains the node coincident with the LV/RV
-growth seed), not copied from that script's Strocchi-mesh-specific values.
+growth seed.
 
 - LBB bridge = `conductionEdges[0]` → disconnects the LV subtree (LBBB)
 - RBB bridge = `conductionEdges[22]` → disconnects the RV subtree (RBBB)
@@ -63,9 +59,8 @@ numbering.
 ## ECG electrodes
 
 `ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
-reference heart's validated V1-V6 placement, not measured on this mesh — a
-normalized approximation, not patient-specific placement. 24-46mm from the
-epicardium, comparable to the reference case's own spread.
+reference heart's validated V1-V6 placement — a normalized approximation.
+24-46mm from the epicardium, comparable to the reference case's own spread.
 
 ## Execution
 

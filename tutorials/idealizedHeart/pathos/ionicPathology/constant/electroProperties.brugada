@@ -38,7 +38,7 @@ monodomainSolverCoeffs
     }
 
     // Brugada Syndrome parametrisation (Ten Tusscher-Noble-Noble-Panfilov
-    // 2004), same as tutorials/PATHOS/BrugadaSyndrome.
+    // 2004).
     // SCN5A loss-of-function:  g_Na reduced 80 % across all tissue types.
     // I_to gain-of-function:   g_to x6 in epicardium only.
     // This tips the plateau past the bifurcation point, causing complete

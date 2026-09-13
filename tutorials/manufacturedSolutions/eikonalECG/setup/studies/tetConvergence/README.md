@@ -21,11 +21,10 @@ Then run the same manifest with driverFOAM:
     driverFoam sweep-run \
         --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
 
-The previous reference to applications/scripts/paperI_results/aggregate.py was
-removed because that script is not present in this repository. Use the
-driverFOAM sweep manifest and its archived verification outputs as the canonical
-run record; add an analysis command only alongside a versioned in-repository
-postprocessor.
+The previous reference to applications/scripts/paperI_results/aggregate.py has
+been removed. Use the driverFOAM sweep manifest and its archived verification
+outputs as the canonical run record; add an analysis command only alongside a
+versioned in-repository postprocessor.
 
 ## Tracking & Outputs
 

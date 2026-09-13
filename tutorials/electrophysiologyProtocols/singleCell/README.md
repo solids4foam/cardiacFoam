@@ -4,7 +4,7 @@ This case is the single integration-point electrophysiology workflow.
 
 - Electro model: `singleCellSolver`
 - Voltage evolution: inside ionic ODE system (`solveVmWithinODESolver=true`)
-- Spatial PDE solve: not used
+- Spatial representation: single integration point (0-D)
 
 ## Folder structure
 

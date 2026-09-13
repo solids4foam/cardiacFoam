@@ -31,8 +31,8 @@ as-is — no scaling happens here.
 
 ## Setup & Fields
 
-These are not strictly UVC coordinates. The transmural convention in
-this mesh is epicardium = 0, endocardium = 1.
+The transmural convention in this mesh — epicardium = 0,
+endocardium = 1 — is specific to this mesh, distinct from standard UVC.
 
 The shipped fields are `fiber` and `sheet` (the fibre/sheet direction
 basis), `sheetNormal` (the third orthonormal direction), `tm`
@@ -87,10 +87,9 @@ reads it via `graphFile purkinjeGraph;`, root node 0.
 ## ECG electrodes
 
 `ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
-reference heart's validated V1-V6 placement, not measured on this mesh — a
-normalized approximation, not patient-specific placement. 24-46mm from the
-epicardium, comparable to the reference case's own spread. All three
-variants share the same positions.
+reference heart's validated V1-V6 placement — a normalized approximation.
+24-46mm from the epicardium, comparable to the reference case's own spread.
+All three variants share the same positions.
 
 ## The `eikonal` variant's numerical stability
 

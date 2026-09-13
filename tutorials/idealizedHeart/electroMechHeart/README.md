@@ -16,13 +16,13 @@ z = [0.0030, 0.0060] m
 
 ## Mechanical boundary conditions
 
-`BASE` has zero displacement. `EPI`, `ENDO_LV`, and `ENDO_RV` are traction-free in this first, unloaded activation/contraction case. This is an intentional benchmark simplification, not an in-vivo representation: it provides a stable reference configuration and removes rigid-body modes, but omits cavity pressure and pericardial restraint.
+`BASE` has zero displacement. `EPI`, `ENDO_LV`, and `ENDO_RV` are traction-free in this first, unloaded activation/contraction case. This is an intentional benchmark simplification: it provides a stable reference configuration and removes rigid-body modes, but omits cavity pressure and pericardial restraint.
 
 For a more physiological pumping simulation, replace the zero endocardial tractions with LV/RV cavity pressures and replace the fixed base with a basal spring constraint; add normal, sliding pericardial restraint at `EPI`.
 
 ## Parameter scope
 
-The inherited isotropic passive law (`E=100 kPa`, `nu=0.3`) is useful for a first integration test, but is not a calibrated human biventricular model. `monodomainSolverCoeffs` sets `conductivitySource field;`, reading the anisotropic conductivity tensor `Conductivity` (`0/electro/Conductivity`, a `volSymmTensorField`) rather than a uniform value. Active mechanics use the rule-based fibre field `f0`; the passive mechanics remain an isotropic neo-Hookean approximation. Review and calibrate passive, active, cavity-pressure, and pericardial parameters before using this case for physiological predictions.
+The inherited isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test approximation. `monodomainSolverCoeffs` sets `conductivitySource field;`, reading the anisotropic conductivity tensor `Conductivity` (`0/electro/Conductivity`, a `volSymmTensorField`) rather than a uniform value. Active mechanics use the rule-based fibre field `f0`; the passive mechanics remain an isotropic neo-Hookean approximation. Review and calibrate passive, active, cavity-pressure, and pericardial parameters before using this case for physiological predictions.
 
 ## Run prerequisites
 

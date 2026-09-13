@@ -17,11 +17,8 @@ FoamFile
 
 // Eikonal variant: both the 3D myocardium and the 1D Purkinje network are
 // eikonal (activation-time-only) solves - the cheapest of electroHeart's
-// three solver combinations. Ported from the former
-// tutorials/heartSim3D-1D/eikonalHeart onto this tutorial's shared mesh:
-// field/graphFile names and electrode positions follow this tutorial's own
-// convention (see ../electroProperties.monodomain), not the original
-// PATHOS-scale values that case was calibrated against.
+// three solver combinations. Field/graphFile names and electrode positions
+// follow this tutorial's own convention (see ../electroProperties.monodomain).
 
 myocardiumSolver eikonalSolver;
 

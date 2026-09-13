@@ -101,8 +101,8 @@ root-cause analysis are recorded in
   (1D standalone, 3D standalone, and the negligible-coupling sweep with
   `rPvj=1e6`).
 - Active-coupling MMS runs use the production PVJ operator directly: the coupled
-  verifier does not overwrite terminal currents, 3D source fields, or implicit
-  source coefficients.
+  verifier leaves terminal currents, 3D source fields, and implicit source
+  coefficients untouched.
 - The coupled verifier adds the exact PVJ source to the manufactured ionic
   residual, so the analytical 1D/3D fields solve the coupled MMS equations while
   the numerical PVJ source remains raw.
@@ -110,9 +110,9 @@ root-cause analysis are recorded in
   `S_pvj(V_num) - S_pvj(V_exact)`.
 - The final N=10→20→40→80 baseline scheme matrix confirms **O(h²)** convergence
   for unidirectional/bidirectional and explicit/implicit PVJ assembly.
-- The production PVJ coupler does not contain FDA-specific manufactured-solution
-  formulas. The FDA reference is used inside `coupled1D3DMonodomainVerifier` to
-  form the MMS source and diagnostics.
+- The production PVJ coupler contains only production physics. The FDA reference
+  lives inside `coupled1D3DMonodomainVerifier`, where it forms the MMS source and
+  diagnostics.
 - The default graph uses the non-cancelling `y=1/6, z=1/3` terminal placement.
   Boundary fluxes remain zero when terminals lie on x-boundary faces, but the
   PVJ terms are no longer hidden by a cancelling placement.

@@ -50,7 +50,7 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across `N = 
 - an outer sweep, which repeats the coupled `phiE -> Vm` block
 - an equation-level non-orthogonal reassembly, which resolves each corrected equation before advancing to the next block
 
-The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`) cross `nOuterCorrectors = 1,2` with `nNonOrthogonalCorrectors = 0,1` on the `N=10,20,40` Delaunay meshes. `setup/studies/correctorN80/` repeats those variants at the finest level. Together these are same-mesh, same-time-step iteration-sensitivity controls, not additional spatial convergence studies.
+The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`) cross `nOuterCorrectors = 1,2` with `nNonOrthogonalCorrectors = 0,1` on the `N=10,20,40` Delaunay meshes. `setup/studies/correctorN80/` repeats those variants at the finest level. Together these are same-mesh, same-time-step iteration-sensitivity controls that test solver-loop convergence rather than spatial resolution.
 
 ## Usage
 
