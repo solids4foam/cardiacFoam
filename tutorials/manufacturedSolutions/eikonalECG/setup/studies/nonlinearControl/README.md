@@ -13,8 +13,8 @@ mesh family, gradient scheme, and ECG settings as the matching rows of
 
 The Paper I release matrix deliberately uses one unstructured mesh-generation
 family: the generic Gmsh Delaunay mesh defined in
-../tetConvergence/box.geo.template. Frontal/Netgen is not part of this control
-or the planned release reruns.
+../tetConvergence/box.geo.template, used exclusively across this control and
+the planned release reruns.
 
 ## Execution
 

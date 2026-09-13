@@ -1,4 +1,4 @@
-# BuenoOrovio Ionic Heterogeneity Probe
+# ionicHeterogeneity
 
 This tutorial runs the meshless `ionicHeterogeneityProbe` utility for the
 Bueno-Orovio transmural heterogeneity map.
@@ -98,3 +98,16 @@ python3 ../../../applications/utilities/ionicHeterogeneityProbe/plotIonicHeterog
 
 To also write separate overlays of every computed voltage trace in the Endo-M
 and M-Epi areas, add `--all-traces`.
+
+## Regression
+
+Covered by `tutorials/Alltest-regression`. `regression/regressionTest.sh`
+cleans, runs, and checks `peak`/`APD90` from `AP_metrics.csv` at five
+transmural samples (endo/mid/epi plateaus plus both blends) and
+`waveformRMS` from `smoothness_report.csv` at a plateau and both blend
+transitions, against `regression/ionicHeterogeneity.reference`. Run it
+directly with:
+
+```bash
+./regression/regressionTest.sh
+```

@@ -20,11 +20,11 @@ on `writeControl`/`writeInterval`/`writeFormat`. Each of the 12 cases gets
 its own output directory (named from its `(N, nOuterCorrectors,
 nNonOrthogonalCorrectors)` values), and its raw `postProcessing/` output is
 archived into that same directory's own `sweepCases/` subfolder via
-`archive_dir_name` -- identical mechanism to every other sweep in this
-tutorial, nothing corrector-specific.
+`archive_dir_name`, the same mechanism used by every other sweep in this
+tutorial.
 
-Comparing the 12 results across variants/resolutions is left to the
-postprocessing module, not a bespoke script.
+Comparing the 12 results across variants/resolutions is handled by the
+postprocessing module.
 
 ## Tracking & Outputs
 

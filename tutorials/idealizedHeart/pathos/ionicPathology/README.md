@@ -2,10 +2,8 @@
 
 Monodomain tissue simulation modelling acute ischemia or Brugada syndrome
 type-1 via `ionicConstantOverrides` on the `TNNP` ionic model, with
-pseudo-ECG output and a coupled (unmodified) Purkinje network — same
-parametrisation as `tutorials/PATHOS/AcuteIschemia`/`BrugadaSyndrome`. Two
-variants of the same case, selected at run time; no default — see
-Execution below.
+pseudo-ECG output and a coupled (unmodified) Purkinje network. Two variants
+of the same case, selected at run time; no default — see Execution below.
 
 ## Stack
 
@@ -52,9 +50,8 @@ variant here).
 ## ECG electrodes
 
 `ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
-reference heart's validated V1-V6 placement, not measured on this mesh — a
-normalized approximation, not patient-specific placement. 24-46mm from the
-epicardium, comparable to the reference case's own spread.
+reference heart's validated V1-V6 placement — a normalized approximation.
+24-46mm from the epicardium, comparable to the reference case's own spread.
 
 ## Execution
 

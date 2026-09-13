@@ -47,7 +47,7 @@ All of `Vm`, `D`, `λ`, and `Ta` are rigorous manufactured convergence targets a
 
 ### Parameter Sources (Single Source of Truth)
 
-Body force `manufacturedSolidForce` does not hard-code physics parameters; deduces them at runtime from solver dictionaries so they never drift:
+Body force `manufacturedSolidForce` deduces its physics parameters at runtime from solver dictionaries, so they never drift:
 
 - `amplitude`, `Tmax`, `V0`, `gamma`, `TaScale` from `constant/electroMechanicalProperties`
 - `E`, `nu` from `constant/solid/mechanicalProperties` (`passiveMechanicalLaw`)
@@ -72,7 +72,7 @@ Implementation note: coupled verifier dictionary is the `verificationModel` entr
 ./Allrun parallel
 ```
 
-Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, so tutorial does not need write access to global `FOAM_USER_LIBBIN`.
+Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, keeping the tutorial's build entirely self-contained within the case directory.
 
 Full solids4foam build only: there is no lightweight variant, and `Allrun` stops if `libelectroMechanicalModels` is missing. `regression/regressionTest.sh` covers the case in `Alltest-regression` on a 20³ mesh. With `CARDIAC_REGRESSION_BUILD_MODE=lightweight` it is an expected skip, so it only runs in a `with-solids4foam` regression run; CI currently runs lightweight only.
 

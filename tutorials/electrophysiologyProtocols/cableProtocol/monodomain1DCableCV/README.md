@@ -15,8 +15,8 @@ trusted, the tissue propagation speed has to be checked in isolation. This case
 gives the smallest practical setup for that task:
 
 - one paced wavefront
-- no geometric curvature effects
-- no Purkinje coupling
+- a straight cable geometry
+- conduction confined to the cable myocardium
 - direct access to activation-time-based CV measurements
 
 The intended workflow is:

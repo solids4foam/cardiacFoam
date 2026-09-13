@@ -1,0 +1,26 @@
+# Reference values for the ionicHeterogeneity tutorial (Bueno-Orovio
+# transmuralBands probe). Generated from an actual ./Allrun of this case;
+# see regressionTest.sh for the comparison method.
+#
+# fileName key variable expected tolerance
+#
+# AP_metrics.csv: per-sample action-potential summary metrics, keyed by
+# transmural coordinate t. peak/APD90 sample the endo plateau, the
+# endo-M blend, the M-cell plateau, the M-Epi blend, and the epi plateau.
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.00 peak 44.8872 1e-3
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.00 APD90 276.610 1e-2
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.35 peak 47.5277 1e-3
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.35 APD90 391.989 1e-2
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.50 peak 48.4250 1e-3
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.50 APD90 457.531 1e-2
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.71 peak 50.1403 1e-3
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 0.71 APD90 453.932 1e-2
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 1.00 peak 41.0798 1e-3
+postProcessing/ionicHeterogeneityProbe/AP_metrics.csv 1.00 APD90 272.062 1e-2
+#
+# smoothness_report.csv: per-transition waveform smoothness, keyed by the
+# transition's starting t (t0). Zero inside a plateau (no transition
+# between adjacent samples); nonzero across the endo-M and M-Epi blends.
+postProcessing/ionicHeterogeneityProbe/smoothness_report.csv 0.10 waveformRMS 0.00000 1e-6
+postProcessing/ionicHeterogeneityProbe/smoothness_report.csv 0.32 waveformRMS 7.84147 1e-3
+postProcessing/ionicHeterogeneityProbe/smoothness_report.csv 0.75 waveformRMS 6.86113 1e-3

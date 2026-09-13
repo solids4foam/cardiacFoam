@@ -1,8 +1,8 @@
 # Pathology techniques on the idealized biventricular heart
 
 Two sibling tutorials, each demonstrating a different *technique* for
-injecting a specific pathology into the model — not a catalogue of
-diseases, a reference for **how** to build one. Both share the same mesh
+injecting a specific pathology into the model — a reference for
+**how** to build one. Both share the same mesh
 and anatomy as `../electroHeart`/`../electroMechHeart` (`../mesh/`) and
 default to the same healthy Purkinje graph and ionic model unless the
 technique itself says otherwise.

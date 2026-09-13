@@ -13,7 +13,7 @@ not merely the presence of an `Allrun` script.
 | Canonical path | Purpose | Solver or workflow | Build mode | Regression | Principal outputs |
 | --- | --- | --- | --- | --- | --- |
 | `electrophysiologyProtocols/singleCell` | Single-point action-potential runs and ionic-model sweeps | `singleCellSolver` | lightweight or full | `Alltest-regression` | voltage traces under `postProcessing/` |
-| `electrophysiologyProtocols/ionicHeterogeneityProbe` | Probe transmural ionic heterogeneity without a tissue PDE | Bueno-Orovio probe and plotting workflow | lightweight or full | not covered | trace, AP-metric, and smoothness CSV files under `postProcessing/ionicHeterogeneityProbe/` |
+| `electrophysiologyProtocols/ionicHeterogeneity` | Probe transmural ionic heterogeneity without a tissue PDE | Bueno-Orovio probe and plotting workflow | lightweight or full | `Alltest-regression` | trace, AP-metric, and smoothness CSV files under `postProcessing/ionicHeterogeneityProbe/` |
 | `electrophysiologyProtocols/restitutionCurves_s1s2Protocol` | Generate S1-S2 action-potential-duration restitution curves | `singleCellSolver` pacing sweep | lightweight or full | not covered | per-run traces and restitution tables/plots |
 | `electrophysiologyProtocols/cableProtocol/monodomain1DCableCV` | Measure and refine 1D conduction velocity | `monodomainSolver` cable convergence workflow | lightweight or full | not covered | activation probes, CV summaries, convergence CSV files and plots |
 | `electrophysiologyProtocols/cableProtocol/eikonal1DCableCV` | Compare eikonal 1D conduction velocity across resolutions | `eikonalSolver` cable workflow | lightweight or full | not covered | activation probes and CV summaries |

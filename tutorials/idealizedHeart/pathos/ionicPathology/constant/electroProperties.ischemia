@@ -37,8 +37,7 @@ monodomainSolverCoeffs
         smoothing         smoothstep;
     }
 
-    // Acute ischemia parametrisation — early ischemic zone (10-15 min),
-    // same as tutorials/PATHOS/AcuteIschemia.
+    // Acute ischemia parametrisation — early ischemic zone (10-15 min).
     // K_o elevated (hyperkalemia): 5.4 -> 8.0 mM.
     // g_Na reduced 40 % (acidosis + fast Na+ channel depression).
     // g_CaL reduced 40 % (acidosis + Ca2+ channel depression).

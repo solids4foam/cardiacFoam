@@ -19,9 +19,9 @@ Then run the same manifest with driverFOAM:
 Each case runs both the manufactured activation-time verifier and the
 manufactured eikonal-ECG verifier. The ECG reference uses quadrature order 96,
 with orders 6, 12, 24, 48, and 96 retained as a reference-quadrature check.
-The former aggregate.py command was removed because it is not present in this
-repository; use the archived driverFOAM outputs as the run record until an
-in-repository canonical collector is added.
+The former aggregate.py command has been removed; use the archived driverFOAM
+outputs as the run record until an in-repository canonical collector is
+added.
 
 ## Tracking & Outputs
 

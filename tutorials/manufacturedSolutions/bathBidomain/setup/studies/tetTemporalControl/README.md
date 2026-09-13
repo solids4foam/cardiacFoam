@@ -10,8 +10,8 @@ coupling fixed while halving `dt` at `N=40` and `N=80`. They test whether
 temporal/splitting error contributes to the solved interface-current behaviour,
 including the finest-level anomaly.
 
-This is a temporal-sensitivity control, not an unstructured temporal-order
-claim: the dedicated Cartesian fixed-mesh ladder supplies that measurement.
+This is a temporal-sensitivity control; the dedicated Cartesian fixed-mesh
+ladder supplies the unstructured temporal-order measurement.
 
 ## Execution
 
