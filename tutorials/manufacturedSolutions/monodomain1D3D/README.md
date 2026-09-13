@@ -91,9 +91,12 @@ against a known solution. The Method of Manufactured Solutions (MMS) supplies th
 known solution: an analytical `V_exact` is imposed on both domains, the matching
 forcing terms are injected, and the solver error is measured under joint
 `h_1D ≈ h_3D` refinement with `dt ~ h²` so temporal error never masks the spatial
-order. The full setup, mesh/time-step pairing, per-sweep tables and the
-root-cause analysis are recorded in
-[`MMS_CONVERGENCE_NOTES.md`](MMS_CONVERGENCE_NOTES.md).
+order. The measured errors and observed rates are committed in
+[`reference/coupling1D3D_hex_convergence.csv`](reference/coupling1D3D_hex_convergence.csv):
+per resolution, `L1`, `L2` and `Linf` for `Vm` on both domains, with
+`rate_L2`/`rate_Linf` against the previous row. The sweep specifications that
+produce them are under
+[`setup/studies/coupledConvergence/`](setup/studies/coupledConvergence/).
 
 **Current interpretation.**
 
