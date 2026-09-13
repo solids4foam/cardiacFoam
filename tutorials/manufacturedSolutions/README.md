@@ -82,9 +82,12 @@ Run only selected cases:
 
 ## Convergence Verification
 
-Each case emits `setup/results/<key>_convergence.csv` (fresh, gitignored),
-diffed within tolerance against the committed `reference/<key>_convergence.csv`,
-plus a per-case `provenance.json` (OpenFOAM version + git SHAs + dict hashes).
+Each case emits `setup/results/<key>_convergence.csv` (fresh, gitignored) plus a
+per-case `provenance.json` (OpenFOAM version + git SHAs + dict hashes). There is
+nothing committed to diff those against: the frozen `reference/<key>_convergence.csv`
+baselines have been removed, and the harness that compared them never lived in this
+repository. Automated coverage of these cases is the per-case `regression/`
+directory, run through `tutorials/Alltest-regression`.
 
 | key | case |
 |---|---|
@@ -99,7 +102,3 @@ plus a per-case `provenance.json` (OpenFOAM version + git SHAs + dict hashes).
 | bath | bathBidomain |
 | bath_tet | bathBidomain (`setup/studies/tetConvergence`) |
 | niederer | NiedererEtAl2011verification |
-
-Cases whose sweep has not been run yet (`bidomain`, `bath`, and `bath_tet`
-pending an interface-column confirmation) report **SKIP** until their
-`reference/` CSV is frozen.

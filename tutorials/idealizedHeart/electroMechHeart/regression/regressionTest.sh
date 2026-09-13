@@ -3,20 +3,24 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # ============================================================
-# Electromechanical Niederer slab regression test
+# Idealized-heart electromechanics regression test
 # ============================================================
 #
-# No reference file is checked in yet for this case - this script is a
-# scaffold, not a wired-up regression test. It will report a controlled
-# "FAIL: reference file not found" if run as-is.
+# FULL SOLIDS4FOAM BUILD ONLY. Under
+# CARDIAC_REGRESSION_BUILD_MODE=lightweight this exits 77 before touching the
+# case and Alltest-regression reports an expected skip; in with-solids4foam
+# mode a skip is a failure.
+#
+# The case runs to its own endTime of 0.02 s and probes two cells: one inside
+# the apical stimulus region, which activates early, and one mid-wall, which
+# does not activate within 20 ms. The reference pins the activation times, the
+# displacement D at both, and the apical active tension.
 
-REF_FILE="regression/electroMechHeterogeneity.reference"
+REF_FILE="regression/electroMechHeart.reference"
 ALLRUN_LOGFILE="log.Allrun"
-PROBE_FILE="postProcessing/Taprobes/solid/0/Ta"
-DISTINCT_EPS=1.0
 SKIP_CODE=77
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 
 fullSolids4FoamAvailable()
 {
@@ -30,9 +34,9 @@ fullSolids4FoamAvailable()
     fi
 
     for candidate in \
+        "${REPO_ROOT}/modules/solids4foam" \
         "${HOME}/solids4foam" \
-        "${WM_PROJECT_USER_DIR:-}/solids4foam" \
-        "${REPO_ROOT}/modules/solids4foam"
+        "${WM_PROJECT_USER_DIR:-}/solids4foam"
     do
         if [[ -n "${candidate}" ]] && [[ -f "${candidate}/${builtMarker}" ]]; then
             export SOLIDS4FOAM_INST_DIR="${candidate}"
@@ -76,22 +80,12 @@ dumpLogTail()
 
 absDiff()
 {
-    awk -v a="$1" -v e="$2" '
-        BEGIN {
-            d = a - e;
-            if (d < 0) d = -d;
-            print d;
-        }
-    '
+    awk -v a="$1" -v e="$2" 'BEGIN { d = a - e; if (d < 0) d = -d; print d; }'
 }
 
 checkWithinTolerance()
 {
-    local label="$1"
-    local actual="$2"
-    local expected="$3"
-    local tolerance="$4"
-    local diffAbs
+    local label="$1" actual="$2" expected="$3" tolerance="$4" diffAbs
 
     diffAbs="$(absDiff "${actual}" "${expected}")"
 
@@ -106,45 +100,41 @@ checkWithinTolerance()
     return 1
 }
 
+# Vector probes write "(x y z)" per location, so strip the parentheses before
+# indexing: time is column 1, and a vector probe then occupies three columns.
 extractProbeValue()
 {
-    local dataFile="$1"
-    local time="$2"
-    local column="$3"
+    local dataFile="$1" time="$2" column="$3"
 
     awk -v target="${time}" -v col="${column}" '
         BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-        $1 !~ /^#/ && NF >= col {
+        /^#/ { next }
+        {
+            gsub(/[()]/, "");
+            if (NF < col) next;
             d = $1 - target;
             if (d < 0) d = -d;
-            if (d < bestDiff) {
-                bestDiff = d;
-                actual = $col;
-                found = 1;
-            }
+            if (d < bestDiff) { bestDiff = d; actual = $col; found = 1; }
         }
         END {
-            if (found && bestDiff <= 2.5e-3) {
-                print actual;
-                exit 0;
-            }
+            if (found && bestDiff <= 2.5e-3) { print actual; exit 0; }
             exit 1;
         }
     ' "${dataFile}"
 }
 
 echo "============================================================"
-echo "Electromechanical Niederer slab regression test"
+echo "Idealized-heart electromechanics regression test"
 echo "============================================================"
 echo
 
 if [[ "${CARDIAC_REGRESSION_BUILD_MODE:-}" == "lightweight" ]]; then
-    echo "SKIP: electromechanical regression requires a full solids4foam build, but lightweight mode was specified."
+    echo "SKIP: electromechanics regression requires a full solids4foam build, but lightweight mode was specified."
     exit "${SKIP_CODE}"
 fi
 
 if ! fullSolids4FoamAvailable; then
-    echo "SKIP: electromechanical regression requires a full solids4foam build."
+    echo "SKIP: electromechanics regression requires a full solids4foam build."
     echo "      SOLIDS4FOAM_INST_DIR does not point to a compiled full solids4foam tree."
     exit "${SKIP_CODE}"
 fi
@@ -171,11 +161,6 @@ if [[ ! -f "${REF_FILE}" ]]; then
     exit 1
 fi
 
-if [[ ! -f "${PROBE_FILE}" ]]; then
-    echo "FAIL: probe output not found: ${PROBE_FILE}"
-    exit 1
-fi
-
 failures=0
 checks=0
 
@@ -185,15 +170,15 @@ while IFS=' ' read -r fileName time column expected tolerance; do
     fi
 
     dataFile="postProcessing/${fileName}"
+    checks=$((checks + 1))
+
     if [[ ! -f "${dataFile}" ]]; then
         echo "FAIL: missing output file ${dataFile}"
         failures=$((failures + 1))
-        checks=$((checks + 1))
         continue
     fi
 
     actual="$(extractProbeValue "${dataFile}" "${time}" "${column}")" || true
-    checks=$((checks + 1))
 
     if [[ -z "${actual}" ]]; then
         echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
@@ -205,37 +190,6 @@ while IFS=' ' read -r fileName time column expected tolerance; do
         "${actual}" "${expected}" "${tolerance}" \
         || failures=$((failures + 1))
 done < "${REF_FILE}"
-
-endo="$(extractProbeValue "${PROBE_FILE}" "0.02" 2)" || {
-    echo "FAIL: could not extract endocardial Ta value for heterogeneity check"
-    exit 1
-}
-mid="$(extractProbeValue "${PROBE_FILE}" "0.02" 3)" || {
-    echo "FAIL: could not extract mid-wall Ta value for heterogeneity check"
-    exit 1
-}
-epi="$(extractProbeValue "${PROBE_FILE}" "0.02" 4)" || {
-    echo "FAIL: could not extract epicardial Ta value for heterogeneity check"
-    exit 1
-}
-
-if awk -v a="${endo}" -v b="${mid}" -v c="${epi}" -v eps="${DISTINCT_EPS}" '
-    BEGIN {
-        ab = a - b; if (ab < 0) ab = -ab;
-        ac = a - c; if (ac < 0) ac = -ac;
-        bc = b - c; if (bc < 0) bc = -bc;
-        exit !((ab > eps) && (ac > eps) && (bc > eps));
-    }
-' ; then
-    printf "PASS: heterogeneity check endo=%.8g mid=%.8g epi=%.8g\n" \
-        "${endo}" "${mid}" "${epi}"
-    checks=$((checks + 1))
-else
-    printf "FAIL: heterogeneity collapsed endo=%.8g mid=%.8g epi=%.8g\n" \
-        "${endo}" "${mid}" "${epi}"
-    failures=$((failures + 1))
-    checks=$((checks + 1))
-fi
 
 echo
 if (( failures == 0 )); then
