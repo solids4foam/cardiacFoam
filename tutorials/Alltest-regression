@@ -30,6 +30,7 @@ REGRESSION_TESTS=(
     "manufacturedSolutions/monodomainPseudoECG"
     "manufacturedSolutions/eikonalECG"
     "manufacturedSolutions/bathBidomain"
+    "manufacturedSolutions/monodomainTotalLagrangianEM"
     "electrophysiologyProtocols/rotorInstability"
     "idealizedHeart/electroHeart"
     "idealizedHeart/pathos/conductionBlock"
@@ -51,12 +52,28 @@ case "${build_mode}" in
         ;;
 esac
 
+# Regression cases that need cardiacFoam built with solids4foam. In
+# lightweight mode their regressionTest.sh exits 77 and the skip is expected;
+# in with-solids4foam mode any skip is a failure.
+FULL_SOLIDS4FOAM_ONLY_TESTS=(
+    "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
+    "manufacturedSolutions/monodomainTotalLagrangianEM"
+)
+
 isExpectedSkip()
 {
     local skipped_case="$1"
+    local fullOnlyCase
 
-    [[ "${build_mode}" == "lightweight" \
-        && "${skipped_case}" == "NiedererEtAl2011/electroMechanicalNiedererEtAl2011" ]]
+    [[ "${build_mode}" == "lightweight" ]] || return 1
+
+    for fullOnlyCase in "${FULL_SOLIDS4FOAM_ONLY_TESTS[@]}"; do
+        if [[ "${skipped_case}" == "${fullOnlyCase}" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 for testCase in "${REGRESSION_TESTS[@]}"; do

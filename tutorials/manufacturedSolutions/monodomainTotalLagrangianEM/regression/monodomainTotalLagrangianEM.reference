@@ -1,0 +1,14 @@
+# kind     key        metric      expected       tolerance
+summary   finalTime  value       0.100897       1e-6
+error     Vm         L1          0.000360105    3.60e-06
+error     Vm         L2          0.000490418    4.90e-06
+error     Vm         Linf        0.00138085     1.38e-05
+error     D          L1          1.19115e-05    1.19e-07
+error     D          L2          1.57468e-05    1.57e-07
+error     D          Linf        6.60643e-05    6.61e-07
+error     lambda     L1          7.34108e-05    7.34e-07
+error     lambda     L2          0.000103583    1.04e-06
+error     lambda     Linf        0.000700177    7.00e-06
+error     Ta         L1          0.0432095      4.32e-04
+error     Ta         L2          0.0686072      6.86e-04
+error     Ta         Linf        0.242461       2.42e-03

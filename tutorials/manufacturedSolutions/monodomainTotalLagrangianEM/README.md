@@ -58,10 +58,10 @@ Effective active-stress amplitude is `TaScale * Tmax`, matching the `Ta` field t
 
 This case requires two `solids4foam` changes:
 
-- `electroMechanicalLaw` looks up runtime `Ta` field and derives `f0f0 = sqr(f0)` from `f0` field (case only ships `f0`)
+- `electroMechanicalLaw` looks up runtime `Ta` field and reads fibre fields `f0` and `f0f`. The case ships `0/solid/f0` and `0/solid/f0f` (both uniform `(1 0 0)`) and `0/solid/D`, which carries the manufactured displacement condition on every patch
 - `nonLinGeomTotalLagTotalDispSolid` applies `fvOptions` source in its SNES residual (no-rho `fvOptions()(D)` overload), enabling MMS body force
 
-Implementation note: coupled verifier dictionary belongs inside `sequentialElectroMechanicalCoeffs`. Electromechanical model stores only that `...Coeffs` sub-dictionary, so top-level `electromechanicalVerificationModel` entry is ignored.
+Implementation note: coupled verifier dictionary is the `verificationModel` entry inside `sequentialElectroMechanicalCoeffs`, the same key every other verifier uses. Electromechanical model stores only that `...Coeffs` sub-dictionary, and looks the verifier up by that exact key: a top-level entry, or one under any other name, is silently ignored.
 
 ## Usage
 
@@ -73,6 +73,8 @@ Implementation note: coupled verifier dictionary belongs inside `sequentialElect
 ```
 
 Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, so tutorial does not need write access to global `FOAM_USER_LIBBIN`.
+
+Full solids4foam build only: there is no lightweight variant, and `Allrun` stops if `libelectroMechanicalModels` is missing. `regression/regressionTest.sh` covers the case in `Alltest-regression` on a 20³ mesh. With `CARDIAC_REGRESSION_BUILD_MODE=lightweight` it is an expected skip, so it only runs in a `with-solids4foam` regression run; CI currently runs lightweight only.
 
 ### Driver-Managed Convergence Sweeps (Suggested)
 

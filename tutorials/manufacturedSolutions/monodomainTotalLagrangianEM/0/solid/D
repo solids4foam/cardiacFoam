@@ -7,34 +7,24 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    location    "constant";
-    object      electroMechanicalProperties;
+    class       volVectorField;
+    location    "0/solid";
+    object      D;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-electroMechanicalModel  sequentialElectroMechanical;
+dimensions      [0 1 0 0 0 0 0];
 
-sequentialElectroMechanicalCoeffs
+internalField   uniform (0 0 0);
+
+boundaryField
 {
-    electroRegion       electro;
-    solidRegion         solid;
-    activeTensionModel  ManufacturedElectromechanics;
-    TaScale             1.0;
-
-    constants
+    ".*"
     {
-        Tmax    1000;
-        V0      1.0;
-        gamma   1.0;
-    }
-
-    verificationModel
-    {
-        type    manufacturedElectromechanicsVerifier;
-        amplitude           (0.02 0.02 0.02);
-        initializeFields    true;
+        type            manufacturedElectromechanicsDisplacement;
+        value           uniform (0 0 0);
     }
 }
+
 
 // ************************************************************************* //
