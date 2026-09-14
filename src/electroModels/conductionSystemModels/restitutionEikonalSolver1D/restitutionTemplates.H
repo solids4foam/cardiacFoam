@@ -31,29 +31,81 @@ namespace Foam
 namespace restitutionTemplates
 {
 
-static const int purkinjeSize = 6;
+static const int purkinjeSize = 7;
 
-// APD nominal [s]: steady-state APD90 from Stewart 2009.
-static const scalar purkinjeAPDnominal    = 0.290;
+// APD nominal [s]: the conditioned APD90 measured at the proximal probe on the
+// last of five S1 beats at 1 s BCL (Stewart/myocyte cable, 0.1 mm, 1e-6 s).
+// Independently reproduced as 0.302701 at 0.2 mm / 1e-5 s, so this quantity is
+// insensitive to discretisation at the 0.3 ms level.
+//
+// 2026-09-14: was 0.290, described as "steady-state APD90 from Stewart 2009".
+// Pacing at 1 Hz measurably SHORTENS APD90 from its from-rest value and then
+// re-lengthens slightly (315.7 -> 301.2 -> 301.8 -> 302.3 -> 302.7 ms across
+// the drive train); it does not prolong to the ~450 ms the retained
+// calibration note claimed. This is a fixed duration subtracted from the
+// activation interval, not an ERP and not a recorded repolarization event.
+static const scalar purkinjeAPDnominal    = 0.303037;
 
-// Escape interval [s]: spontaneous If firing period (funny current).
-static const scalar purkinjeEscapeInterval = 1.1;
+// Escape interval [s]: the measured proximal automaticity cycle following the
+// final S1 activation, with no S2 applied. 2026-09-14: was 1.1, a round number
+// with no measurement behind it. Stewart reactivation is near-synchronous
+// across the cable (0.222 ms crossing spread over 16 mm) rather than a
+// normally propagating end-launched wave, so this is a graph scheduling
+// parameter rather than a conduction result.
+static const scalar purkinjeEscapeInterval = 1.202470;
 
-// DI axis [s]. The lower bound 0.330 is the measured edge of capture: in the
-// S1-S2 protocol, premature beats below this DI fell inside the absolute
-// refractory period and failed to propagate. With the default apdNominal it
-// gives minBeatInterval (ERP) = 0.290 + 0.330 = 0.620 s.
+// Minimum measured DI90 [s] for capture: the calibrated refractory boundary.
+//
+// This is deliberately NOT the CV table's first abscissa. Bracketed by direct
+// measurement on the Stewart cable: a premature beat at DI90 = 25 ms does not
+// capture (protocol_outcome stimulus_no_capture), while DI90 = 52.85 ms
+// captures and reaches every probe. The true boundary lies in (0.025, 0.0529];
+// 0.050 sits inside that bracket, slightly toward the conservative end.
+//
+// 2026-09-14: before this existed, minBeatInterval was apdNominal + the CV
+// table's lower endpoint = 0.290 + 0.330 = 0.620 s. The reference monodomain
+// captures AND propagates premature beats at activation intervals of 0.404 s
+// and 0.504 s, so the graph was refusing three of four beats the tissue
+// conducts -- a false positive for conduction block across a wide range of
+// prematurity. Refining this bracket is what the 7-case boundary sweep is for.
+static const scalar purkinjeMinimumDI90   = 0.050;
+
+// DI axis [s]: MEASURED DI90, one entry per S1-S2 branch. Each value is
+// t(S2 activation) - t(S1 repolarization90) read at the proximal probe, not a
+// requested value and not a stimulus coupling interval. Do not read the first
+// entry as a capture boundary -- that is purkinjeMinimumDI90, above, and the
+// two are calibrated separately.
 static const scalar purkinjeDI[] = {
-    0.330, 0.350, 0.400, 0.450, 0.500, 0.700
+    0.06224, 0.07185, 0.08164, 0.09151, 0.10143, 0.20116, 0.40106
 };
 
-// CV [m/s]: calibrated output of the S1-S2 protocol documented in
-// tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
-// Purkinje_S1_S2_Calibration.md (Stewart model, conductivity 2.3 S/m giving a
-// resting CV of 3.03 m/s against a 3.0 m/s target; five S1 beats at BCL 1000 ms,
-// checkpointed at 4.25 s, one S2 branch per DI).
+// CV [m/s]: central-segment conduction velocity (probes at 5 mm and 15 mm)
+// measured on the Stewart/myocyte cable at each DI90 above. Protocol: five S1
+// stimuli at 1 s BCL, one S2 scheduled as t(repolarization90) + requestedDI90,
+// conductivity 2.3 S/m, dx 0.2 mm, deltaT 1e-5 s, six MPI ranks.
+//
+// Resolution: a three-point mesh ladder (0.2/0.1/0.05 mm) and a three-point
+// time-step ladder (1e-5/5e-6/2e-6 s) at DI90 ~ 101 ms give 2.4992 -> 2.5112
+// and 2.5075 -> 2.5186 respectively, so these ordinates are converged to
+// better than 1% and sit about 0.8% below the fully resolved value. The whole
+// table is recorded at one resolution rather than mixing corrected and
+// uncorrected points.
+//
+// 2026-09-15: replaces the retained table {2.03, 2.43, 2.95, 3.18, 3.29, 3.37}
+// on abscissae {0.330 ... 0.700}. Those values were not reproducible: the
+// discrepancy survives a fourfold mesh refinement and a fivefold time-step
+// refinement, so it is not numerical. They also never sampled the steep
+// region -- their lowest ordinate, 2.03 m/s, is above the 1.40 m/s measured
+// here at DI90 62 ms, and conduction fails entirely by 25 ms.
+//
+// Shape: CV falls 44% between DI90 101 ms and 62 ms (slope 0.028 (m/s)/ms)
+// against 0.0066 between 101 and 201 ms and 0.00087 above 200 ms -- roughly
+// thirty times steeper at the short end. Below the first abscissa the model
+// clamps to 1.4042 m/s, which OVERESTIMATES conduction near the capture
+// boundary, where the measured wave is decremental (0.46 m/s over the first
+// segment at DI90 53 ms) and has no well-defined local velocity at all.
 static const scalar purkinjeCV[] = {
-    2.03, 2.43, 2.95, 3.18, 3.29, 3.37
+    1.4042, 1.7999, 2.1521, 2.3423, 2.4992, 3.1542, 3.3280
 };
 
 static const label numPurkinjeVmSamples = 1000;

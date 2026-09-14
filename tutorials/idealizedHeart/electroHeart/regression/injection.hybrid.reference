@@ -1,8 +1,19 @@
 # Hybrid variant: monodomainSolver + restitutionEikonalSolver1D.
 #
 # This probe reads -1 through t=0.03 and activates at t=0.035, then holds
-# 0.0313331 flat for the rest of the run - measured, see this tutorial's
-# history. Sampled at the run's own endTime, comfortably past activation.
+# 0.0316724 flat for the rest of the run. Sampled at the run's own endTime,
+# comfortably past activation.
+#
+# 2026-09-15: was 0.0313331. The Stewart Purkinje calibration was replaced by
+# reproducible measurement (see the cable tutorial's
+# Purkinje_S1_S2_Calibration.md), which moved the fully recovered conduction
+# velocity from 3.37 to 3.3280 m/s. This case paces one beat from rest, so
+# every node activates for the first time: the activation interval is
+# unbounded, acceptance always passes, and the diastolic interval clamps to
+# the CV table's maximum. That maximum is therefore the only calibration
+# constant this reference is sensitive to - apdNominal, minimumDI90 and
+# escapeInterval do not affect it - and a 1.2% slower Purkinje velocity delays
+# this junction by 0.34 ms, 3.4x the tolerance below.
 #
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0313331     1e-4
+injectionProbe/0/activationTime         0.04   2    0.0316724     1e-4

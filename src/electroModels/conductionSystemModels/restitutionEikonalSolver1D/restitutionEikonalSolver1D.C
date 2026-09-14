@@ -56,7 +56,20 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
             restitutionTemplates::purkinjeAPDnominal
         )
     ),
-    minBeatInterval_(apdNominal_ + restitutionPtr_->diMin()),
+    minimumDI90_
+    (
+        solverCoeffs.lookupOrDefault<scalar>
+        (
+            "minimumDI90",
+            restitutionTemplates::purkinjeMinimumDI90
+        )
+    ),
+    // The capture boundary is a separately calibrated quantity, not the
+    // CV table's lower endpoint. Deriving it from diMin() tied the
+    // refractory threshold to wherever the velocity measurements happened
+    // to start, which is why this solver refused premature beats that the
+    // reference monodomain captures and propagates.
+    minBeatInterval_(apdNominal_ + minimumDI90_),
     escapeInterval_
     (
         solverCoeffs.lookupOrDefault<scalar>

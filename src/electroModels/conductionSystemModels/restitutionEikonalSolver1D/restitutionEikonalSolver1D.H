@@ -81,7 +81,8 @@ class restitutionEikonalSolver1D
     StimulusProtocol stimProtocol_;
 
     scalar  apdNominal_;        //- constant APD [s] (dict: apdNominal)
-    scalar  minBeatInterval_;   //- apdNominal + minDI: minimum beat-to-beat interval [s]
+    scalar  minimumDI90_;       //- calibrated capture boundary [s] (dict: minimumDI90)
+    scalar  minBeatInterval_;   //- apdNominal + minimumDI90: minimum activation interval [s]
     scalar  escapeInterval_;    //- spontaneous firing beat-to-beat interval [s] (dict: escapeInterval)
     scalar  tStart_;            //- simulation start time [s]
 
