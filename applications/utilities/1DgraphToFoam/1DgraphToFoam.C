@@ -30,7 +30,7 @@ Author
 #include "Time.H"
 #include "IFstream.H"
 #include "OFstream.H"
-#include "vtkUnstructuredReader.H"
+#include "cardiacVtkUnstructuredReader.H"
 
 #include "labelIOField.H"
 #include "scalarIOField.H"
@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
     const scalar graphStep(args.getOrDefault<scalar>("graphStep", 3e-4));
 
     IFstream vtkStream(vtkFile);
-    vtkUnstructuredReader reader(runTime, vtkStream);
+    cardiacVtkUnstructuredReader reader(runTime, vtkStream);
 
     const pointField& points = reader.points();
     const labelListList& lines = reader.lines();

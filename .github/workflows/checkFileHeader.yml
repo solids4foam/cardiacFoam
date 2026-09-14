@@ -23,7 +23,28 @@ jobs:
           script=./applications/scripts/cardiacFoamChangeCopyright.sh
           chmod +x "$script"
 
-          mapfile -t files_to_check < <(git ls-files '*.C' '*.H')
+          # Paths excluded below are imported third-party code whose upstream
+          # headers must stay intact. Only add to this list for third-party
+          # code, never to make the check pass on cardiacFoam's own sources.
+          #
+          #   src/HFDIBDEM/
+          #     openHFDIB-DEM, imported for the immersed-boundary solver. It is
+          #     licensed under the LGPL and credited to Federico Municchi (2016),
+          #     Martin Isoz and Martin Kotouc Sourek (2019-). Rewriting these
+          #     headers to cardiacFoam's GPL block would delete that licence
+          #     notice, so they are left byte-intact.
+          #
+          #   applications/solvers/pimpleHFDIBFoam/*.H
+          #     OpenFOAM pimpleFoam include fragments. Upstream ships these .H
+          #     files with no licence header at all, and correctPhi.solver.H and
+          #     setRDeltaT.H are still byte-identical to OpenFOAM's, so a
+          #     cardiacFoam header would misattribute them. pimpleHFDIBFoam.C
+          #     itself is checked as normal.
+          mapfile -t files_to_check < <(
+            git ls-files '*.C' '*.H' \
+              ':(exclude)src/HFDIBDEM/*' \
+              ':(exclude)applications/solvers/pimpleHFDIBFoam/*.H'
+          )
 
           if [ "${#files_to_check[@]}" -eq 0 ]; then
             echo "No tracked C/H files to check."

@@ -36,6 +36,7 @@ REGRESSION_TESTS=(
     "idealizedHeart/electroHeart"
     "idealizedHeart/electroMechHeart"
     "idealizedHeart/pathos/conductionBlock"
+    "pimpleHFDIBFoam/immersedCylinderSmoke"
 )
 
 failures=0

@@ -1,0 +1,82 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  8
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         Euler;
+}
+
+gradSchemes
+{
+    // Your working choice (robust near IB forcing)
+    default         pointCellsLeastSquares;
+
+    // Limit gradients to reduce oscillations around IB region
+    grad(U)         cellLimited leastSquares 1;
+    grad(*)         cellLimited leastSquares 1;
+}
+
+divSchemes
+{
+    default                             none;
+
+    // Convection of momentum (bounded, robust)
+    div(phi,U)                          Gauss limitedLinearV 1;
+
+    // Viscous term
+    div((nuEff*dev2(T(grad(U)))))       Gauss linear;
+
+    // HFDIB forcing / coupling term (KEEP — required by your solver)
+    div(((lambda*(1|A(U)))*f))          Gauss linear;
+
+    // Only used if SDF curvature is enabled: kappa = div(nhat)
+    div(nhat)                           Gauss linear;
+
+    // If turbulence fields exist (harmless for laminar)
+    div(phi,k)                          bounded Gauss limitedLinearV 1;
+    div(phi,epsilon)                    bounded Gauss limitedLinearV 1;
+    div(phi,omega)                      bounded Gauss limitedLinearV 1;
+    div(phi,nuTilda)                    bounded Gauss limitedLinearV 1;
+}
+
+laplacianSchemes
+{
+    default                             Gauss linear corrected;
+
+    // Keep if your solver uses mesh-motion field(s)
+    laplacian(diffusivity,cellMotionU)  Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+fluxRequired
+{
+    default         no;
+    p;
+}
+
+// ************************************************************************* //
+// ************************************************************************* //

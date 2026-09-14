@@ -1,0 +1,117 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                |
+| \\      /  F ield         | cfMesh: A library for mesh generation          |
+|  \\    /   O peration     |                                                |
+|   \\  /    A nd           | Author: Franjo Juretic                         |
+|    \\/     M anipulation  | E-mail: franjo.juretic@c-fields.com            |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version   2.0;
+    format    ascii;
+    class     dictionary;
+    location  "system";
+    object    meshDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+surfaceFile         "geometry.fms";
+
+// Division factor of cells per refinement level
+// Note: it must be at least 1.0.
+divisionFactor      1.5;
+
+#message "Division factor: $divisionFactor";
+#message "MESH_LEVEL: $MESH_LEVEL";
+
+minCellSize         ${{ 1 / pow($divisionFactor, ${MESH_LEVEL:-1}) }};
+
+maxCellSize         $minCellSize;
+
+boundaryCellSize    $minCellSize;
+
+localRefinement
+{
+    "sphere"
+    {
+        cellSize    ${{ ${minCellSize}/2 }};
+    }
+
+    "xmin|ymin|zmin|xmax|ymax|zmax"
+    {
+        cellSize    ${{ ${minCellSize}/2 }};
+    }
+}
+
+objectRefinements
+{
+    outerSphere
+    {
+        type        "sphere";
+        cellSize    ${{ ${minCellSize}/2 }};
+        centre      (0 0 0);
+        radius      0.6;
+    }
+}
+
+/*
+renameBoundary
+{
+    defaultName     fixedWalls;
+    defaultType     wall;
+
+    newPatchNames
+    {
+        "spehre"
+        {
+            type    wall;
+            newName sphere;
+        }
+
+        "xmin"
+        {
+            type    wall;
+            newName xmin;
+        }
+
+        "xmax"
+        {
+            type    wall;
+            newName xmax;
+        }
+
+        "ymin"
+        {
+            type    wall;
+            newName ymin;
+        }
+
+        "ymax"
+        {
+            type    wall;
+            newName ymax;
+        }
+
+        "zmin"
+        {
+            type    wall;
+            newName zmin;
+        }
+
+        "zmax"
+        {
+            type    wall;
+            newName zmax;
+        }
+    }
+}
+*/
+
+meshQualitySettings
+{
+    maxNonOrthogonality 30;
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,21 @@
+/* Immersed body and top-level HFDIB-DEM driver */
+immersedBody.C
+openHFDIBDEM.C
+
+/* Body addition models */
+addModels/addModel.C
+addModels/addModelOnce.C
+
+/* Geometry models */
+geomModels/geomModel.C
+geomModels/stlBased/stlBased.C
+geomModels/stlBased/nonConvexBody.C
+
+/* Immersed boundary interpolation */
+ibInterpolation/interpolationInfo.C
+ibInterpolation/lineInt/lineInt.C
+ibInterpolation/lineInt/lineIntInfo.C
+ibInterpolation/leastSquaresInt/leastSquaresInt.C
+ibInterpolation/leastSquaresInt/leastSquaresIntInfo.C
+
+LIB = $(FOAM_USER_LIBBIN)/libHFDIBDEM

@@ -1,0 +1,141 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Version:  8
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      HFDIBDEMDict;
+}
+
+// --------------------------- Global settings --------------------------------
+
+bodyNames ("sphere");
+
+interpolationSchemes
+{
+    U cellPointFace;
+}
+
+surfaceThreshold        1e-4;
+stepDEM                 0.05;
+
+geometricD              (1 1 1);
+
+recordSimulation        true;
+recordFirstTimeStep     false;
+
+nSolidsInDomain         1000;
+ibCouplingCoeff         0.2;
+
+outputSetup
+{
+    basic        true;
+    iB           false;
+    DEM          false;
+    addModel     true;
+    parallelDEM  false;
+}
+
+virtualMesh
+{
+    level        2;
+    charCellSize 0.01;
+}
+
+// ------------------------------- DEM ----------------------------------------
+
+DEM
+{
+    LcCoeff       4.0;
+    rotationModel chen2012;
+
+    materials
+    {
+        particle
+        {
+            Y     1e7;
+            nu    0.3;
+            mu    0.05;
+            adhN  0;
+            eps   0.5;
+        }
+
+        wall
+        {
+            Y     1e7;
+            nu    0.2;
+            mu    0;
+            adhN  0;
+            eps   0.5;
+        }
+    }
+
+    collisionPatches {}
+}
+
+// ============================ Cylinder body =================================
+
+sphere
+{
+    // Keep as-is unless your solver uses bodyOperation to switch motion handling.
+    // The motion is applied via stlBased sinusoidal translation.
+    bodyOperation 0;
+
+    rho   rho [1 -3 0 0 0 0 0] 5000;
+
+    // No-slip immersed boundary
+    U { BC noSlip; }
+
+    material        particle;
+
+    bodyGeom        stlBased;
+    stlBasedCoeffs
+    {
+      //fileName "constant/triSurface/cylinder.stl";
+        fileName "constant/triSurface/sphere.stl";
+    }
+
+    sdBasedLambda    false;
+    interfaceSpan    2.0;
+    startSynced      false;
+    refineBuffers    2;
+
+    // Do NOT force static at any time
+    timesToSetStatic -1;
+
+    // ---------------------------------------------------------------------
+    // Wan–Turek oscillating cylinder kinematics:
+    // solids4foam oscillatingSphereInCube motion:
+    // x(t) = 0.125*(1 - cos(2*pi*t))
+    //-------------------------------------
+    deformingBody_sinusoidalTranslation
+    {
+        amplitude     -0.125;
+        period        1.0;
+        phase         1.57079632679;
+        direction     (1 0 0);
+        verticalShift (0.125 0 0);
+    }
+
+    // KEEP bodyAddition block present (even as no-op) – your code path expects it
+    bodyAddition
+    {
+        addModel           once;
+        distributionCoeffs
+        {
+            addMode         boundBox;
+            stlBaseSize     1e-5;
+            addDomain       boundBox;
+            boundBoxCoeffs
+            {
+                minBound (0 0 0);
+                maxBound (0 0 0);
+            }
+        }
+    }
+}

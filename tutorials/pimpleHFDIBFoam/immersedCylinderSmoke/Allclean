@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+cd "${0%/*}" || exit 1    # run from this directory
+
+# Source tutorial clean functions
+. "${WM_PROJECT_DIR}"/bin/tools/CleanFunctions
+
+# Removes time directories (0/ included) and logs; 0.orig/ is the tracked copy
+cleanCase0
+
+# Left behind by a coded boundary condition if one is ever reintroduced
+rm -rf dynamicCode
+
+#------------------------------------------------------------------------------

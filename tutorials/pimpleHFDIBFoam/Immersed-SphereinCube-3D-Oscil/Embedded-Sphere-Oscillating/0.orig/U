@@ -1,0 +1,51 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| solids4foam: solid mechanics and fluid-solid interaction simulations        |
+| Version:     v2.0                                                           |
+| Web:         https://solids4foam.github.io                                  |
+| Disclaimer:  This offering is not approved or endorsed by OpenCFD Limited,  |
+|              producer and distributor of the OpenFOAM software via          |
+|              www.openfoam.com, and owner of the OPENFOAM® and OpenCFD®      |
+|              trade marks.                                                   |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    sphere
+    {
+        // `newMovingWallVelocity` implements boundary non-orthogonal
+        // corrections, which are required for second-order accuracy.
+        type            newMovingWallVelocity;
+        value           uniform (0 0 0);
+    }
+
+    // "xmin|xmax|ymin|ymax|zmin|zmax"
+    // {
+    //     // `fixedValueCorrected` employs non-orthogonal corrections which are
+    //     // required to achieve second-order accuracy on grids with
+    //     // boundary non-orthogonality.
+    //     type            fixedValueCorrected;
+    //     value           uniform (0 0 0);
+    // }
+
+    xmin { type fixedValueCorrected; value uniform (0 0 0); }
+xmax { type fixedValueCorrected; value uniform (0 0 0); }
+ymin { type fixedValueCorrected; value uniform (0 0 0); }
+ymax { type fixedValueCorrected; value uniform (0 0 0); }
+zmin { type fixedValueCorrected; value uniform (0 0 0); }
+zmax { type fixedValueCorrected; value uniform (0 0 0); }
+}
+
+
+// ************************************************************************* //
