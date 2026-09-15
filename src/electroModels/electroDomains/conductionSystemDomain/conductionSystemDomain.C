@@ -261,7 +261,6 @@ void conductionSystemDomain::readRootStimulus(const dictionary& dict)
     }
 
     Info<< "Purkinje root stimulus: node=" << rootNode_
-        << ", firings=" << rootStartTimes_.size()
         << ", startTimes=" << rootStartTimes_
         << ", duration=" << rootDuration_
         << ", intensity=" << rootIntensity_ << nl << endl;

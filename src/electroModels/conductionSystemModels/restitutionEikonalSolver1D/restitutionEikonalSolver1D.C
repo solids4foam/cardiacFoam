@@ -236,6 +236,35 @@ void Foam::restitutionEikonalSolver1D::advance
         }
     }
 
+    // rootStimulus start times inside (t0, tNow] become candidate root activations.
+    {
+        const label root = domain.rootNode();
+        const scalarList& rootStartTimes = domain.rootStartTimes();
+
+        forAll(rootStartTimes, beatI)
+        {
+            const scalar tFire = rootStartTimes[beatI];
+
+            if (tFire <= t0 || tFire > tNow)
+            {
+                continue;
+            }
+
+            const scalar beatInterval =
+                lastActTime_[root] < 0 ? GREAT : tFire - lastActTime_[root];
+
+            if (beatInterval < minBeatInterval_)
+            {
+                ++blockCount_[root];
+            }
+            else if (tFire < nextTact_[root])
+            {
+                nextTact_[root] = tFire;
+                nextTactSource_[root] = -1;
+            }
+        }
+    }
+
     if (stimulusIO::computeStimulus(tNow, stimProtocol_) != 0)
     {
         forAll(stimSites_, s)

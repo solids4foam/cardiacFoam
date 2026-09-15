@@ -52,7 +52,8 @@ addToRunTimeSelectionTable
 
 eikonalSolver1D::eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
-    purkinjeCV_("purkinjeCV", solverCoeffs)
+    purkinjeCV_("purkinjeCV", solverCoeffs),
+    warnedRootStartTimes_(false)
 {}
 
 
@@ -72,6 +73,37 @@ void eikonalSolver1D::advance
 
     const conductionGraph& G = domain.graph();
     scalarField& Tact = domain.activationTime();
+
+    // Seed the root at the earliest rootStimulus start time; a single-pass solve activates each node once.
+    {
+        const scalarList& rootStartTimes = domain.rootStartTimes();
+
+        if (!rootStartTimes.empty())
+        {
+            scalar tFirst = rootStartTimes[0];
+            forAll(rootStartTimes, beatI)
+            {
+                tFirst = Foam::min(tFirst, rootStartTimes[beatI]);
+            }
+
+            const label root = domain.rootNode();
+
+            if (Tact[root] < 0.0 || tFirst < Tact[root])
+            {
+                Tact[root] = tFirst;
+            }
+
+            if (rootStartTimes.size() > 1 && !warnedRootStartTimes_)
+            {
+                WarningInFunction
+                    << "eikonalSolver1D uses only the earliest rootStimulus "
+                    << "start time (" << tFirst << " s); the remaining "
+                    << rootStartTimes.size() - 1 << " entries are ignored."
+                    << endl;
+                warnedRootStartTimes_ = true;
+            }
+        }
+    }
 
     // Merge tissue observations as earliest arrivals, before the no-activation guard.
     {

@@ -176,6 +176,18 @@ public:
         return terminalActivationObservations_;
     }
 
+    //- Graph node driven by rootStimulus.
+    label rootNode() const
+    {
+        return rootNode_;
+    }
+
+    //- rootStimulus start times [s]; empty when no rootStimulus is given.
+    const scalarList& rootStartTimes() const
+    {
+        return rootStartTimes_;
+    }
+
     virtual void setTerminalCoupling
     (
         const scalarField& terminalCurrent,
