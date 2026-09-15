@@ -87,10 +87,10 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 {
     if (solverCoeffs.found("stimulus"))
     {
-        const dictionary& sDict = solverCoeffs.subDict("stimulus");
-
-        stimSites_ = sDict.get<labelList>("sites");
-        stimProtocol_ = stimulusIO::loadStimulusProtocol(sDict);
+        FatalIOErrorInFunction(solverCoeffs)
+            << "restitutionEikonalSolver1D does not read a 'stimulus' "
+            << "sub-dictionary; drive the network with rootStimulus."
+            << exit(FatalIOError);
     }
 }
 
@@ -261,22 +261,6 @@ void Foam::restitutionEikonalSolver1D::advance
             {
                 nextTact_[root] = tFire;
                 nextTactSource_[root] = -1;
-            }
-        }
-    }
-
-    if (stimulusIO::computeStimulus(tNow, stimProtocol_) != 0)
-    {
-        forAll(stimSites_, s)
-        {
-            const label site = stimSites_[s];
-            const scalar beatInterval =
-                lastActTime_[site] < 0 ? GREAT : tNow - lastActTime_[site];
-
-            if (beatInterval >= minBeatInterval_ && tNow < nextTact_[site])
-            {
-                nextTact_[site] = tNow;
-                nextTactSource_[site] = -1;
             }
         }
     }

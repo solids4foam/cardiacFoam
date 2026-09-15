@@ -44,7 +44,6 @@ SourceFiles
 
 #include "conductionSystemSolver.H"
 #include "restitutionModel.H"
-#include "stimulusIO.H"
 #include "fvMesh.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
@@ -76,9 +75,6 @@ class restitutionEikonalSolver1D
     labelList   blockCount_;
     labelList   wavebreakCount_;
     scalarField minDI_;
-
-    labelList        stimSites_;
-    StimulusProtocol stimProtocol_;
 
     scalar  apdNominal_;        //- constant APD [s] (dict: apdNominal)
     scalar  minimumDI90_;       //- calibrated capture boundary [s] (dict: minimumDI90)
