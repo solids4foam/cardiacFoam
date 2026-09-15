@@ -1,9 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-| =========                 |                                                 |
-| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v1912                                 |
-|   \\  /    A nd           | Website:  www.openfoam.com                      |
-|    \\/     M anipulation  |                                                 |
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
@@ -19,7 +17,8 @@ myocardiumSolver  monodomainSolver;
 
 monodomainSolverCoeffs
 {
-    conductivity [ -1 -3 3 0 0 2 0 ] (0.1334177215 0 0 0.01760617761 0 0.01760617761);
+    conductivitySource uniform;
+    conductivity [ -1 -3 3 0 0 2 0 ] (0.04 0 0 0.04 0 0.02);
     chi   [ 0 -1 0 0 0 0 0 ] 140000;
     cm    [ -1 -4 4 0 0 2 0 ] 0.01;
 
@@ -30,8 +29,8 @@ monodomainSolverCoeffs
     {
         ionic
         {
-            export ( Iion);
-            debug (Vm);
+            export (Vm);
+            debug ();
         }
     }
 
@@ -40,7 +39,7 @@ monodomainSolverCoeffs
     maxSteps 1000000000;
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
-
+    // No tissue stimulus: every myocardial activation enters through a junction.
 
     conductionNetworkDomains
     {
@@ -50,21 +49,23 @@ monodomainSolverCoeffs
 
             purkinjeGraphModelCoeffs
             {
-                conductionSystemSolver eikonalSolver1D;
+                conductionSystemSolver restitutionEikonalSolver1D;
                 graphFile              purkinjeGraph;
 
-                purkinjeCV             [ 0 1 -1 0 0 0 0 ] 2.0;
+                chi      140000;
+                cm       0.01;
+                vm1DRest -0.084;
 
-                chi                    140000;
-                cm                     0.01;
-                vm1DRest               -0.084;
+                // apdNominal, minimumDI90 and escapeInterval use the compiled defaults.
 
+                // Escape at 1.20247 s; root beats at intervals 0.4975 s and 0.4 s
+                // are captured, the beat at 0.3 s is below apdNominal + minimumDI90.
                 rootStimulus
                 {
-                    node      0;
-                    startTime 0.0;
-                    duration  0.002;
-                    intensity 0.0;
+                    node          0;
+                    startTimeList (1.7 2.1 2.4);
+                    duration      0.001;
+                    intensity     0;
                 }
 
                 outputVariables
@@ -78,14 +79,14 @@ monodomainSolverCoeffs
 
     domainCouplings
     {
-        couplingA
+        purkinjeToMyocardium
         {
             electroDomainCoupler    eikonalMonodomainPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
-            rPvj                    10000;
-            pvjRadius               3e-4;
-            couplingMode            unidirectional;
-            debugCoupling           true;
+            rPvj                    5000;
+            pvjRadius               0.0006;
+            couplingMode            bidirectional;
+            debugCoupling           false;
         }
     }
 }

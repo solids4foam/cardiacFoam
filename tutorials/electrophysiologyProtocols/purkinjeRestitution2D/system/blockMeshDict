@@ -1,7 +1,7 @@
 /*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  v2412                                 |
+|  \\    /   O peration     | Version:  v1912                                 |
 |   \\  /    A nd           | Website:  www.openfoam.com                      |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -9,22 +9,60 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    location    "0";
-    object      Vm;
+    class       dictionary;
+    object      blockMeshDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [1 2 -3 0 0 -1 0];
+scale   0.001;
 
-internalField   uniform -0.084;
+vertices
+(
+    (0 0 0)
+    (50 0 0)
+    (50 50 0)
+    (0 50 0)
+    (0 0 0.1)
+    (50 0 0.1)
+    (50 50 0.1)
+    (0 50 0.1)
+);
 
-boundaryField
-{
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (150 150 1) simpleGrading (1 1 1) // deltaX = 0.33 mm, as rotorInstability
+);
+
+edges
+(
+);
+
+boundary
+(
     walls
     {
-        type            zeroGradient;
+        type patch;
+        faces
+        (
+            (3 7 6 2)
+            (0 4 7 3)
+            (2 6 5 1)
+            (1 5 4 0)
+        );
     }
-}
+    frontAndBack
+    {
+        type empty;
+        faces
+        (
+            (0 3 2 1)
+            (4 5 6 7)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
 
 // ************************************************************************* //

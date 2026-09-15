@@ -1,0 +1,18 @@
+# file                 time   col  expected      tolerance
+# purkinjeNetwork.dat columns: $1 time, $2..$6 node0..node4 activationTime [s].
+# Escape beat: every node fires at escapeInterval.
+purkinjeNetwork.dat    1.40   2    1.20247       1e-6
+purkinjeNetwork.dat    1.40   6    1.20247       1e-6
+# Root beat at 1.7 s, interval 0.4975 s after the escape: captured.
+purkinjeNetwork.dat    1.80   2    1.70000000    1e-6
+purkinjeNetwork.dat    1.80   3    1.70448020    1e-6
+purkinjeNetwork.dat    1.80   4    1.71240682    1e-6
+purkinjeNetwork.dat    1.80   6    1.71398918    1e-6
+# Root beat at 2.1 s, interval 0.4 s: captured at a shorter DI, conducts more slowly.
+purkinjeNetwork.dat    2.20   2    2.10000000    1e-6
+purkinjeNetwork.dat    2.20   3    2.10574454    1e-6
+purkinjeNetwork.dat    2.20   4    2.11588760    1e-6
+purkinjeNetwork.dat    2.20   6    2.11789920    1e-6
+# Root beat at 2.4 s, interval 0.3 s: blocked, activation times unchanged.
+purkinjeNetwork.dat    2.45   2    2.10000000    1e-6
+purkinjeNetwork.dat    2.45   6    2.11789920    1e-6

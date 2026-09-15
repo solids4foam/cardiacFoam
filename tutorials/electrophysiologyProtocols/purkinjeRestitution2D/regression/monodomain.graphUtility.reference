@@ -1,0 +1,7 @@
+# file                 time    col  expected          tolerance
+# runPurkinjeGraph solves the network alone: node Vm matches the unidirectional
+# coupled run and the junction current is zero.
+purkinjeNetwork.dat    0.015   5    0.0241431534      1e-6
+purkinjeNetwork.dat    0.305   5   -0.0626353566      1e-6
+purkinjeNetwork.dat    0.305   9   -0.0709806861      1e-6
+purkinjeNetwork.dat    0.305   2    0                 1e-12
