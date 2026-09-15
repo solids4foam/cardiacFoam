@@ -21,6 +21,7 @@ eikonal and the cable network solvers.
 | Variant | Network solver | Coupler | Protocol |
 | --- | --- | --- | --- |
 | `antegrade` (default) | `restitutionEikonalSolver1D` | `eikonalMonodomainPvjCoupler`, bidirectional | no stimulus until the network's escape beat at 1.20247 s; root beats at 1.7, 2.1 and 2.4 s |
+| `retrograde` | `restitutionEikonalSolver1D` | `eikonalMonodomainPvjCoupler`, bidirectional | tissue stimulus on junction 4 at 0.05 and 0.55 s; no root stimulus |
 | `monodomain` | `monodomain1DSolver` | `reactionDiffusionPvjCoupler`, implicit, linear kernel | root current at 0.01 and 0.3 s |
 
 `antegrade` exercises the restitution solver's compiled defaults. After the
@@ -28,6 +29,11 @@ escape beat, the 1.7 s beat arrives at an interval of 0.4975 s and the 2.1 s
 beat at 0.4 s. Both are captured, and the second conducts more slowly because
 its diastolic interval is shorter. The 2.4 s beat falls below
 `apdNominal + minimumDI90` (0.353 s) and is blocked at the root.
+
+`retrograde` has no network stimulus. The tissue activates junction 4, the
+wave climbs the network to the root and returns to the tissue through
+junctions 2 and 3. The second tissue beat is captured at a shorter diastolic
+interval and travels up the tree more slowly than the first.
 
 `monodomain` integrates the cable on every graph edge and exports node `Vm`
 and the junction coupling current.
@@ -39,6 +45,7 @@ The restitution constants and how they were measured are described in
 
 ```bash
 ./Allrun                      # antegrade
+./Allrun retrograde
 ./Allrun monodomain parallel  # 4 subdomains, system/decomposeParDict
 ./Allclean
 ```
@@ -55,6 +62,6 @@ node's `Vm`. `postProcessing/purkinjeNetworkVTK/` holds the network as VTK.
 
 ## Regression
 
-`regression/regressionTest.sh` runs `antegrade` and `monodomain` in parallel
-and compares `purkinjeNetwork.dat` against `regression/<variant>.reference`.
+`regression/regressionTest.sh` runs every variant in parallel and compares
+`purkinjeNetwork.dat` against `regression/<variant>.reference`.
 For `monodomain` it also runs the graph-only `runPurkinjeGraph` utility.

@@ -355,11 +355,15 @@ void pvjMapper::depositActivationTimes
 void pvjMapper::gatherActivationTimes
 (
     const volScalarField& activationTimeField,
-    scalarField& terminalActivationTime
+    const scalarField& newerThan,
+    scalarField& terminalActivationTime,
+    scalarField& latestActivationTime
 ) const
 {
     terminalActivationTime.setSize(terminalCellSets_.size());
     terminalActivationTime = GREAT;
+    latestActivationTime.setSize(terminalCellSets_.size());
+    latestActivationTime = -1.0;
 
     const scalarField& activationValues = activationTimeField.primitiveField();
 
@@ -370,13 +374,21 @@ void pvjMapper::gatherActivationTimes
             const label cellI = terminalCellSets_[i][localI];
             const scalar t = activationValues[cellI];
 
-            if (t >= 0.0 && t < terminalActivationTime[i])
+            if (t < 0.0)
+            {
+                continue;
+            }
+
+            latestActivationTime[i] = max(latestActivationTime[i], t);
+
+            if (t > newerThan[i] && t < terminalActivationTime[i])
             {
                 terminalActivationTime[i] = t;
             }
         }
 
         reduce(terminalActivationTime[i], minOp<scalar>());
+        reduce(latestActivationTime[i], maxOp<scalar>());
 
         if (terminalActivationTime[i] >= GREAT/2.0)
         {

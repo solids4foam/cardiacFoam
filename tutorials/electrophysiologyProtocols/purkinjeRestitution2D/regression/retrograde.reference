@@ -1,0 +1,16 @@
+# file                 time   col  expected        tolerance
+# purkinjeNetwork.dat columns: $1 time, $2..$6 node0..node4 activationTime [s].
+# No root stimulus: the network is activated only by the tissue, at junction 4
+# (node 4), and carries the wave to the root and out through junctions 2 and 3.
+#
+# Tissue beat at 0.05 s.
+purkinjeNetwork.dat    0.50   6    0.0516728377    1e-6
+purkinjeNetwork.dat    0.50   3    0.0606872607    1e-6
+purkinjeNetwork.dat    0.50   2    0.0648939915    1e-6
+purkinjeNetwork.dat    0.50   4    0.0681992800    1e-6
+# Tissue beat at 0.55 s, 0.5 s after the first: captured, and slower up the
+# tree at the shorter diastolic interval (9.6 ms to node 1, against 9.0 ms).
+purkinjeNetwork.dat    0.90   6    0.5519084180    1e-6
+purkinjeNetwork.dat    0.90   3    0.5614944410    1e-6
+purkinjeNetwork.dat    0.90   2    0.5659640110    1e-6
+purkinjeNetwork.dat    0.90   4    0.5694740960    1e-6

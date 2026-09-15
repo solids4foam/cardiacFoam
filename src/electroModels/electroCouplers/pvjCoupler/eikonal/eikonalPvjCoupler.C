@@ -53,14 +53,7 @@ void eikonalPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 
     if (couplingMode_ == bidirectional)
     {
-        scalarField observedTissueTimes;
-        mapper_.gatherActivationTimes
-        (
-            primaryDomain_.activationTime(),
-            observedTissueTimes
-        );
-
-        networkTerminalDomain_.setTerminalActivationObservations(observedTissueTimes);
+        observeTerminalActivations();
     }
 
     clearTerminalCouplingBuffers();

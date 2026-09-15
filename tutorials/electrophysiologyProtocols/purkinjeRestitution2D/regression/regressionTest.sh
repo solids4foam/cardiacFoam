@@ -11,7 +11,7 @@ IFS=$'\n\t'
 # tolerance). The monodomain variant also runs the graph-only runPurkinjeGraph
 # utility and checks it against regression/monodomain.graphUtility.reference.
 
-VARIANTS=(antegrade monodomain)
+VARIANTS=(antegrade retrograde monodomain)
 ALLRUN_LOGFILE="log.Allrun"
 GRAPH_LOGFILE="log.runPurkinjeGraph"
 

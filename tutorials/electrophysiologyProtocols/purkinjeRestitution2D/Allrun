@@ -5,6 +5,8 @@
 # Variants, all on the same slab and Purkinje graph:
 #   antegrade  (default) - restitutionEikonalSolver1D network paced at its root;
 #     escape beat, two captured beats at different DI, one blocked beat.
+#   retrograde - restitutionEikonalSolver1D network activated from the tissue
+#     through one junction, twice; the wave returns to the tissue at the others.
 #   monodomain - monodomain1DSolver network, reactionDiffusionPvjCoupler with
 #     implicit coupling and linear kernel, root paced twice.
 #   parallel   - decompose and run cardiacFoam in parallel.
@@ -12,9 +14,9 @@ variant="antegrade"
 parallelRun=false
 for arg in "$@"; do
     case "$arg" in
-        antegrade|monodomain) variant="$arg" ;;
-        parallel)             parallelRun=true ;;
-        *) echo "Unknown argument '$arg'. Use antegrade, monodomain and/or parallel." ; exit 1 ;;
+        antegrade|retrograde|monodomain) variant="$arg" ;;
+        parallel)                        parallelRun=true ;;
+        *) echo "Unknown argument '$arg'. Use antegrade, retrograde, monodomain and/or parallel." ; exit 1 ;;
     esac
 done
 

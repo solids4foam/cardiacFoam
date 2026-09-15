@@ -97,6 +97,11 @@ pvjCoupler::pvjCoupler
     (
         networkTerminalDomain_.terminalNodes().size(),
         0.0
+    ),
+    lastObservedTissueActivation_
+    (
+        networkTerminalDomain_.terminalNodes().size(),
+        -1.0
     )
 {}
 
@@ -105,6 +110,23 @@ void pvjCoupler::clearTerminalCouplingBuffers() const
 {
     terminalCurrentBuffer_ = 0.0;
     terminalSourceBuffer_ = 0.0;
+}
+
+
+void pvjCoupler::observeTerminalActivations()
+{
+    scalarField observedTissueTimes;
+    scalarField latestTissueTimes;
+    mapper_.gatherActivationTimes
+    (
+        primaryDomain_.activationTime(),
+        lastObservedTissueActivation_,
+        observedTissueTimes,
+        latestTissueTimes
+    );
+
+    lastObservedTissueActivation_ = latestTissueTimes;
+    networkTerminalDomain_.setTerminalActivationObservations(observedTissueTimes);
 }
 
 } // End namespace Foam

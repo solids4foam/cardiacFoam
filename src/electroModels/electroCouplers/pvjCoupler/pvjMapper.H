@@ -59,10 +59,13 @@ public:
         scalarField& values
     ) const;
 
+    //- Per terminal: earliest cell activation newer than newerThan (-1 if none) and latest cell activation.
     void gatherActivationTimes
     (
         const volScalarField& activationTimeField,
-        scalarField& terminalActivationTime
+        const scalarField& newerThan,
+        scalarField& terminalActivationTime,
+        scalarField& latestActivationTime
     ) const;
 
     void depositCoupling
