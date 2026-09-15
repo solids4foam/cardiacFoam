@@ -64,11 +64,7 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
             restitutionTemplates::purkinjeMinimumDI90
         )
     ),
-    // The capture boundary is a separately calibrated quantity, not the
-    // CV table's lower endpoint. Deriving it from diMin() tied the
-    // refractory threshold to wherever the velocity measurements happened
-    // to start, which is why this solver refused premature beats that the
-    // reference monodomain captures and propagates.
+    // Capture boundary, calibrated independently of the CV table domain.
     minBeatInterval_(apdNominal_ + minimumDI90_),
     escapeInterval_
     (
@@ -154,13 +150,14 @@ void Foam::restitutionEikonalSolver1D::importExternalActivations
     const scalar tNow
 )
 {
-    scalarField& Tact = domain.activationTime();
+    // Observations become candidate events; the cascade is the only writer of activationTime().
     const labelList& terminalNodes = domain.terminalNodes();
+    const scalarField& observed = domain.terminalActivationObservations();
 
     forAll(terminalNodes, i)
     {
         const label nodeI = terminalNodes[i];
-        const scalar incomingTime = Tact[nodeI];
+        const scalar incomingTime = observed[i];
         const scalar lastActTime = lastActTime_[nodeI];
 
         // Negative activation times mean "not yet activated" for this graph
@@ -175,7 +172,6 @@ void Foam::restitutionEikonalSolver1D::importExternalActivations
             continue;
         }
 
-        Tact[nodeI] = lastActTime < 0.0 ? -1.0 : lastActTime;
 
         if (incomingTime > tNow)
         {

@@ -91,6 +91,9 @@ class conductionSystemDomain
     scalarField terminalCurrent_;
     scalarField terminalSource_;
 
+    //- Tissue activation times observed at the terminals this step (-1 = none).
+    scalarField terminalActivationObservations_;
+
     autoPtr<OFstream> outputPtr_;
     wordList exportVars_;
     wordList debugVars_;
@@ -162,7 +165,16 @@ public:
 
     virtual void terminalActivationTime(scalarField& values) const override;
 
-    virtual void setTerminalActivationTime(const scalarField& values) override;
+    virtual void setTerminalActivationObservations
+    (
+        const scalarField& values
+    ) override;
+
+    //- Solver-facing, read-only. Indexed like terminalNodes().
+    const scalarField& terminalActivationObservations() const
+    {
+        return terminalActivationObservations_;
+    }
 
     virtual void setTerminalCoupling
     (

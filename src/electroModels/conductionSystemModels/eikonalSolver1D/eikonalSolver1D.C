@@ -73,6 +73,27 @@ void eikonalSolver1D::advance
     const conductionGraph& G = domain.graph();
     scalarField& Tact = domain.activationTime();
 
+    // Merge tissue observations as earliest arrivals, before the no-activation guard.
+    {
+        const labelList& terminalNodes = domain.terminalNodes();
+        const scalarField& observed = domain.terminalActivationObservations();
+
+        forAll(terminalNodes, i)
+        {
+            if (observed[i] < 0.0)
+            {
+                continue;
+            }
+
+            const label nodeI = terminalNodes[i];
+
+            if (Tact[nodeI] < 0.0 || observed[i] < Tact[nodeI])
+            {
+                Tact[nodeI] = observed[i];
+            }
+        }
+    }
+
     if (gMax(Tact) < 0)
     {
         WarningInFunction

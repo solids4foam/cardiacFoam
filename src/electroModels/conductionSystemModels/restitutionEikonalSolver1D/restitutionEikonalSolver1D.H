@@ -25,8 +25,8 @@ Description
       beatInterval < minBeatInterval   — refractory / relative refractory (block)
       beatInterval >= minBeatInterval  — excitable, activated by incoming wave
       beatInterval >= escapeInterval   — spontaneous firing (funny current)
-    minBeatInterval = apdNominal + minDI. CV is looked up as a function of
-    DI = beatInterval - apdNominal. Reports breakdown indicators. Multi-beat
+    minBeatInterval = apdNominal + minimumDI90. CV is looked up from the
+    receiving node's DI = beatInterval - apdNominal. Reports breakdown indicators. Multi-beat
     history is not tracked separately: activationTime (owned by
     conductionSystemDomain) is a single evolving field overwritten at each
     activation, and the write-time series across output directories is the
@@ -113,11 +113,6 @@ public:
         scalar t0,
         scalar dt
     ) override;
-
-    virtual bool acceptsRepeatedTerminalActivationTimes() const override
-    {
-        return true;
-    }
 
     virtual bool writesGraphVm() const override
     {

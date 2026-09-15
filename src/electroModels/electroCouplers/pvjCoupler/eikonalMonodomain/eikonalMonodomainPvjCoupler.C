@@ -71,7 +71,7 @@ void eikonalMonodomainPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
             observedTissueTimes
         );
 
-        networkTerminalDomain_.setTerminalActivationTime(observedTissueTimes);
+        networkTerminalDomain_.setTerminalActivationObservations(observedTissueTimes);
     }
 
     clearTerminalCouplingBuffers();
