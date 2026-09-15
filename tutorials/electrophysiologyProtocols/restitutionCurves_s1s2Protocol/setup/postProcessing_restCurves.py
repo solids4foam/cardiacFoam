@@ -263,7 +263,7 @@ def get_s1_s2_beats(beats, filepath=None, config=None):
     s2_val = int(m_s2.group(1)) if m_s2 else 250
 
     # The S1 train ends and the first S2 happens based on the config intervals
-    s1_target_time = (n_s1 * s1_val) / 1000.0
+    s1_target_time = ((n_s1 - 1) * s1_val) / 1000.0
 
     s1_beat = None
     s2_beat = None

@@ -38,7 +38,7 @@ singleCellSolverCoeffs
         nstim2 2;
     }
 
-    writeAfterTime    18.0;
+    writeAfterTime    16.0;
 
     outputVariables
     {
