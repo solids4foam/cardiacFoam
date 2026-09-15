@@ -87,7 +87,8 @@ public:
 
     virtual void terminalActivationTime(scalarField& values) const = 0;
 
-    virtual void setTerminalActivationTime(const scalarField& values) = 0;
+    //- Deposit tissue activation times observed at the terminals; the solver decides their use.
+    virtual void setTerminalActivationObservations(const scalarField& values) = 0;
 
     //- Receive terminal exchange terms prepared by the coupling model.
     //  Positive terminalCurrent removes charge from the network and injects

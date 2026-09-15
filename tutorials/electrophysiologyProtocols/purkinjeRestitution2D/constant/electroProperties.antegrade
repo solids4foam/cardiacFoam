@@ -1,0 +1,94 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver  monodomainSolver;
+
+monodomainSolverCoeffs
+{
+    conductivitySource uniform;
+    conductivity [ -1 -3 3 0 0 2 0 ] (0.04 0 0 0.04 0 0.02);
+    chi   [ 0 -1 0 0 0 0 0 ] 140000;
+    cm    [ -1 -4 4 0 0 2 0 ] 0.01;
+
+    ionicModel    BuenoOrovio;
+    tissue    epicardialCells;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm);
+            debug ();
+        }
+    }
+
+    solutionAlgorithm    explicit;
+    solver RKF45;
+    maxSteps 1000000000;
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    // No tissue stimulus: every myocardial activation enters through a junction.
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver restitutionEikonalSolver1D;
+                graphFile              purkinjeGraph;
+
+                chi      140000;
+                cm       0.01;
+                vm1DRest -0.084;
+
+                // apdNominal, minimumDI90 and escapeInterval use the compiled defaults.
+
+                // Escape at 1.20247 s; root beats at intervals 0.4975 s and 0.4 s
+                // are captured, the beat at 0.3 s is below apdNominal + minimumDI90.
+                rootStimulus
+                {
+                    node          0;
+                    startTimeList (1.7 2.1 2.4);
+                    duration      0.001;
+                    intensity     0;
+                }
+
+                outputVariables
+                {
+                    export (activationTime);
+                    debug  ();
+                }
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCoupler    eikonalMonodomainPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            rPvj                    5000;
+            pvjRadius               0.0006;
+            couplingMode            bidirectional;
+            debugCoupling           false;
+        }
+    }
+}
+
+// ************************************************************************* //

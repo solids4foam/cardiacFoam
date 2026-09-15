@@ -103,22 +103,25 @@ CARDIAC_HOST_DEVICE inline double computeStimulusPOD
         const int k = static_cast<int>(std::floor(tp / s.stimPeriodS1 + 0.5));
         const double phase = tp - k * s.stimPeriodS1;
 
-        if (k >= 0 && k <= s.nStim1 && phase >= 0.0 && phase <= s.stimDuration)
+        if (k >= 0 && k < s.nStim1 && phase >= 0.0 && phase <= s.stimDuration)
         {
             Istim = -s.stimAmplitude;
         }
     }
 
     // ---------- S2 ----------
+    // S2 pulses follow the last S1 pulse at multiples of stimPeriodS2.
     if (Istim == 0.0 && s.stimPeriodS2 > 0.0 && s.nStim2 > 0)
     {
-        const double tS1End =
-            s.stimStart + s.stimPeriodS1 * static_cast<double>(s.nStim1);
-        const double tp = t - tS1End;
+        const double tAnchor =
+            s.nStim1 > 0
+          ? s.stimStart + s.stimPeriodS1*static_cast<double>(s.nStim1 - 1)
+          : s.stimStart - s.stimPeriodS2;
+        const double tp = t - tAnchor;
         const int k = static_cast<int>(std::floor(tp / s.stimPeriodS2 + 0.5));
         const double phase = tp - k * s.stimPeriodS2;
 
-        if (k >= 0 && k <= s.nStim2 && phase >= 0.0 && phase <= s.stimDuration)
+        if (k >= 1 && k <= s.nStim2 && phase >= 0.0 && phase <= s.stimDuration)
         {
             Istim = -s.stimAmplitude;
         }

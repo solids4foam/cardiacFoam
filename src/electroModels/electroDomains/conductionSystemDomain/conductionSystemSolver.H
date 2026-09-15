@@ -87,11 +87,6 @@ public:
     ) const
     {}
 
-    virtual bool acceptsRepeatedTerminalActivationTimes() const
-    {
-        return false;
-    }
-
     virtual bool writesGraphVm() const
     {
         return false;

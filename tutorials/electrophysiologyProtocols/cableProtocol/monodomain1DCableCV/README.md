@@ -51,7 +51,9 @@ tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/
 
 - Cable length: 20 mm
 - Cross-section: 0.1 mm x 0.1 mm
-- Resolution: 0.1 mm along the cable (`200 x 1 x 1`)
+- Resolution: 0.2 mm along the cable (`100 x 1 x 1`)
+  - The frozen reference protocol below overrides this to 0.1 mm; the
+    committed default is the coarser mesh.
 - Stimulus region: first 0.5 mm of the cable
 
 Five probes are placed at:
@@ -209,53 +211,32 @@ so keep those fixed while calibrating conductivity.
 - CV summary in `postProcessing/cv_summary.txt`
 - sweep artifacts grouped by ionic model inside `outputsCVConvergence/<ionicModel>/`
 
-## Restitution calibration for restitutionEikonal solver
+## Restitution calibration for restitutionEikonalSolver1D
 
-This case has been calibrated to generate a functional S1-S2 restitution curve for use in dynamic restitution-aware 3D eikonal sweeps (`restitutionEikonalSolver1D`).
+This case is also the measurement apparatus for the constants compiled into
+`restitutionEikonalSolver1D`. The full record -- protocol, conditioned state,
+the CV and APD90 tables, the capture boundary, and the mesh and time-step
+convergence behind them -- is in
+[Purkinje_S1_S2_Calibration.md](Purkinje_S1_S2_Calibration.md).
 
-### Initial calibration (Resting CV)
+It is deliberately not repeated here. An earlier version of this README carried
+a second copy of those numbers, and the two drifted: both asserted a conditioned
+APD near 450 ms and a capture boundary at DI 0.330 s, neither of which
+reproduces.
 
-The `conductivity` in `constant/electroProperties` was tuned to achieve a baseline conduction velocity of **3.0 m/s**. Using the Stewart ionic model, a conductivity of **2.3 S/m** yields a CV of exactly **3.03 m/s** when paced from a mathematically perfect resting state (the very first beat at t=0).
+In brief, measured on this cable with Stewart/myocyte at 2.3 S/m:
 
-### S1-S2 protocol automation
+- conditioned APD90 is **303 ms**, and 1 Hz pacing *shortens* it from the
+  from-rest value rather than prolonging it;
+- conduction velocity runs **1.40 m/s at DI90 62 ms to 3.33 m/s at 401 ms**,
+  roughly thirty times steeper at the short end than the long end;
+- a premature beat captures at DI90 52.85 ms and fails at 25 ms;
+- APD90 varies only 7.7% across the whole capturable range, which is why the
+  solver carries a constant `apdNominal` and no APD restitution curve.
 
-A smart branching approach leverages OpenFOAM's native restart capabilities to generate the restitution curve efficiently:
-
-1. **Phase 1 (S1 Drive Train):** 5 S1 beats at a Basic Cycle Length (BCL) of 1000 ms, simulated from t=0 to t=4.25 s across 6 cores. The OpenFOAM field state was saved at t=4.25 s.
-2. **Phase 2 (S2 Branches):** For each Diastolic Interval (DI) tested, the t=4.25 s checkpoint was restored and the simulation resumed, injecting the S2 premature beat and simulating only the brief ~25 ms window required for wave propagation.
-
-### Electrophysiological phenomena observed
-
-#### Supernormal conduction (velocity peaking)
-
-When pacing at 1 Hz, the resting membrane potential ($V_m$) does not perfectly return to its absolute minimum before the next beat arrives due to ionic memory (e.g., slight extracellular $K^+$ accumulation). Because $V_m$ sits slightly higher (less negative), the membrane is closer to the excitation threshold, requiring less depolarizing current to trigger adjacent cells. This results in **supernormal conduction**:
-
-- **Beat 1:** 3.03 m/s
-- **Beat 2:** 3.22 m/s
-- **Beat 5:** 3.17 m/s
-- **S2 (DI = 0.700 s):** 3.37 m/s
-
-#### APD prolongation and ERP shift
-
-The nominal resting Action Potential Duration (APD) of the Stewart model is approximately 290 ms. Pacing 5 times at 1.0 Hz caused the APD to physiologically lengthen to approximately 450 ms. Because the APD prolonged, the Effective Refractory Period (ERP) pushed significantly outward. Any premature S2 beats with a DI below 0.330 s fell inside the Absolute Refractory Period and naturally failed to propagate.
-
-### Final restitution curve
-
-By sweeping S2 intervals that successfully propagated outside the ERP, the steep gradient of the restitution curve was isolated. These functional values are hardcoded into `src/electroModels/conductionSystemModels/restitutionEikonalSolver1D/restitutionTemplates.H`:
-
-**Diastolic Intervals (s):**
-
-```
-{ 0.330, 0.350, 0.400, 0.450, 0.500, 0.700 }
-```
-
-**Conduction Velocities (m/s):**
-
-```
-{ 2.03,  2.43,  2.95,  3.18,  3.29,  3.37 }
-```
-
-These values are actively used by the eikonal solver during 3D Purkinje sweeps.
+The sweep specifications in this directory drive the protocol through the
+external orchestration add-on. `requestedDI90` is an input and `measuredDI90`
+is a result; the calibration table is indexed on the measured value.
 
 ## Typical use
 

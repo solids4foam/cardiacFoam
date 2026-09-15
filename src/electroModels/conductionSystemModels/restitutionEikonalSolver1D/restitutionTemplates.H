@@ -31,29 +31,25 @@ namespace Foam
 namespace restitutionTemplates
 {
 
-static const int purkinjeSize = 6;
+static const int purkinjeSize = 7;
 
-// APD nominal [s]: steady-state APD90 from Stewart 2009.
-static const scalar purkinjeAPDnominal    = 0.290;
+// Conditioned APD90 [s], subtracted from the activation interval to give DI.
+static const scalar purkinjeAPDnominal    = 0.303037;
 
-// Escape interval [s]: spontaneous If firing period (funny current).
-static const scalar purkinjeEscapeInterval = 1.1;
+// Automaticity cycle [s] for a node that receives no activation.
+static const scalar purkinjeEscapeInterval = 1.202470;
 
-// DI axis [s]. The lower bound 0.330 is the measured edge of capture: in the
-// S1-S2 protocol, premature beats below this DI fell inside the absolute
-// refractory period and failed to propagate. With the default apdNominal it
-// gives minBeatInterval (ERP) = 0.290 + 0.330 = 0.620 s.
+// Capture boundary [s]: minimum DI at which a node accepts an activation.
+static const scalar purkinjeMinimumDI90   = 0.050;
+
+// Measured DI90 [s] at which each CV below was recorded.
 static const scalar purkinjeDI[] = {
-    0.330, 0.350, 0.400, 0.450, 0.500, 0.700
+    0.06224, 0.07185, 0.08164, 0.09151, 0.10143, 0.20116, 0.40106
 };
 
-// CV [m/s]: calibrated output of the S1-S2 protocol documented in
-// tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
-// Purkinje_S1_S2_Calibration.md (Stewart model, conductivity 2.3 S/m giving a
-// resting CV of 3.03 m/s against a 3.0 m/s target; five S1 beats at BCL 1000 ms,
-// checkpointed at 4.25 s, one S2 branch per DI).
+// Conduction velocity [m/s] at each DI90; clamped outside the table range.
 static const scalar purkinjeCV[] = {
-    2.03, 2.43, 2.95, 3.18, 3.29, 3.37
+    1.4042, 1.7999, 2.1521, 2.3423, 2.4992, 3.1542, 3.3280
 };
 
 static const label numPurkinjeVmSamples = 1000;

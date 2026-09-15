@@ -261,7 +261,6 @@ void conductionSystemDomain::readRootStimulus(const dictionary& dict)
     }
 
     Info<< "Purkinje root stimulus: node=" << rootNode_
-        << ", firings=" << rootStartTimes_.size()
         << ", startTimes=" << rootStartTimes_
         << ", duration=" << rootDuration_
         << ", intensity=" << rootIntensity_ << nl << endl;
@@ -325,6 +324,7 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 
     terminalCurrent_.setSize(terminalNodes_.size(), 0.0);
     terminalSource_.setSize(terminalNodes_.size(), 0.0);
+    terminalActivationObservations_.setSize(terminalNodes_.size(), -1.0);
 
     if (ionicModelPtr_.valid())
     {
@@ -598,6 +598,9 @@ void conductionSystemDomain::preProcess()
 void conductionSystemDomain::advance(scalar t0, scalar dt)
 {
     solverPtr_->advance(*this, t0, dt);
+
+    // Consumed by the solver above; cleared for the next coupling phase.
+    terminalActivationObservations_ = -1.0;
 }
 
 
@@ -681,37 +684,21 @@ void conductionSystemDomain::terminalActivationTime(scalarField& values) const
 }
 
 
-void conductionSystemDomain::setTerminalActivationTime(const scalarField& values)
+void conductionSystemDomain::setTerminalActivationObservations
+(
+    const scalarField& values
+)
 {
     if (values.size() != terminalNodes_.size())
     {
         FatalErrorInFunction
             << "Expected " << terminalNodes_.size()
-            << " terminal activation values but received "
+            << " terminal activation observations but received "
             << values.size()
             << exit(FatalError);
     }
 
-    const bool acceptsRepeated =
-        solverPtr_->acceptsRepeatedTerminalActivationTimes();
-
-    forAll(terminalNodes_, i)
-    {
-        if (values[i] >= 0.0)
-        {
-            const label nodeI = terminalNodes_[i];
-
-            if
-            (
-                activationTime_[nodeI] < 0.0
-             || values[i] < activationTime_[nodeI]
-             || (acceptsRepeated && values[i] > activationTime_[nodeI] + SMALL)
-            )
-            {
-                activationTime_[nodeI] = values[i];
-            }
-        }
-    }
+    terminalActivationObservations_ = values;
 }
 
 

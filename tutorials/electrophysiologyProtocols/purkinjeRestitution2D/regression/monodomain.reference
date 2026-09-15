@@ -1,0 +1,14 @@
+# file                 time    col  expected          tolerance
+# purkinjeNetwork.dat columns: $1 time, $2..$4 junction 2, 3, 4 IcouplingSource [A/m3],
+# $5.. node0.. Vm [V].
+# Root stimulated at 0.01 s: depolarised shortly after.
+purkinjeNetwork.dat    0.015   5    0.0241431534      1e-6
+# Root stimulated again at 0.3 s, during recovery from the first beat.
+purkinjeNetwork.dat    0.305   5   -0.0626353566      1e-6
+purkinjeNetwork.dat    0.305   7   -0.0758957031      1e-6
+purkinjeNetwork.dat    0.305   9   -0.0709806861      1e-6
+# Junction current into the tissue.
+purkinjeNetwork.dat    0.305   2   -6061.66840        5
+purkinjeNetwork.dat    0.305   4   -6218.71886        5
+purkinjeNetwork.dat    0.320   2   -1030.32570        5
+purkinjeNetwork.dat    0.320   4   -1506.76841        5

@@ -3,27 +3,29 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # ============================================================
-# Idealized heart injection regression test
+# purkinjeRestitution2D regression test
 # ============================================================
 #
-# Confirms the stimulus/Purkinje-to-myocardium injection is correct across
-# all three solver variants: probes activationTime at a
-# Purkinje-myocardial-junction site on the LV free wall (node 211 in the
-# shared purkinjeGraph). This is the same point conductionBlock's lbbb
-# regression checks stays un-activated (severed LV subtree) - here it must
-# have activated, in every variant.
-#
-# Each variant has its own reference because each reaches the probe
-# differently: monodomain activates it at 19.4ms, hybrid's eikonal-1D
-# Purkinje to 3D monodomain coupling at 31.3ms, and eikonal solves a single
-# steady problem that writes only time 1. The sample time in each reference
-# reflects that; the expected values were measured, not chosen.
+# Runs each variant in parallel and compares postProcessing/purkinjeNetwork.dat
+# against regression/<variant>.reference (rows: file time column expected
+# tolerance). The monodomain variant also runs the graph-only runPurkinjeGraph
+# utility and checks it against regression/monodomain.graphUtility.reference.
 
-VARIANTS=(monodomain eikonal hybrid)
+VARIANTS=(antegrade retrograde monodomain)
 ALLRUN_LOGFILE="log.Allrun"
+GRAPH_LOGFILE="log.runPurkinjeGraph"
+
+# macOS strips DYLD_LIBRARY_PATH from child processes; runPurkinjeGraph is
+# called directly rather than through RunFunctions.
+if [[ "$(uname -s)" == "Darwin" && -n "${WM_PROJECT_DIR:-}" && -n "${WM_OPTIONS:-}" ]]; then
+    openfoamLibDir="${WM_PROJECT_DIR}/platforms/${WM_OPTIONS}/lib"
+    if [[ -d "${openfoamLibDir}" ]]; then
+        export DYLD_LIBRARY_PATH="${openfoamLibDir}:${DYLD_LIBRARY_PATH:-}"
+    fi
+fi
 
 echo "============================================================"
-echo "Idealized heart injection regression test"
+echo "purkinjeRestitution2D regression test"
 echo "============================================================"
 echo
 
@@ -42,12 +44,12 @@ dumpLogTail()
     fi
 }
 
-# Compare one reference file's rows against this variant's output.
+# Compare one reference file's rows against postProcessing/.
 # Echoes PASS/FAIL per row; returns the number of failures.
 checkReference()
 {
     local refFile="$1"
-    local variantFailures=0
+    local failures=0
 
     while IFS=' ' read -r fileName time column expected tolerance; do
         if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
@@ -57,7 +59,7 @@ checkReference()
         local dataFile="postProcessing/${fileName}"
         if [[ ! -f "${dataFile}" ]]; then
             echo "FAIL: missing output file ${dataFile}"
-            variantFailures=$((variantFailures + 1))
+            failures=$((failures + 1))
             continue
         fi
 
@@ -75,7 +77,7 @@ checkReference()
                     }
                 }
                 END {
-                    if (found && bestDiff <= 2.5e-3) {
+                    if (found && bestDiff <= 1e-6) {
                         print actual;
                         exit 0;
                     }
@@ -86,7 +88,7 @@ checkReference()
 
         if [[ -z "${actual}" ]]; then
             echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
-            variantFailures=$((variantFailures + 1))
+            failures=$((failures + 1))
             continue
         fi
 
@@ -96,41 +98,34 @@ checkReference()
                 'BEGIN { d = a - e; if (d < 0) d = -d; print d; }'
         )"
 
-        if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d < t)}'; then
-            printf "PASS: %s col=%s t=%s activationTime=%.7g (difference = %.3g)\n" \
+        if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d <= t)}'; then
+            printf "PASS: %s col=%s t=%s value=%.9g (difference = %.3g)\n" \
                 "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
         else
-            printf "FAIL: %s col=%s t=%s activationTime=%.7g (difference = %.3g)\n" \
-                "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
-            variantFailures=$((variantFailures + 1))
+            printf "FAIL: %s col=%s t=%s value=%.9g expected=%.9g (difference = %.3g)\n" \
+                "${dataFile}" "${column}" "${time}" "${actual}" "${expected}" "${diffAbs}"
+            failures=$((failures + 1))
         fi
     done < "${refFile}"
 
-    return "${variantFailures}"
+    return "${failures}"
 }
 
 failures=0
 failedVariants=()
 
 for variant in "${VARIANTS[@]}"; do
-    refFile="regression/injection.${variant}.reference"
+    refFile="regression/${variant}.reference"
 
     echo "------------------------------------------------------------"
     echo "Variant: ${variant}"
     echo "------------------------------------------------------------"
 
-    if [[ ! -f "${refFile}" ]]; then
-        echo "FAIL: reference file not found: ${refFile}"
-        failures=$((failures + 1))
-        failedVariants+=("${variant}")
-        echo
-        continue
-    fi
-
     ./Allclean > /dev/null 2>&1 || true
 
-    if ! ./Allrun "${variant}" parallel > "${ALLRUN_LOGFILE}" 2>&1; then
-        echo "FAIL: Allrun ${variant} parallel exited non-zero. Surfacing logs:"
+    if ! ./Allrun "${variant}" parallel > "${ALLRUN_LOGFILE}" 2>&1 \
+        || ! grep -q "^End" log.cardiacFoam; then
+        echo "FAIL: Allrun ${variant} parallel did not complete. Surfacing logs:"
         dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
         dumpLogTail "cardiacFoam" "log.cardiacFoam"
         failures=$((failures + 1))
@@ -141,6 +136,21 @@ for variant in "${VARIANTS[@]}"; do
 
     variantFailures=0
     checkReference "${refFile}" || variantFailures=$?
+
+    if [[ "${variant}" == "monodomain" ]]; then
+        rm -rf postProcessing
+        if runPurkinjeGraph -case . -conductionDomain purkinjeNetwork \
+            > "${GRAPH_LOGFILE}" 2>&1; then
+            graphFailures=0
+            checkReference "regression/monodomain.graphUtility.reference" \
+                || graphFailures=$?
+            variantFailures=$((variantFailures + graphFailures))
+        else
+            echo "FAIL: runPurkinjeGraph exited non-zero."
+            dumpLogTail "runPurkinjeGraph" "${GRAPH_LOGFILE}"
+            variantFailures=$((variantFailures + 1))
+        fi
+    fi
 
     if (( variantFailures > 0 )); then
         failures=$((failures + variantFailures))

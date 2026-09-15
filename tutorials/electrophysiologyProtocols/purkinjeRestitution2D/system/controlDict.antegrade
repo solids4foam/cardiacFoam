@@ -8,25 +8,25 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      decomposeParDict;
+    location    "system";
+    object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-numberOfSubdomains  6;
-
-method          scotch;
-
-scotchCoeffs
-{
-    //processorWeights
-    //(
-    //    1
-    //    1
-    //    1
-    //    1
-    //);
-    //writeGraph  true;
-    //strategy "b";
-}
+application     cardiacFoam;
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         2.45;
+deltaT          5e-05;
+writeControl    runTime;
+writeInterval   0.05;
+purgeWrite      0;
+writeFormat     ascii;
+writePrecision  6;
+writeCompression off;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable false;
 
 // ************************************************************************* //
