@@ -272,9 +272,11 @@ label rootNodeFromFields
 
     if (rootNode == -1)
     {
-        rootNode = 0;
-        Info<< "No nodeRole root marker was found. Using node 0 as root."
-            << nl;
+        FatalErrorInFunction
+            << "No root marker was found: expected a point field named "
+            << "'NodeType' with value 0, or 'nodeRole'/'node_role'/'role' "
+            << "with value 1, marking exactly one root node."
+            << exit(FatalError);
     }
 
     return rootNode;
