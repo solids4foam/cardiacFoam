@@ -31,10 +31,6 @@ Description
 Usage
     \b vtkUnstructuredToFoam \<XXX.vtk\>
 
-    Options:
-      - \par -no-fields
-        Do not attempt to recreate volFields
-
 Note
     The .vtk format does not contain any boundary information.
     It is purely a description of the internal mesh. This also limits the
@@ -115,13 +111,10 @@ int main(int argc, char *argv[])
     );
 
     argList::noParallel();
-    argList::addOptionCompat("no-fields", {"noFields", 2106});
     argList::addArgument("vtk-file", "The input legacy ascii vtk file");
 
     #include "setRootCase.H"
     #include "createTime.H"
-
-    const bool doFields = !args.found("no-fields");
 
     IFstream mshStream(args.get<fileName>(1));
 
@@ -154,7 +147,6 @@ int main(int argc, char *argv[])
     mesh.write();
 
 
-    if (doFields)
     {
         // Re-read mesh as fvMesh so we can have fields
         Info<< "Re-reading mesh ..." << endl;

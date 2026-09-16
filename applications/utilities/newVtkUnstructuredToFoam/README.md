@@ -10,8 +10,6 @@ and the imported fields in the current time directory (`0/` by default).
 newVtkUnstructuredToFoam myMesh.vtk -case ./myCase
 ```
 
-Pass `-no-fields` to import mesh topology only without reading CELL_DATA.
-
 ## Complete post-import workflow
 
 After import, two manual steps are always required before running cardiacFoam:
