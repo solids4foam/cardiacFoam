@@ -56,6 +56,9 @@ protected:
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
 
+    //- Latest tissue activation seen at each terminal at the previous observation.
+    scalarField lastObservedTissueActivation_;
+
     static networkCouplingEndpoint& requireTerminalNetworkDomain
     (
         electroDomainInterface& secondaryDomain
@@ -73,6 +76,9 @@ protected:
     );
 
     void clearTerminalCouplingBuffers() const;
+
+    //- Deposit tissue activations at the terminals that are newer than the previous observation.
+    void observeTerminalActivations();
 };
 
 } // End namespace Foam

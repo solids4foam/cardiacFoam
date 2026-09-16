@@ -257,21 +257,25 @@ scalar stimulusIO::computeStimulus
         const label k = label(floor(tp / stim_period_S1 + 0.5));
         const scalar phase = tp - k * stim_period_S1;
 
-        if (k >= 0 && k <= nstim1 && phase >= 0 && phase <= stim_duration)
+        if (k >= 0 && k < nstim1 && phase >= 0 && phase <= stim_duration)
         {
             Istim = -stim_amplitude;
         }
     }
 
     // ---------- S2 ----------
+    // S2 pulses follow the last S1 pulse at multiples of stim_period_S2.
     if (Istim == 0.0 && stim_period_S2 > 0.0 && nstim2 > 0)
     {
-        const scalar tS1End = stim_start + stim_period_S1 * nstim1;
-        const scalar tp = VOI - tS1End;
+        const scalar tAnchor =
+            nstim1 > 0
+          ? stim_start + stim_period_S1*(nstim1 - 1)
+          : stim_start - stim_period_S2;
+        const scalar tp = VOI - tAnchor;
         const label k = label(floor(tp / stim_period_S2 + 0.5));
         const scalar phase = tp - k * stim_period_S2;
 
-        if (k >= 0 && k <= nstim2 && phase >= 0 && phase <= stim_duration)
+        if (k >= 1 && k <= nstim2 && phase >= 0 && phase <= stim_duration)
         {
             Istim = -stim_amplitude;
         }

@@ -15,7 +15,8 @@ electrophysiologyProtocols/
 ├── cableProtocol/               1D conduction-velocity calibration
 │   ├── monodomain1DCableCV/
 │   └── eikonal1DCableCV/
-└── rotorInstability/            sustained re-entry / spiral-wave check
+├── rotorInstability/            sustained re-entry / spiral-wave check
+└── purkinjeRestitution2D/       multi-beat Purkinje network coupled to a 2D slab
 ```
 
 ## `singleCell/`
@@ -55,6 +56,13 @@ A 2D slab workflow that initiates and sustains re-entrant spiral waves
 scheme can sustain self-perpetuating re-entry without spuriously damping or
 blowing up.
 
+## `purkinjeRestitution2D/`
+
+A small Purkinje tree coupled to a 2D monodomain slab, paced over several
+beats. Checks the network's escape rhythm, capture and block at short
+coupling intervals, retrograde activation from the tissue, and the
+reaction-diffusion network coupling in parallel.
+
 ## Pre-checking tissue types and pathologies
 
 `singleCell` and `ionicHeterogeneity` share a role: confirm the typical
@@ -67,6 +75,7 @@ table, not a regression gate (see its README's `tworldVsGaur` study).
 
 ## Regression
 
-`singleCell`, `ionicHeterogeneity`, and `rotorInstability` are wired into
+`singleCell`, `ionicHeterogeneity`, `rotorInstability` and
+`purkinjeRestitution2D` are wired into
 `tutorials/Alltest-regression`; see `../README.md` for the full canonical
 table and coverage status of the rest.

@@ -42,6 +42,9 @@ class eikonalMonodomainPvjCoupler
     mutable scalarField terminalActivationBuffer_;
     scalarField R_pvj_;
 
+    //- Tissue resting potential minus the template resting potential [V].
+    scalar vmTemplateOffset_;
+
 public:
 
     OverrideTypeName("eikonalMonodomainPvjCoupler");

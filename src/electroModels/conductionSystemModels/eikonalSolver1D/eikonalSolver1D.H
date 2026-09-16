@@ -45,6 +45,7 @@ class eikonalSolver1D
     public conductionSystemSolver
 {
     dimensionedScalar purkinjeCV_;        //- conduction velocity [m/s]
+    bool warnedRootStartTimes_;           //- extra rootStimulus entries already reported
 
 public:
 

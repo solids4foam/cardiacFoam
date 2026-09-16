@@ -25,8 +25,8 @@ Description
       beatInterval < minBeatInterval   — refractory / relative refractory (block)
       beatInterval >= minBeatInterval  — excitable, activated by incoming wave
       beatInterval >= escapeInterval   — spontaneous firing (funny current)
-    minBeatInterval = apdNominal + minDI. CV is looked up as a function of
-    DI = beatInterval - apdNominal. Reports breakdown indicators. Multi-beat
+    minBeatInterval = apdNominal + minimumDI90. CV is looked up from the
+    receiving node's DI = beatInterval - apdNominal. Reports breakdown indicators. Multi-beat
     history is not tracked separately: activationTime (owned by
     conductionSystemDomain) is a single evolving field overwritten at each
     activation, and the write-time series across output directories is the
@@ -44,7 +44,6 @@ SourceFiles
 
 #include "conductionSystemSolver.H"
 #include "restitutionModel.H"
-#include "stimulusIO.H"
 #include "fvMesh.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
@@ -77,11 +76,9 @@ class restitutionEikonalSolver1D
     labelList   wavebreakCount_;
     scalarField minDI_;
 
-    labelList        stimSites_;
-    StimulusProtocol stimProtocol_;
-
     scalar  apdNominal_;        //- constant APD [s] (dict: apdNominal)
-    scalar  minBeatInterval_;   //- apdNominal + minDI: minimum beat-to-beat interval [s]
+    scalar  minimumDI90_;       //- calibrated capture boundary [s] (dict: minimumDI90)
+    scalar  minBeatInterval_;   //- apdNominal + minimumDI90: minimum activation interval [s]
     scalar  escapeInterval_;    //- spontaneous firing beat-to-beat interval [s] (dict: escapeInterval)
     scalar  tStart_;            //- simulation start time [s]
 
@@ -112,11 +109,6 @@ public:
         scalar t0,
         scalar dt
     ) override;
-
-    virtual bool acceptsRepeatedTerminalActivationTimes() const override
-    {
-        return true;
-    }
 
     virtual bool writesGraphVm() const override
     {

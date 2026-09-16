@@ -56,7 +56,16 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
             restitutionTemplates::purkinjeAPDnominal
         )
     ),
-    minBeatInterval_(apdNominal_ + restitutionPtr_->diMin()),
+    minimumDI90_
+    (
+        solverCoeffs.lookupOrDefault<scalar>
+        (
+            "minimumDI90",
+            restitutionTemplates::purkinjeMinimumDI90
+        )
+    ),
+    // Capture boundary, calibrated independently of the CV table domain.
+    minBeatInterval_(apdNominal_ + minimumDI90_),
     escapeInterval_
     (
         solverCoeffs.lookupOrDefault<scalar>
@@ -78,10 +87,10 @@ Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 {
     if (solverCoeffs.found("stimulus"))
     {
-        const dictionary& sDict = solverCoeffs.subDict("stimulus");
-
-        stimSites_ = sDict.get<labelList>("sites");
-        stimProtocol_ = stimulusIO::loadStimulusProtocol(sDict);
+        FatalIOErrorInFunction(solverCoeffs)
+            << "restitutionEikonalSolver1D does not read a 'stimulus' "
+            << "sub-dictionary; drive the network with rootStimulus."
+            << exit(FatalIOError);
     }
 }
 
@@ -141,13 +150,14 @@ void Foam::restitutionEikonalSolver1D::importExternalActivations
     const scalar tNow
 )
 {
-    scalarField& Tact = domain.activationTime();
+    // Observations become candidate events; the cascade is the only writer of activationTime().
     const labelList& terminalNodes = domain.terminalNodes();
+    const scalarField& observed = domain.terminalActivationObservations();
 
     forAll(terminalNodes, i)
     {
         const label nodeI = terminalNodes[i];
-        const scalar incomingTime = Tact[nodeI];
+        const scalar incomingTime = observed[i];
         const scalar lastActTime = lastActTime_[nodeI];
 
         // Negative activation times mean "not yet activated" for this graph
@@ -162,7 +172,6 @@ void Foam::restitutionEikonalSolver1D::importExternalActivations
             continue;
         }
 
-        Tact[nodeI] = lastActTime < 0.0 ? -1.0 : lastActTime;
 
         if (incomingTime > tNow)
         {
@@ -227,18 +236,31 @@ void Foam::restitutionEikonalSolver1D::advance
         }
     }
 
-    if (stimulusIO::computeStimulus(tNow, stimProtocol_) != 0)
+    // rootStimulus start times inside (t0, tNow] become candidate root activations.
     {
-        forAll(stimSites_, s)
-        {
-            const label site = stimSites_[s];
-            const scalar beatInterval =
-                lastActTime_[site] < 0 ? GREAT : tNow - lastActTime_[site];
+        const label root = domain.rootNode();
+        const scalarList& rootStartTimes = domain.rootStartTimes();
 
-            if (beatInterval >= minBeatInterval_ && tNow < nextTact_[site])
+        forAll(rootStartTimes, beatI)
+        {
+            const scalar tFire = rootStartTimes[beatI];
+
+            if (tFire <= t0 || tFire > tNow)
             {
-                nextTact_[site] = tNow;
-                nextTactSource_[site] = -1;
+                continue;
+            }
+
+            const scalar beatInterval =
+                lastActTime_[root] < 0 ? GREAT : tFire - lastActTime_[root];
+
+            if (beatInterval < minBeatInterval_)
+            {
+                ++blockCount_[root];
+            }
+            else if (tFire < nextTact_[root])
+            {
+                nextTact_[root] = tFire;
+                nextTactSource_[root] = -1;
             }
         }
     }

@@ -19,6 +19,7 @@ License
 
 #include "eikonalMonodomainPvjCoupler.H"
 #include "restitutionTemplates.H"
+#include "ionicModel.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -42,7 +43,8 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
 :
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     terminalActivationBuffer_(),
-    R_pvj_()
+    R_pvj_(),
+    vmTemplateOffset_(0.0)
 {
     if (dict.found("rPvj"))
     {
@@ -54,6 +56,27 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
             << "Missing rPvj in domainCouplings dictionary for "
             << "eikonalMonodomainPvjCoupler" << exit(FatalError);
     }
+
+    const ionicModel* tissueModel = primaryDomain.ionicModelPtr();
+    if (!tissueModel)
+    {
+        FatalErrorInFunction
+            << "eikonalMonodomainPvjCoupler requires a tissue domain with an "
+            << "ionic model" << exit(FatalError);
+    }
+
+    // Resting potential from ranks that hold tissue cells.
+    const PtrList<scalarField>* tissueStates = tissueModel->ioStatesPtr();
+    const bool hasCells =
+        tissueStates && !tissueStates->empty() && !(*tissueStates)[0].empty();
+    scalar vmRestSum = hasCells ? tissueModel->vmRest() : 0.0;
+    label nRanksWithCells = hasCells ? 1 : 0;
+    reduce(vmRestSum, sumOp<scalar>());
+    reduce(nRanksWithCells, sumOp<label>());
+
+    vmTemplateOffset_ =
+        vmRestSum/max(nRanksWithCells, 1)
+      - restitutionTemplates::purkinjeVmValues[0]*1e-3;
 }
 
 
@@ -64,14 +87,7 @@ void eikonalMonodomainPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 
     if (couplingMode_ == bidirectional)
     {
-        scalarField observedTissueTimes;
-        mapper_.gatherActivationTimes
-        (
-            primaryDomain_.activationTime(),
-            observedTissueTimes
-        );
-
-        networkTerminalDomain_.setTerminalActivationTime(observedTissueTimes);
+        observeTerminalActivations();
     }
 
     clearTerminalCouplingBuffers();
@@ -94,7 +110,13 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     // Anterograde coupling using voltage template
     const label nTerminalNodes = networkTerminalDomain_.terminalNodes().size();
 
-    scalarField terminalVoltage(nTerminalNodes, restitutionTemplates::purkinjeVmValues[0] * 1e-3);
+    // Template shifted to the tissue resting potential, so a quiescent node
+    // drives no junction current and leaves the junction tissue at rest.
+    scalarField terminalVoltage
+    (
+        nTerminalNodes,
+        restitutionTemplates::purkinjeVmValues[0]*1e-3 + vmTemplateOffset_
+    );
     const scalar currentTime = mesh_.time().value();
 
     for (label i = 0; i < nTerminalNodes; ++i)
@@ -105,7 +127,9 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
         if (currentTime >= tact)
         {
             const scalar localTime = currentTime - tact;
-            terminalVoltage[i] = restitutionTemplates::evaluatePurkinjeVmTemplate(localTime) * 1e-3;
+            terminalVoltage[i] =
+                restitutionTemplates::evaluatePurkinjeVmTemplate(localTime)*1e-3
+              + vmTemplateOffset_;
         }
     }
 

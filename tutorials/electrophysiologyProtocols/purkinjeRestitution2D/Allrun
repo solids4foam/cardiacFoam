@@ -1,0 +1,35 @@
+#!/bin/bash
+
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+# Variants, all on the same slab and Purkinje graph:
+#   antegrade  (default) - restitutionEikonalSolver1D network paced at its root;
+#     escape beat, two captured beats at different DI, one blocked beat.
+#   retrograde - restitutionEikonalSolver1D network activated from the tissue
+#     through one junction, twice; the wave returns to the tissue at the others.
+#   monodomain - monodomain1DSolver network, reactionDiffusionPvjCoupler with
+#     implicit coupling and linear kernel, root paced twice.
+#   parallel   - decompose and run cardiacFoam in parallel.
+variant="antegrade"
+parallelRun=false
+for arg in "$@"; do
+    case "$arg" in
+        antegrade|retrograde|monodomain) variant="$arg" ;;
+        parallel)                        parallelRun=true ;;
+        *) echo "Unknown argument '$arg'. Use antegrade, retrograde, monodomain and/or parallel." ; exit 1 ;;
+    esac
+done
+
+ln -sf "electroProperties.$variant" constant/electroProperties
+ln -sf "controlDict.$variant" system/controlDict
+echo "Active variant: $variant"
+
+runApplication blockMesh
+
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi

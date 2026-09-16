@@ -205,7 +205,7 @@ Concrete implementations of `conductionSystemSolver`.
 |---|---|---|
 | `monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
 | `eikonalSolver1D` | `eikonalSolver1D` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
-| `restitutionEikonalSolver1D` | `restitutionEikonalSolver1D` | Re-excitable activation solver. Beat-to-beat interval logic per node with CV(DI) restitution and constant `apdNominal`; reports block, wavebreak, short-DI and minimum-DI diagnostics. See [conductionSystemModels/README.md](conductionSystemModels/README.md) |
+| `restitutionEikonalSolver1D` | `restitutionEikonalSolver1D` | Re-excitable activation solver. Per-node activation-interval logic with CV(DI) restitution; reports block, wavebreak, short-DI and minimum-DI diagnostics. A node re-activates when its activation interval reaches `apdNominal + minimumDI90`. `apdNominal` is a fixed duration subtracted from the activation interval, not a measured repolarization event and not an ERP; `minimumDI90` is the separately calibrated capture boundary and is deliberately independent of the CV table's lower endpoint. See [conductionSystemModels/README.md](conductionSystemModels/README.md) |
 
 **Cable equation (per edge):**
 
