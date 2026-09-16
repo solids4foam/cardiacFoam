@@ -284,7 +284,9 @@ inline Tuple2<Tuple2<scalar, scalar>, scalar> computeBoundaryBulkNorms
             << exit(FatalError);
     }
 
-    // Mark cells owning at least one real (non-empty) boundary face.
+    // Mark cells owning at least one physical boundary face. Empty and coupled
+    // (processor, cyclic) patches are excluded, so the split does not depend
+    // on the domain decomposition.
     const polyBoundaryMesh& bMesh = mesh.boundaryMesh();
     boolList isBoundaryCell(mesh.nCells(), false);
 
@@ -292,7 +294,7 @@ inline Tuple2<Tuple2<scalar, scalar>, scalar> computeBoundaryBulkNorms
     {
         const polyPatch& pp = bMesh[patchI];
 
-        if (pp.empty() || pp.type() == "empty")
+        if (pp.empty() || pp.type() == "empty" || pp.coupled())
         {
             continue;
         }
