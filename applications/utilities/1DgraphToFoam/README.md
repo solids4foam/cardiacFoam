@@ -1,7 +1,9 @@
 # 1DgraphToFoam
 
 Converts a legacy ASCII VTK graph made of `VTK_LINE`, `VTK_POLY_LINE`, or
-`POLYDATA LINES` into a Foam dictionary at `constant/purkinjeGraph`.
+`POLYDATA LINES` into a Foam dictionary at `constant/purkinjeGraph`. Every VTK
+line segment becomes one `conductionEdges` entry as-is; run `refine1Dgraph` on
+the VTK graph beforehand if edges need subdividing to a maximum length.
 
 Recommended VTK data layout:
 
@@ -21,7 +23,9 @@ Example:
 
 The output contains:
 
-- `rootNode`: from `POINT_DATA nodeRole == 1`, or node 0 if absent.
+- `rootNode`: from `POINT_DATA nodeRole == 1` (or `NodeType == 0`). If no root
+  marker is found, node 0 is used and an Info message is printed — the
+  dictionary always carries a `rootNode` entry.
 - `pvjNodes`: from `POINT_DATA nodeRole == 2`, or inferred as degree-one endpoints except the root.
 - `pvjLocations`: coordinates of `pvjNodes`, used by the PVJ mapper.
 - `conductionEdges`: solver-ready `(nodeA nodeB length conductance)` entries.
