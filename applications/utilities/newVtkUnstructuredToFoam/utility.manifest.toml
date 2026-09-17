@@ -8,8 +8,7 @@ Extended version of the standard vtkUnstructuredToFoam that additionally
 reads scalar, vector, and tensor CELL_DATA fields from the VTK file and
 reconstructs them as volFields on the imported fvMesh. The resulting mesh is
 written to constant/polyMesh with no boundary-patch information (all faces are
-assigned to a single default patch). Pass -no-fields to import only the mesh
-topology without attempting to reconstruct fields.
+assigned to a single default patch).
 
 IMPORTANT — two post-import steps are always required:
 
@@ -41,12 +40,6 @@ positional_args = [
 example = "newVtkUnstructuredToFoam myMesh.vtk -case ./myCase"
 
 category = "io-conversion"
-
-[[flags]]
-name = "-no-fields"
-description = "Skip reconstruction of volFields from VTK CELL_DATA."
-takes_value = false
-argument_kind = "switch"
 
 [[produces]]
 artifact_id = "vtk_imported_polymesh"
