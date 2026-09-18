@@ -1,0 +1,35 @@
+for (label level = 0; level < maxRefinementLevel + 1; level++)
+{
+    mesh.controlledUpdate();
+
+    if (mesh.changing())
+    {
+        MRF.update();
+
+        if (correctPhi)
+        {
+            // Calculate absolute flux
+            // from the mapped surface velocity
+            phi = mesh.Sf() & Uf();
+
+            #include "correctPhi.solver.H"
+
+            // Make the flux relative to the mesh motion
+            fvc::makeRelative(phi, U);
+        }
+
+        if (checkMeshCourantNo)
+        {
+            #include "meshCourantNo.H"
+        }
+
+        lambda *= 0.0;
+        HFDIBDEM.recreateBodies(lambda, refineF);
+    }
+}
+
+Ui.correctBoundaryConditions();
+lambda.correctBoundaryConditions();
+f.correctBoundaryConditions();
+refineF.correctBoundaryConditions();
+surface.correctBoundaryConditions();

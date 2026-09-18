@@ -43,7 +43,7 @@ Note
 #include "Time.H"
 #include "fvMesh.H"
 #include "IFstream.H"
-#include "vtkUnstructuredReader.H"
+#include "cardiacVtkUnstructuredReader.H"
 
 #include "columnFvMesh.H"
 #include "scalarIOField.H"
@@ -55,7 +55,7 @@ using namespace Foam;
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 template<class Type>
-void constructVolFields(fvMesh& mesh, const vtkUnstructuredReader& reader)
+void constructVolFields(fvMesh& mesh, const cardiacVtkUnstructuredReader& reader)
 {
     const auto fields(reader.cellData().csorted<IOField<Type>>());
     for (const auto& field : fields)
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 
     IFstream mshStream(args.get<fileName>(1));
 
-    vtkUnstructuredReader reader(runTime, mshStream);
+    cardiacVtkUnstructuredReader reader(runTime, mshStream);
 
     polyMesh mesh
     (

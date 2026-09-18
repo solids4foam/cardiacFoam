@@ -1,0 +1,25 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| OpenFOAM: blockMeshDict (OF8)                                              |
+\*---------------------------------------------------------------------------*/
+ FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      topoSetDict;
+}
+
+actions
+(
+    {
+        name    refineCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        sourceInfo
+        {
+            box (0 0 -1) (22 4.1 1);
+        }
+    }
+);

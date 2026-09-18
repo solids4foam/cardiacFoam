@@ -1,0 +1,36 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+|  \\    /   O peration     | Version:  8
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      dynamicMeshDict;
+}
+
+dynamicFvMesh   dynamicMotionSolverFvMesh;
+
+motionSolverLibs
+(
+    "libfvMotionSolvers.so"
+    "libprescribedSinusoidalMeshMotion.so"
+);
+
+solver          prescribedSinusoidalMeshMotion;
+
+prescribedSinusoidalMeshMotionCoeffs
+{
+    scaleFactor             0.15;
+    orthogonalMeshMotion    no;
+
+    xMin                    0.0;
+    xMax                    24.0;
+    yMin                    0.0;
+    yMax                    4.1;
+
+    period                  1;
+}

@@ -1,0 +1,132 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  8
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    // Pressure
+    p
+    {
+        solver              GAMG;
+        tolerance           1e-8;
+        relTol              0.05;
+
+        smoother            GaussSeidel;
+        nPreSweeps          0;
+        nPostSweeps         2;
+        nFinestSweeps       2;
+
+        cacheAgglomeration  yes;
+        nCellsInCoarsestLevel 20;
+        agglomerator        faceAreaPair;
+        mergeLevels         1;
+        updateInterval      2;
+    }
+
+    // Final pressure / pressure correction
+    "pFinal|pcorrFinal"
+    {
+        $p;
+        tolerance           1e-12;
+        relTol              0;
+    }
+
+    // Pressure correction during PIMPLE
+    "pcorr.*"
+    {
+        $p;
+        tolerance           0.02;
+        relTol              0;
+    }
+
+    // Momentum and possible turbulence fields (robust regex)
+    "(U|Ui|UFinal|k|epsilon|omega|R|nuTilda)"
+    {
+        solver              PBiCG;
+        preconditioner      DILU;
+        tolerance           1e-12;
+        relTol              0;
+    }
+
+    // Mesh motion solvers (kept for compatibility with HFDIB variants)
+    cellDisplacement
+    {
+        solver              PCG;
+        preconditioner      DIC;
+        tolerance           1e-8;
+        relTol              0;
+        minIter             3;
+    }
+
+    cellDisplacementFinal
+    {
+        $cellDisplacement;
+        relTol              0;
+    }
+
+    cellMotionUx
+    {
+        solver              PCG;
+        preconditioner      DIC;
+        tolerance           1e-8;
+        relTol              0;
+    }
+}
+
+PIMPLE
+{
+    // IMPORTANT: keep only one correctPhi (your old file had two)
+    correctPhi                 yes;
+
+    nOuterCorrectors           5;
+    nCorrectors                3;
+    nNonOrthogonalCorrectors   2;
+
+    // HFDIB-safe
+    moveMeshOuterCorrectors    false;
+    momentumPredictor          yes;
+
+    // Required for incompressible solvers
+    pRefCell                   0;
+    pRefValue                  0;
+
+    // residualControl
+    // {
+    //     p                      1e-4;
+    //     U                      1e-5;
+    //     "(k|epsilon|omega|nuTilda)" 1e-5;
+    // }
+}
+
+relaxationFactors
+{
+    equations
+    {
+        U                       0.7;
+    }
+    fields
+    {
+        p                       0.3;
+    }
+}
+
+// Cache gradients (good for performance & stability)
+cache
+{
+    grad(U);
+}
+
+// ************************************************************************* //

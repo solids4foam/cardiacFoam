@@ -1,0 +1,106 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       pointVectorField;
+    location    "0";
+    object      pointDisplacement;
+}
+
+dimensions      [0 1 0 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+
+    outlet
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+
+    bottomWall
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+
+    topWall
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+
+    rectBlock
+    {
+        type            codedFixedValue;
+        value           uniform (0 0 0);
+        name            deformingBody_customProfileBend_reference;
+
+        code
+        #{
+            const scalar Ax      = 0.4;
+            const scalar Ay      = 0.8;
+            const scalar period  = 1.0;
+            const scalar phase   = 0.0;
+            const scalar yMin    = 0.0;
+            const scalar yMax    = 2.0295;
+            const scalar xCenter = 12.0;
+
+            const scalar H       = yMax - yMin;
+            const scalar omega   = constant::mathematical::twoPi/period;
+            const scalar t       = this->db().time().value();
+            const scalar s       = Foam::sin(omega*t + phase);
+
+            vectorField& field = *this;
+            const pointField& pts = this->patch().localPoints();
+
+            // Store undeformed patch points once and reuse them
+            static bool refInitialised = false;
+            static pointField refPts;
+
+            if (!refInitialised || refPts.size() != pts.size())
+            {
+                refPts = pts;
+                refInitialised = true;
+            }
+
+            forAll(field, i)
+            {
+                const scalar X0 = refPts[i].x();
+                const scalar Y0 = refPts[i].y();
+
+                scalar xi = (Y0 - yMin)/H;
+                xi = max(0.0, min(1.0, xi));
+
+                // Quintic smoothstep:
+                // g(0)=0, g'(0)=0, g(1)=1, g'(1)=0
+                const scalar g =
+                      6.0*Foam::pow(xi, 5)
+                    - 15.0*Foam::pow(xi, 4)
+                    + 10.0*Foam::pow(xi, 3);
+
+                const scalar gp =
+                      30.0*Foam::pow(xi, 4)
+                    - 60.0*Foam::pow(xi, 3)
+                    + 30.0*Foam::sqr(xi);
+
+                const scalar dx = Ax*g*s;
+                const scalar dy = -(X0 - xCenter)*(Ay/H)*gp*s;
+
+                field[i] = vector(dx, dy, 0.0);
+            }
+        #};
+    }
+
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+}

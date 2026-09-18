@@ -1,0 +1,94 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  8
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           volVectorField;
+    object          U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [ 0 1 -1 0 0 0 0 ];
+
+internalField   uniform ( 1 0 0 );
+
+boundaryField
+{
+    inlet
+    {
+        type            codedFixedValue;
+        value           uniform ( 0 0 0 );
+        name            parabolicInlet;
+        codeInclude     #{
+            #include "fvCFD.H"
+        #};
+        codeOptions     #{
+            -I$(LIB_SRC)/OpenFOAM/lnInclude \
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};
+        codeLibs        #{
+            -lOpenFOAM \
+            -lfiniteVolume \
+            -lmeshTools
+        #};
+        code            #{
+            // Re=20, nu=0.05, D=1 -> Umean = Re*nu/D = 1.0
+            const scalar Umean = 1.0;
+
+            const vectorField& Cf = patch().Cf();
+            vectorField& Up = *this;
+
+            // Determine inlet y-range (global, parallel-safe)
+            scalar yMin = GREAT;
+            scalar yMax = -GREAT;
+
+            forAll(Cf, i)
+            {
+                const scalar y = Cf[i].y();
+                yMin = min(yMin, y);
+                yMax = max(yMax, y);
+            }
+
+            reduce(yMin, minOp<scalar>());
+            reduce(yMax, maxOp<scalar>());
+
+            const scalar H = yMax - yMin;
+
+            forAll(Up, i)
+            {
+                const scalar eta = Cf[i].y() - yMin;  // y - yB
+
+                // ux = (6U/H^2) * (eta*H - eta^2), uy=0
+                const scalar ux = (6.0*Umean/(H*H))*(eta*H - eta*eta);
+
+                Up[i] = vector(ux, 0.0, 0.0);
+            }
+        #};
+    }
+    outlet
+    {
+        type            zeroGradient;
+    }
+    bottomWall
+    {
+        type            noSlip;
+    }
+    topWall
+    {
+        type            noSlip;
+    }
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+}
+
+
+// ************************************************************************* //

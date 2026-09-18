@@ -1,4 +1,4 @@
-vtkUnstructuredReader.C
+cardiacVtkUnstructuredReader.C
 newVtkUnstructuredToFoam.C
 
 EXE = $(FOAM_USER_APPBIN)/newVtkUnstructuredToFoam

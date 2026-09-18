@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+|  \\    /   O peration     | Website:  https://openfoam.org
+|   \\  /    A nd           | Version:  8
+|    \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      topoSetDict;
+}
+
+actions
+(
+    // Refinement region around cylinder (uniform blob, not rings)
+    {
+        name    nearCyl;
+        type    cellSet;
+        action  new;
+        source  cylinderToCell;
+        sourceInfo
+        {
+            // Cylinder axis along z, centered at (0,0)
+            p1      (0 0 -0.261725);
+            p2      (0 0  0.261725);
+
+            // Tune radius as needed; start a bit larger than cylinder radius
+            radius  1.2;
+        }
+    }
+
+    // Wake refinement strip downstream (box)
+    {
+        name    wake;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        sourceInfo
+        {
+            // You can move x-min slightly: 0.0 starts right behind cylinder
+            // Use -0.5 if you want a little upstream too.
+            box (0.0 -0.6 -0.261725) (12.0 0.6 0.261725);
+        }
+    }
+);
