@@ -88,7 +88,6 @@ driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studi
 
 driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json
 driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/odeToleranceControl/sweep_ode_tolerance.json
 driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json
 ```
 

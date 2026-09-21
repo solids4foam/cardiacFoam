@@ -5,7 +5,7 @@
     "setup_dir_name": "setup",
     "output_dir_name": "setup/studies/coupledConvergence/results/coupled1D3DConvergence_rpvj1e6",
     "electro_property_overrides": {
-      "rPvj": "1e6"
+      "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.rPvj": "1e6"
     }
   },
   "sweep": {

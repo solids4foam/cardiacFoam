@@ -1,5 +1,18 @@
 # gradientVerification - eikonalECG
 
+## Status (2026-09-17)
+
+Configured and ready to run (spec, mesh template, and aggregator all in
+place; see `../tetConvergence/box.geo.template` for the shared mesh
+convention this study also uses). Not rerun in this verification pass --
+it is a small, standalone gradient-operator check (isolated `gaussLinear`
+vs `leastSquares` comparison, not solver output), separate from the
+solver-dependent studies (`tetConvergence`, `errorLocalisation`,
+`nonlinearControl`, `cartesianConvergence`) that were rerun and verified
+this cycle. Left for the supervisor to decide whether it's worth running;
+its one existing case (`leastSquares_axis_40_errorField`, the
+`@tbl-eikonal-localisation` data) is unaffected either way.
+
 ## Purpose
 
 This study exercises the gradient reconstruction operator in isolation

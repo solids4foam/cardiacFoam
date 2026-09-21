@@ -5,7 +5,7 @@
     "setup_dir_name": "setup",
     "output_dir_name": "setup/studies/coupledConvergence/results/coupled1D3DConvergence_bidirectional",
     "electro_property_overrides": {
-      "couplingMode": "bidirectional"
+      "$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA.couplingMode": "bidirectional"
     }
   },
   "sweep": {

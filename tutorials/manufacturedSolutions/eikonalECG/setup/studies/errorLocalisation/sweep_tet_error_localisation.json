@@ -3,6 +3,7 @@
     "entry": "manufacturedEikonalECG",
     "case_dir_name": "manufacturedSolutions/eikonalECG",
     "setup_dir_name": "setup",
+    "cases_root": "tutorials",
     "dimensions": [
       "3D"
     ],
