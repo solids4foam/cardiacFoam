@@ -70,9 +70,7 @@ This table previously carried a `GoktepeKuhl` row at `1.0` with an open
 question about whether that was correct. It was not: the model's `eps`
 switch was parameterised in Göktepe & Kuhl's mV/ms units but evaluated on
 the normalised `u`, leaving it 100x slow with its switch effectively
-disabled. The model has been removed rather than repaired — see
-[`future/GOKTEPE_KUHL_REMOVAL.md`](../../future/GOKTEPE_KUHL_REMOVAL.md) for
-the analysis and for what to do differently if it is ever re-added.
+disabled. The model has been removed rather than repaired.
 
 ## Concrete models
 
