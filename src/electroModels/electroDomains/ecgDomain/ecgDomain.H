@@ -61,7 +61,7 @@ class ecgDomain
     word domainName_;
     word solverType_;
 
-    //- Output stream for pseudoECG.dat or bathECG.dat
+    //- Output stream for pseudoECG.dat, torsoECG.dat or eikonalECG.dat
     autoPtr<OFstream> outputPtr_;
     //- Runtime-selected ECG evaluation kernel
     autoPtr<ecgSolver> solverPtr_;
