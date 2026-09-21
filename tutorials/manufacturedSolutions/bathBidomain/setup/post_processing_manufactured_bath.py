@@ -35,10 +35,6 @@ ERROR_FIELDS = (
     *(f"{norm}_{name}" for name in FIELD_NAMES for norm in ("L1", "L2", "Linf")),
 )
 FILENAME_PATTERN = re.compile(r"bathBidomain_(\dD)_(\d+)_cells\.dat$")
-BATH_ECG_SUMMARY_PATTERN = re.compile(
-    r"BathECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_"
-    r"DT[^_]+_manufacturedBathECGSummary\.dat$"
-)
 DISABLE_PLOT_ENV_VAR = "BATH_BIDOMAIN_DISABLE_PLOTS"
 PLOT_DISABLED = os.environ.get(DISABLE_PLOT_ENV_VAR, "").strip().lower() in {
     "1",
@@ -127,10 +123,6 @@ def _load_expected_filenames(output_dir):
     return None
 
 
-def _load_expected_bath_ecg_summary_filenames(output_dir):
-    return None
-
-
 def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None):
     folder = Path(folder_name)
     if not folder.exists():
@@ -171,46 +163,6 @@ def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None
     return sorted(rows, key=lambda row: (row["Dimension"], row["N"]))
 
 
-def read_bath_ecg_summary_files(folder_name, expected_filenames: set[str] | None = None):
-    folder = Path(folder_name)
-    rows = []
-
-    files = sorted(folder.glob("BathECG_*_manufacturedBathECGSummary.dat"))
-    if expected_filenames is not None:
-        files = [path for path in files if path.name in expected_filenames]
-
-    for path in files:
-        match = BATH_ECG_SUMMARY_PATTERN.match(path.name)
-        if match is None:
-            print("Skipping unrecognized bath ECG summary filename:", path.name)
-            continue
-
-        metadata = {}
-        with path.open(encoding="utf-8", errors="ignore") as handle:
-            for raw in handle:
-                line = raw.strip()
-                if not line or line.startswith("Manufactured bath ECG summary"):
-                    continue
-                if line.startswith("Electrode "):
-                    break
-                key, _, value = line.partition(" ")
-                if key and value:
-                    metadata[key] = value.strip()
-
-        rows.append(
-            {
-                "Dimension": match.group("dimension"),
-                "N": int(match.group("cells")),
-                "samples": int(metadata.get("samples", "0")),
-                "field_L1": float(metadata.get("field_L1", "nan")),
-                "field_L2": float(metadata.get("field_L2", "nan")),
-                "field_Linf": float(metadata.get("field_Linf", "nan")),
-            }
-        )
-
-    return sorted(rows, key=lambda row: (row["Dimension"], row["N"]))
-
-
 def compute_convergence_rates(rows):
     grouped = {}
     for row in rows:
@@ -242,40 +194,6 @@ def compute_convergence_rates(rows):
                     )
                 row[f"rate_{field_name}"] = row[f"rate_Linf_{field_name}"]
             rate_rows.append(row)
-
-    return rate_rows
-
-
-def compute_bath_ecg_convergence_rates(rows):
-    grouped = {}
-    for row in rows:
-        grouped.setdefault(row["Dimension"], []).append(row)
-
-    rate_rows = []
-    for dimension, group_rows in sorted(grouped.items()):
-        ordered = sorted(group_rows, key=lambda row: row["N"])
-        for lower, higher in zip(ordered, ordered[1:]):
-            n1 = int(lower["N"])
-            n2 = int(higher["N"])
-            if n1 == n2:
-                continue
-            h1 = 1.0/n1
-            h2 = 1.0/n2
-            rate_rows.append(
-                {
-                    "Dimension": dimension,
-                    "N_lower": n1,
-                    "N_higher": n2,
-                    "rate_field_L1": _safe_rate(lower["field_L1"], higher["field_L1"], h1, h2),
-                    "rate_field_L2": _safe_rate(lower["field_L2"], higher["field_L2"], h1, h2),
-                    "rate_field_Linf": _safe_rate(
-                        lower["field_Linf"],
-                        higher["field_Linf"],
-                        h1,
-                        h2,
-                    ),
-                }
-            )
 
     return rate_rows
 
@@ -465,66 +383,6 @@ def _plot_convergence_rates(rows, destination: Path) -> Path | None:
     return destination
 
 
-def _plot_bath_ecg_errors(rows, destination: Path) -> Path | None:
-    if not _has_matplotlib() or not rows:
-        return None
-
-    configure_matplotlib_defaults()
-    grouped = {}
-    for row in rows:
-        grouped.setdefault(row["Dimension"], []).append(row)
-
-    fig, axis = plt.subplots(figsize=(8, 5))
-    for dimension, group_rows in sorted(grouped.items()):
-        ordered = sorted(group_rows, key=lambda item: item["N"])
-        ns, errors = _positive_xy(
-            [int(item["N"]) for item in ordered],
-            [item["field_Linf"] for item in ordered],
-        )
-        if not ns:
-            continue
-        axis.loglog(
-            ns,
-            errors,
-            marker="o",
-            label=f"{dimension}",
-        )
-    axis.set_xlabel("N")
-    axis.set_ylabel("Bath-domain phiE Linf error")
-    axis.set_title("Bath-domain phiE manufactured error")
-    axis.grid(True, which="both", alpha=0.25)
-    axis.legend()
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    finalize_matplotlib_figure(fig, save_path=destination, show=False, close=True)
-    return destination
-
-
-def _plot_bath_ecg_convergence_rates(rows, destination: Path) -> Path | None:
-    if not _has_matplotlib() or not rows:
-        return None
-
-    configure_matplotlib_defaults()
-    labels = [
-        f"{row['Dimension']} {row['N_lower']}-{row['N_higher']}"
-        for row in rows
-    ]
-    x_positions = range(len(labels))
-    fig, axis = plt.subplots(figsize=(max(8, len(labels)*1.4), 5))
-    values = [row.get("rate_field_Linf", float("nan")) for row in rows]
-    axis.bar(x_positions, values, width=0.55, label="phiE")
-    axis.axhline(1.0, color="0.35", linewidth=0.8, linestyle="--")
-    axis.axhline(2.0, color="0.35", linewidth=0.8, linestyle=":")
-    axis.set_xticks(list(x_positions))
-    axis.set_xticklabels(labels, rotation=30, ha="right")
-    axis.set_ylabel("Observed rate")
-    axis.set_title("Bath-domain phiE observed convergence rates")
-    axis.grid(True, axis="y", alpha=0.25)
-    axis.legend()
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    finalize_matplotlib_figure(fig, save_path=destination, show=False, close=True)
-    return destination
-
-
 def plot_vm_across_dimensions(
     rows,
     *,
@@ -675,74 +533,6 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
             print(
                 "Bath-bidomain plots disabled; unset "
                 f"{DISABLE_PLOT_ENV_VAR} to export PNG plots."
-            )
-
-    bath_ecg_rows = read_bath_ecg_summary_files(
-        output_path,
-        expected_filenames=_load_expected_bath_ecg_summary_filenames(output_path),
-    )
-    if bath_ecg_rows:
-        bath_ecg_csv = output_path / "bath_ecg_errors.csv"
-        _write_csv(
-            bath_ecg_rows,
-            bath_ecg_csv,
-            ("Dimension", "N", "samples", "field_L1", "field_L2", "field_Linf"),
-        )
-        bath_ecg_rate_rows = compute_bath_ecg_convergence_rates(bath_ecg_rows)
-        bath_ecg_rates_csv = output_path / "bath_ecg_convergence_rates.csv"
-        _write_csv(
-            bath_ecg_rate_rows,
-            bath_ecg_rates_csv,
-            (
-                "Dimension",
-                "N_lower",
-                "N_higher",
-                "rate_field_L1",
-                "rate_field_L2",
-                "rate_field_Linf",
-            ),
-        )
-        artifacts.extend(
-            [
-                {
-                    "path": str(bath_ecg_csv),
-                    "label": "Bath-domain phiE error table",
-                    "kind": "table",
-                    "format": "csv",
-                },
-                {
-                    "path": str(bath_ecg_rates_csv),
-                    "label": "Bath-domain phiE convergence rates table",
-                    "kind": "table",
-                    "format": "csv",
-                },
-            ]
-        )
-        bath_ecg_plot = _plot_bath_ecg_errors(
-            bath_ecg_rows,
-            output_path / "bath_ecg_phiE_errors.png",
-        )
-        bath_ecg_rate_plot = _plot_bath_ecg_convergence_rates(
-            bath_ecg_rate_rows,
-            output_path / "bath_ecg_phiE_convergence_rates.png",
-        )
-        if bath_ecg_plot is not None:
-            artifacts.append(
-                {
-                    "path": str(bath_ecg_plot),
-                    "label": "Bath-domain phiE errors",
-                    "kind": "plot",
-                    "format": "png",
-                }
-            )
-        if bath_ecg_rate_plot is not None:
-            artifacts.append(
-                {
-                    "path": str(bath_ecg_rate_plot),
-                    "label": "Bath-domain phiE convergence rates",
-                    "kind": "plot",
-                    "format": "png",
-                }
             )
 
     print("\nBath-bidomain convergence rates:")
