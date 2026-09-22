@@ -1,8 +1,13 @@
-// Unit-cube [0,1]^3 tetrahedral mesh for the monodomain manufactured MMS.
+// Unit-cube [0,1]^3 tetrahedral mesh, shared with the eikonal/bidomain tet
+// MMS (eikonalECG/setup/studies/tetConvergence/box.geo, bidomain/setup/studies/
+// tetConvergence/box.geo.template -- identical geometry/lc ladder, copied
+// here verbatim so all three solvers refine on the same mesh sequence).
 //
-// Frontal-Delaunay 3D generation (anatomically-oriented quality family),
-// with Netgen optimisation and extra smoothing passes. The characteristic
-// length placeholder __LC__ is substituted by render_tet_geo (lc = 1/N).
+// The characteristic length placeholder __LC__ is substituted by
+// render_tet_geo (lc = 1/N) to build a refinement ladder.
+//
+// The meshing settings below must stay identical in all three templates. With
+// gmsh 4.15.2 they give 4874 tetrahedra at N=10 and 37040 at N=20.
 
 SetFactory("OpenCASCADE");
 
@@ -15,8 +20,6 @@ Physical Surface("boundary") = {1, 2, 3, 4, 5, 6};
 
 Mesh.MeshSizeMin = lc;
 Mesh.MeshSizeMax = lc;
-Mesh.Algorithm3D = 4;      // Frontal: anatomically-oriented quality family
+Mesh.Algorithm3D = 1;      // Delaunay: near-uniform, isotropic tets
 Mesh.Optimize = 1;
 Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format
-Mesh.OptimizeNetgen = 1;
-Mesh.Smoothing = 100;

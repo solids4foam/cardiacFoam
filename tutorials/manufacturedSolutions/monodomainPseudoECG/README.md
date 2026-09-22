@@ -104,18 +104,7 @@ space--time paths.  Their mesh-fixed `dt/2` controls live in
 `setup/studies/tetTemporalControl/`; do not label a tet slope as purely spatial
 unless the control change is smaller than the accepted field-error separation.
 
-The finest fixed-grid temporal level of every dimensional ladder is repeated
-with tighter RKF45 tolerances in `setup/studies/odeToleranceControl/`.  This
-is required to attribute the measured complete-advance temporal response to
-the configured Lie--Godunov/PDE path rather than an inherited ODE default.
-
 The checked-in sweep JSON files are the source of truth for these studies.
-
-RKF45 tolerance control (one finest fixed-grid temporal case per dimension):
-
-```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/odeToleranceControl/sweep_ode_tolerance.json --output-dir .tmp/driverfoam/monodomainPseudoECG-ode-control
-```
 
 Tetrahedral mesh variant (example of running a study):
 

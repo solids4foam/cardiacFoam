@@ -16,9 +16,7 @@ driverFoam sweep-plan \
 
 The eight cases are fixed-mesh timestep ladders: four levels at `N=640` in
 both 1D and 2D. The configured `sbdf2` coupling and adaptive RKF45 baseline
-controls (`absTol=1e-10`, `relTol=1e-8`) are archived for every case. The
-companion `odeToleranceControl` study repeats the finest level of each ladder
-with tighter ODE tolerances.
+controls (`absTol=1e-10`, `relTol=1e-8`) are archived for every case.
 
 ## Tracking & Outputs
 

@@ -3,12 +3,12 @@
     "entry": "manufacturedEikonalECG",
     "case_dir_name": "manufacturedSolutions/eikonalECG",
     "setup_dir_name": "setup",
+    "cases_root": "tutorials",
     "dimensions": ["3D"],
     "solver_types": ["eikonal"],
     "mesh_family": "tet",
     "gradient_reconstruction": true,
     "postprocess_strict_artifacts": false,
-    "run_in_parallel": false,
     "archive_dir_name": "setup/studies/gradientVerification/results/sweepCases"
   },
   "sweep": {

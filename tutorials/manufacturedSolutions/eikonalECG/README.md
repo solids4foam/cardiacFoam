@@ -20,7 +20,7 @@ This case verifies:
   (no quadrature needed -- the manufactured solution is exact there)
 - the eikonal template ECG, `Vm(x,t) = U(t - psi(x))`, sampled internally and
   written to `postProcessing/eikonalECG.dat`, checked against a
-  Gauss-Legendre quadrature reference (`referenceQuadratureOrder = 96`) of
+  Gauss-Legendre quadrature reference (`referenceQuadratureOrder = 48`) of
   the manufactured volume integral
 
 ### Key Configuration
@@ -155,4 +155,4 @@ It is important to clarify how the errors are evaluated for the different fields
 
 1. **Activation Times ($\tau$)**: This error uses a direct, point-by-point comparison rather than quadrature integration. Because the manufactured activation time is a simple analytical function $\tau(x) = \exp(k \cdot x)$, it can be evaluated exactly at any point. To calculate the error, the solver performs a point-by-point comparison between the numerical activation time solved at each OpenFOAM mesh cell's center and the exact analytical mathematical formula evaluated at that identical cell center point.
 
-2. **The ECG Computation (Where Quadrature is Used)**: Unlike the activation time, the ECG signal is defined mathematically as a volume integral over the entire domain. To get the "exact" baseline reference to compare OpenFOAM against, we calculate the integral of the manufactured analytical gradient field. Because this specific multidimensional integral does not have a simple closed-form algebraic solution, the exact "analytical" reference integral is computed using a highly accurate Gauss-Legendre Quadrature (e.g. $q=96$), which integrates the continuous analytical function down to machine precision. The ECG error is the comparison between OpenFOAM's numerical mesh integration (which simply sums up the cell values $\times$ cell volumes) against this near-perfect reference integral computed using the Gauss-Legendre quadrature.
+2. **The ECG Computation (Where Quadrature is Used)**: Unlike the activation time, the ECG signal is defined mathematically as a volume integral over the entire domain. To get the "exact" baseline reference to compare OpenFOAM against, we calculate the integral of the manufactured analytical gradient field. Because this specific multidimensional integral does not have a simple closed-form algebraic solution, the exact "analytical" reference integral is computed using a highly accurate Gauss-Legendre Quadrature ($q=48$). The integrand is analytic on the cube; its only singularity is at the electrode, so convergence slows as an electrode approaches the surface. The ECG error is the comparison between OpenFOAM's numerical mesh integration (which simply sums up the cell values $\times$ cell volumes) against this near-perfect reference integral computed using the Gauss-Legendre quadrature.

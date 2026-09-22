@@ -17,11 +17,9 @@ driverFoam sweep-run \
     --output-dir .tmp/driverfoam/monodomain1D3D-active
 ```
 
-The `bidirectional` and `decoupled` specs currently fail before OpenFOAM because
-their overrides target `couplingMode` and `rPvj` without the current override
-scope. Those keys live under
-`monodomainSolverCoeffs.domainCouplings.couplingA`; fix that
-spec/dictionary contract before running those variants.
+The `bidirectional` and `decoupled` specs use fully scoped
+`$ELECTRO_MODEL_COEFFS.domainCouplings.couplingA` overrides so they remain
+valid if the active myocardium-solver coefficient dictionary is renamed.
 
 ## Tracking & Outputs
 
