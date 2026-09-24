@@ -93,7 +93,7 @@ Foam::Gaur::~Gaur()
 
 Foam::List<Foam::word> Foam::Gaur::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

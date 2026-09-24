@@ -113,7 +113,7 @@ Foam::Trovato::~Trovato()
 
 Foam::List<Foam::word> Foam::Trovato::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

@@ -25,13 +25,8 @@ or if APD envelope checks fail (when enabled and `failOnAPDEnvelope` is true).
 
 ## Heterogeneity Modes
 
-The utility supports two heterogeneity modes via the `ionicHeterogeneity.mode`
-dictionary key:
-
-- **`transmuralBands`** (default): Uses fixed endo / M-cell / epi zones with
-  configurable interfaces. Reference points are set via the probe dictionary
-  keys `endoReferenceT`, `mCellReferenceT`, `epiReferenceT` (or via
-  `endoMInterface` and `mEpiInterface` in the heterogeneity dictionary).
+The utility requires the `ionicHeterogeneity.mode` dictionary key to be set
+explicitly (there is no default), and only supports `namedRegions`:
 
 - **`namedRegions`**: Uses an open, user-defined list of named field regions
   specified in `ionicHeterogeneity.regions`. Reference point defaults are
@@ -59,12 +54,12 @@ Optional `constant/ionicHeterogeneityProbe` dictionary keys:
 | `checkSecondaryRise` | false | Enable secondary-rise check |
 | `maxAPDJump` | 20.0 | Max APD difference (ms) between adjacent samples |
 | `maxWaveformRMS` | 10.0 | Max waveform RMS (mV) between adjacent samples |
-| `checkAPDEnvelope` | true | Check that each sample's APDs lie within the endo–M–epi envelope |
+| `checkAPDEnvelope` | true | Check that each sample's APDs lie between the APDs of the two neighbouring region references |
 | `failOnAPDEnvelope` | true | Return exit code 1 on envelope violation |
 | `maxAPDBoundTolerance` | 5.0 | Tolerance (ms) for the envelope bound check |
-| `endoReferenceT` | 0.0 | Transmural coordinate of the endocardial reference |
-| `mCellReferenceT` | midpoint | Transmural coordinate of the M-cell reference (midpoint between endo and epi interfaces) |
-| `epiReferenceT` | 1.0 | Transmural coordinate of the epicardial reference |
+
+Envelope references come from the declared `regions`: the outer edge of the
+first and last regions and the midpoint of every interior region.
 
 A `singleCellStimulus` sub-dictionary can also be provided to override the
 stimulus protocol for the probe run.

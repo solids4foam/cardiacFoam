@@ -396,7 +396,7 @@ public:
 
         //- Configure region-based heterogeneity through
         //  ionicHeterogeneityOrchestrator.
-        void configureTransmuralBandHeterogeneity
+        void configureRegionHeterogeneity
         (
             const scalarField& transmuralDistance,
             const dictionary& heterogeneityDict,
