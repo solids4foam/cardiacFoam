@@ -63,7 +63,7 @@ cutoff destabilizes `eikonal`'s gradient-dependent advection term, and the
 smooth transition is the more physiologically realistic choice for
 `monodomain`/`hybrid` anyway).
 
-`monodomain`'s `ionicHeterogeneity` additionally composes a `gradientAxes.apicobasal`
+`monodomain`'s and `hybrid`'s `ionicHeterogeneity` additionally compose a `gradientAxes.apicobasal`
 axis for an apex-to-base APD gradient: `apicobasal` is used directly
 as the distance field (0=apex, 1=base, already this mesh's convention),
 and `variables (tauSi)` scales the Bueno-Orovio-Cherry-Fenton model's
@@ -72,7 +72,10 @@ primary APD-determining time constant. `scalingMin 0.97;`/`scalingMax
 the ~20ms apex-to-base gradient commonly reported in the literature —
 shorter APD at the apex, longer at the base. `eikonal` has no ionic
 model to scale a constant in (activation-time-only solve), so this
-doesn't apply there; not yet ported to `hybrid`.
+doesn't apply there. In `hybrid` it shifts the regression probe's
+activation by <0.001ms and only softens the T wave (still inverted in
+V2-V6 over a 0.5s beat): the ~20ms gradient is small against the ~70ms
+activation spread.
 
 ## Purkinje conduction network
 

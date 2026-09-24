@@ -44,7 +44,7 @@ Every model also comes as a GPU-ready batched version: `AlievPanfilovcompactBatc
 
 ### Cell types
 
-`TNNP`, `BuenoOrovio`, `ToRORd_dynCl` and `TWorld` carry their own endocardial, mid-myocardial and epicardial constants. The other eight accept those labels as well, but their equations hold one cell type, so a label there only picks which `ionicConstantOverrides` scope applies: without overrides every region gets identical cells. In batched form only the same four support the three cell types; the other eight run `myocyte` cells only. Cell types can vary across the tissue, by transmural bands, named regions or mesh cell zones, with an optional gradient on top.
+`TNNP`, `BuenoOrovio`, `ToRORd_dynCl` and `TWorld` carry their own endocardial, mid-myocardial and epicardial constants. The other eight hold one cell type and support only `myocyte`, scalar and batched alike: heterogeneity there means regions with `baseline myocyte;` plus per-region `ionicConstantOverrides`, since without overrides every region gets identical cells. Cell types can vary across the tissue by named regions (`namedRegions`, from a scalar field) or mesh cell zones (`cellZoneRegions`), with an optional gradient on top.
 
 ### Verification models
 

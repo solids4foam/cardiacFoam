@@ -40,7 +40,7 @@ monodomainSolverCoeffs
             epicardialCells  { range (0.7 1); }
         }
 
-        // Apex-to-base APD gradient (composes with the transmural bands
+        // Apex-to-base APD gradient (composes with the named regions
         // above): APD shorter at the apex, longer at the base, matching the
         // consistently reported direction in the literature (e.g. Opthof
         // et al., J Cardiovasc Electrophysiol; Sengupta et al., Circulation
