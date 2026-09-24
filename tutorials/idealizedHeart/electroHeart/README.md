@@ -89,6 +89,44 @@ endocardial point to the basal-septal AHA segments (`{2,3}` for LV, `21`
 for RV). `electroProperties.*`'s `conductionNetworkDomains.purkinjeNetwork`
 reads it via `graphFile purkinjeGraph;`, root node 0.
 
+All three variants conduct along the tree at ~3.3 m/s: `hybrid`'s
+`restitutionEikonalSolver1D` at its calibrated restitution maximum (3.33
+m/s), `eikonal`'s `eikonalSolver1D` via `purkinjeCV 3.33`, and
+`monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` (measured
+3.16 m/s at 0.35 and 5.8 m/s at 1.5; the former 10.0 gave ~8.7 m/s).
+
+Two trees are available, chosen by `Allrun`'s `human`/`pig` argument and
+both copied in as `constant/purkinjeGraph`, so no dictionary changes:
+
+| tree | source file | terminals | PVJs (LV/RV) | PVJs inside the wall |
+|---|---|---|---|---|
+| `human` (default) | `../mesh/constant/purkinjeGraph` | all on the endocardium | 1142 (387/755) | 1% |
+| `pig` | `../mesh/constant/purkinjeGraphPig` | transmural insertion | 920 (360/560) | 83% |
+
+The pig tree uses the same His, LV and RV seeds and growth parameters; only
+the terminals differ. LV terminals are chosen by `terminalSelectionModel
+weightedField` from the Garcia-Bustos subendocardial/intramural weights
+`setPurkinjeMorphometry` writes (122 subendocardial, 238 intramural), RV
+keeps `allLeaves`, and both march into the wall (`terminalModel transmural`,
+`gradientFollow` to a random depth in 0.25-0.4 of wall thickness); 3 of 560
+RV marches leave the mesh. 46 PVJs on the basal rim sit up to 0.5 mm past
+the open base plane.
+
+Each junction's current is spread over the tissue within `pvjRadius` of it,
+so the radius is the smallest the mesh allows at every junction of both
+trees (`1.65e-3`; the coarsest junction cell, mid-wall on the pig tree, is
+1.60 mm across). A junction is physiologically a point contact, and a larger
+sphere dilutes the current: at the former `2.5e-3` only 26% of the pig
+tree's intramural junctions captured the tissue within 40 ms under
+`hybrid`. At `1.65e-3` every junction of both trees captures; at `rPvj 1000`
+intramural junctions capture after ~11 ms against ~5 ms at the surface, so
+the pig tree activates slightly more slowly than the human tree (99% of the
+myocardium by 76 vs 74 ms under `hybrid`), and faster below `rPvj` 300
+(`untracked_development/idealizedHeart/pvjCouplingSweep`).
+"Inside the wall" counts PVJs deeper than 0.15 of the wall thickness. The
+generation record is `cases/idealizedBivEllipsoidPig` in
+cardiacCoreStandalone.
+
 ## ECG electrodes
 
 `ecgDomains.ECG.electrodePositions` are placed by angle around the LV long
@@ -129,12 +167,17 @@ nonlinear scheme, only marginally stable — it needs both of:
 ./Allrun eikonal
 ./Allrun hybrid
 ./Allrun monodomain parallel
+./Allrun hybrid pig   # any variant on the pig Purkinje tree
 ```
+
+The regression runs every variant on both trees (`regression/injection.<variant>.reference`
+for human, `injection.<variant>.pig.reference` for pig).
 
 `constant/electroProperties` and `system/controlDict` are symlinks to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant (same
 pattern `pathos/conductionBlock` uses for its own variants).
-`controlDict` differs per variant because `hybrid`'s coupling needs ~100ms
-of simulated time before activation shows (`monodomain` completes within
-20ms; `eikonal` overrides its own time control internally regardless of
-`controlDict`, per `eikonalMyocardiumDomain::applyModelTimeControls`).
+`controlDict` differs per variant but all share `endTime 0.04`: the
+regression probe activates at 28.8 ms (`monodomain`) and 30.3 ms (`hybrid`)
+on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
+own time control internally regardless of `controlDict`, per
+`eikonalMyocardiumDomain::applyModelTimeControls`.

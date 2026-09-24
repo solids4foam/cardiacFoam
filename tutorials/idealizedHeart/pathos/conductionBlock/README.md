@@ -17,6 +17,11 @@ same case, selected at run time; no default — see Execution below.
 `constant/electroProperties` itself never changes between variants — it
 always reads `graphFile purkinjeGraph;`. Only the graph file differs.
 
+Purkinje conduction and junction coupling follow `../../electroHeart`:
+`purkinjeConductivity 0.4` (~3.3 m/s along the tree, the hybrid variant's
+calibrated Purkinje velocity) and `pvjRadius 1.65e-3`, the smallest junction
+radius valid on the shared mesh.
+
 ## Mesh and shared anatomy fields
 
 Shared with `electroHeart`/`electroMechHeart`/

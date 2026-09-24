@@ -120,7 +120,9 @@ monodomainSolverCoeffs
             electroDomainCoupler    eikonalMonodomainPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
             rPvj                    1000;
-            pvjRadius               2.5e-3;
+            // Smallest radius valid at every junction of both Purkinje trees:
+            // the coarsest junction cell (pig tree, mid-wall) is 1.60 mm across.
+            pvjRadius               1.65e-3;
             couplingMode            unidirectional;
             debugCoupling           true;
         }
