@@ -248,6 +248,7 @@ spatial mesh via smooth or sharp transitions, or via named mesh regions.
 
 `mode` is required whenever `ionicHeterogeneity` configures region-based
 heterogeneity; there is no default.
+
 - `gradientAxes`: optional dict of named exponential-scaling overlay axes (e.g. `apicobasal`); each composes multiplicatively on top of the transmural blend
 
 See `ionicHeterogeneity.H` and `ionicHeterogeneityOrchestrator.H` for implementation details.
