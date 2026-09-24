@@ -7,8 +7,9 @@ This study validates spatial convergence on unstructured tetrahedral meshes usin
 It meshes the unit cube with `box.geo.template`, the Delaunay tetrahedral box
 whose meshing settings the bidomain and eikonalECG tet studies share: four
 resolutions for each of the axis-aligned/rotated conductivity tensors and
-Gauss--linear/least-squares gradient reconstructions.  The pseudo-ECG verifier is enabled at every level
-with the same reference quadrature as the Cartesian sweep.
+Gauss--linear/least-squares gradient reconstructions. The pseudo-ECG verifier
+is enabled at every level with the same reference quadrature as the Cartesian
+sweep.
 
 ## Execution
 
