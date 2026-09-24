@@ -1009,6 +1009,15 @@ namespace Foam
     }
 
 
+    Foam::word Foam::ionicModelIO::exportFieldName(const word& name)
+    {
+        return
+            ionicVariableCompatibility::isVmLikeName(name)
+          ? word("VmIonic")
+          : name;
+    }
+
+
     const Foam::wordList& Foam::ionicModelIO::exportedFieldNamesRef
     (
         const wordList& userList,
