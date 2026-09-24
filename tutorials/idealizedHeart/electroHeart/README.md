@@ -91,9 +91,17 @@ reads it via `graphFile purkinjeGraph;`, root node 0.
 
 ## ECG electrodes
 
-`ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
-reference heart's validated V1-V6 placement — a normalized approximation.
-24-46mm from the epicardium, comparable to the reference case's own spread.
+`ecgDomains.ECG.electrodePositions` are placed by angle around the LV long
+axis in omnidriver's LV frame (`compute_lv_frame`: `L` apex-to-base, `S` LV
+centre to RV centre, anterior `A = L x S`, here `-z`): V1..V6 at 35, 65, 100,
+135, 170, 205 deg from `S` toward `A`, each at its original apex-base height
+and 25mm from the nearest tissue. V1 thus faces the anterior RV free wall
+(which spans about +-54 deg) and V6 the LV lateral wall. The earlier
+reference-frame transfer from a real heart put V1 at 75 deg, past the RV:
+this z-symmetric anatomy has no posterior QRS component, so that V1 read a
+positive QRS with no R-wave progression. With this placement the hybrid
+variant gives V1 rS, V2 RS, V3-V6 R. The mesh is mirror-symmetric in `z`, so
+the choice of `-z` as anterior is the frame's convention, not anatomy.
 All three variants share the same positions.
 
 ## The `eikonal` variant's numerical stability
