@@ -226,8 +226,9 @@ void Foam::electrophysiologyModel::setVmFromRestartState()
     }
     Vm.correctBoundaryConditions();
 
-    Info<< "Vm set from the " << ionicModelPtr_->type() << " restart state"
-        << endl;
+    Info<< "Vm set from the " << ionicModelPtr_->type() << " restart state: "
+        << gMin(Vm.primitiveField()) << " .. " << gMax(Vm.primitiveField())
+        << " V" << endl;
 }
 
 
