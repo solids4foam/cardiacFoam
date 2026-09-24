@@ -80,7 +80,8 @@ Primary 3D cardiac region. Selects concrete solvers via `myocardiumDomainInterfa
 
 **`myocardiumDomain`**
 
-- Inherits: `electroDomainInterface`, `tissueCouplingEndpoint`, `electroStateProvider`
+- Inherits: `electroDomainInterface`, `electroVolumeFieldDomain`,
+  `tissueCouplingEndpoint`, `electroStateProvider`
 - Owns: `autoPtr<myocardiumSolver>`, `ionicModel&`
 
 - Fields: `Vm_` (transmembrane voltage), `sourceField_` (external current injection)
@@ -93,7 +94,9 @@ Primary 3D cardiac region. Selects concrete solvers via `myocardiumDomainInterfa
 
 - Inherits: `myocardiumDomainInterface`
 
-- Owns: activation-time state (`psi`) and the 3D eikonal transport fields
+- Owns: activation-time state (`activationTime_`, exposed via `activationTime()`,
+  `activationTimeField()` and `activationTimePtr()`) and the 3D eikonal transport
+  fields
 
 - Does not require an ionic model
 
@@ -113,7 +116,7 @@ The body-surface region. Solves a purely passive Laplace/Poisson equation driven
 
 **`ecgDomain`**
 
-- Inherits: `electroDomainInterface`
+- Inherits: `electroDomainInterface`, `electroStateProvider`
 
 - Holds: `const electroStateProvider& stateProvider_` — reference to the upstream myocardium
 
@@ -178,8 +181,8 @@ Cm * ∂Vm/∂t + Iion = ∇·(σ∇Vm)/χ + Istim
 
 ```
 
-Cm * ∂Vm/∂t + Iion = ∇·(σᵢ∇Vm)/χ − ∇·(σₑ∇φₑ)/χ + Istim
-0 = ∇·(σᵢ∇Vm) + ∇·(σₑ∇φₑ)   [Laplace equation for φₑ]
+Cm * ∂Vm/∂t + Iion = ∇·(σᵢ∇(Vm + φₑ))/χ + Istim
+∇·(σᵢ∇Vm) + ∇·((σᵢ+σₑ)∇φₑ) = 0   [elliptic equation for φₑ]
 
 ```
 
@@ -193,7 +196,13 @@ Concrete implementations of `ecgSolver`.
 |---|---|---|---|
 | `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
 | `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
-| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - psi(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+
+`eikonalTemplateGenerator.C/H` and `tissueTemplates.H`, beside `eikonalECG`,
+build those single-cell templates: pacing a single-cell ionic model to
+steady state, capturing its action potential after a chosen stimulus (S1),
+and synthesizing the endo/mid/epi (or manufactured) templates `eikonalECG`
+samples from.
 
 ---
 
@@ -204,7 +213,7 @@ Concrete implementations of `conductionSystemSolver`.
 | Class | Type name | Method |
 |---|---|---|
 | `monodomain1DSolver` | `monodomain1DSolver` | Implicit backward-Euler cable equation + ionic ODE [default] |
-| `eikonalSolver1D` | `eikonalSolver1D` | Eikonal fast-marching on graph — activation times only; single param `c0` [m/s] |
+| `eikonalSolver1D` | `eikonalSolver1D` | Dijkstra shortest-path on graph — activation times only; single param `c0` [m/s] |
 | `restitutionEikonalSolver1D` | `restitutionEikonalSolver1D` | Re-excitable activation solver. Per-node activation-interval logic with CV(DI) restitution; reports block, wavebreak, short-DI and minimum-DI diagnostics. A node re-activates when its activation interval reaches `apdNominal + minimumDI90`. `apdNominal` is a fixed duration subtracted from the activation interval, not a measured repolarization event and not an ERP; `minimumDI90` is the separately calibrated capture boundary and is deliberately independent of the CV table's lower endpoint. See [conductionSystemModels/README.md](conductionSystemModels/README.md) |
 
 **Cable equation (per edge):**
@@ -218,7 +227,11 @@ where G = conductance/length
 
 `monodomain1DSolver` uses the Hines tree-elimination algorithm — O(n). Requires tree topology.
 
-`eikonalSolver1D` uses a single BFS pass: `activationTime[child] = activationTime[parent] + edgeLength / c0`.
+`eikonalSolver1D` runs Dijkstra's algorithm (a `std::priority_queue` min-heap) over
+the graph, seeded simultaneously from every pre-activated node — root stimuli and
+any tissue-observed PVJ activations — relaxing
+`activationTime[neighbor] = min(current, activationTime[node] + edgeLength / c0)`
+at each step.
 
 ---
 
@@ -325,9 +338,11 @@ monodomainSolverCoeffs
 
 electroDomainInterface
     ├── myocardiumDomainInterface + electroStateProvider + tissueCouplingEndpoint
-    │     ├── myocardiumDomain
+    │     ├── myocardiumDomain (+ electroVolumeFieldDomain)
     │     └── eikonalMyocardiumDomain
-    ├── ecgDomain
+    ├── ecgDomain + electroStateProvider
+    ├── electroStateDomain + electroStateProvider
+    │     └── extracellularPotentialDomain
     └── conductionSystemDomain + networkCouplingEndpoint
 
 myocardiumSolver
@@ -335,8 +350,10 @@ myocardiumSolver
     └── bidomainSolver        (owns local phiE; may bind global phiE)
 
 electroStateProvider
-    ← implemented by: myocardiumDomain
-    ← consumed by:    ecgDomain, electrophysicsSystemBuilder
+    ← implemented by: myocardiumDomain, ecgDomain, extracellularPotentialDomain
+                       (via electroStateDomain)
+    ← consumed by:    electrophysicsSystemBuilder (ECG domains read
+                       myocardium state through this interface)
 
 ElectromechanicalSignalProvider  (from couplingModels/)
     ← implemented by: ionicModel

@@ -25,7 +25,7 @@ src/activeTensionModels/
 └── <Name>Batched/        # the batched version of each model
 ```
 
-**Deep dive:** [ACTIVE_TENSION_MODELS_ARCHITECTURE.md](ACTIVE_TENSION_MODELS_ARCHITECTURE.md) explains how this library is built inside.
+**Deep dive:** [ARCHITECTURE.md](ARCHITECTURE.md) explains how this library is built inside.
 
 ## What this does not own
 
