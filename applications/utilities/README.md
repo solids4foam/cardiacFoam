@@ -1,6 +1,6 @@
 # Utilities
 
-Thirteen tools for preparing a case before `cardiacFoam` runs, and for inspecting it afterwards.
+Fourteen tools for preparing a case before `cardiacFoam` runs, and for inspecting it afterwards.
 
 ```mermaid
 flowchart TB
@@ -15,6 +15,7 @@ flowchart TB
         LV["listCellModelsVariables"]
         HP["ionicHeterogeneityProbe"]
         SW["sweepCurrents"]
+        SI["setIonicRestartState<br/><i>seed per-region ionic states</i>"]
     end
     subgraph MECH["Mechanics only: f0 and f0f"]
         SF["setFibreField<br/><i>computes f0 and writes f0f</i>"]
@@ -54,6 +55,7 @@ flowchart TB
 | fix the dimensions recorded in a field file | `setFieldDimensions` | [README](setFieldDimensions/README.md) |
 | see which variables a cell model exposes | `listCellModelsVariables` | [README](listCellModelsVariables/README.md) |
 | check heterogeneity weights before a tissue run | `ionicHeterogeneityProbe` | [README](ionicHeterogeneityProbe/README.md) |
+| start a tissue run from converged single-cell ionic states | `setIonicRestartState` | [README](setIonicRestartState/README.md) |
 | sweep a cell model's currents | `sweepCurrents` | [README](sweepCurrents/README.md) |
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |
@@ -79,6 +81,7 @@ When you add or rename a utility, update its `Make/files`, the two tables on thi
 | Advance one configured Purkinje graph domain | `runPurkinjeGraph` | full + lightweight; serial | maintained C++ | Standalone graph evolution omits myocardium coupling currents | [README](runPurkinjeGraph/README.md) |
 | Create myocardial fibre/sheet fields | `setFibreField` | full + lightweight; utility-defined parallel behavior | maintained C++ | Field equivalence depends on mesh, patches, and method settings | [README](setFibreField/README.md) |
 | Set field dimensions in an existing field file | `setFieldDimensions` | full + lightweight; serial | maintained C++ | Changes dimensions metadata, not field values | [README](setFieldDimensions/README.md) |
+| Seed per-cell ionic restart states from single-cell states per region | `setIonicRestartState` | full + lightweight; serial and parallel | maintained C++ | Seeds ionic states only; active-tension and mechanics states are not written | [README](setIonicRestartState/README.md) |
 | Assign torso-organ conductivity fields | `setTorsoOrganConductivityField` | full + lightweight; serial | maintained C++ | Result depends on input labels and conductivity dictionary | [README](setTorsoOrganConductivityField/README.md) |
 | Diagnose manufactured bath-bidomain interface fluxes | `bathBidomainInterfaceMetrics` | full + lightweight; serial/reconstructed | maintained C++ | One-sided fluxes depend on the configured gradient scheme | [README](bathBidomainInterfaceMetrics/README.md) |
 | Sweep configured ionic-model currents | `sweepCurrents` | full + lightweight; serial | maintained C++ and generated model metadata consumer | A sweep is not equivalent to a spatial solver trajectory | [README](sweepCurrents/README.md) |
