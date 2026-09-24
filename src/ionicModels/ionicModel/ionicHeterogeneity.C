@@ -26,61 +26,6 @@ License
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void Foam::ionicHeterogeneity::validateTransmuralBandConfig
-(
-    const scalar endoMInterface,
-    const scalar mEpiInterface,
-    const scalar transitionWidth,
-    const word& smoothing,
-    const word& transitionMode
-)
-{
-    if (transitionMode != "blend" && transitionMode != "hard")
-    {
-        FatalErrorInFunction
-            << "Unsupported ionicHeterogeneity transitionMode '"
-            << transitionMode
-            << "'. Supported transitionMode values: blend, hard."
-            << exit(FatalError);
-    }
-
-    if (smoothing != "smoothstep")
-    {
-        FatalErrorInFunction
-            << "Unsupported ionicHeterogeneity smoothing '" << smoothing
-            << "'. Supported smoothing: smoothstep."
-            << exit(FatalError);
-    }
-
-    if
-    (
-        endoMInterface <= 0.0
-     || mEpiInterface >= 1.0
-     || endoMInterface >= mEpiInterface
-     || transitionWidth < 0.0
-     || (
-            transitionMode == "blend"
-         && (
-                endoMInterface + transitionWidth > mEpiInterface + SMALL
-             || mEpiInterface + transitionWidth > 1.0 + SMALL
-            )
-        )
-    )
-    {
-        FatalErrorInFunction
-            << "Invalid transmuralBands configuration: "
-            << "endoMInterface=" << endoMInterface
-            << ", mEpiInterface=" << mEpiInterface
-            << ", transitionWidth=" << transitionWidth
-            << ", transitionMode=" << transitionMode
-            << ". Expected 0 < endoMInterface < mEpiInterface < 1 "
-            << "and, for transitionMode blend, non-overlapping "
-            << "transition bands."
-            << exit(FatalError);
-    }
-}
-
-
 void Foam::ionicHeterogeneity::validateGradientAxisConfig
 (
     const word& axisName,
@@ -130,63 +75,6 @@ Foam::scalar Foam::ionicHeterogeneity::smoothingWeight
 }
 
 
-Foam::ionicHeterogeneity::TransmuralBandWeights
-Foam::ionicHeterogeneity::transmuralBandWeights
-(
-    const scalar t,
-    const scalar endoMInterface,
-    const scalar mEpiInterface,
-    const scalar transitionWidth,
-    const word& smoothing,
-    const word& transitionMode
-)
-{
-    if (transitionMode == "hard" || transitionWidth <= SMALL)
-    {
-        if (t <= endoMInterface)
-        {
-            return {1.0, 0.0, 0.0};
-        }
-
-        if (t <= mEpiInterface)
-        {
-            return {0.0, 1.0, 0.0};
-        }
-
-        return {0.0, 0.0, 1.0};
-    }
-
-    const scalar endoMUpper = endoMInterface + transitionWidth;
-    const scalar mEpiUpper = mEpiInterface + transitionWidth;
-
-    if (t <= endoMInterface)
-    {
-        return {1.0, 0.0, 0.0};
-    }
-
-    if (t < endoMUpper)
-    {
-        const scalar x = (t - endoMInterface)/transitionWidth;
-        const scalar w = smoothingWeight(x, smoothing);
-        return {1.0 - w, w, 0.0};
-    }
-
-    if (t <= mEpiInterface)
-    {
-        return {0.0, 1.0, 0.0};
-    }
-
-    if (t < mEpiUpper)
-    {
-        const scalar x = (t - mEpiInterface)/transitionWidth;
-        const scalar w = smoothingWeight(x, smoothing);
-        return {0.0, 1.0 - w, w};
-    }
-
-    return {0.0, 0.0, 1.0};
-}
-
-
 Foam::scalar Foam::ionicHeterogeneity::apexBaseScale
 (
     const scalar d,
@@ -196,34 +84,6 @@ Foam::scalar Foam::ionicHeterogeneity::apexBaseScale
 )
 {
     return scalingMin*(1.0 + (scalingMax/scalingMin - 1.0)*std::exp(-beta*d));
-}
-
-
-Foam::List<Foam::ionicHeterogeneity::NamedFieldRegion>
-Foam::ionicHeterogeneity::synthesizeTransmuralBandRegions
-(
-    const scalar endoMInterface,
-    const scalar mEpiInterface
-)
-{
-    List<NamedFieldRegion> regions(3);
-
-    regions[0].name = "endocardialCells";
-    regions[0].rangeMin = 0.0;
-    regions[0].rangeMax = endoMInterface;
-    regions[0].baseline = "endocardialCells";
-
-    regions[1].name = "mCells";
-    regions[1].rangeMin = endoMInterface;
-    regions[1].rangeMax = mEpiInterface;
-    regions[1].baseline = "mCells";
-
-    regions[2].name = "epicardialCells";
-    regions[2].rangeMin = mEpiInterface;
-    regions[2].rangeMax = 1.0;
-    regions[2].baseline = "epicardialCells";
-
-    return regions;
 }
 
 
@@ -283,10 +143,21 @@ Foam::ionicHeterogeneity::parseNamedFieldRegions
             "epicardialCells", "mCells", "endocardialCells"
         };
 
+        if (!regionDict.found("baseline") && !anatomicalNames.found(regionName))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << " has no 'baseline' entry. Only the anatomical region "
+                << "names epicardialCells, mCells, endocardialCells default "
+                << "their baseline to themselves; any other region name "
+                << "must declare 'baseline <word>;' explicitly."
+                << exit(FatalError);
+        }
+
         const word baseline = regionDict.lookupOrDefault<word>
         (
             "baseline",
-            anatomicalNames.found(regionName) ? regionName : word("myocyte")
+            regionName
         );
 
         if (!anatomicalNames.found(baseline) && baseline != "myocyte")
@@ -421,10 +292,21 @@ Foam::ionicHeterogeneity::parseNamedCellZoneRegions
             "epicardialCells", "mCells", "endocardialCells"
         };
 
+        if (!regionDict.found("baseline") && !anatomicalNames.found(regionName))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity.regions." << regionName
+                << " has no 'baseline' entry. Only the anatomical region "
+                << "names epicardialCells, mCells, endocardialCells default "
+                << "their baseline to themselves; any other region name "
+                << "must declare 'baseline <word>;' explicitly."
+                << exit(FatalError);
+        }
+
         const word baseline = regionDict.lookupOrDefault<word>
         (
             "baseline",
-            anatomicalNames.found(regionName) ? regionName : word("myocyte")
+            regionName
         );
 
         if (!anatomicalNames.found(baseline) && baseline != "myocyte")

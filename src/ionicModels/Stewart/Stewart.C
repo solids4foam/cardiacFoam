@@ -113,7 +113,7 @@ Foam::Stewart::~Stewart()
 
 Foam::List<Foam::word> Foam::Stewart::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

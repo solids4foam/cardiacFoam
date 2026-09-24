@@ -27,9 +27,10 @@ Shared with `electroHeart`/`electroMechHeart`/
 
 ## Tissue heterogeneity
 
-`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into
-`endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`,
-`mEpiInterface 0.7`) from `field t;`, `system/setExprFieldsDict`'s
+`monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies
+cells into `endocardialCells`/`mCells`/`epicardialCells` regions
+(`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from `field t;`,
+`system/setExprFieldsDict`'s
 `t = 1 - tm` (`tm`: 0 at epicardium, 1 at endocardium — the opposite
 orientation `ionicHeterogeneity` requires).
 

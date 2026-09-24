@@ -50,16 +50,18 @@ and never read it.
 ## Tissue heterogeneity
 
 `*SolverCoeffs.ionicHeterogeneity` classifies cells into
-`endocardialCells`/`mCells`/`epicardialCells` bands from a scalar field
-that must be 0 at the endocardium and 1 at the epicardium — the
-opposite of this mesh's `tm` convention. `system/setExprFieldsDict`
-derives `t = 1 - tm` (run by `Allrun` via `setExprFields`, after
-preloading `tm` with `readFields`), and `ionicHeterogeneity` reads
-`field t;` with the standard thresholds `endoMInterface 0.3;` /
-`mEpiInterface 0.7;` and a smooth `transitionWidth 0.1;`/`transitionMode
-blend;` (all three variants — a hard cutoff destabilizes `eikonal`'s
-gradient-dependent advection term, and the smooth transition is the more
-physiologically realistic choice for `monodomain`/`hybrid` anyway).
+`endocardialCells`/`mCells`/`epicardialCells` regions (`mode namedRegions;`)
+from a scalar field that must be 0 at the endocardium and 1 at the
+epicardium — the opposite of this mesh's `tm` convention.
+`system/setExprFieldsDict` derives `t = 1 - tm` (run by `Allrun` via
+`setExprFields`, after preloading `tm` with `readFields`), and
+`ionicHeterogeneity` reads `field t;` with `regions` tiling `[0,1]` at the
+standard thresholds `endocardialCells { range (0 0.3); }` / `mCells
+{ range (0.3 0.7); }` / `epicardialCells { range (0.7 1); }` and a smooth
+`transitionWidth 0.1;`/`transitionMode blend;` (all three variants — a hard
+cutoff destabilizes `eikonal`'s gradient-dependent advection term, and the
+smooth transition is the more physiologically realistic choice for
+`monodomain`/`hybrid` anyway).
 
 `monodomain`'s `ionicHeterogeneity` additionally composes a `gradientAxes.apicobasal`
 axis for an apex-to-base APD gradient: `apicobasal` is used directly

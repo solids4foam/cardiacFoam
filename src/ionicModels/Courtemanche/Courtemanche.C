@@ -112,7 +112,7 @@ Foam::Courtemanche::~Courtemanche()
 
 Foam::List<Foam::word> Foam::Courtemanche::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

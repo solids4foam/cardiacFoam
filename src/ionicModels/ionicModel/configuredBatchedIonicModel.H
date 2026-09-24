@@ -169,7 +169,7 @@ public:
                 << exit(FatalError);
         }
 
-        ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
+        ionicHeterogeneityOrchestrator::configureRegionHeterogeneity
         (
             *this,
             transmuralDistance,

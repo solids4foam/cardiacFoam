@@ -241,9 +241,13 @@ spatial mesh via smooth or sharp transitions, or via named mesh regions.
 
 **Supported modes:**
 
-- `transmuralBands`: smooth or hard transitions based on normalized transmural distance
-- `namedRegions`: field-value-based regions with optional blending
+- `namedRegions`: field-value-based regions with optional blending; endo/M/epi
+  transmural bands are expressed here as three regions (e.g.
+  `endocardialCells`, `mCells`, `epicardialCells`) tiling `[0,1]`
 - `cellZoneRegions`: hard-boundary mesh cell-zone assignment
+
+`mode` is required whenever `ionicHeterogeneity` configures region-based
+heterogeneity; there is no default.
 - `gradientAxes`: optional dict of named exponential-scaling overlay axes (e.g. `apicobasal`); each composes multiplicatively on top of the transmural blend
 
 See `ionicHeterogeneity.H` and `ionicHeterogeneityOrchestrator.H` for implementation details.

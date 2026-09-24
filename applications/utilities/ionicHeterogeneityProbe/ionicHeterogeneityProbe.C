@@ -361,56 +361,45 @@ int main(int argc, char *argv[])
 
     const dictionary& heterogeneityDict =
         modelDict.subDict("ionicHeterogeneity");
-    const word heterogeneityMode =
-        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    if (heterogeneityMode == "cellZoneRegions")
+    if (!heterogeneityDict.found("mode"))
     {
         FatalErrorInFunction
-            << "ionicHeterogeneityProbe does not support mode "
-            << "cellZoneRegions: there is no continuous distance field to "
-            << "sweep. Use transmuralBands or namedRegions."
+            << "ionicHeterogeneityProbe requires ionicHeterogeneity 'mode' "
+            << "to be set to 'namedRegions'."
             << exit(FatalError);
     }
 
-    scalar endoMInterface = 0.3;
-    scalar mEpiInterface = 0.7;
+    const word heterogeneityMode(heterogeneityDict.lookup("mode"));
 
-    if (heterogeneityMode == "namedRegions")
+    if (heterogeneityMode != "namedRegions")
     {
-        // Best-effort defaults for the envelope check: use the boundary
-        // between the first and second, and second and third, regions
-        // once sorted by range. Users can always override via
-        // endoReferenceT/mCellReferenceT/epiReferenceT in the probe dict.
-        const List<ionicHeterogeneity::NamedFieldRegion> regions =
-            ionicHeterogeneity::parseNamedFieldRegions
-            (
-                heterogeneityDict.subDict("regions")
-            );
+        FatalErrorInFunction
+            << "ionicHeterogeneityProbe supports only mode namedRegions "
+            << "(it sweeps a continuous field value); got mode '"
+            << heterogeneityMode << "'."
+            << exit(FatalError);
+    }
 
-        if (regions.size() >= 3)
-        {
-            endoMInterface = regions[0].rangeMax;
-            mEpiInterface = regions[regions.size() - 2].rangeMax;
-        }
-    }
-    else
-    {
-        endoMInterface =
-            heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-        mEpiInterface =
-            heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-    }
-    const scalar endoReferenceT =
-        probeDict.lookupOrDefault<scalar>("endoReferenceT", 0.0);
-    const scalar mCellReferenceT =
-        probeDict.lookupOrDefault<scalar>
+    const List<ionicHeterogeneity::NamedFieldRegion> regions =
+        ionicHeterogeneity::parseNamedFieldRegions
         (
-            "mCellReferenceT",
-            0.5*(endoMInterface + mEpiInterface)
+            heterogeneityDict.subDict("regions")
         );
-    const scalar epiReferenceT =
-        probeDict.lookupOrDefault<scalar>("epiReferenceT", 1.0);
+
+    // APD envelope references: outer edge of the first and last regions,
+    // midpoint of every interior region.
+    const label nRegions = regions.size();
+    scalarList referenceT(nRegions);
+    wordList referenceNames(nRegions);
+    forAll(regions, regionI)
+    {
+        referenceNames[regionI] = regions[regionI].name;
+        referenceT[regionI] =
+            (regionI == 0) ? regions[regionI].rangeMin
+          : (regionI == nRegions - 1) ? regions[regionI].rangeMax
+          : 0.5*(regions[regionI].rangeMin + regions[regionI].rangeMax);
+    }
 
     scalarField tSamples(nSamples, 0.0);
     forAll(tSamples, i)
@@ -550,28 +539,16 @@ int main(int argc, char *argv[])
 
     if (checkAPDEnvelope)
     {
-        const label endoRefI =
-            min
-            (
-                label(nSamples - 1),
-                max(label(0), label(round(endoReferenceT*(nSamples - 1))))
-            );
-        const label mCellRefI =
-            min
-            (
-                label(nSamples - 1),
-                max(label(0), label(round(mCellReferenceT*(nSamples - 1))))
-            );
-        const label epiRefI =
-            min
-            (
-                label(nSamples - 1),
-                max(label(0), label(round(epiReferenceT*(nSamples - 1))))
-            );
-
-        const ProbeMetrics& endoRef = metrics[endoRefI];
-        const ProbeMetrics& mCellRef = metrics[mCellRefI];
-        const ProbeMetrics& epiRef = metrics[epiRefI];
+        labelList referenceI(nRegions);
+        forAll(referenceT, refI)
+        {
+            referenceI[refI] =
+                min
+                (
+                    label(nSamples - 1),
+                    max(label(0), label(round(referenceT[refI]*(nSamples - 1))))
+                );
+        }
 
         OFstream envelopeFile(outputDir/"APD_envelope_report.csv");
         envelopeFile
@@ -582,9 +559,13 @@ int main(int argc, char *argv[])
         forAll(metrics, sampleI)
         {
             const ProbeMetrics& m = metrics[sampleI];
-            const bool endoToM = m.t <= mCellReferenceT;
-            const ProbeMetrics& a = endoToM ? endoRef : mCellRef;
-            const ProbeMetrics& b = endoToM ? mCellRef : epiRef;
+            label segI = 0;
+            while (segI < nRegions - 2 && m.t > referenceT[segI + 1])
+            {
+                ++segI;
+            }
+            const ProbeMetrics& a = metrics[referenceI[segI]];
+            const ProbeMetrics& b = metrics[referenceI[segI + 1]];
 
             const bool apd30Bounded =
                 bounded(m.apd30, a.apd30, b.apd30, maxAPDBoundTolerance);
@@ -611,7 +592,7 @@ int main(int argc, char *argv[])
 
             envelopeFile
                 << m.t << ","
-                << (endoToM ? "endoM" : "mEpi") << ","
+                << referenceNames[segI] << "-" << referenceNames[segI + 1] << ","
                 << a.t << "," << b.t << ","
                 << apd30Bounded << ","
                 << apd50Bounded << ","

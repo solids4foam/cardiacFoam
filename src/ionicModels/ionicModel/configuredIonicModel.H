@@ -154,7 +154,7 @@ public:
         const dictionary& heterogeneityDict
     ) override
     {
-        ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
+        ionicHeterogeneityOrchestrator::configureRegionHeterogeneity
         (
             *this, transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_
         );

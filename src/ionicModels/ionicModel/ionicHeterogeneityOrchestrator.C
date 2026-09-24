@@ -40,12 +40,22 @@ void Foam::ionicHeterogeneityOrchestrator::configureGradientAxisHeterogeneity
 {
     const word axisName(dict.dictName());
 
-    const scalar beta =
-        dict.lookupOrDefault<scalar>("beta", 3.0);
-    const scalar scalingMin =
-        dict.lookupOrDefault<scalar>("scalingMin", 0.2);
-    const scalar scalingMax =
-        dict.lookupOrDefault<scalar>("scalingMax", 5.0);
+    const wordList requiredKeys({"beta", "scalingMin", "scalingMax", "variables"});
+    for (const word& key : requiredKeys)
+    {
+        if (!dict.found(key))
+        {
+            FatalErrorInFunction
+                << "gradientAxes '" << axisName << "' for ionic model "
+                << model.type() << " has no '" << key << "' entry. "
+                << "Required: field, beta, scalingMin, scalingMax, variables."
+                << exit(FatalError);
+        }
+    }
+
+    const scalar beta(dict.get<scalar>("beta"));
+    const scalar scalingMin(dict.get<scalar>("scalingMin"));
+    const scalar scalingMax(dict.get<scalar>("scalingMax"));
     const wordList variables(dict.lookup("variables"));
 
     ionicHeterogeneity::validateGradientAxisConfig
@@ -124,7 +134,7 @@ void Foam::ionicHeterogeneityOrchestrator::configureGradientAxisHeterogeneity
 }
 
 
-void Foam::ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
+void Foam::ionicHeterogeneityOrchestrator::configureRegionHeterogeneity
 (
     const ionicModel& model,
     const scalarField& transmuralDistance,
@@ -144,8 +154,16 @@ void Foam::ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
             << exit(FatalError);
     }
 
-    const word mode =
-        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+    if (!heterogeneityDict.found("mode"))
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity for ionic model " << model.type()
+            << " has no 'mode' entry. 'mode' is required: namedRegions or "
+            << "cellZoneRegions."
+            << exit(FatalError);
+    }
+
+    const word mode(heterogeneityDict.lookup("mode"));
 
     if (mode == "namedRegions")
     {
@@ -167,63 +185,10 @@ void Foam::ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
         return;
     }
 
-    if (mode != "transmuralBands")
-    {
-        FatalErrorInFunction
-            << "Unsupported " << model.type() << " ionicHeterogeneity mode '"
-            << mode << "'. Supported modes: transmuralBands, namedRegions, cellZoneRegions."
-            << exit(FatalError);
-    }
-
-    const word smoothing =
-        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
-    const word transitionMode =
-        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
-    const scalar endoMInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-    const scalar mEpiInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-    const scalar transitionWidth =
-        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
-
-    ionicHeterogeneity::validateTransmuralBandConfig
-    (
-        endoMInterface,
-        mEpiInterface,
-        transitionWidth,
-        smoothing,
-        transitionMode
-    );
-
-    // transmuralBands is a shorthand: expand to the same three named
-    // regions (with explicit anatomical baselines) that namedRegions mode
-    // uses directly, and delegate to the shared blending implementation.
-    // This keeps exactly one code path for region-based heterogeneity.
-    List<ionicHeterogeneity::NamedFieldRegion> regions(3);
-    regions[0].name = "endocardialCells";
-    regions[0].rangeMin = 0.0;
-    regions[0].rangeMax = endoMInterface;
-    regions[0].baseline = "endocardialCells";
-    regions[1].name = "mCells";
-    regions[1].rangeMin = endoMInterface;
-    regions[1].rangeMax = mEpiInterface;
-    regions[1].baseline = "mCells";
-    regions[2].name = "epicardialCells";
-    regions[2].rangeMin = mEpiInterface;
-    regions[2].rangeMax = 1.0;
-    regions[2].baseline = "epicardialCells";
-
-    blendNamedRegions
-    (
-        model,
-        transmuralDistance,
-        regions,
-        transitionWidth,
-        smoothing,
-        transitionMode,
-        heterogeneousConstants,
-        heterogeneousInitialStates
-    );
+    FatalErrorInFunction
+        << "Unsupported " << model.type() << " ionicHeterogeneity mode '"
+        << mode << "'. Supported modes: namedRegions, cellZoneRegions."
+        << exit(FatalError);
 }
 
 
@@ -236,12 +201,16 @@ void Foam::ionicHeterogeneityOrchestrator::configureNamedRegionHeterogeneity
     PtrList<scalarField>* heterogeneousInitialStates
 )
 {
-    const word smoothing =
-        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
-    const word transitionMode =
-        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
-    const scalar transitionWidth =
-        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+    if (!heterogeneityDict.found("transitionMode"))
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity mode namedRegions requires a "
+            << "'transitionMode' entry for ionic model " << model.type()
+            << ". Supported: blend, hard."
+            << exit(FatalError);
+    }
+
+    const word transitionMode(heterogeneityDict.lookup("transitionMode"));
 
     if (transitionMode != "blend" && transitionMode != "hard")
     {
@@ -252,21 +221,48 @@ void Foam::ionicHeterogeneityOrchestrator::configureNamedRegionHeterogeneity
             << exit(FatalError);
     }
 
-    if (smoothing != "smoothstep")
-    {
-        FatalErrorInFunction
-            << "Unsupported ionicHeterogeneity smoothing '" << smoothing
-            << "' for mode namedRegions. Supported: smoothstep."
-            << exit(FatalError);
-    }
+    word smoothing;
+    scalar transitionWidth = 0.0;
 
-    if (transitionWidth < 0.0)
+    if (transitionMode == "blend")
     {
-        FatalErrorInFunction
-            << "Invalid ionicHeterogeneity transitionWidth "
-            << transitionWidth << " for mode namedRegions. Expected a "
-            << "non-negative value."
-            << exit(FatalError);
+        if (!heterogeneityDict.found("transitionWidth"))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity mode namedRegions with "
+                << "transitionMode blend requires a 'transitionWidth' "
+                << "entry for ionic model " << model.type() << "."
+                << exit(FatalError);
+        }
+
+        if (!heterogeneityDict.found("smoothing"))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity mode namedRegions with "
+                << "transitionMode blend requires a 'smoothing' entry "
+                << "for ionic model " << model.type() << "."
+                << exit(FatalError);
+        }
+
+        transitionWidth = heterogeneityDict.get<scalar>("transitionWidth");
+        smoothing = word(heterogeneityDict.lookup("smoothing"));
+
+        if (smoothing != "smoothstep")
+        {
+            FatalErrorInFunction
+                << "Unsupported ionicHeterogeneity smoothing '" << smoothing
+                << "' for mode namedRegions. Supported: smoothstep."
+                << exit(FatalError);
+        }
+
+        if (transitionWidth < 0.0)
+        {
+            FatalErrorInFunction
+                << "Invalid ionicHeterogeneity transitionWidth "
+                << transitionWidth << " for mode namedRegions. Expected a "
+                << "non-negative value."
+                << exit(FatalError);
+        }
     }
 
     if (!heterogeneityDict.found("regions"))
@@ -450,6 +446,17 @@ Foam::scalarField Foam::ionicHeterogeneityOrchestrator::constantsForRegion
     const wordList& knownRegionNames
 )
 {
+    const wordList supported(model.supportedTissueTypes());
+    if (!supported.found(baseline))
+    {
+        FatalErrorInFunction
+            << "ionicHeterogeneity region '" << regionName
+            << "' uses baseline '" << baseline << "', which ionic model "
+            << model.type() << " does not support. Supported tissue types: "
+            << supported
+            << exit(FatalError);
+    }
+
     const label tissueFlag = ionicSelector::tissueFlag(baseline);
 
     scalarField constants = model.constantsForTissue(tissueFlag);

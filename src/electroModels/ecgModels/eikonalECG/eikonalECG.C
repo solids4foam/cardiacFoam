@@ -395,19 +395,28 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     }
 
     const dictionary& hetDict = *hetDictPtr;
-    const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    const bool multiRegionModeSupported =
-        (mode == "namedRegions" || mode == "cellZoneRegions")
-     && personalizedTemplatesEnabled_;
-
-    if (mode != "transmuralBands" && !multiRegionModeSupported)
+    if (!hetDict.found("mode"))
     {
         FatalErrorInFunction
-            << "eikonalECG supports ionicHeterogeneity mode "
-            << "'transmuralBands' always, or 'namedRegions'/"
-            << "'cellZoneRegions' only when personalizedTemplates is also "
-            << "enabled (the fixed 3-curve compiled fallback cannot "
+            << "eikonalECG ionicHeterogeneity has no 'mode' entry. 'mode' "
+            << "is required: 'namedRegions' (always supported here) or "
+            << "'cellZoneRegions' (only when personalizedTemplates is also "
+            << "enabled)."
+            << exit(FatalError);
+    }
+
+    const word mode(hetDict.lookup("mode"));
+
+    const bool cellZoneRegionsSupported =
+        mode == "cellZoneRegions" && personalizedTemplatesEnabled_;
+
+    if (mode != "namedRegions" && !cellZoneRegionsSupported)
+    {
+        FatalErrorInFunction
+            << "eikonalECG supports ionicHeterogeneity mode 'namedRegions' "
+            << "always, or 'cellZoneRegions' only when personalizedTemplates "
+            << "is also enabled (the fixed 3-curve compiled fallback cannot "
             << "represent an arbitrary number of regions); mode '" << mode
             << "' cannot be represented by per-region template weights here."
             << exit(FatalError);
@@ -481,36 +490,56 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
         return;
     }
 
-    const word transitionMode = hetDict.lookupOrDefault<word>("transitionMode", "blend");
-    const scalar transitionWidth = hetDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
-    const word smoothing = hetDict.lookupOrDefault<word>("smoothing", "smoothstep");
-
-    List<ionicHeterogeneity::NamedFieldRegion> regions;
-
-    if (mode == "transmuralBands")
+    if (!hetDict.found("transitionMode"))
     {
-        const scalar endoMInterface = hetDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-        const scalar mEpiInterface = hetDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-
-        ionicHeterogeneity::validateTransmuralBandConfig
-        (
-            endoMInterface, mEpiInterface, transitionWidth, smoothing, transitionMode
-        );
-
-        regions = ionicHeterogeneity::synthesizeTransmuralBandRegions
-        (
-            endoMInterface, mEpiInterface
-        );
+        FatalErrorInFunction
+            << "eikonalECG ionicHeterogeneity mode namedRegions requires a "
+            << "'transitionMode' entry. Supported: blend, hard."
+            << exit(FatalError);
     }
-    else
+
+    const word transitionMode(hetDict.lookup("transitionMode"));
+
+    word smoothing;
+    scalar transitionWidth = 0.0;
+
+    if (transitionMode == "blend")
     {
-        regions = ionicHeterogeneity::parseNamedFieldRegions
+        if (!hetDict.found("transitionWidth") || !hetDict.found("smoothing"))
+        {
+            FatalErrorInFunction
+                << "eikonalECG ionicHeterogeneity mode namedRegions with "
+                << "transitionMode blend requires both 'transitionWidth' "
+                << "and 'smoothing' entries."
+                << exit(FatalError);
+        }
+
+        transitionWidth = hetDict.get<scalar>("transitionWidth");
+        smoothing = word(hetDict.lookup("smoothing"));
+    }
+    else if (transitionMode != "hard")
+    {
+        FatalErrorInFunction
+            << "Unsupported eikonalECG ionicHeterogeneity transitionMode '"
+            << transitionMode << "'. Supported: blend, hard."
+            << exit(FatalError);
+    }
+
+    const List<ionicHeterogeneity::NamedFieldRegion> regions =
+        ionicHeterogeneity::parseNamedFieldRegions
         (
             hetDict.subDict("regions")
         );
+
+    if (!hetDict.found("field"))
+    {
+        FatalErrorInFunction
+            << "eikonalECG ionicHeterogeneity mode namedRegions requires a "
+            << "'field' entry."
+            << exit(FatalError);
     }
 
-    const word fieldName = hetDict.lookupOrDefault<word>("field", "t");
+    const word fieldName(hetDict.lookup("field"));
     autoPtr<volScalarField> tReadPtr;
     const volScalarField* tPtr = mesh.cfindObject<volScalarField>(fieldName);
 
@@ -614,19 +643,22 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
     }
 
     const dictionary& hetDict = *hetDictPtr;
-    const word mode = hetDict.lookupOrDefault<word>("mode", "transmuralBands");
 
-    if
-    (
-        mode != "transmuralBands"
-     && mode != "namedRegions"
-     && mode != "cellZoneRegions"
-    )
+    if (!hetDict.found("mode"))
+    {
+        FatalErrorInFunction
+            << "eikonalECG personalizedTemplates requires ionicHeterogeneity "
+            << "'mode' to be set: 'namedRegions' or 'cellZoneRegions'."
+            << exit(FatalError);
+    }
+
+    const word mode(hetDict.lookup("mode"));
+
+    if (mode != "namedRegions" && mode != "cellZoneRegions")
     {
         FatalErrorInFunction
             << "eikonalECG personalizedTemplates supports ionicHeterogeneity "
-            << "mode 'transmuralBands', 'namedRegions', or "
-            << "'cellZoneRegions' only; mode '"
+            << "mode 'namedRegions' or 'cellZoneRegions' only; mode '"
             << mode << "' cannot be used to generate anchor templates."
             << exit(FatalError);
     }
