@@ -77,12 +77,15 @@ isSelected()
     return 1
 }
 
-# Apply "path=value" (set) and "path!" (remove) edits to electroProperties
+# Apply "path=value" (set) and "path!" (remove) edits to electroProperties.
+# The run option "skip=<version>" is handled by runCheck and skipped here.
 applyEdits()
 {
     local edit
     for edit in "$@"; do
-        if [[ "${edit}" == *'!' ]]; then
+        if [[ "${edit}" == skip=* ]]; then
+            continue
+        elif [[ "${edit}" == *'!' ]]; then
             foamDictionary constant/electroProperties \
                 -entry "${edit%!}" -remove > /dev/null
         else
@@ -99,8 +102,20 @@ runCheck()
     shift 4
     local runDir="${runRoot}/${name}"
     local rc=0
+    local edit
 
     rm -rf "${runDir}"
+
+    # skip=<version>[,<version>...]: known OpenFOAM version limitation
+    for edit in "$@"; do
+        if [[ "${edit}" == skip=* \
+            && ",${edit#skip=}," == *",${WM_PROJECT_VERSION:-},"* ]]; then
+            echo "SKIP: ${name} (not supported on OpenFOAM ${WM_PROJECT_VERSION})"
+            skips=$((skips + 1))
+            return 0
+        fi
+    done
+
     mkdir -p "${runRoot}"
     cp -a "${caseDir}/base/${base}" "${runDir}"
     cp -a "${caseDir}/variants/${variant}/." "${runDir}/"
@@ -177,6 +192,7 @@ echo "============================================================"
 
 checks=0
 failures=0
+skips=0
 failed=()
 
 while IFS=$' \t' read -r name base variant expect edits; do
@@ -236,5 +252,5 @@ if (( failures > 0 )); then
     echo "Configuration checks FAILED (${failures}/${checks}): $(printf '%s ' "${failed[@]}")"
     exit 1
 fi
-echo "Configuration checks PASSED (${checks} checks)"
+echo "Configuration checks PASSED (${checks} checks, ${skips} skipped)"
 exit 0

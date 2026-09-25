@@ -10,14 +10,20 @@
 #            fail:<text>: must stop with a FOAM FATAL error mentioning <text>
 #                  (write spaces in <text> as ~)
 #   edit     applied to constant/electroProperties with foamDictionary:
-#            path=value sets an entry, path! removes it (no spaces in values)
+#            path=value sets an entry, path! removes it (no spaces in values);
+#            skip=<version>[,...] skips the check on those OpenFOAM versions
+#
+# On OpenFOAM v2312 a cellZone myocardium sub-mesh fails its fvSchemes
+# lookups (e.g. "Entry 'interpolate(conductivity)' not found"), as noted in
+# manufacturedSolutions/bathBidomain, so the cellZone and bath checks that
+# solve on a sub-mesh are skipped there.
 
 # ---- Myocardium models and options --------------------------------------
 monodomainExplicit                     slab  monodomainExplicit                     pass
 monodomainImplicit                     slab  monodomainImplicit                     pass
 monodomainSbdf2                        slab  monodomainSbdf2                        pass
 monodomainFieldConductivity            slab  monodomainFieldConductivity            pass
-monodomainCellZone                     slab  monodomainCellZone                     pass
+monodomainCellZone                     slab  monodomainCellZone                     pass  skip=v2312
 monodomainVerificationNone             slab  monodomainVerificationNone             pass
 bidomain                               slab  bidomain                               pass
 eikonal                                slab  eikonal                                pass
@@ -34,8 +40,8 @@ bidomainPseudoECG                      slab  bidomainPseudoECG                  
 eikonalECG                             slab  eikonalECG                             pass
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
-bathBidomain                           bath  bathBidomain                           pass
-bathTorsoECG                           bath  bathTorsoECG                           pass
+bathBidomain                           bath  bathBidomain                           pass  skip=v2312
+bathTorsoECG                           bath  bathTorsoECG                           pass  skip=v2312
 
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
