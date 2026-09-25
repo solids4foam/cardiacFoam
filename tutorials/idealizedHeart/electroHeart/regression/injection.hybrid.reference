@@ -1,8 +1,11 @@
 # Hybrid variant: monodomainSolver + restitutionEikonalSolver1D.
 #
 # This probe reads -1 through t=0.03 and activates at t=0.035, then holds
-# 0.0336609 flat for the rest of the run. Sampled at the run's own endTime,
+# 0.0302759 flat for the rest of the run. Sampled at the run's own endTime,
 # comfortably past activation.
+#
+# 2026-09-24: was 0.0336609 with pvjRadius 2.5e-3; the 1.65e-3 radius
+# concentrates each junction's current on less tissue, so capture is sooner.
 #
 # 2026-09-16: was 0.0316724. eikonalMonodomainPvjCoupler now shifts the
 # Purkinje Vm template to the tissue resting potential. The unshifted template
@@ -21,4 +24,4 @@
 # this junction by 0.34 ms, 3.4x the tolerance below.
 #
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0336609     1e-4
+injectionProbe/0/activationTime         0.04   2    0.0302759     1e-4

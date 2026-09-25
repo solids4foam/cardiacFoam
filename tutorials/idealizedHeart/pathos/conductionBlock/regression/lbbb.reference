@@ -1,2 +1,7 @@
+# 2026-09-24: cutoff moved from t=0.02 to t=0.035. With the Purkinje
+# network at ~3.3 m/s (purkinjeConductivity 0.4) the healthy tree activates
+# this point at 28.8 ms, so t=0.02 no longer separated block from health; the
+# blocked point activates by myocardial spread at 43.2 ms.
+#
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.02   2    -1            1e-4
+injectionProbe/0/activationTime         0.035  2    -1            1e-4

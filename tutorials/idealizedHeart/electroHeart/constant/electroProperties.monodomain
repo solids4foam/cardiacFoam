@@ -88,7 +88,9 @@ monodomainSolverCoeffs
 
                 chi                    14000;
                 cm                     0.01;
-                purkinjeConductivity   10.0;
+                // Purkinje conduction velocity ~3.3 m/s, matching the hybrid variant's
+                // calibrated restitution maximum (3.33 m/s); 10.0 gave ~8.7 m/s.
+                purkinjeConductivity   0.4;
                 vm1DRest               -0.084;
 
                 rootStimulus
@@ -118,7 +120,9 @@ monodomainSolverCoeffs
             electroDomainCoupler    reactionDiffusionPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
             rPvj                    1000;
-            pvjRadius               2.5e-3;
+            // Smallest radius valid at every junction of both Purkinje trees:
+            // the coarsest junction cell (pig tree, mid-wall) is 1.60 mm across.
+            pvjRadius               1.65e-3;
             couplingMode            unidirectional;
             debugCoupling           true;
         }

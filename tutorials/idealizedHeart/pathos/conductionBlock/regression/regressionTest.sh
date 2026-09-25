@@ -9,19 +9,20 @@ IFS=$'\n\t'
 # Confirms the LBB bridge severing actually blocks fast conduction: probes
 # activationTime at the same Purkinje-myocardial-junction site (node 211 in
 # the shared purkinjeGraph) that electroHeart's own regression
-# checks IS activated by t=0.02. Here, with the LV subtree disconnected
-# from the root (a tree - no alternate path), it must stay un-activated
-# (activationTime == -1) at the same time cutoff. Only the lbbb variant is
-# covered - rbbb is exercised manually, not part of automated regression.
+# checks IS activated by t=0.035 (28.8 ms on the healthy tree). Here, with
+# the LV subtree disconnected from the root (a tree - no alternate path), it
+# must still be un-activated (activationTime == -1) at t=0.035: the point is
+# reached only by myocardial spread from the intact RV side, at 43.2 ms. The
+# cutoff sits between the two with margin on both sides. Only the lbbb
+# variant is covered - rbbb is exercised manually, not part of automated
+# regression.
 #
 # conductionBlock's own controlDict runs to 0.7s (full ECG-scale, for real
-# use of the tutorial), but this check only needs t=0.02 - the graph is a
-# tree, so a severed subtree never receives Purkinje current regardless of
-# how much longer the run continues. Running the full 0.7s here would only
-# add ~45 minutes with no extra information for this check, so the run's
-# own endTime is temporarily shortened to 0.02s just for this script's
-# invocation, then restored - the tracked controlDict is never left
-# changed. Allrun itself is reused unmodified.
+# use of the tutorial), but this check only needs t=0.035. Running the full
+# 0.7s here would only add ~45 minutes with no extra information for this
+# check, so the run's own endTime is temporarily shortened to 0.035s just
+# for this script's invocation, then restored - the tracked controlDict is
+# never left changed. Allrun itself is reused unmodified.
 
 REF_FILE="regression/lbbb.reference"
 ALLRUN_LOGFILE="log.Allrun"
@@ -41,7 +42,7 @@ restoreControlDict()
 }
 trap restoreControlDict EXIT
 
-sed -E 's/^endTime[[:space:]]+[^;]+;/endTime    0.02;/' \
+sed -E 's/^endTime[[:space:]]+[^;]+;/endTime    0.035;/' \
     "${CONTROL_DICT_BACKUP}" > "${CONTROL_DICT}"
 
 dumpLogTail()
