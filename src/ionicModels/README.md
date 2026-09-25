@@ -60,7 +60,7 @@ src/ionicModels/
 └── <Name>Batched/       # one folder per batched model
 ```
 
-**Deep dive:** [IONIC_MODEL_ARCHITECTURE.md](IONIC_MODEL_ARCHITECTURE.md) explains how this library is built inside.
+**Deep dive:** [ARCHITECTURE.md](ARCHITECTURE.md) explains how this library is built inside.
 
 ## What this does not own
 
