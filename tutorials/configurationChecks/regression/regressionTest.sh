@@ -77,12 +77,16 @@ isSelected()
     return 1
 }
 
-# Apply "path=value" (set) and "path!" (remove) edits to electroProperties
+# Apply "path=value" (set) and "path!" (remove) edits to electroProperties.
+# The run options "np=N" and "post=<script>" are handled by runCheck and
+# skipped here.
 applyEdits()
 {
     local edit
     for edit in "$@"; do
-        if [[ "${edit}" == *'!' ]]; then
+        if [[ "${edit}" == np=* || "${edit}" == post=* ]]; then
+            continue
+        elif [[ "${edit}" == *'!' ]]; then
             foamDictionary constant/electroProperties \
                 -entry "${edit%!}" -remove > /dev/null
         else
@@ -99,6 +103,12 @@ runCheck()
     shift 4
     local runDir="${runRoot}/${name}"
     local rc=0
+    local nProcs=1 post="" edit
+
+    for edit in "$@"; do
+        [[ "${edit}" == np=* ]] && nProcs="${edit#np=}"
+        [[ "${edit}" == post=* ]] && post="${edit#post=}"
+    done
 
     rm -rf "${runDir}"
     mkdir -p "${runRoot}"
@@ -115,7 +125,41 @@ runCheck()
         return 1
     }
 
-    (cd "${runDir}" && cardiacFoam > log.cardiacFoam 2>&1) || rc=$?
+    if (( nProcs > 1 )); then
+        # Deterministic decomposition, so that the run is reproducible
+        cat > "${runDir}/system/decomposeParDict" <<DICT
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      decomposeParDict;
+}
+
+numberOfSubdomains ${nProcs};
+method          simple;
+coeffs
+{
+    n           (${nProcs} 1 1);
+}
+DICT
+        (
+            # RunFunctions is not written for 'set -eu'
+            set +eu
+            cd "${runDir}"
+            runApplication decomposePar > /dev/null || exit 1
+            runParallel cardiacFoam > /dev/null || exit 2
+            runApplication reconstructPar > /dev/null || exit 3
+        ) || rc=$?
+        if (( rc == 1 || rc == 3 )); then
+            echo "FAIL: ${name}: decomposePar or reconstructPar failed"
+            regressionDumpLog "${runDir}/log.decomposePar"
+            regressionDumpLog "${runDir}/log.reconstructPar"
+            return 1
+        fi
+    else
+        (cd "${runDir}" && cardiacFoam > log.cardiacFoam 2>&1) || rc=$?
+    fi
 
     if [[ "${expect}" == pass ]]; then
         if (( rc != 0 )); then
@@ -123,7 +167,20 @@ runCheck()
             regressionDumpLog "${runDir}/log.cardiacFoam"
             return 1
         fi
-        (cd "${runDir}" && checkSolverLogs > /dev/null) || {
+        local logs=(log.cardiacFoam)
+        (( nProcs > 1 )) && logs+=(log.decomposePar log.reconstructPar)
+
+        # Post-processing utility run on the result, from post/<script>
+        if [[ -n "${post}" ]]; then
+            cp "${caseDir}/post/${post}" "${runDir}/Allpost"
+            (cd "${runDir}" && ./Allpost > log.Allpost 2>&1) || {
+                echo "FAIL: ${name}: post-processing (post/${post}) failed"
+                regressionDumpLog "${runDir}/log.Allpost"
+                return 1
+            }
+            logs+=("log.${post}")
+        fi
+        (cd "${runDir}" && checkSolverLogs "${logs[@]}" > /dev/null) || {
             echo "FAIL: ${name}: run did not complete cleanly"
             regressionDumpLog "${runDir}/log.cardiacFoam"
             return 1
@@ -156,13 +213,13 @@ runCheck()
         echo "FAIL: ${name}: cardiacFoam succeeded, expected a fatal error"
         return 1
     fi
-    if ! grep -q 'FOAM FATAL' "${runDir}/log.cardiacFoam"; then
+    if ! grep -aq 'FOAM FATAL' "${runDir}/log.cardiacFoam"; then
         echo "FAIL: ${name}: cardiacFoam failed without a FOAM FATAL error"
         regressionDumpLog "${runDir}/log.cardiacFoam"
         return 1
     fi
-    if ! sed -n '/FOAM FATAL/,$p' "${runDir}/log.cardiacFoam" \
-        | grep -qF -- "${text}"; then
+    if ! tr -d '\000' < "${runDir}/log.cardiacFoam" \
+        | sed -n '/FOAM FATAL/,$p' | grep -qF -- "${text}"; then
         echo "FAIL: ${name}: fatal error does not mention '${text}'"
         regressionDumpLog "${runDir}/log.cardiacFoam"
         return 1
@@ -194,7 +251,17 @@ while IFS=$' \t' read -r name base variant expect edits; do
 done < "${caseDir}/checks"
 
 # Comparisons between the outputs of two checks that both ran (see
-# ./comparisons): "same" requires identical files, "differ" different ones
+# ./comparisons): "same" requires identical files, "differ" different ones,
+# and "close:<rtol>:<atol>" requires everything both runs wrote to match
+# within the tolerances (using applications/scripts/cardiacCompareCases)
+compareTool="${caseDir}"
+until [[ -x "${compareTool}/applications/scripts/cardiacCompareCases" \
+    || "${compareTool}" == / ]]
+do
+    compareTool="$(dirname "${compareTool}")"
+done
+compareTool="${compareTool}/applications/scripts/cardiacCompareCases"
+
 while IFS=$' \t' read -r relation nameA nameB file; do
     [[ -z "${relation}" || "${relation}" == \#* ]] && continue
     [[ -d "${runRoot}/${nameA}" && -d "${runRoot}/${nameB}" ]] || continue
@@ -204,7 +271,26 @@ while IFS=$' \t' read -r relation nameA nameB file; do
     fileB="${runRoot}/${nameB}/${file}"
     checks=$((checks + 1))
 
-    if [[ ! -f "${fileA}" || ! -f "${fileB}" ]]; then
+    if [[ "${relation}" == close:* ]]; then
+        IFS=: read -r _ rtol atol <<< "${relation}"
+        compareLog="${runRoot}/compare.${nameA}.${nameB}.log"
+        # A parallel run records "../constant" as the location of its
+        # *.withDefaultValues, so leave those out
+        if "${compareTool}" --rtol "${rtol}" --atol "${atol:-0}" \
+            --exclude system --exclude '*.withDefaultValues' \
+            --exclude manifest.diff "${fileA}" "${fileB}" \
+            > "${compareLog}" 2>&1
+        then
+            echo "PASS: ${nameA} and ${nameB} match within rtol ${rtol}," \
+                "atol ${atol:-0}"
+        else
+            echo "FAIL: ${nameA} and ${nameB} differ beyond rtol ${rtol}," \
+                "atol ${atol:-0}"
+            grep -v '^$' "${compareLog}" | head -20
+            failures=$((failures + 1))
+            failed+=("${relation}:${nameA}:${nameB}")
+        fi
+    elif [[ ! -f "${fileA}" || ! -f "${fileB}" ]]; then
         echo "FAIL: ${relation} ${nameA} ${nameB}: ${file} missing"
         failures=$((failures + 1))
         failed+=("${relation}:${nameA}:${nameB}")

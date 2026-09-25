@@ -5,6 +5,10 @@
 #
 #   same    the file must be identical in both runs
 #   differ  the file must differ, i.e. the option has an effect
+#   close:<rtol>:<atol>  everything both runs wrote (file "." for the whole
+#                 run, excluding system/, logs and *.withDefaultValues) must
+#                 match within |a - b| <= atol + rtol*max(|a|, |b|); used for
+#                 parallel against serial runs
 
 # Options that must change the myocardium solution
 differ  monodomainExplicit                   monodomainImplicit                               0.005/Vm
@@ -25,3 +29,21 @@ same    monodomainExplicit                   monodomainPseudoECG                
 same    bidomain                             bidomainPseudoECG                                0.005/Vm
 same    eikonal                              eikonalECG                                       1/activationTime
 same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE
+
+# Parallel runs must reproduce the serial ones up to round-off: rtol covers
+# the 8 significant digits written, atol the round-off in values near zero
+# (for example phiE and ionicCurrent away from the wave)
+close:1e-6:1e-12  monodomainExplicit                   monodomainExplicitParallel                   .
+close:1e-6:1e-12  monodomainImplicit                   monodomainImplicitParallel                   .
+close:1e-6:1e-12  bidomain                             bidomainParallel                             .
+close:1e-6:1e-12  eikonal                              eikonalParallel                              .
+close:1e-6:1e-12  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusionParallel  .
+close:1e-6:1e-12  monodomainPurkinjeRestitutionEikonal monodomainPurkinjeRestitutionEikonalParallel .
+close:1e-6:1e-12  eikonalPurkinje                      eikonalPurkinjeParallel                      .
+close:1e-6:1e-12  monodomainPseudoECG                  monodomainPseudoECGParallel                  .
+close:1e-6:1e-12  eikonalECG                           eikonalECGParallel                           .
+close:1e-6:1e-12  bathTorsoECG                         bathTorsoECGParallel                         .
+
+# recomputePseudoECG must reproduce the pseudo-ECG the solver wrote (both
+# are written with 8 significant digits)
+close:1e-7:1e-15  monodomainPseudoECG            monodomainPseudoECGRecomputed                postProcessing/pseudoECG.dat

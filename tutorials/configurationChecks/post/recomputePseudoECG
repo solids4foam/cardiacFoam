@@ -1,0 +1,9 @@
+#!/bin/bash
+# Recompute the pseudo-ECG from the written Vm fields. The solver's own
+# pseudoECG.dat is removed first, so a comparison with the plain run checks
+# that the utility reproduces it.
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+rm -f postProcessing/pseudoECG.dat
+runApplication recomputePseudoECG || exit 1

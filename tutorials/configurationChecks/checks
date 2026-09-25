@@ -10,7 +10,10 @@
 #            fail:<text>: must stop with a FOAM FATAL error mentioning <text>
 #                  (write spaces in <text> as ~)
 #   edit     applied to constant/electroProperties with foamDictionary:
-#            path=value sets an entry, path! removes it (no spaces in values)
+#            path=value sets an entry, path! removes it (no spaces in values);
+#            np=N runs on N processors (simple decomposition) and
+#            reconstructs; post=<script> then runs post/<script> in the
+#            run directory (a post-processing utility)
 
 # ---- Myocardium models and options --------------------------------------
 monodomainExplicit                     slab  monodomainExplicit                     pass
@@ -40,6 +43,23 @@ bathTorsoECG                           bath  bathTorsoECG                       
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
 singleCellTWorldActiveTension          singleCell singleCellTWorldActiveTension     pass
+
+# ---- Parallel runs (2 processors, simple decomposition) --------------------
+# Compared with the serial run of the same variant in ./comparisons
+monodomainExplicitParallel             slab  monodomainExplicit                     pass  np=2
+monodomainImplicitParallel             slab  monodomainImplicit                     pass  np=2
+bidomainParallel                       slab  bidomain                               pass  np=2
+eikonalParallel                        slab  eikonal                                pass  np=2
+monodomainPurkinjeReactionDiffusionParallel slab monodomainPurkinjeReactionDiffusion pass np=2
+monodomainPurkinjeRestitutionEikonalParallel slab monodomainPurkinjeRestitutionEikonal pass np=2
+eikonalPurkinjeParallel                slab  eikonalPurkinje                        pass  np=2
+monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
+eikonalECGParallel                     slab  eikonalECG                             pass  np=2
+bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2
+
+# ---- Post-processing utilities that link the electro libraries -----------
+monodomainPseudoECGRecomputed          slab  monodomainPseudoECG                    pass  post=recomputePseudoECG
+bathBidomainInterfaceMetrics           bath  bathBidomain                           pass  post=bathBidomainInterfaceMetrics
 
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
