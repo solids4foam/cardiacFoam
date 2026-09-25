@@ -1,0 +1,409 @@
+#!/usr/bin/env python3
+"""
+cardiacCompareCases: compare everything two OpenFOAM case runs wrote.
+
+Intended for changes that should not alter results, e.g. refactoring: run a
+case with the old and the new code, then check that both runs wrote the
+same set of files with the same contents, to within a tolerance.
+
+    cardiacCompareCases [options] <caseA> <caseB>
+
+Compared:
+  - the set of files in each case (a file present in only one case is a
+    difference), excluding logs and processor directories by default;
+  - text files (OpenFOAM dictionaries and fields, .dat, .csv, .txt, ...)
+    token by token: numbers within the tolerance, all other tokens exactly;
+  - binary OpenFOAM fields (writeFormat binary) value by value, like text;
+  - any other binary file byte for byte.
+
+A number pair a, b matches when |a - b| <= atol + rtol*max(|a|, |b|). The
+defaults (atol = rtol = 0) require identical values.
+
+Exit status: 0 when the cases match, 1 when they differ, 2 on usage errors.
+
+Reproducibility: serial runs of the same code and inputs are bit-identical,
+so expect "cases match" with the default zero tolerance. Parallel runs are
+bit-identical only if both use the same decomposition. The scotch method can
+decompose differently from one run to the next, which changes results at the
+round-off level and, for long explicit runs, well beyond it. Before
+comparing parallel runs, switch both to a deterministic method, e.g.
+
+    foamDictionary -entry method -set hierarchical system/decomposeParDict
+
+(with matching hierarchicalCoeffs), or decompose once and copy the
+processor* directories into both cases.
+
+Examples:
+    cardiacCompareCases runMain/bidomain runBranch/bidomain
+    cardiacCompareCases --rtol 1e-12 --processors caseA caseB
+    cardiacCompareCases --exclude 'constant/*' --exclude 'system/*' a b
+"""
+
+import argparse
+import fnmatch
+import gzip
+import math
+import os
+import re
+import struct
+import sys
+
+DEFAULT_EXCLUDES = [
+    "log.*",
+    "*.foam",
+    "*.OpenFOAM",
+    ".*",
+    "__pycache__",
+    "*.pyc",
+]
+
+# Structural characters are tokens of their own; ',' is only a separator
+TOKEN_RE = re.compile(rb"[()\[\]{};]|[^\s()\[\]{};,]+")
+BLOCK_COMMENT_RE = re.compile(rb"/\*.*?\*/", re.DOTALL)
+LINE_COMMENT_RE = re.compile(rb"//[^\n]*")
+BINARY_LIST_RE = re.compile(rb"List<(\w+)>\s+(\d+)\s*\(")
+# Binary files of these classes are decoded; other binary files (meshes,
+# restart state, ...) are compared byte for byte
+GEOMETRIC_FIELD_RE = re.compile(rb"^(vol|surface|point)\w*Field(::Internal)?$")
+
+# Number of scalar components of each binary list element type
+COMPONENTS = {
+    b"scalar": 1,
+    b"vector": 3,
+    b"tensor": 9,
+    b"symmTensor": 6,
+    b"sphericalTensor": 1,
+}
+
+
+class Stats:
+    """Accumulates the comparison result for one file."""
+
+    def __init__(self):
+        self.nValues = 0
+        self.maxAbs = 0.0
+        self.maxRel = 0.0
+        self.nMismatch = 0
+        self.first = None      # description of the first mismatch
+        self.structural = None  # non-numeric difference, if any
+
+    def mismatch(self, where, a, b):
+        self.nMismatch += 1
+        if self.first is None:
+            self.first = f"{where}: {a!r} vs {b!r}"
+
+
+# ---------------------------------------------------------------------------
+# Reading
+# ---------------------------------------------------------------------------
+
+def readBytes(path):
+    with open(path, "rb") as f:
+        data = f.read()
+    if path.endswith(".gz"):
+        data = gzip.decompress(data)
+    return data
+
+
+def foamHeader(data):
+    """Return the FoamFile header dictionary text, or None."""
+    head = data[:4096]
+    start = head.find(b"FoamFile")
+    if start < 0:
+        return None
+    end = head.find(b"}", start)
+    return head[start:end] if end > 0 else None
+
+
+def headerEntry(header, key):
+    m = re.search(rb"\b" + key + rb"\s+\"?([^;\"]+)\"?\s*;", header)
+    return m.group(1).strip() if m else None
+
+
+def isBinary(data):
+    return b"\0" in data[:8192]
+
+
+def number(token):
+    """Return token as a float, or None if it is not a number."""
+    if b"_" in token:
+        return None
+    try:
+        return float(token)
+    except ValueError:
+        return None
+
+
+def classify(where, token):
+    """Return a numeric ("val") or non-numeric ("tok") item for a token."""
+    value = number(token)
+    if value is None:
+        return ("tok", where, token)
+    return ("val", where, value)
+
+
+def textTokens(data, stripComments):
+    """Yield (lineNumber, token) for text content."""
+    if stripComments:
+        # Keep line numbers stable: replace comments with their newlines
+        data = BLOCK_COMMENT_RE.sub(
+            lambda m: b"\n" * m.group(0).count(b"\n"), data
+        )
+        data = LINE_COMMENT_RE.sub(b"", data)
+    for lineNo, line in enumerate(data.split(b"\n"), 1):
+        for token in TOKEN_RE.findall(line):
+            yield lineNo, token
+
+
+def binaryFieldItems(data, header):
+    """
+    Return the ("tok", where, token) and ("val", where, value) items of an
+    OpenFOAM binary field file, decoding each 'List<T> N(...)' block.
+    Returns None when the file uses an element type we cannot decode.
+    """
+    arch = headerEntry(header, b"arch") or b"LSB;label=32;scalar=64"
+    endian = ">" if arch.startswith(b"MSB") else "<"
+    scalarBits = 32 if b"scalar=32" in arch else 64
+    labelBits = 64 if b"label=64" in arch else 32
+    scalarFmt, scalarSize = ("f", 4) if scalarBits == 32 else ("d", 8)
+    labelFmt, labelSize = ("i", 4) if labelBits == 32 else ("q", 8)
+
+    items = []
+    pos = 0
+    for m in BINARY_LIST_RE.finditer(data):
+        if m.start() < pos:
+            continue
+        for lineNo, token in textTokens(data[pos:m.end()], False):
+            items.append(classify(f"text block at byte {pos}", token))
+        kind, n = m.group(1), int(m.group(2))
+        if kind in COMPONENTS:
+            fmt, size = scalarFmt, scalarSize * COMPONENTS[kind]
+            count = n * COMPONENTS[kind]
+        elif kind == b"label":
+            fmt, size, count = labelFmt, labelSize, n
+        else:
+            return None
+        nBytes = n * size
+        block = data[m.end():m.end() + nBytes]
+        if len(block) != nBytes:
+            return None
+        values = struct.unpack(f"{endian}{count}{fmt}", block)
+        where = f"List<{kind.decode()}> at byte {m.start()}"
+        for i, v in enumerate(values):
+            items.append(("val", f"{where}, item {i}", float(v)))
+        pos = m.end() + nBytes
+    for lineNo, token in textTokens(data[pos:], False):
+        items.append(classify(f"text block at byte {pos}", token))
+    return items
+
+
+def items(data, ignoreRes):
+    """
+    Return the comparable items of a file as a list of
+    (kind, where, value) with kind "tok" (bytes) or "val" (float), or None
+    to request an exact byte comparison.
+    """
+    header = foamHeader(data)
+
+    if isBinary(data):
+        if header is None or headerEntry(header, b"format") != b"binary":
+            return None
+        cls = headerEntry(header, b"class") or b""
+        if not GEOMETRIC_FIELD_RE.match(cls):
+            return None
+        return binaryFieldItems(data, header)
+
+    if ignoreRes:
+        lines = data.split(b"\n")
+        data = b"\n".join(
+            b"" if any(r.search(line) for r in ignoreRes) else line
+            for line in lines
+        )
+
+    return [
+        classify(f"line {lineNo}", token)
+        for lineNo, token in textTokens(data, header is not None)
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Comparing
+# ---------------------------------------------------------------------------
+
+def compareValues(stats, where, a, b, atol, rtol):
+    stats.nValues += 1
+    if a == b or (math.isnan(a) and math.isnan(b)):
+        return
+    if math.isinf(a) or math.isinf(b) or math.isnan(a) or math.isnan(b):
+        stats.mismatch(where, a, b)
+        stats.maxAbs = math.inf
+        return
+    diff = abs(a - b)
+    scale = max(abs(a), abs(b))
+    stats.maxAbs = max(stats.maxAbs, diff)
+    if scale > 0:
+        stats.maxRel = max(stats.maxRel, diff/scale)
+    if diff > atol + rtol*scale:
+        stats.mismatch(where, a, b)
+
+
+def show(value, width=40):
+    """Short printable form of a token or value for messages."""
+    if isinstance(value, bytes):
+        value = value.decode(errors="replace")
+    text = repr(value)
+    return text if len(text) <= width else text[:width - 3] + "..."
+
+
+def compareFile(pathA, pathB, atol, rtol, ignoreRes):
+    """Return (status, Stats) with status 'identical', 'within' or 'differ'."""
+    dataA, dataB = readBytes(pathA), readBytes(pathB)
+    stats = Stats()
+    if dataA == dataB:
+        return "identical", stats
+
+    itemsA = items(dataA, ignoreRes)
+    itemsB = items(dataB, ignoreRes)
+
+    if itemsA is None or itemsB is None:
+        stats.structural = "binary contents differ"
+        return "differ", stats
+
+    for (kA, wA, vA), (kB, wB, vB) in zip(itemsA, itemsB):
+        if kA == "val" and kB == "val":
+            compareValues(stats, wA, vA, vB, atol, rtol)
+        elif kA != kB or vA != vB:
+            stats.structural = f"{wA}: {show(vA)} vs {show(vB)}"
+            return "differ", stats
+
+    if len(itemsA) != len(itemsB):
+        stats.structural = (
+            f"different lengths ({len(itemsA)} vs {len(itemsB)} tokens)"
+        )
+        return "differ", stats
+
+    if stats.nMismatch:
+        return "differ", stats
+    return ("identical" if stats.nValues == 0 else "within"), stats
+
+
+def excluded(relPath, excludes):
+    parts = relPath.split(os.sep)
+    for pattern in excludes:
+        if fnmatch.fnmatch(relPath, pattern):
+            return True
+        if any(fnmatch.fnmatch(part, pattern) for part in parts):
+            return True
+    return False
+
+
+def listFiles(root, excludes):
+    files = set()
+    for dirPath, dirNames, fileNames in os.walk(root):
+        relDir = os.path.relpath(dirPath, root)
+        relDir = "" if relDir == "." else relDir
+        dirNames[:] = sorted(
+            d for d in dirNames
+            if not excluded(os.path.join(relDir, d), excludes)
+        )
+        for name in fileNames:
+            rel = os.path.join(relDir, name)
+            if not excluded(rel, excludes):
+                files.add(rel)
+    return files
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="cardiacCompareCases",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("caseA")
+    parser.add_argument("caseB")
+    parser.add_argument("--atol", type=float, default=0.0,
+                        help="absolute tolerance (default: 0)")
+    parser.add_argument("--rtol", type=float, default=0.0,
+                        help="relative tolerance (default: 0)")
+    parser.add_argument("--exclude", action="append", default=[],
+                        metavar="GLOB",
+                        help="skip files or directories matching GLOB "
+                             "(repeatable; matched against the relative "
+                             "path and each path component)")
+    parser.add_argument("--processors", action="store_true",
+                        help="also compare processor* directories")
+    parser.add_argument("--logs", action="store_true",
+                        help="also compare log.* files")
+    parser.add_argument("--ignore-lines", action="append", default=[],
+                        metavar="REGEX",
+                        help="in text files, ignore lines matching REGEX "
+                             "(repeatable), e.g. timing output")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="list every compared file")
+    args = parser.parse_args(argv)
+
+    for case in (args.caseA, args.caseB):
+        if not os.path.isdir(case):
+            parser.error(f"not a directory: {case}")
+
+    excludes = list(DEFAULT_EXCLUDES) + args.exclude
+    if args.logs:
+        excludes.remove("log.*")
+    if not args.processors:
+        excludes.append("processor*")
+    ignoreRes = [re.compile(r.encode()) for r in args.ignore_lines]
+
+    filesA = listFiles(args.caseA, excludes)
+    filesB = listFiles(args.caseB, excludes)
+    onlyA = sorted(filesA - filesB)
+    onlyB = sorted(filesB - filesA)
+    common = sorted(filesA & filesB)
+
+    counts = {"identical": 0, "within": 0, "differ": 0}
+    worstAbs, worstRel = 0.0, 0.0
+
+    for rel in common:
+        status, stats = compareFile(
+            os.path.join(args.caseA, rel), os.path.join(args.caseB, rel),
+            args.atol, args.rtol, ignoreRes,
+        )
+        counts[status] += 1
+        worstAbs = max(worstAbs, stats.maxAbs)
+        worstRel = max(worstRel, stats.maxRel)
+
+        if status == "differ":
+            if stats.structural:
+                print(f"DIFFER  {rel}: {stats.structural}")
+            else:
+                print(
+                    f"DIFFER  {rel}: {stats.nMismatch}/{stats.nValues} "
+                    f"values outside tolerance, max abs {stats.maxAbs:.3g}, "
+                    f"max rel {stats.maxRel:.3g}; first at {stats.first}"
+                )
+        elif args.verbose:
+            detail = ""
+            if status == "within":
+                detail = (f" (max abs {stats.maxAbs:.3g}, "
+                          f"max rel {stats.maxRel:.3g})")
+            print(f"{status.upper():8}{rel}{detail}")
+
+    for rel in onlyA:
+        print(f"ONLY A  {rel}")
+    for rel in onlyB:
+        print(f"ONLY B  {rel}")
+
+    print(
+        f"\nCompared {len(common)} file(s): {counts['identical']} identical, "
+        f"{counts['within']} within tolerance, {counts['differ']} differ; "
+        f"{len(onlyA)} only in A, {len(onlyB)} only in B."
+    )
+    if counts["within"] or counts["differ"]:
+        print(f"Largest differences: abs {worstAbs:.3g}, rel {worstRel:.3g}")
+
+    same = not (counts["differ"] or onlyA or onlyB)
+    print("RESULT: cases match" if same else "RESULT: cases differ")
+    return 0 if same else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
