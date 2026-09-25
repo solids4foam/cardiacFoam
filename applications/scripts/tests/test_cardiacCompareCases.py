@@ -205,6 +205,26 @@ class TestCompareCases(unittest.TestCase):
         ).run("--rtol", "1")
         self.assertEqual(rc, 1, out)
 
+    def test_two_files_can_be_compared(self):
+        cases = CaseDirs({"a.dat": b"0 1.0\n"}, {"b.dat": b"0 1.00000001\n"})
+        fileA = os.path.join(cases.a, "a.dat")
+        fileB = os.path.join(cases.b, "b.dat")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            rcExact = ccc.main([fileA, fileB])
+            rcClose = ccc.main(["--rtol", "1e-6", fileA, fileB])
+        cases.tmp.cleanup()
+        self.assertEqual(rcExact, 1, out.getvalue())
+        self.assertEqual(rcClose, 0, out.getvalue())
+
+    def test_file_and_directory_is_an_error(self):
+        cases = CaseDirs({"a.dat": b"1"}, {"a.dat": b"1"})
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                ccc.main([os.path.join(cases.a, "a.dat"), cases.b])
+        cases.tmp.cleanup()
+        self.assertEqual(raised.exception.code, 2)
+
     def test_other_binary_files_compared_bytewise(self):
         rc, out = CaseDirs(
             {"0.1/TNNPState": b"\0\1\2"}, {"0.1/TNNPState": b"\0\1\3"}
