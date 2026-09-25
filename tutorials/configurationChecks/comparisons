@@ -1,0 +1,27 @@
+# Comparisons between two checks' outputs, run by regression/regressionTest.sh
+# after the checks (a line is skipped unless both checks ran)
+#
+# relation  checkA  checkB  file
+#
+#   same    the file must be identical in both runs
+#   differ  the file must differ, i.e. the option has an effect
+
+# Options that must change the myocardium solution
+differ  monodomainExplicit                   monodomainImplicit                               0.005/Vm
+differ  monodomainImplicit                   monodomainSbdf2                                  0.005/Vm
+differ  monodomainExplicit                   monodomainCellZone                               0.005/Vm
+differ  monodomainImplicit                   bidomain                                         0.005/Vm
+differ  eikonal                              eikonalPurkinje                                  1/activationTime
+
+# Purkinje junction couplers must feed the network activation into the slab
+differ  monodomainExplicit                   monodomainPurkinjeReactionDiffusion              0.005/Vm
+differ  monodomainExplicit                   monodomainPurkinjeRestitutionEikonal             0.005/Vm
+differ  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusionBidirectional 0.005/Vm
+
+# Options that must not change the myocardium solution
+same    monodomainExplicit                   monodomainFieldConductivity                      0.005/Vm
+same    monodomainExplicit                   monodomainVerificationNone                       0.005/Vm
+same    monodomainExplicit                   monodomainPseudoECG                              0.005/Vm
+same    bidomain                             bidomainPseudoECG                                0.005/Vm
+same    eikonal                              eikonalECG                                       1/activationTime
+same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE

@@ -1,0 +1,8 @@
+1/activationTime
+1/activationTime.purkinjeNetwork
+1/uniform/functionObjects/functionObjectProperties
+1/uniform/time
+constant/electroProperties.withDefaultValues
+postProcessing/purkinjeNetwork.dat
+postProcessing/purkinjeNetworkVTK/purkinjeNetwork.vtk.series
+postProcessing/purkinjeNetworkVTK/purkinjeNetwork_000001.vtk

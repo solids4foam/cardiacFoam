@@ -35,6 +35,7 @@ REGRESSION_TESTS=(
     "idealizedHeart/electroHeart"
     "idealizedHeart/electroMechHeart"
     "idealizedHeart/pathos/conductionBlock"
+    "configurationChecks"
 )
 
 usage()
