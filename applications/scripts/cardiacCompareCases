@@ -7,6 +7,7 @@ case with the old and the new code, then check that both runs wrote the
 same set of files with the same contents, to within a tolerance.
 
     cardiacCompareCases [options] <caseA> <caseB>
+    cardiacCompareCases [options] <fileA> <fileB>
 
 Compared:
   - the set of files in each case (a file present in only one case is a
@@ -342,30 +343,38 @@ def main(argv=None):
                         help="list every compared file")
     args = parser.parse_args(argv)
 
-    for case in (args.caseA, args.caseB):
-        if not os.path.isdir(case):
-            parser.error(f"not a directory: {case}")
-
-    excludes = list(DEFAULT_EXCLUDES) + args.exclude
-    if args.logs:
-        excludes.remove("log.*")
-    if not args.processors:
-        excludes.append("processor*")
     ignoreRes = [re.compile(r.encode()) for r in args.ignore_lines]
 
-    filesA = listFiles(args.caseA, excludes)
-    filesB = listFiles(args.caseB, excludes)
-    onlyA = sorted(filesA - filesB)
-    onlyB = sorted(filesB - filesA)
-    common = sorted(filesA & filesB)
+    if os.path.isfile(args.caseA) and os.path.isfile(args.caseB):
+        # Two files: compare just those
+        pairs = [(os.path.basename(args.caseB), args.caseA, args.caseB)]
+        onlyA, onlyB = [], []
+    else:
+        for case in (args.caseA, args.caseB):
+            if not os.path.isdir(case):
+                parser.error(f"not a directory: {case}")
+
+        excludes = list(DEFAULT_EXCLUDES) + args.exclude
+        if args.logs:
+            excludes.remove("log.*")
+        if not args.processors:
+            excludes.append("processor*")
+
+        filesA = listFiles(args.caseA, excludes)
+        filesB = listFiles(args.caseB, excludes)
+        onlyA = sorted(filesA - filesB)
+        onlyB = sorted(filesB - filesA)
+        pairs = [
+            (rel, os.path.join(args.caseA, rel), os.path.join(args.caseB, rel))
+            for rel in sorted(filesA & filesB)
+        ]
 
     counts = {"identical": 0, "within": 0, "differ": 0}
     worstAbs, worstRel = 0.0, 0.0
 
-    for rel in common:
+    for rel, pathA, pathB in pairs:
         status, stats = compareFile(
-            os.path.join(args.caseA, rel), os.path.join(args.caseB, rel),
-            args.atol, args.rtol, ignoreRes,
+            pathA, pathB, args.atol, args.rtol, ignoreRes,
         )
         counts[status] += 1
         worstAbs = max(worstAbs, stats.maxAbs)
@@ -393,7 +402,7 @@ def main(argv=None):
         print(f"ONLY B  {rel}")
 
     print(
-        f"\nCompared {len(common)} file(s): {counts['identical']} identical, "
+        f"\nCompared {len(pairs)} file(s): {counts['identical']} identical, "
         f"{counts['within']} within tolerance, {counts['differ']} differ; "
         f"{len(onlyA)} only in A, {len(onlyB)} only in B."
     )
