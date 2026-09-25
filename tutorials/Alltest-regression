@@ -27,6 +27,7 @@ REGRESSION_TESTS=(
     "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
     "manufacturedSolutions/bidomain"
     "manufacturedSolutions/monodomainPseudoECG"
+    "manufacturedSolutions/monodomain1D3D"
     "manufacturedSolutions/eikonalECG"
     "manufacturedSolutions/bathBidomain"
     "manufacturedSolutions/monodomainTotalLagrangianEM"

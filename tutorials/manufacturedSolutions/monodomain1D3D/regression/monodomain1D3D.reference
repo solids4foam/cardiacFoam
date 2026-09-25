@@ -1,0 +1,31 @@
+# kind key metric expected tolerance rel|abs
+# Generated from a v2512 serial run at N_CELLS=20 with the 41-node graph.
+# The summaries print 6 significant digits, so a round-off change can flip the
+# last digit (up to 1e-5 relative): rel 2e-5 allows one printed digit. The net
+# junction current is near zero by cancellation, so it gets an absolute
+# tolerance.
+error3D Vm L1 0.000853948 2e-5 rel
+error3D Vm L2 0.00116361 2e-5 rel
+error3D Vm Linf 0.00336237 2e-5 rel
+error3D u1 L1 0.000111841 2e-5 rel
+error3D u1 L2 0.000155118 2e-5 rel
+error3D u1 Linf 0.000551867 2e-5 rel
+error3D u2 L1 4.86786e-05 2e-5 rel
+error3D u2 L2 6.66589e-05 2e-5 rel
+error3D u2 Linf 0.000195356 2e-5 rel
+error1D Vm1D L1 5.9471e-06 2e-5 rel
+error1D Vm1D L2 7.11648e-06 2e-5 rel
+error1D Vm1D Linf 1.36983e-05 2e-5 rel
+error1D u1 L1 5.78369e-06 2e-5 rel
+error1D u1 L2 6.51348e-06 2e-5 rel
+error1D u1 Linf 1.08006e-05 2e-5 rel
+error1D u2 L1 1.52323e-06 2e-5 rel
+error1D u2 L2 1.81432e-06 2e-5 rel
+error1D u2 Linf 3.78511e-06 2e-5 rel
+coupling sourceL1 - 3.17832 2e-5 rel
+coupling sourceL2 - 53.7473 2e-5 rel
+coupling sourceErrorL1 - 0.000249206 2e-5 rel
+coupling sourceErrorL2 - 0.00421579 2e-5 rel
+coupling totalAbsCurrent - 3.17832 2e-5 rel
+coupling nonZeroCells - 42 2e-5 rel
+coupling totalCurrent - 6.81632e-06 1e-9 abs
