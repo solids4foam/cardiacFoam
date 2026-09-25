@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Idealized heart injection regression test
 # ============================================================
@@ -133,6 +141,13 @@ for variant in "${VARIANTS[@]}"; do
         echo "FAIL: Allrun ${variant} parallel exited non-zero. Surfacing logs:"
         dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
         dumpLogTail "cardiacFoam" "log.cardiacFoam"
+        failures=$((failures + 1))
+        failedVariants+=("${variant}")
+        echo
+        continue
+    fi
+
+    if ! checkSolverLogs log.cardiacFoam log.reconstructPar; then
         failures=$((failures + 1))
         failedVariants+=("${variant}")
         echo
