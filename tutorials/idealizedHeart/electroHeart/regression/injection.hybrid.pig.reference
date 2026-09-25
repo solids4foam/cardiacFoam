@@ -1,0 +1,11 @@
+# Hybrid variant on the pig Purkinje tree (Allrun hybrid pig).
+#
+# The probe reads -1 through t=0.03 and activates at 34.0 ms, versus 30.3 ms
+# on the human tree. With the former pvjRadius 2.5e-3 it never activated
+# within 40 ms: only 26% of the intramural junctions captured the tissue,
+# since the sphere, wholly inside the wall, diluted each junction's current.
+# At 1.65e-3 every junction captures (intramural capture delay ~11 ms at
+# rPvj 1000, surface ~5 ms). Sampled at endTime.
+#
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         0.04   2    0.0339693     1e-4

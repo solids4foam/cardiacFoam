@@ -1,4 +1,9 @@
 # Monodomain variant: monodomainSolver + monodomain1DSolver.
 #
+# The probe reads -1 through t=0.025 and activates at 28.8 ms; sampled at
+# endTime. 2026-09-24: was 0.015716 at t=0.02 with purkinjeConductivity 10
+# (~8.7 m/s); 0.4 gives ~3.3 m/s, the hybrid variant's calibrated Purkinje
+# velocity, so the monodomain and hybrid probes now activate 1.5 ms apart.
+#
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.02   2    0.0193572     1e-4
+injectionProbe/0/activationTime         0.04   2    0.0288211     1e-4

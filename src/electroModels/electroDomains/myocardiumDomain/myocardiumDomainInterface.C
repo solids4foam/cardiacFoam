@@ -52,7 +52,7 @@ scalarField readTransmuralDistance
 {
     scalarField fullValues;
 
-    const word mode = heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+    const word mode(heterogeneityDict.lookup("mode"));
 
     if (mode == "cellZoneRegions")
     {
@@ -98,8 +98,16 @@ scalarField readTransmuralDistance
     }
     else
     {
-        const word fieldName =
-            heterogeneityDict.lookupOrDefault<word>("field", "t");
+        if (!heterogeneityDict.found("field"))
+        {
+            FatalErrorInFunction
+                << "ionicHeterogeneity mode '" << mode << "' requires a "
+                << "'field' entry naming the scalar field to read region "
+                << "membership from."
+                << exit(FatalError);
+        }
+
+        const word fieldName(heterogeneityDict.lookup("field"));
 
         const volScalarField transmuralField
         (
@@ -239,11 +247,17 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         const dictionary& heterogeneityDict =
             electroProperties.subDict("ionicHeterogeneity");
 
-        if
-        (
-            heterogeneityDict.found("mode")
-         || heterogeneityDict.found("field")
-        )
+        if (heterogeneityDict.found("field") && !heterogeneityDict.found("mode"))
+        {
+            FatalErrorInFunction
+                << "electroProperties.ionicHeterogeneity has a 'field' "
+                << "entry but no 'mode' entry. 'mode' is required whenever "
+                << "region heterogeneity is configured: namedRegions or "
+                << "cellZoneRegions."
+                << exit(FatalError);
+        }
+
+        if (heterogeneityDict.found("mode"))
         {
             const scalarField transmuralDistance =
                 readTransmuralDistance(mesh, electroProperties, heterogeneityDict);

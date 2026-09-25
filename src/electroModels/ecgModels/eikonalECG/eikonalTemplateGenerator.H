@@ -26,8 +26,7 @@ Description
     dynamically-generated ones. This component generates templates at
     runtime by pacing single cells of a real ionicModel with a case's own
     ionic parameterisation (heterogeneity constants and S1 stimulus
-    protocol): 3 anchors (endo/mid/epi) for ionicHeterogeneity.mode
-    transmuralBands, or N anchors (one per named region) for mode
+    protocol): N anchors (one per named region) for ionicHeterogeneity.mode
     namedRegions.
 
     This file does not wire the generated templates into eikonalECG; it is
@@ -60,11 +59,11 @@ struct DynamicTemplate
 };
 
 //- nBeats overrides ionicModelConfig.singleCellStimulus.nstim1; neither
-//  dict is mutated. Returns one template per anchor: 3 entries
-//  ([endo, mid, epi], in that order) for mode transmuralBands (the
-//  default), or one entry per region (sorted by rangeMin, matching
-//  ionicHeterogeneity::parseNamedFieldRegions()'s own order) for mode
-//  namedRegions. Fatals on any other heterogeneityDict.mode.
+//  dict is mutated. Returns one template per anchor: one entry per region
+//  for mode namedRegions (sorted by rangeMin, matching
+//  ionicHeterogeneity::parseNamedFieldRegions()'s own order) or mode
+//  cellZoneRegions (in the order 'regions' declares them). Fatals on any
+//  other heterogeneityDict.mode.
 List<DynamicTemplate> generatePersonalizedTemplates
 (
     const dictionary& ionicModelConfig,

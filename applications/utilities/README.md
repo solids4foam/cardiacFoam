@@ -1,6 +1,6 @@
 # Utilities
 
-Thirteen tools for preparing a case before `cardiacFoam` runs, and for inspecting it afterwards.
+Fourteen tools for preparing a case before `cardiacFoam` runs, and for inspecting it afterwards.
 
 ```mermaid
 flowchart TB
@@ -15,6 +15,7 @@ flowchart TB
         LV["listCellModelsVariables"]
         HP["ionicHeterogeneityProbe"]
         SW["sweepCurrents"]
+        SI["setIonicRestartState<br/><i>seed per-region ionic states</i>"]
     end
     subgraph MECH["Mechanics only: f0 and f0f"]
         SF["setFibreField<br/><i>computes f0 and writes f0f</i>"]
@@ -54,6 +55,7 @@ flowchart TB
 | fix the dimensions recorded in a field file | `setFieldDimensions` | [README](setFieldDimensions/README.md) |
 | see which variables a cell model exposes | `listCellModelsVariables` | [README](listCellModelsVariables/README.md) |
 | check heterogeneity weights before a tissue run | `ionicHeterogeneityProbe` | [README](ionicHeterogeneityProbe/README.md) |
+| start a tissue run from converged single-cell ionic states | `setIonicRestartState` | [README](setIonicRestartState/README.md) |
 | sweep a cell model's currents | `sweepCurrents` | [README](sweepCurrents/README.md) |
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |

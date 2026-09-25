@@ -12,7 +12,7 @@ y = [-0.0040, 0.0020] m
 z = [0.0030, 0.0060] m
 ```
 
-`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into `endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`, `mEpiInterface 0.7`) from a field that must be 0 at the endocardium and 1 at the epicardium — the opposite of this mesh's `tm` convention. `system/electro/setExprFieldsDict` derives `t = 1 - tm` for it to read; `Allrun` runs `setExprFields -region electro` for this.
+`monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies cells into `endocardialCells`/`mCells`/`epicardialCells` regions (`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from a field that must be 0 at the endocardium and 1 at the epicardium — the opposite of this mesh's `tm` convention. `system/electro/setExprFieldsDict` derives `t = 1 - tm` for it to read; `Allrun` runs `setExprFields -region electro` for this.
 
 ## Mechanical boundary conditions
 

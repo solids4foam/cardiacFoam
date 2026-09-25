@@ -1,0 +1,9 @@
+# Monodomain variant on the pig Purkinje tree (Allrun monodomain pig).
+#
+# The probe reads -1 through t=0.03 and activates at 31.9 ms, versus 28.8 ms
+# on the human tree: the pig tree reaches this LV free-wall point through
+# different, mostly intramural junctions. With pvjRadius 1.65e-3 every pig
+# junction captures the tissue. Sampled at endTime.
+#
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         0.04   2    0.0319186     1e-4

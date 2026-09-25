@@ -17,6 +17,11 @@ same case, selected at run time; no default — see Execution below.
 `constant/electroProperties` itself never changes between variants — it
 always reads `graphFile purkinjeGraph;`. Only the graph file differs.
 
+Purkinje conduction and junction coupling follow `../../electroHeart`:
+`purkinjeConductivity 0.4` (~3.3 m/s along the tree, the hybrid variant's
+calibrated Purkinje velocity) and `pvjRadius 1.65e-3`, the smallest junction
+radius valid on the shared mesh.
+
 ## Mesh and shared anatomy fields
 
 Shared with `electroHeart`/`electroMechHeart`/
@@ -27,9 +32,10 @@ Shared with `electroHeart`/`electroMechHeart`/
 
 ## Tissue heterogeneity
 
-`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into
-`endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`,
-`mEpiInterface 0.7`) from `field t;`, `system/setExprFieldsDict`'s
+`monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies
+cells into `endocardialCells`/`mCells`/`epicardialCells` regions
+(`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from `field t;`,
+`system/setExprFieldsDict`'s
 `t = 1 - tm` (`tm`: 0 at epicardium, 1 at endocardium — the opposite
 orientation `ionicHeterogeneity` requires).
 

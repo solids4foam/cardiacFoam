@@ -65,14 +65,17 @@ inline void readValue(std::ifstream& is, T& value, const fileName& statePath)
 }
 
 
-inline void validateHeader
-(
-    const word& model,
-    const label stride,
-    const label nRows,
-    std::ifstream& is,
-    const fileName& statePath
-)
+//- Model name, states per row and number of rows of a state file
+struct Header
+{
+    word model;
+    label stride;
+    label rows;
+};
+
+
+//- Read and check the format fields of a state file header
+inline Header readHeader(std::ifstream& is, const fileName& statePath)
 {
     std::uint32_t fileMagic = 0;
     std::uint32_t fileVersion = 0;
@@ -107,10 +110,7 @@ inline void validateHeader
     (
         fileMagic != magic
      || fileVersion != version
-     || fileModel != model
      || fileScalarSize != sizeof(scalar)
-     || fileStride != static_cast<std::uint64_t>(stride)
-     || fileRows != static_cast<std::uint64_t>(nRows)
     )
     {
         FatalErrorInFunction
@@ -118,6 +118,36 @@ inline void validateHeader
             << exit(FatalError);
     }
 
+    Header header;
+    header.model = word(fileModel);
+    header.stride = label(fileStride);
+    header.rows = label(fileRows);
+    return header;
+}
+
+
+inline void validateHeader
+(
+    const word& model,
+    const label stride,
+    const label nRows,
+    std::ifstream& is,
+    const fileName& statePath
+)
+{
+    const Header header = readHeader(is, statePath);
+
+    if
+    (
+        header.model != model
+     || header.stride != stride
+     || header.rows != nRows
+    )
+    {
+        FatalErrorInFunction
+            << "Invalid restart state file " << statePath
+            << exit(FatalError);
+    }
 }
 
 inline void writeHeader

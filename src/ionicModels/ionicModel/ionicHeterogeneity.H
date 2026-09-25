@@ -37,22 +37,6 @@ namespace Foam
 namespace ionicHeterogeneity
 {
 
-struct TransmuralBandWeights
-{
-    scalar endo;
-    scalar mCell;
-    scalar epi;
-};
-
-void validateTransmuralBandConfig
-(
-    scalar endoMInterface,
-    scalar mEpiInterface,
-    scalar transitionWidth,
-    const word& smoothing,
-    const word& transitionMode
-);
-
 //- Validate a gradientAxes axis's scalingMin/scalingMax/variables.
 void validateGradientAxisConfig
 (
@@ -72,10 +56,10 @@ struct NamedFieldRegion
     //- Explicit tissue baseline this region resolves to via
     //  constantsForTissue()/initialStatesForTissue(). If the region name
     //  differs from the baseline, ionicConstantOverrides.<name> is layered
-    //  on top. One of:
-    //  epicardialCells, mCells, endocardialCells, myocyte. Defaults to the
-    //  region's own name if it is one of the three anatomical names,
-    //  otherwise defaults to myocyte — set explicitly to override this.
+    //  on top. One of: epicardialCells, mCells, endocardialCells, myocyte.
+    //  Defaults to the region's own name only when that name is one of
+    //  the three anatomical names; any other region name must declare
+    //  'baseline' explicitly, or parsing fatals.
     word baseline;
 };
 
@@ -93,20 +77,22 @@ struct NamedRegionWeight
 };
 
 //- Parse an open dictionary of {name: {range (min max); baseline <word>;}}
-//  entries into a list sorted by rangeMin. 'baseline' is optional per
-//  region (see NamedFieldRegion::baseline for the default rule) but if
-//  given must be one of epicardialCells/mCells/endocardialCells/myocyte.
+//  entries into a list sorted by rangeMin. 'baseline' is required for any
+//  region name that is not itself one of epicardialCells/mCells/
+//  endocardialCells (see NamedFieldRegion::baseline); when given it must
+//  be one of epicardialCells/mCells/endocardialCells/myocyte.
 //  Fatals if any region is named 'global', if any region is missing
 //  'range', if a range is malformed, if fewer than two regions are
-//  declared, if 'baseline' is not a supported tissue name, or if the
-//  sorted regions do not tile [0,1] contiguously with no gaps/overlaps
-//  — including at the edges: the first region's rangeMin must be exactly
-//  0 and the last region's rangeMax must be exactly 1 (within SMALL).
+//  declared, if a non-anatomical region name is missing 'baseline', if
+//  'baseline' is not a supported tissue name, or if the sorted regions
+//  do not tile [0,1] contiguously with no gaps/overlaps — including at
+//  the edges: the first region's rangeMin must be exactly 0 and the last
+//  region's rangeMax must be exactly 1 (within SMALL).
 List<NamedFieldRegion> parseNamedFieldRegions(const dictionary& regionsDict);
 
 //- Parse an open dictionary of {name: {cellZone <word>; baseline <word>;}}
-//  entries. 'baseline' follows the same fallback rules as NamedFieldRegion.
-//  Fatals if any region is missing 'cellZone'.
+//  entries. 'baseline' follows the same required-unless-anatomical rule
+//  as NamedFieldRegion. Fatals if any region is missing 'cellZone'.
 List<NamedCellZoneRegion> parseNamedCellZoneRegions(const dictionary& regionsDict);
 
 //- Per-cell region weights (sum to 1) for field value t against a
@@ -123,38 +109,12 @@ List<NamedRegionWeight> namedRegionWeightsAt
 
 scalar smoothingWeight(scalar x, const word& smoothing);
 
-TransmuralBandWeights transmuralBandWeights
-(
-    scalar t,
-    scalar endoMInterface,
-    scalar mEpiInterface,
-    scalar transitionWidth,
-    const word& smoothing,
-    const word& transitionMode
-);
-
 scalar apexBaseScale
 (
     scalar d,
     scalar beta,
     scalar scalingMin,
     scalar scalingMax
-);
-
-//- Expand a transmuralBands (endoMInterface, mEpiInterface) configuration
-//  into the same three named regions
-//  (endocardialCells, mCells, epicardialCells) that mode namedRegions
-//  consumes directly, so callers that need a uniform List<NamedFieldRegion>
-//  view of either mode (e.g. eikonalECG's personalizedTemplates) can treat
-//  transmuralBands as the N=3 case of the same region-based machinery.
-//  Mirrors the inline construction in
-//  ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity();
-//  callers must not assume this list is used to change that orchestrator's
-//  own behavior, only to give a second consumer an equivalent view.
-List<NamedFieldRegion> synthesizeTransmuralBandRegions
-(
-    scalar endoMInterface,
-    scalar mEpiInterface
 );
 
 } // End namespace ionicHeterogeneity

@@ -62,16 +62,7 @@ Author
         {
             const dictionary& het = coeffs.subDict("ionicHeterogeneity");
             const word mode = het.lookupOrDefault<word>("mode", "none");
-            if (mode == "transmuralBands")
-            {
-                Info<< "    Heterogeneity     : endo |"
-                    << het.lookupOrDefault<scalar>("endoMInterface", 0.0) << "| mcells |"
-                    << het.lookupOrDefault<scalar>("mEpiInterface", 0.0) << "| epi" << nl;
-            }
-            else
-            {
-                Info<< "    Heterogeneity     : " << mode << nl;
-            }
+            Info<< "    Heterogeneity     : " << mode << nl;
         }
         else
         {
@@ -113,16 +104,7 @@ Author
                         {
                             const dictionary& het = condCoeffs.subDict("ionicHeterogeneity");
                             const word mode = het.lookupOrDefault<word>("mode", "none");
-                            if (mode == "transmuralBands")
-                            {
-                                Info<< "    Heterogeneity     : endo |"
-                                    << het.lookupOrDefault<scalar>("endoMInterface", 0.0) << "| mcells |"
-                                    << het.lookupOrDefault<scalar>("mEpiInterface", 0.0) << "| epi" << nl;
-                            }
-                            else
-                            {
-                                Info<< "    Heterogeneity     : " << mode << nl;
-                            }
+                            Info<< "    Heterogeneity     : " << mode << nl;
                         }
                         else
                         {

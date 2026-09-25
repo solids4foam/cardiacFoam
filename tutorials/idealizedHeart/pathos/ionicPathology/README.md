@@ -30,11 +30,17 @@ files are identical except for the `ionicConstantOverrides` block:
   dispersion of repolarisation). References: Coronel et al. 2009,
   Shimizu & Antzelevitch 1999.
 
+Purkinje conduction and junction coupling follow `../../electroHeart`:
+`purkinjeConductivity 0.4` (~3.3 m/s along the tree, the hybrid variant's
+calibrated Purkinje velocity) and `pvjRadius 1.65e-3`, the smallest junction
+radius valid on the shared mesh.
+
 ## Tissue heterogeneity
 
-`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into
-`endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`,
-`mEpiInterface 0.7`) from `field t;`, `system/setExprFieldsDict`'s
+`monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies
+cells into `endocardialCells`/`mCells`/`epicardialCells` regions
+(`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from `field t;`,
+`system/setExprFieldsDict`'s
 `t = 1 - tm` (`tm`: 0 at epicardium, 1 at endocardium — the opposite
 orientation `ionicHeterogeneity` requires). `epicardialCells` is also
 where the `brugada` variant's `g_to`/`g_CaL` override applies.

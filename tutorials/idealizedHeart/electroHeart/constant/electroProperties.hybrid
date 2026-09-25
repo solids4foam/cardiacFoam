@@ -35,13 +35,42 @@ monodomainSolverCoeffs
 
     ionicHeterogeneity
     {
+        mode              namedRegions;
         field             t;
-        mode              transmuralBands;
-        endoMInterface    0.3;
-        mEpiInterface     0.7;
-        transitionWidth   0.1;
         transitionMode    blend;
+        transitionWidth   0.1;
         smoothing         smoothstep;
+        regions
+        {
+            endocardialCells { range (0 0.3); }
+            mCells           { range (0.3 0.7); }
+            epicardialCells  { range (0.7 1); }
+        }
+
+        // Apex-to-base APD gradient (composes with the named regions
+        // above): APD shorter at the apex, longer at the base, matching the
+        // consistently reported direction in the literature (e.g. Opthof
+        // et al., J Cardiovasc Electrophysiol; Sengupta et al., Circulation
+        // Cardiovasc Imaging). apicobasal follows the same 0=apex/1=base
+        // convention this tutorial already uses for Purkinje-tree UVCs (see
+        // README), so it is used directly as the distance field, no
+        // inversion needed. tauSi is the primary APD-determining time
+        // constant in the Bueno-Orovio-Cherry-Fenton minimal model;
+        // scalingMin/scalingMax were calibrated against single-cell APD90
+        // measurements (RKF45, S1 pacing) to target the ~20ms total
+        // apex-base gradient commonly used in simulation studies, not the
+        // library's generic wide-range defaults.
+        gradientAxes
+        {
+            apicobasal
+            {
+                field       apicobasal;
+                beta        1.2;
+                scalingMin  0.97;
+                scalingMax  1.04;
+                variables   (tauSi);
+            }
+        }
     }
 
     solutionAlgorithm explicit;
@@ -91,7 +120,9 @@ monodomainSolverCoeffs
             electroDomainCoupler    eikonalMonodomainPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
             rPvj                    1000;
-            pvjRadius               2.5e-3;
+            // Smallest radius valid at every junction of both Purkinje trees:
+            // the coarsest junction cell (pig tree, mid-wall) is 1.60 mm across.
+            pvjRadius               1.65e-3;
             couplingMode            unidirectional;
             debugCoupling           true;
         }
@@ -106,12 +137,12 @@ monodomainSolverCoeffs
 
             electrodePositions
             {
-                V1 (0.015716  0.005708  -0.073831);
-                V2 (0.033206 -0.023525  -0.056927);
-                V3 (0.052927 -0.027237  -0.044977);
-                V4 (0.070759 -0.041274  -0.018468);
-                V5 (0.073891 -0.055458   0.008801);
-                V6 (0.069582 -0.064013   0.029485);
+                V1 (0.010407  0.056280  -0.050468);
+                V2 (0.030086  0.016628  -0.061925);
+                V3 (0.052524 -0.019359  -0.050439);
+                V4 (0.070768 -0.037057  -0.026220);
+                V5 (0.073474 -0.043547  -0.003609);
+                V6 (0.068323 -0.043011   0.018866);
             }
         }
     }
