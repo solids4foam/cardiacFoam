@@ -53,9 +53,11 @@ variant here).
 
 ## ECG electrodes
 
-`ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
-reference heart's validated V1-V6 placement — a normalized approximation.
-24-46mm from the epicardium, comparable to the reference case's own spread.
+`ecgDomains.ECG.electrodePositions` are placed by angle around the LV long
+axis in the LV frame (`L` apex-to-base, `S` LV centre to RV centre, anterior
+`A = L x S`, here `-z`): V1..V6 at 35, 65, 100, 135, 170, 205 deg from `S`
+toward `A`, each at its original apex-base height and 25 mm from the nearest
+tissue.
 
 ## Execution
 
