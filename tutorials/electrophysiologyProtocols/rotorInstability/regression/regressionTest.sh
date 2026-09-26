@@ -2,23 +2,30 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Rotor Instability activation regression test
 # ============================================================
-
-ACTIVATION_TOL=1e-4
 
 REF_FILE="regression/rotorInstability.reference"
 ALLRUN_LOGFILE="log.Allrun"
 
 echo "============================================================"
 echo "Rotor Instability activation regression test"
-echo "Activation-time difference < ${ACTIVATION_TOL}"
+echo "Activation times within the tolerances in ${REF_FILE}"
 echo "============================================================"
 echo
 
 ./Allclean > /dev/null 2>&1 || true
 ./Allrun parallel > "${ALLRUN_LOGFILE}" 2>&1
+checkSolverLogs log.cardiacFoam log.reconstructPar log.postProcess || exit 1
 
 if [[ ! -f "${REF_FILE}" ]]; then
     echo "FAIL: reference file not found: ${REF_FILE}"

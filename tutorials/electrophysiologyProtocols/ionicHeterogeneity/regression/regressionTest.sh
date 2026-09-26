@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # ionicHeterogeneity regression test
 #
@@ -55,6 +63,7 @@ if [[ "${CHECK_ONLY}" -eq 1 ]]; then
 else
     ./Allclean > /dev/null 2>&1 || true
     ./Allrun > "${ALLRUN_LOGFILE}" 2>&1
+    checkSolverLogs -e '^Completed\.$' log.ionicHeterogeneityProbe || exit 1
 fi
 
 if [[ ! -f "${REF_FILE}" ]]; then

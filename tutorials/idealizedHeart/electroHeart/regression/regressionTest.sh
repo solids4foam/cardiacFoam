@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Idealized heart injection regression test
 # ============================================================
@@ -148,6 +156,13 @@ for variant in "${VARIANTS[@]}"; do
         dumpLogTail "cardiacFoam" "log.cardiacFoam"
         failures=$((failures + 1))
         failedVariants+=("${label}")
+        echo
+        continue
+    fi
+
+    if ! checkSolverLogs log.cardiacFoam log.reconstructPar; then
+        failures=$((failures + 1))
+        failedVariants+=("${variant}")
         echo
         continue
     fi

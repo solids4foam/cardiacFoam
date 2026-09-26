@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Bath-bidomain manufactured-solution regression test
 # ============================================================
@@ -29,14 +37,15 @@ echo
 # The same case passes on v2412 and v2512 in both modes. A diagnostic
 # Info<< probe at extracellularPotentialDomain.C:647 confirmed the lookup
 # key, sub-mesh name, and field names are correct; the bug is internal to
-# v2312's schemesLookup machinery. Suppress the regression for v2312 only.
+# v2312's schemesLookup machinery. Skip the regression (exit 77) for v2312
+# only; Alltest-regression treats this as an expected skip on v2312.
 ofVersion="${WM_PROJECT_VERSION:-unknown}"
 if [[ "${ofVersion}" == *2312* ]]; then
     echo "SKIP: bathBidomain regression is suppressed on OpenFOAM v2312."
     echo "      v2312 dictionary lookup of 'laplacian(conductivityIntracellular,Vm)'"
     echo "      fails for both lightweight and with-solids4foam modes; v2412 and"
     echo "      v2512 (both modes) exercise this test successfully."
-    exit 0
+    exit 77
 fi
 
 findFirstMatch()
@@ -214,6 +223,7 @@ if ! ./Allrun > "${ALLRUN_LOGFILE}" 2>&1; then
     done
     exit 1
 fi
+checkSolverLogs || exit 1
 
 errorFile="$(findManufacturedErrorFile)" || {
     echo "FAIL: bath-bidomain manufactured error summary file not found."

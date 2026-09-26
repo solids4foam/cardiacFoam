@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Idealized heart conduction-block (lbbb) regression test
 # ============================================================
@@ -66,6 +74,7 @@ if ! ./Allrun lbbb > "${ALLRUN_LOGFILE}" 2>&1; then
     dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
     exit 1
 fi
+checkSolverLogs || exit 1
 
 if [[ ! -f "${REF_FILE}" ]]; then
     echo "FAIL: reference file not found: ${REF_FILE}"

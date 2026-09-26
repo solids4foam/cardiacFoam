@@ -6,6 +6,7 @@ notes.txt
 todo*
 tutorialsTest
 tutorialsTest-regression
+tutorials/configurationChecks/runs
 
 # Build log files
 log.Allwmake
@@ -154,6 +155,9 @@ tutorials/**/0/*
 # the eikonal solver now reads its boundary conditions from it
 # (MUST_READ), so it must be tracked like any constant/ or system/ dict.
 !tutorials/**/0/activationTime
+# ...and the configuration checks' variant fields: small, uniform,
+# hand-authored inputs (see tutorials/configurationChecks/README.md).
+!tutorials/configurationChecks/variants/*/0/*
 # ...and idealizedHeart/mesh/0/*: the one canonical, curated copy
 # of the supplied idealized-biventricular anatomy (fibre, sheet, sheetNormal,
 # tm, tv, apicobasal, Conductivity), shared by electroHeart and

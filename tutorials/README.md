@@ -31,6 +31,7 @@ not merely the presence of an `Allrun` script.
 | `idealizedHeart/electroMechHeart` | Couple whole-ventricle electrophysiology to the solid on the same anatomy | `electroMechanicalModel` with monodomain electrophysiology | full only | `Alltest-regression` (expected skip in lightweight mode) | `Ta` and `D` probes on the solid, activation-time and `Vm` probes on the electro region |
 | `idealizedHeart/pathos/conductionBlock` | Model left or right bundle-branch block structurally | `monodomainSolver` with one Purkinje bundle severed, variant selected at run time | lightweight or full | `Alltest-regression` | junction activation-time probes and pseudo-ECG series |
 | `idealizedHeart/pathos/ionicPathology` | Model acute ischemia or Brugada syndrome type-1 | `monodomainSolver` with `ionicConstantOverrides` on `TNNP`, variant selected at run time | lightweight or full | not covered | pseudo-ECG series and monodomain fields |
+| `configurationChecks` | Check which `electroProperties` configurations are accepted, what they write, and which are rejected | short runs of every myocardium, conduction, coupler and ECG selection, plus invalid ones | lightweight or full | `Alltest-regression` | per-check runs under `runs/`, compared with `regression/manifests/` |
 
 ## Common script pattern
 

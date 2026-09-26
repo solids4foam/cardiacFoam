@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Bidomain manufactured-solution regression test
 # ============================================================
@@ -170,6 +178,7 @@ checkReferenceValues()
 ./Allclean > /dev/null 2>&1 || true
 blockMesh -dict system/blockMeshDict.3D > "${BLOCKMESH_LOGFILE}" 2>&1
 ./Allrun > "${ALLRUN_LOGFILE}" 2>&1
+checkSolverLogs || exit 1
 
 errorFile="$(findManufacturedErrorFile)" || {
     echo "FAIL: manufactured error summary file not found."

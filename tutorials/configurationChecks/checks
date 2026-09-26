@@ -1,0 +1,71 @@
+# Configuration checks, run by regression/regressionTest.sh
+#
+# name  base  variant  expect  [edit ...]
+#
+#   base     case under base/ providing mesh, system/ and Allprepare
+#   variant  files under variants/ copied over the base (at least
+#            constant/electroProperties)
+#   expect   pass: must complete and write the files in
+#                  regression/manifests/<name>
+#            fail:<text>: must stop with a FOAM FATAL error mentioning <text>
+#                  (write spaces in <text> as ~)
+#   edit     applied to constant/electroProperties with foamDictionary:
+#            path=value sets an entry, path! removes it (no spaces in values);
+#            skip=<version>[,...] skips the check on those OpenFOAM versions
+#
+# On OpenFOAM v2312 a cellZone myocardium sub-mesh fails its fvSchemes
+# lookups (e.g. "Entry 'interpolate(conductivity)' not found"), as noted in
+# manufacturedSolutions/bathBidomain, so the cellZone and bath checks that
+# solve on a sub-mesh are skipped there.
+
+# ---- Myocardium models and options --------------------------------------
+monodomainExplicit                     slab  monodomainExplicit                     pass
+monodomainImplicit                     slab  monodomainImplicit                     pass
+monodomainSbdf2                        slab  monodomainSbdf2                        pass
+monodomainFieldConductivity            slab  monodomainFieldConductivity            pass
+monodomainCellZone                     slab  monodomainCellZone                     pass  skip=v2312
+monodomainVerificationNone             slab  monodomainVerificationNone             pass
+bidomain                               slab  bidomain                               pass
+eikonal                                slab  eikonal                                pass
+
+# ---- Conduction system (Purkinje) and junction couplers -----------------
+monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion    pass
+monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
+monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
+eikonalPurkinje                        slab  eikonalPurkinje                        pass
+
+# ---- ECG ------------------------------------------------------------------
+monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
+bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
+eikonalECG                             slab  eikonalECG                             pass
+
+# ---- Bath (extracellular potential domain) and torso ECG ------------------
+bathBidomain                           bath  bathBidomain                           pass  skip=v2312
+bathTorsoECG                           bath  bathTorsoECG                           pass  skip=v2312
+
+# ---- Single cell ------------------------------------------------------------
+singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
+singleCellTWorldActiveTension          singleCell singleCellTWorldActiveTension     pass
+
+# ---- Invalid configurations: must stop with a clear fatal error ------------
+unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
+missingMyocardiumCoeffs                slab  monodomainExplicit          fail:bidomainSolverCoeffs     myocardiumSolver=bidomainSolver
+unknownIonicModel                      slab  monodomainExplicit          fail:bogusIonicModel          monodomainSolverCoeffs/ionicModel=bogusIonicModel
+unknownConductivitySource              slab  monodomainExplicit          fail:bogusSource              monodomainSolverCoeffs/conductivitySource=bogusSource
+unknownTimeCouplingScheme              slab  monodomainImplicit          fail:bogusScheme              monodomainSolverCoeffs/timeCouplingScheme=bogusScheme
+unknownVerificationModel               slab  monodomainVerificationNone  fail:libverificationModels    monodomainSolverCoeffs/verificationModel/type=bogusVerifier
+unknownAdvanceScheme                   slab  monodomainPurkinjeReactionDiffusion fail:bogusAdvanceScheme monodomainSolverCoeffs/electrophysicsAdvanceScheme=bogusAdvanceScheme
+unknownConductionSystemDomain          slab  monodomainPurkinjeReactionDiffusion fail:bogusDomain  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/conductionSystemDomain=bogusDomain
+unknownConductionSystemSolver          slab  monodomainPurkinjeReactionDiffusion fail:bogusSolver1D monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/conductionSystemSolver=bogusSolver1D
+missingGraphFile                       slab  monodomainPurkinjeReactionDiffusion fail:missingGraph monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/graphFile=missingGraph
+unknownElectroDomainCoupler            slab  monodomainPurkinjeReactionDiffusion fail:bogusCoupler monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/electroDomainCoupler=bogusCoupler
+couplingToUnknownNetwork               slab  monodomainPurkinjeReactionDiffusion fail:bogusNetwork monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/conductionNetworkDomain=bogusNetwork
+missingCouplingMode                    slab  monodomainPurkinjeReactionDiffusion fail:couplingMode monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/couplingMode!
+unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=bogusECG
+eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=eikonalECG
+eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!
+torsoECGWithMonodomain                 slab  monodomainPseudoECG         fail:torsoECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
+torsoECGWithoutBath                    slab  bidomainPseudoECG           fail:torsoECG                 bidomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
+bathWithoutCellZone                    bath  bathBidomain                fail:subset~cell~map          bidomainSolverCoeffs/cellZone!
+unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
+unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension

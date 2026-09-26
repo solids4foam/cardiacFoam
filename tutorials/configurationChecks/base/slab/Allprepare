@@ -1,0 +1,7 @@
+#!/bin/bash
+# Mesh the slab and add the "myocardium" cellZone used by the cellZone check
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication blockMesh || exit 1
+runApplication topoSet || exit 1
