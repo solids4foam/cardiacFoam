@@ -77,14 +77,20 @@ regression/regressionTest.sh
 regression/regressionTest.sh parallel
 ```
 
-Driver-managed sweep:
+Driver-managed (from the repository root; a record stages into a scratch
+directory you supply, never into this tree):
 
 ```bash
-driverFoam run --strict --entry niederer2011
+driverFoam run --strict --entry niederer2011 --cases-root tutorials --scratch-dir <dir>
+driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir <dir>
+driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/tetConvergence/sweep_tet_generic.json --output-dir <dir>
 ```
 
-Driver sweeps are controlled by the driverFOAM add-on's `niederer_2011`
-cardiacFoam plugin defaults.
+The driver reads this case as it is: `niederer2011` is a pointer at this
+directory, and each study under `setup/studies/` states only what it
+varies (`dx`/`tetDx`, `deltaT`, `endTime`). Each study's `base` names
+`cases_root` (`tutorials`, relative to the repository root), because a
+driver sweep over a tutorial record has no cases root it could discover.
 
 ## Regression behavior
 

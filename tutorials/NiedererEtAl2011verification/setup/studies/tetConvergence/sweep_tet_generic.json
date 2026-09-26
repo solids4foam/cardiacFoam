@@ -1,6 +1,7 @@
 {
   "base": {
     "entry": "niederer2011",
+    "cases_root": "tutorials",
     "mesh": "tet"
   },
   "sweep": {
