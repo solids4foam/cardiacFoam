@@ -71,7 +71,6 @@ class ecgDomain
     scalarField numericValues_;
 
     const dictionary* inheritedElectrodePositionsPtr_;
-    const dictionary* inheritedManufacturedBidomainPtr_;
     const dictionary* inheritedPotentialDomainPtr_;
 
     //- Disallow copy construct
@@ -101,7 +100,6 @@ public:
             const dictionary& dict,
             const word& domainName = "ECG",
             const dictionary* inheritedElectrodePositionsPtr = nullptr,
-            const dictionary* inheritedManufacturedBidomainPtr = nullptr,
             const dictionary* inheritedPotentialDomainPtr = nullptr
         );
 
