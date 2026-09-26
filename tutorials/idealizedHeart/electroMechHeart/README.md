@@ -1,6 +1,6 @@
 # Idealized biventricular electromechanics
 
-This case adapts `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` to the supplied idealized biventricular mesh. It uses cardiacFoam's sequential electromechanical model, the TNNP ionic model, and the Land--Niederer active-tension model. Mechanics uses the rule-based fibre field `f0`, shared with `electroHeart` via `../mesh/0/fiber`.
+This case uses cardiacFoam's sequential electromechanical model, the TNNP ionic model, and the Land--Niederer active-tension model. Mechanics uses the rule-based fibre field `f0`, copied from `../mesh/0/fiber`.
 
 ## Mesh and activation
 
@@ -12,7 +12,7 @@ y = [-0.0040, 0.0020] m
 z = [0.0030, 0.0060] m
 ```
 
-`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into `endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`, `mEpiInterface 0.7`) from a field that must be 0 at the endocardium and 1 at the epicardium — the opposite of this mesh's `tm` convention. `system/electro/setExprFieldsDict` derives `t = 1 - tm` for it to read; `Allrun` runs `setExprFields -region electro` for this.
+`monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies cells into `endocardialCells`/`mCells`/`epicardialCells` regions (`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from a field that must be 0 at the endocardium and 1 at the epicardium — the opposite of this mesh's `tm` convention. `system/electro/setExprFieldsDict` derives `t = 1 - tm` for it to read; `Allrun` runs `setExprFields -region electro` for this.
 
 ## Mechanical boundary conditions
 
@@ -22,8 +22,8 @@ For a more physiological pumping simulation, replace the zero endocardial tracti
 
 ## Parameter scope
 
-The inherited isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test approximation. `monodomainSolverCoeffs` sets `conductivitySource field;`, reading the anisotropic conductivity tensor `Conductivity` (`0/electro/Conductivity`, a `volSymmTensorField`) rather than a uniform value. Active mechanics use the rule-based fibre field `f0`; the passive mechanics remain an isotropic neo-Hookean approximation. Review and calibrate passive, active, cavity-pressure, and pericardial parameters before using this case for physiological predictions.
+The isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test approximation. `monodomainSolverCoeffs` sets `conductivitySource field;`, reading the anisotropic conductivity tensor `Conductivity` (`0/electro/Conductivity`, a `volSymmTensorField`) rather than a uniform value. Active mechanics use the rule-based fibre field `f0`; the passive mechanics remain an isotropic neo-Hookean approximation. Review and calibrate passive, active, cavity-pressure, and pericardial parameters before using this case for physiological predictions.
 
 ## Run prerequisites
 
-This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun parallel`). The mesh and the shared `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live once in the sibling `../mesh/` directory (shared with `electroHeart`, to avoid tracking the same ~10MB mesh twice in git) and `Allrun` copies them in each run (the shared `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
+This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun parallel`). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live in `../mesh/` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.

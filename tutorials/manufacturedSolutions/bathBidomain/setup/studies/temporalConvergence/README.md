@@ -7,13 +7,7 @@ bath-bidomain advance, including its predictor--corrector interface workflow.
 It uses the explicitly archived `godunov` coupling and the Paper I
 `groundElectrode` boundary variant at `N=640` in 1D and 2D, with four
 successive halvings of `dt` and fixed end time 0.02. It establishes temporal
-order for this configured bath-bidomain advance on its own terms, independent
-of the standalone monodomain or bidomain runs.
-
-The companion tetrahedral `tetTemporalControl` repeats selected interface
-levels at `dt/2`; it asks whether temporal error contaminates the interface
-current sequence rather than establishing a separate temporal order on the
-unstructured mesh.
+order for this configured bath-bidomain advance.
 
 ## Execution
 

@@ -119,7 +119,7 @@ Foam::AlievPanfilov::~AlievPanfilov()
 
 Foam::List<Foam::word> Foam::AlievPanfilov::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

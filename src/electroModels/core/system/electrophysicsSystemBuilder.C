@@ -321,8 +321,6 @@ void configureECGDomains
     DynamicList<word> ecgDomainNames;
     DynamicList<const dictionary*> ecgDomainDicts;
     const dictionary* sharedElectrodePositionsPtr = nullptr;
-    const dictionary* manufacturedBidomainPtr =
-        electroProperties.findDict("manufacturedBidomain");
     const dictionary* bathPotentialDomainPtr =
         electroProperties.findDict("bathPotentialDomain");
 
@@ -443,7 +441,6 @@ void configureECGDomains
                 domainDict,
                 domainName,
                 sharedElectrodePositionsPtr,
-                manufacturedBidomainPtr,
                 bathPotentialDomainPtr
             );
 

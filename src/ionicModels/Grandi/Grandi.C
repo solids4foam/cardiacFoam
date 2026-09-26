@@ -113,7 +113,7 @@ Foam::Grandi::~Grandi()
 
 Foam::List<Foam::word> Foam::Grandi::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

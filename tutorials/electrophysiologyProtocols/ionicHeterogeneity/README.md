@@ -26,12 +26,17 @@ This comes from:
 ```cpp
 ionicHeterogeneity
 {
-    mode              transmuralBands;
+    mode              namedRegions;
     field             t;
-    endoMInterface    0.3;
-    mEpiInterface     0.7;
+    transitionMode    blend;
     transitionWidth   0.1;
     smoothing         smoothstep;
+    regions
+    {
+        endocardialCells { range (0 0.3); }
+        mCells           { range (0.3 0.7); }
+        epicardialCells  { range (0.7 1); }
+    }
 }
 ```
 

@@ -1,0 +1,25 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      caseParameters;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Spring stiffness of both end supports, normal and tangential [Pa/m]
+kEnds           1e7;
+
+// Time step shared by the electro and solid regions [s]
+deltaT          1e-05;
+
+// End time: covers the active-tension peak [s]
+endTime         0.25;
+
+// ************************************************************************* //

@@ -373,7 +373,7 @@ void Foam::ionicModel::configureGradientAxisHeterogeneityImpl
 }
 
 
-void Foam::ionicModel::configureTransmuralBandHeterogeneity
+void Foam::ionicModel::configureRegionHeterogeneity
 (
     const scalarField& transmuralDistance,
     const dictionary& heterogeneityDict,
@@ -381,7 +381,7 @@ void Foam::ionicModel::configureTransmuralBandHeterogeneity
     PtrList<scalarField>* heterogeneousInitialStates
 ) const
 {
-    ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
+    ionicHeterogeneityOrchestrator::configureRegionHeterogeneity
     (
         *this, transmuralDistance, heterogeneityDict, heterogeneousConstants,
         heterogeneousInitialStates

@@ -5,6 +5,17 @@ This folder contains maintained reference, cardiac protocols, and verification c
 cases; local research cases and generated sweep directories are not part of
 this documented contract.
 
+## Folder layout
+
+```text
+tutorials/
+├── electrophysiologyProtocols/    small EP checks: cells, restitution, CV, re-entry, Purkinje
+├── electromechanicsProtocols/     small electromechanics checks: supports, active tension
+├── NiedererEtAl2011verification/  Niederer et al. (2011) monodomain slab benchmark
+├── manufacturedSolutions/         verification against known (manufactured) solutions
+└── idealizedHeart/                anatomical biventricular cases (EP, EM, pathologies)
+```
+
 ## Canonical tutorial cases
 
 `Regression` means coverage by the cross-case `Alltest-regression` runner,
@@ -19,8 +30,8 @@ not merely the presence of an `Allrun` script.
 | `electrophysiologyProtocols/cableProtocol/eikonal1DCableCV` | Compare eikonal 1D conduction velocity across resolutions | `eikonalSolver` cable workflow | lightweight or full | not covered | activation probes and CV summaries |
 | `electrophysiologyProtocols/rotorInstability` | Exercise sustained re-entry and activation-time behavior | monodomain rotor protocol | lightweight or full | `Alltest-regression` | probe traces and activation-time metrics |
 | `electrophysiologyProtocols/purkinjeRestitution2D` | Pace a Purkinje network coupled to a 2D slab over several beats, antegrade and retrograde | `monodomainSolver` with `restitutionEikonalSolver1D` or `monodomain1DSolver`, variant selected at run time | lightweight or full | `Alltest-regression` | per-node network activation time, `Vm` and junction current under `postProcessing/` |
-| `NiedererEtAl2011/NiedererEtAl2011verification` | Run the Niederer slab electrophysiology benchmark | `monodomainSolver` verification workflow | lightweight or full | `Alltest-regression` | activation probes, smoke-check fields, summaries and plots |
-| `NiedererEtAl2011/electroMechanicalNiedererEtAl2011` | Demonstrate sequential electrophysiology-solid coupling | `electroMechanicalModel` with monodomain electrophysiology | full only | `Alltest-regression` (expected skip in lightweight mode) | active-tension probes and coupled solid/electro fields |
+| `NiedererEtAl2011verification` | Run the Niederer slab electrophysiology benchmark | `monodomainSolver` verification workflow | lightweight or full | `Alltest-regression` | activation probes, smoke-check fields, summaries and plots |
+| `electromechanicsProtocols/springSupportedSlab` | Show spring (Robin) supports in electromechanics: slab shortening from isometric to free as the end-spring stiffness drops | `electroMechanicalModel` with monodomain electrophysiology and `solidRobin` end supports | full only | `Alltest-regression` (expected skip in lightweight mode) | end displacement and end force (`solidForces`), `Ta` and `Vm` probes |
 | `manufacturedSolutions/monodomainPseudoECG` | Verify monodomain fields and pseudo-ECG against manufactured solutions | `monodomainFDAManufactured` plus pseudo-ECG verification | lightweight or full | `Alltest-regression` | manufactured error summaries and pseudo-ECG series under `postProcessing/` |
 | `manufacturedSolutions/bidomain` | Verify spatial bidomain convergence | `bidomainFDAManufactured` | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
 | `manufacturedSolutions/bathBidomain` | Verify bidomain-with-bath fields and ECG ownership | `bathBidomainFDAManufactured` and optional `torsoECG` | lightweight or full | `Alltest-regression` | global bath fields and manufactured error/ECG summaries |
@@ -53,11 +64,13 @@ CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression
 CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam ./tutorials/Alltest-regression
 ```
 
-Two cases need cardiacFoam built with solids4foam: the electromechanical
-Niederer slab and the electromechanics manufactured solution
-(`manufacturedSolutions/monodomainTotalLagrangianEM`). In lightweight mode
-their regression scripts exit 77 and the runner reports an expected skip;
-any other exit-77 skip fails the aggregate run. In `with-solids4foam` mode no
-skip is expected, so a missing solids4foam build fails these two cases instead
-of skipping them. CI runs lightweight mode only, so these two cases are
+Three cases need cardiacFoam built with solids4foam: the spring-supported
+electromechanics slab (`electromechanicsProtocols/springSupportedSlab`), the
+electromechanics manufactured solution
+(`manufacturedSolutions/monodomainTotalLagrangianEM`) and the idealized-heart
+electromechanics case (`idealizedHeart/electroMechHeart`). In lightweight
+mode their regression scripts exit 77 and the runner reports an expected
+skip; any other exit-77 skip fails the aggregate run. In `with-solids4foam`
+mode no skip is expected, so a missing solids4foam build fails these cases
+instead of skipping them. CI runs lightweight mode only, so these cases are
 exercised only by a `with-solids4foam` run.

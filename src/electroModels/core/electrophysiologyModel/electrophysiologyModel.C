@@ -20,6 +20,7 @@ License
 #include "electrophysiologyModel.H"
 #include "addToRunTimeSelectionTable.H"
 #include "electrophysicsSystemBuilder.H"
+#include "electroVolumeFieldDomain.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -156,11 +157,78 @@ bool Foam::electrophysiologyModel::readRestartState()
         const bool loaded = ionicModelPtr_->readRestartState(mesh());
         if (loaded)
         {
+            setVmFromRestartState();
             ionicModelPtr_->refreshRestartState(mesh());
         }
         return loaded;
     }
     return false;
+}
+
+
+void Foam::electrophysiologyModel::setVmFromRestartState()
+{
+    if (!domainSystem_.hasMyocardium())
+    {
+        return;
+    }
+
+    electroVolumeFieldDomain* volumeDomainPtr =
+        dynamic_cast<electroVolumeFieldDomain*>(&domainSystem_.myocardium());
+
+    if (!volumeDomainPtr)
+    {
+        return;
+    }
+
+    volScalarField& Vm = volumeDomainPtr->VmRef();
+
+    // A Vm file at the start time holds the more recent potential
+    IOobject VmHeader
+    (
+        Vm.name(),
+        Vm.mesh().time().timeName(),
+        Vm.mesh(),
+        IOobject::MUST_READ
+    );
+
+    if (VmHeader.typeHeaderOk<volScalarField>(true))
+    {
+        return;
+    }
+
+    const PtrList<scalarField>* statesPtr = ionicModelPtr_->ioStatesPtr();
+
+    if (!statesPtr)
+    {
+        WarningInFunction
+            << "Vm not set from the restart state: " << ionicModelPtr_->type()
+            << " does not expose per-cell states." << endl;
+        return;
+    }
+
+    if (statesPtr->size() != Vm.size())
+    {
+        FatalErrorInFunction
+            << "Restart state holds " << statesPtr->size() << " cells, but Vm"
+            << " has " << Vm.size() << "."
+            << exit(FatalError);
+    }
+
+    const ionicModelIO::VmTransform transform =
+        ionicModelPtr_->ioVmTransform();
+
+    // Model voltage in mV, field in V
+    forAll(Vm, cellI)
+    {
+        const scalarField& state = (*statesPtr)[cellI];
+        Vm[cellI] = 1e-3*(transform ? transform(state) : state[0]);
+    }
+    Vm.correctBoundaryConditions();
+
+    Info<< "Vm set from the " << ionicModelPtr_->type() << " restart state: "
+        << gMin(Vm.primitiveField()) << " .. " << gMax(Vm.primitiveField())
+        << " V" << endl;
 }
 
 
@@ -170,6 +238,13 @@ void Foam::electrophysiologyModel::writeRestartState() const
     {
         ionicModelPtr_->writeRestartState(mesh());
     }
+}
+
+
+void Foam::electrophysiologyModel::writeFields(const Time& runTime)
+{
+    electroModel::writeFields(runTime);
+    writeRestartState();
 }
 
 

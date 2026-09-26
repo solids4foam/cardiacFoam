@@ -1,5 +1,5 @@
 # Reference values for the ionicHeterogeneity tutorial (Bueno-Orovio
-# transmuralBands probe). Generated from an actual ./Allrun of this case;
+# endo/M/epi namedRegions probe). Generated from an actual ./Allrun of this case;
 # see regressionTest.sh for the comparison method.
 #
 # fileName key variable expected tolerance

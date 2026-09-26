@@ -1,0 +1,26 @@
+# applications/utilities/setIonicRestartState/utility.manifest.toml
+
+name = "setIonicRestartState"
+description = "Seed a myocardium's per-cell ionic restart state from single-cell states, one per ionicHeterogeneity region."
+
+purpose = """
+Reads the case's ionicHeterogeneity namedRegions definition and one single-cell
+<Model>State restart file per region, and writes <startTime>/<Model>State so
+every myocardium cell starts at its region's state. Runs serial or -parallel
+after decomposePar.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "system/setIonicRestartStateDict",
+]
+
+outputs = [
+  "<startTime>/<Model>State",
+]
+
+requires_mesh = true
+
+example = "setIonicRestartState -case ./myCase"
+
+category = "field-setup"

@@ -111,71 +111,6 @@ void validateTemplate(const DynamicTemplate& tpl, const word& anchor)
 }
 
 
-//- tPoints/anchorNames for mode transmuralBands: unchanged from the
-//  original 3-anchor implementation.
-void transmuralBandAnchors
-(
-    const dictionary& heterogeneityDict,
-    scalarField& tPoints,
-    wordList& anchorNames
-)
-{
-    const scalar endoMInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("endoMInterface", 0.3);
-    const scalar mEpiInterface =
-        heterogeneityDict.lookupOrDefault<scalar>("mEpiInterface", 0.7);
-    const scalar transitionWidth =
-        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
-    const word smoothing =
-        heterogeneityDict.lookupOrDefault<word>("smoothing", "smoothstep");
-    const word transitionMode =
-        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
-
-    ionicHeterogeneity::validateTransmuralBandConfig
-    (
-        endoMInterface,
-        mEpiInterface,
-        transitionWidth,
-        smoothing,
-        transitionMode
-    );
-
-    scalar tMid = 0.5*(endoMInterface + mEpiInterface);
-
-    if (transitionMode == "blend" && transitionWidth > SMALL)
-    {
-        const scalar endoMUpper = endoMInterface + transitionWidth;
-
-        if (endoMUpper >= mEpiInterface - SMALL)
-        {
-            FatalErrorInFunction
-                << "eikonalTemplateGenerator: transitionWidth ("
-                << transitionWidth << ") leaves no pure mid-myocardium "
-                << "region between endoMInterface+transitionWidth ("
-                << endoMUpper << ") and mEpiInterface (" << mEpiInterface
-                << "). Reduce transitionWidth or widen the mCells band."
-                << exit(FatalError);
-        }
-
-        tMid = 0.5*(endoMUpper + mEpiInterface);
-    }
-
-    tPoints.setSize(3);
-    tPoints[0] = 0.0;
-    tPoints[1] = tMid;
-    tPoints[2] = 1.0;
-
-    anchorNames.setSize(3);
-    anchorNames[0] = "endocardium";
-    anchorNames[1] = "mid-myocardium";
-    anchorNames[2] = "epicardium";
-
-    checkUnitInterval(tPoints[0], anchorNames[0]);
-    checkUnitInterval(tPoints[1], anchorNames[1]);
-    checkUnitInterval(tPoints[2], anchorNames[2]);
-}
-
-
 //- tPoints/anchorNames for mode namedRegions: one anchor per region, at
 //  the midpoint of that region's "pure" sub-range (the part of its range
 //  not eaten into by a blend zone with the PREVIOUS region -- mirroring
@@ -203,10 +138,38 @@ void namedRegionAnchors
             heterogeneityDict.subDict("regions")
         );
 
-    const word transitionMode =
-        heterogeneityDict.lookupOrDefault<word>("transitionMode", "blend");
-    const scalar transitionWidth =
-        heterogeneityDict.lookupOrDefault<scalar>("transitionWidth", 0.1);
+    if (!heterogeneityDict.found("transitionMode"))
+    {
+        FatalErrorInFunction
+            << "eikonalTemplateGenerator: ionicHeterogeneity mode "
+            << "namedRegions requires a 'transitionMode' entry."
+            << exit(FatalError);
+    }
+
+    const word transitionMode(heterogeneityDict.lookup("transitionMode"));
+
+    scalar transitionWidth = 0.0;
+
+    if (transitionMode == "blend")
+    {
+        if (!heterogeneityDict.found("transitionWidth"))
+        {
+            FatalErrorInFunction
+                << "eikonalTemplateGenerator: ionicHeterogeneity mode "
+                << "namedRegions with transitionMode blend requires a "
+                << "'transitionWidth' entry."
+                << exit(FatalError);
+        }
+
+        transitionWidth = heterogeneityDict.get<scalar>("transitionWidth");
+    }
+    else if (transitionMode != "hard")
+    {
+        FatalErrorInFunction
+            << "Unsupported ionicHeterogeneity transitionMode '"
+            << transitionMode << "'. Supported: blend, hard."
+            << exit(FatalError);
+    }
 
     const label nRegions = regions.size();
     tPoints.setSize(nRegions);
@@ -299,17 +262,20 @@ List<DynamicTemplate> generatePersonalizedTemplates
             << exit(FatalError);
     }
 
-    const word mode =
-        heterogeneityDict.lookupOrDefault<word>("mode", "transmuralBands");
+    if (!heterogeneityDict.found("mode"))
+    {
+        FatalErrorInFunction
+            << "eikonalTemplateGenerator requires ionicHeterogeneity 'mode' "
+            << "to be set: 'namedRegions' or 'cellZoneRegions'."
+            << exit(FatalError);
+    }
+
+    const word mode(heterogeneityDict.lookup("mode"));
 
     scalarField tPoints;
     wordList anchorNames;
 
-    if (mode == "transmuralBands")
-    {
-        transmuralBandAnchors(heterogeneityDict, tPoints, anchorNames);
-    }
-    else if (mode == "namedRegions")
+    if (mode == "namedRegions")
     {
         namedRegionAnchors(heterogeneityDict, tPoints, anchorNames);
     }
@@ -321,8 +287,8 @@ List<DynamicTemplate> generatePersonalizedTemplates
     {
         FatalErrorInFunction
             << "eikonalTemplateGenerator supports ionicHeterogeneity mode "
-            << "'transmuralBands', 'namedRegions', or 'cellZoneRegions' "
-            << "only; got '" << mode << "'."
+            << "'namedRegions' or 'cellZoneRegions' only; got '" << mode
+            << "'."
             << exit(FatalError);
     }
 

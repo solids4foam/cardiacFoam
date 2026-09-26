@@ -16,7 +16,7 @@ Built-in verification: verifiers that compare a run with a manufactured solution
 
 Cases that run them are in [tutorials/manufacturedSolutions](../../tutorials/manufacturedSolutions/README.md).
 
-**Deep dive:** [VERIFICATION_MODELS_ARCHITECTURE.md](VERIFICATION_MODELS_ARCHITECTURE.md) explains how this library is built inside.
+**Deep dive:** [ARCHITECTURE.md](ARCHITECTURE.md) explains how this library is built inside.
 
 ## What this does not own
 

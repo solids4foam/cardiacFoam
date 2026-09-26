@@ -145,16 +145,10 @@ bool Foam::TNNP::readRestartState(const fvMesh& mesh)
         }
     }
 
-    const volScalarField& Vm = mesh.lookupObject<volScalarField>("Vm");
     const scalar t = mesh.time().value()*1000.0;
 
     forAll(STATES_, integrationPtI)
     {
-        if (!solveVmWithinODESolver())
-        {
-            STATES_[integrationPtI][0] = Vm[integrationPtI]*1000.0;
-        }
-
         ::TNNPcomputeVariables
         (
             t,

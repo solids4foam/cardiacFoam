@@ -85,6 +85,9 @@ class electrophysiologyModel
     //  is passed to the base class constructor.
     static word readSolverType(Time& runTime, const word& region);
 
+    //- Set Vm from the loaded ionic state when the start time has no Vm file
+    void setVmFromRestartState();
+
 public:
 
     //- Runtime type information
@@ -109,6 +112,9 @@ public:
         virtual bool readRestartState() override;
 
         virtual void writeRestartState() const override;
+
+        //- Write fields and the ionic restart state
+        virtual void writeFields(const Time& runTime) override;
 
     //- Destructor
     virtual ~electrophysiologyModel() = default;

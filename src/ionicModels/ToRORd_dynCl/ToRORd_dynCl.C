@@ -119,7 +119,7 @@ void Foam::ToRORd_dynCl::configureIonicHeterogeneity
     const dictionary& heterogeneityDict
 )
 {
-    ionicHeterogeneityOrchestrator::configureTransmuralBandHeterogeneity
+    ionicHeterogeneityOrchestrator::configureRegionHeterogeneity
     (
         *this, transmuralDistance, heterogeneityDict, HETEROGENEOUS_CONSTANTS_,
         &HETEROGENEOUS_INITIAL_STATES_

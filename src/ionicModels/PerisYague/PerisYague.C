@@ -112,7 +112,7 @@ Foam::PerisYague::~PerisYague()
 
 Foam::List<Foam::word> Foam::PerisYague::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

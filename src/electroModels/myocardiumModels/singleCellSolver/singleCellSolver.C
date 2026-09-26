@@ -148,7 +148,7 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
             (
                 IOobject
                 (
-                    exportNames[i],
+                    ionicModelIO::exportFieldName(exportNames[i]),
                     runTime.timeName(),
                     mesh(),
                     IOobject::NO_READ,
@@ -159,6 +159,12 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
                 "zeroGradient"
             )
         );
+
+        if (outFields_[i].name() != exportNames[i])
+        {
+            Info<< "Export " << exportNames[i] << " written as "
+                << outFields_[i].name() << nl;
+        }
     }
 
     if (verificationModelPtr_)
@@ -271,6 +277,13 @@ bool singleCellSolver::evolve()
     }
 
     return true;
+}
+
+
+void singleCellSolver::writeFields(const Time& runTime)
+{
+    electroModel::writeFields(runTime);
+    ionicModelPtr_->writeRestartState(mesh());
 }
 
 

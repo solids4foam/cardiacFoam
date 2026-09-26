@@ -30,8 +30,7 @@ boundary patches `EPI`, `BASE`, `ENDO_LV`, `ENDO_RV`.
 Electrophysiology only, three solver combinations (`monodomain` default,
 `eikonal`, `hybrid`) selected at run time — see its own README for the
 full stack table and the numerical-stability notes the `eikonal` variant
-needed. `monodomain` is the regression-covered healthy baseline other
-tutorials (`pathos/*`) reference.
+needed. `monodomain` is the regression-covered variant.
 
 ## `electroMechHeart/`
 

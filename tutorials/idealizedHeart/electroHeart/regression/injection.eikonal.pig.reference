@@ -1,0 +1,10 @@
+# Eikonal variant on the pig Purkinje tree (Allrun eikonal pig).
+#
+# Single steady solve, writes only time 1 (see injection.eikonal.reference).
+# The pig tree reaches this probe 0.38 ms later than the human tree
+# (0.0058399): its junctions near the probe sit at different positions and
+# mostly inside the wall. The eikonal coupling has no source-sink load, so
+# the delay is geometric only.
+#
+# file                                  time   col  expected      tolerance
+injectionProbe/0/activationTime         1      2    0.00621733    1e-4

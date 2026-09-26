@@ -186,6 +186,9 @@ public:
     );
 
 
+    //- Field name of an exported variable: the voltage is written as VmIonic
+    static word exportFieldName(const word& name);
+
     static const wordList& exportedFieldNamesRef
     (
         const wordList& userList,

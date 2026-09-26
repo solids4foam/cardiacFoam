@@ -134,9 +134,7 @@ protected:
         OverrideTypeName("Courtemanche");
 
 
-        //- Tissue types supported by this model. "myocyte" preserves the
-        //  existing homogeneous-run behavior; the anatomical three enable
-        //  ionicHeterogeneity (transmuralBands or namedRegions).
+        //- Tissue types supported by this model
         virtual List<word> supportedTissueTypes() const override;
 
         //- Per-point constants accessor (heterogeneous when configured)

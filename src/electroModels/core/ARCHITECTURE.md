@@ -8,9 +8,13 @@ It does not solve myocardium, Purkinje, or ECG physics directly. It does four th
 3. Selects the timestep orchestration scheme
 4. Runs the domains and couplers in the correct order
 
-Internally `core/` is organised into three subdirectories (`system/`,
-`advanceSchemes/`, `electrophysiologyModel/`) plus flat pure-abstract interface
-headers that carry no peer dependencies.
+Internally `core/` is organised into four subdirectories (`system/`,
+`advanceSchemes/`, `electrophysiologyModel/`, `verificationModels/`) plus flat
+pure-abstract interface headers that carry no peer dependencies.
+`verificationModels/` holds the abstract verifier base classes
+(`electroVerificationModel`, `couplingVerificationModel`, `ecgVerificationModel`,
+`eikonalVerificationModel`, `graphVerificationModel`) that the concrete
+verifiers in `src/verificationModels` inherit from.
 
 ---
 
@@ -34,9 +38,9 @@ Domain-agnostic: works with volumetric meshes, 1D graphs, or abstract solvers.
 ```
 
 electroDomainInterface
-├─ MyocardiumDomain  (myocardiumDomain/)
-├─ ConductionSystemDomain  (conductionSystemDomain/)
-└─ ECGDomain  (ecgDomain/)
+├─ myocardiumDomain  (myocardiumDomain/)
+├─ conductionSystemDomain  (conductionSystemDomain/)
+└─ ecgDomain  (ecgDomain/)
 
 ```
 
@@ -53,7 +57,9 @@ Specialised contract for 3D FVM-based domains. A 1D graph solver implements
 | `volScalarField& VmRef()` | Mutable transmembrane potential |
 | `const volScalarField& Vm()` | Immutable Vm |
 | `const volScalarField& Iion()` | Ionic current (read-only) |
+| `const volScalarField* IionOldPtr()` / `IionOldOldPtr()` | Previous timestep(s)' ionic current, for solvers that extrapolate it (default: `nullptr`) |
 | `volScalarField& sourceField()` | Coupling source term (write) |
+| `volScalarField* implicitSourceCoeffPtr()` (const and non-const) | Optional implicit source coefficient (default: `nullptr`) |
 | `const dimensionedScalar& chi()` | Surface-to-volume ratio [1/m] |
 | `const dimensionedScalar& Cm()` | Membrane capacitance [F/m²] |
 
@@ -77,8 +83,10 @@ Read-only, pointer-based state interface for one-way downstream coupling
 | Method | Returns |
 |---|---|
 | `VmPtr()` | `const volScalarField*` or `nullptr` |
+| `activationTimePtr()` | `const volScalarField*` or `nullptr` |
 | `phiEPtr()` | `const volScalarField*` or `nullptr` (monodomain → nullptr) |
 | `conductivityPtr()` | `const volTensorField*` or `nullptr` |
+| `chiPtr()` / `CmPtr()` / `c0Ptr()` | `const dimensionedScalar*` or `nullptr` |
 | `intracellularConductivityPtr()` | Falls back to `conductivityPtr()` |
 | `extracellularConductivityPtr()` | Falls back to `conductivityPtr()` |
 | `mesh()` / `baseMesh()` | Active mesh / base mesh |
@@ -93,6 +101,25 @@ if (VmPtr) { compute_ecg_field(*VmPtr); }
 ```
 
 Breaks cyclic dependencies: ECG reads state without a callback to myocardium.
+
+---
+
+### `electroStateDomain.H`
+
+Combined contract for domains that both advance in time and expose read-only
+state: `public electroDomainInterface, public electroStateProvider`. Used for
+the bath/extracellular potential domain, held by `electrophysicsSystem` as
+`autoPtr<electroStateDomain> potentialDomain_` and built by
+`configureBathPotentialDomain(...)`.
+
+```
+
+electroStateDomain
+├─ electroDomainInterface (implements)
+├─ electroStateProvider (implements)
+└─ extracellularPotentialDomain (concrete)
+
+```
 
 ---
 
@@ -146,15 +173,18 @@ Domain container and advance coordinator.
 
 - `autoPtr<myocardiumDomainInterface> myocardium_` — primary domain
 
+- `autoPtr<electroStateDomain> potentialDomain_` — optional bath/extracellular
+  potential domain, only set for unified-phiE (bath-coupled bidomain) cases
+
 - `autoPtr<electrophysicsAdvanceScheme> advanceScheme_`
 
 - `PtrList<electroDomainInterface> conductionDomains_`
 
-- `PtrList<ElectroDomainCoupler> conductionCouplingModels_`
+- `PtrList<electroDomainCoupler> conductionCouplingModels_`
 
 - `PtrList<electroDomainInterface> ecgDomains_`
 
-- `PtrList<ElectroDomainCoupler> ecgCouplingModels_`
+- `PtrList<electroDomainCoupler> ecgCouplingModels_`
 
 The actual timestep sequence is delegated to `advanceScheme_`; this container
 just holds the assembled pieces.
@@ -170,25 +200,56 @@ auto myocardium = myocardiumDomainInterface::New(mesh, electroProperties);
 system.setMyocardium(myocardium);
 ```
 
-Builder functions:
+Builder functions, called in this order by the caller (`electrophysiologyModel`'s
+constructor) — the order matters, since later calls depend on state set up by
+earlier ones:
 
 | Function | Responsibility |
 |---|---|
 | `configureMyocardiumDomain(...)` | Instantiate myocardium domain via factory |
 | `configureAdvanceScheme(...)` | Select the runtime advance scheme |
-| `configureConductionDomains(...)` | Load Purkinje graph(s) and instantiate domains |
-| `configureConductionCouplings(...)` | Instantiate PVJ couplers |
-| `configureECGDomains(...)` | Instantiate ECG solver(s) |
-| `configureECGCouplings(...)` | Instantiate myocardium-ECG couplers |
+| `configureBathPotentialDomain(...)` | Optionally instantiate a standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`); requires the myocardium domain to already be configured |
+| `configureConductionDomains(...)` | Load Purkinje graph(s), instantiate domains, and build their PVJ couplings in the same pass |
+| `configureECGDomains(...)` | Instantiate ECG domain(s), reading myocardium (and optionally bath) state via `electroStateProvider`, and build any per-domain ECG couplings in the same pass |
+
+No `configure*Couplings(...)` functions exist.
+
+`configureBathPotentialDomain(...)` instantiates an optional standalone
+domain, gated on whether `bathPotentialDomain` is present in
+`electroProperties`. It builds no couplings. It requires the myocardium
+domain to already be configured (`system.hasMyocardium()`). It runs before
+`configureECGDomains(...)`: the potential domain it builds is one of the
+state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
+
+Coupling instantiation for conduction and for ECG is built inline, in two
+different structures:
+
+- conduction (PVJ) couplings: built inside `configureConductionDomains(...)`
+  from a top-level `domainCouplings` block; each entry resolves against the
+  conduction-domain map via `conductionNetworkDomain <name>`
+- ECG couplings: built inside `configureECGDomains(...)` from an optional
+  `coupling` subdict nested under each `ecgDomains.<name>` entry; there is
+  no top-level `domainCouplings`-equivalent container for ECG
 
 Current rules:
 
 - `conductionNetworkDomains` and `domainCouplings` are optional
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
+- `bathPotentialDomain` is optional; when present it is read from
+  `electroProperties.subDict("bathPotentialDomain")`
+- Each `ecgDomains.<name>` entry's `coupling` subdict is optional; when
+  present, `configureECGDomains(...)` requires a myocardium domain to exist
 
 ---
 
 ## Domain assembly
+
+### Bath potential domain (single, optional)
+
+Build the one `bathPotentialDomain` entry if present. Independent of the
+conduction and ECG passes; only depends on the myocardium domain already
+being built. Built before conduction, since a `torsoECG`-class ECG domain
+built afterwards may need it.
 
 ### Conduction (two-pass)
 
@@ -199,10 +260,20 @@ Current rules:
 The two-pass exists because couplings and conduction domains are stored in
 separate dictionary containers.
 
-### ECG (single-pass)
+### ECG (two-pass)
 
-Build every entry in `ecgDomains`. ECG domains consume myocardium state through
-`electroStateProvider`; no active ECG coupling family is assembled in `core`.
+1. Build every entry in `ecgDomains`. Each domain's `ecgSolver` (`pseudoECG`,
+   `eikonalECG`, or `torsoECG`) determines which `electroStateProvider` it
+   reads from — `torsoECG` requires the bath potential domain from the
+   previous step.
+2. For each ECG domain whose dict declares a `coupling` subdict, build a
+   coupler (`electroDomainCoupler::New(myocardium, ecgDomain, couplingDict)`)
+   and append it to `ecgCouplingModels_`. Domains without a `coupling`
+   subdict get none.
+
+ECG couplings are declared per-domain, under each `ecgDomains.<name>`
+entry's `coupling` subdict, rather than in a separate top-level container
+like conduction's `domainCouplings`.
 
 ---
 
@@ -210,15 +281,19 @@ Build every entry in `ecgDomains`. ECG domains consume myocardium state through
 
 `electrophysicsAdvanceScheme` is a runtime-selected orchestration strategy.
 
-**Staged order:**
+**Staged order** (method names as declared on `electrophysicsSystem`):
 
-1. Prepare myocardium timestep
-2. Prepare conduction couplings (`prepareSecondaryCoupling`)
-3. Advance conduction domains
-4. Prepare myocardium couplings (`preparePrimaryCoupling`)
-5. Advance myocardium
-6. Prepare ECG couplings (`preparePostPrimaryCoupling`)
-7. Advance ECG domains
+1. Prepare myocardium timestep (`myocardium.prepareTimeStep(...)`)
+2. Prepare conduction couplings (`prepareConductionCouplings(...)`)
+3. Advance conduction domains (`advanceConductionDomains(...)`)
+4. Prepare myocardium couplings (`prepareMyocardiumCouplings(...)`)
+5. Advance the primary domain — either:
+   - no potential domain: `myocardium.advance(t0, dt, pimplePtr)`, or
+   - a potential domain is set (`hasPotentialDomain()`): a split
+     reaction/diffusion sequence coupling `myocardium` and
+     `potentialDomain_` (see below)
+6. Prepare ECG couplings (`prepareECGCouplings(...)`)
+7. Advance ECG domains (`advanceECGDomains(...)`)
 
 ### `advanceSchemes/staggeredElectrophysicsAdvanceScheme`
 
@@ -226,6 +301,7 @@ Single-pass weak coupling. Each domain sees the state from the previous
 timestep. Suitable for unidirectional Purkinje → myocardium workflows.
 
 ```cpp
+myocardium.prepareTimeStep(t0, dt);
 system.prepareConductionCouplings(t0, dt);
 system.advanceConductionDomains(t0, dt);
 system.prepareMyocardiumCouplings(t0, dt);
@@ -234,6 +310,40 @@ system.prepareECGCouplings(t0, dt);
 system.advanceECGDomains(t0, dt);
 
 ```
+
+**Bath/unified-phiE branch:** when `system.hasPotentialDomain()` (a bath
+potential domain was configured via `configureBathPotentialDomain(...)`),
+step 5 above is replaced by a split reaction/diffusion sequence instead of
+the plain `myocardium.advance(...)` call — this requires a myocardium
+domain that `supportsSplitReactionDiffusion()`:
+
+```cpp
+myocardium.solveReactionStep(t0, dt);
+system.preparePotentialDomain(t0, dt);
+
+if (bathPredictorCorrector_)   // default true
+{
+    // Predict Vm, update phiE, then correct Vm.
+    myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+    system.advancePotentialDomain(t0, dt);
+    myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+}
+else
+{
+    // Update phiE, then solve Vm with the updated phiE held fixed.
+    system.advancePotentialDomain(t0, dt);
+    myocardium.solveDiffusionStep(t0, dt, pimplePtr);
+}
+
+myocardium.finalizeDiffusionStep();
+
+```
+
+This is how the bath/extracellular-potential coupling (unified phiE) is
+implemented: `staggeredElectrophysicsAdvanceScheme` owns a
+`bathPredictorCorrector_` switch (dictionary key
+`bathPredictorCorrector`, default `true`) that picks between the two
+sub-variants above.
 
 ---
 
@@ -341,19 +451,21 @@ New solver-family branching belongs in a domain-layer factory, not in the builde
 ┌─────────────────────────────────────────────────────────────┐
 │ electrophysicsSystem (domain container)                     │
 │  • myocardium (implements electroVolumeFieldDomain)         │
-│  • advanceScheme                                            │
-│  • conductionDomains (Purkinje graphs)                      │
-│  • ecgDomains (ECG solvers)                                 │
+│  • potentialDomain (optional, implements electroStateDomain)│
+│  • advanceScheme                                             │
+│  • conductionDomains (Purkinje graphs)                       │
+│  • ecgDomains (ECG solvers)                                  │
 │  • couplers (Purkinje↔myocardium, myocardium→ECG)          │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌──────────────────────────────┬──────────────────────────────┐
 │ electrophysicsAdvanceScheme  │ electrophysicsSystemBuilder  │
 │ (abstract strategy)          │ (dictionary-driven factory)  │
-│ • advance()                  │ • configureMyocardium()      │
-├──────────────────────────────┤ • configureConduction()      │
-│ Implementations:             │ • configureECG()             │
-│ • staggered (weak)           │ • configureCouplers()        │
+│ • advance()                  │ • configureMyocardiumDomain()│
+├──────────────────────────────┤ • configureAdvanceScheme()   │
+│ Implementations:             │ • configureConductionDomains()│
+│ • staggered (weak, with      │ • configureBathPotentialDomain()│
+│   optional bath coupling)    │ • configureECGDomains()      │
 └──────────────────────────────┴──────────────────────────────┘
 
 ```
@@ -363,21 +475,28 @@ New solver-family branching belongs in a domain-layer factory, not in the builde
 ```
 
 electroModel.H
+  ├─ electromechanicalSignalProvider.H
   ├─ electroStateProvider.H
-  ├─ electroStateDomain.H
-  ├─ system/electrophysicsSystem.H
-  │  ├─ electroDomainInterface.H
-  │  │  ├─ myocardiumDomain (implements)
-  │  │  ├─ ConductionSystemDomain (implements)
-  │  │  └─ ECGDomain (implements)
-  │  ├─ advanceSchemes/electrophysicsAdvanceScheme.H
-  │  │  └─ advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H
-  │  └─ ElectroDomainCoupler.H
-  └─ system/electrophysicsSystemBuilder.H
-     ├─ electroVolumeFieldDomain.H
-     └─ dimVoltage.H
+  └─ system/electrophysicsSystem.H
+     ├─ electroDomainInterface.H
+     │  ├─ myocardiumDomain (implements)
+     │  ├─ conductionSystemDomain (implements)
+     │  └─ ecgDomain (implements)
+     ├─ electroStateDomain.H  (electroDomainInterface + electroStateProvider)
+     │  └─ extracellularPotentialDomain (implements; the bath/potential domain)
+     ├─ electroDomainCoupler.H
+     ├─ myocardiumDomainInterface.H
+     └─ advanceSchemes/electrophysicsAdvanceScheme.H
+        └─ advanceSchemes/staggered/staggeredElectrophysicsAdvanceScheme.H
+
+system/electrophysicsSystemBuilder.H
+  ├─ system/electrophysicsSystem.H  (as above)
+  └─ electroStateProvider.H
 
 overrideTypeName.H  (used by all polymorphic solver classes)
+dimVoltage.H / electroVolumeFieldDomain.H  (used by the myocardium domain
+  layer, e.g. myocardiumDomain.H / myocardiumSolver.H — not included from
+  core's builder or system files directly)
 
 ```
 

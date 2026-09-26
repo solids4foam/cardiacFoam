@@ -37,18 +37,5 @@ setFieldDimensions -time 0.1 -case ./myCase
 setFieldDimensions -dryRun -case ./myCase
 ```
 
-## Complete post-VTK-import sequence
-
-```bash
-newVtkUnstructuredToFoam  myHeart.vtk        -case ./myCase
-transformPoints -scale '(0.001 0.001 0.001)' -case ./myCase
-setFieldDimensions                           -case ./myCase
-checkMeshGeometry                            -case ./myCase
-checkMesh                                    -case ./myCase
-```
-
-## Build
-
-```bash
-wmake
-```
+This is one step of the mesh-import sequence in
+[utilities: Importing an external mesh](../README.md#importing-an-external-mesh).

@@ -14,12 +14,19 @@ IFS=$'\n\t'
 # have activated, in every variant.
 #
 # Each variant has its own reference because each reaches the probe
-# differently: monodomain activates it at 19.4ms, hybrid's eikonal-1D
-# Purkinje to 3D monodomain coupling at 31.3ms, and eikonal solves a single
+# differently: monodomain activates it at 28.8ms, hybrid's eikonal-1D
+# Purkinje to 3D monodomain coupling at 30.3ms, and eikonal solves a single
 # steady problem that writes only time 1. The sample time in each reference
 # reflects that; the expected values were measured, not chosen.
+#
+# Every variant runs on both Purkinje trees (Allrun's human/pig argument):
+# the human tree keeps all terminals on the endocardium, the pig tree inserts
+# them transmurally. The pig tree reaches the same probe point through
+# different junctions, so it has its own references,
+# injection.<variant>.pig.reference.
 
 VARIANTS=(monodomain eikonal hybrid)
+TREES=(human pig)
 ALLRUN_LOGFILE="log.Allrun"
 
 echo "============================================================"
@@ -112,29 +119,35 @@ checkReference()
 failures=0
 failedVariants=()
 
+for tree in "${TREES[@]}"; do
 for variant in "${VARIANTS[@]}"; do
-    refFile="regression/injection.${variant}.reference"
+    if [[ "${tree}" == "human" ]]; then
+        refFile="regression/injection.${variant}.reference"
+    else
+        refFile="regression/injection.${variant}.${tree}.reference"
+    fi
+    label="${variant}/${tree}"
 
     echo "------------------------------------------------------------"
-    echo "Variant: ${variant}"
+    echo "Variant: ${variant}  Purkinje tree: ${tree}"
     echo "------------------------------------------------------------"
 
     if [[ ! -f "${refFile}" ]]; then
         echo "FAIL: reference file not found: ${refFile}"
         failures=$((failures + 1))
-        failedVariants+=("${variant}")
+        failedVariants+=("${label}")
         echo
         continue
     fi
 
     ./Allclean > /dev/null 2>&1 || true
 
-    if ! ./Allrun "${variant}" parallel > "${ALLRUN_LOGFILE}" 2>&1; then
-        echo "FAIL: Allrun ${variant} parallel exited non-zero. Surfacing logs:"
+    if ! ./Allrun "${variant}" "${tree}" parallel > "${ALLRUN_LOGFILE}" 2>&1; then
+        echo "FAIL: Allrun ${variant} ${tree} parallel exited non-zero. Surfacing logs:"
         dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
         dumpLogTail "cardiacFoam" "log.cardiacFoam"
         failures=$((failures + 1))
-        failedVariants+=("${variant}")
+        failedVariants+=("${label}")
         echo
         continue
     fi
@@ -144,14 +157,15 @@ for variant in "${VARIANTS[@]}"; do
 
     if (( variantFailures > 0 )); then
         failures=$((failures + variantFailures))
-        failedVariants+=("${variant}")
+        failedVariants+=("${label}")
     fi
     echo
+done
 done
 
 if (( failures == 0 )); then
     echo "============================================================"
-    echo "Regression test PASSED (${#VARIANTS[@]} variants)"
+    echo "Regression test PASSED (${#VARIANTS[@]} variants x ${#TREES[@]} Purkinje trees)"
     echo "============================================================"
     exit 0
 else

@@ -113,7 +113,7 @@ Foam::Fabbri::~Fabbri()
 
 Foam::List<Foam::word> Foam::Fabbri::supportedTissueTypes() const
 {
-    return {"epicardialCells", "mCells", "endocardialCells", "myocyte"};
+    return {"myocyte"};
 }
 
 

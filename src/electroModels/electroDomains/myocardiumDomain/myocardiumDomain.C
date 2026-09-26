@@ -546,7 +546,7 @@ void myocardiumDomain::initialiseProcessing()
             (
                 IOobject
                 (
-                    exportedNames[i],
+                    ionicModelIO::exportFieldName(exportedNames[i]),
                     mesh().time().timeName(),
                     mesh(),
                     IOobject::NO_READ,
@@ -557,6 +557,12 @@ void myocardiumDomain::initialiseProcessing()
                 "zeroGradient"
             )
         );
+
+        if (outFields_[i].name() != exportedNames[i])
+        {
+            Info<< "Export " << exportedNames[i] << " written as "
+                << outFields_[i].name() << nl;
+        }
     }
 
     if (verificationModelPtr_)

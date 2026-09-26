@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/solid";
+    object      solidProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
+
+nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs
+{
+    nCorrectors     1000;
+
+    // Relative residual: converge when residual < rTol * initialResidual
+    rTol            0.02;
+
+    // Absolute residual: converge when residual < aTol. Kept far below the
+    // per-step residual so that rTol and sTol decide convergence at any deltaT
+    aTol            1e-9;
+
+    // Step norm: converge when deltaX < sTol * xNorm
+    sTol            1e-7;
+
+    infoFrequency   1;
+
+    predictor       false;
+}
+
+// ************************************************************************* //

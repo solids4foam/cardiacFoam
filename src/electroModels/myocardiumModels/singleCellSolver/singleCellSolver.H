@@ -130,6 +130,9 @@ public:
         //- Evolve the electro model
         virtual bool evolve() override;
 
+        //- Write fields and the ionic restart state
+        virtual void writeFields(const Time& runTime) override;
+
         //- This function is called at the end of the simulation
         virtual void end() override;
 

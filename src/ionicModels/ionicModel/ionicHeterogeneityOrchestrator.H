@@ -17,8 +17,7 @@ License
 
 Description
     Spatial ionic heterogeneity configuration functions for ionic models.
-    Dispatches transmuralBands, namedRegions, cellZoneRegions, and
-    apex-to-base setup.
+    Dispatches namedRegions, cellZoneRegions, and apex-to-base setup.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -41,8 +40,9 @@ class ionicModel;
 namespace ionicHeterogeneityOrchestrator
 {
 
-//- Configure region-based heterogeneity from the selected mode.
-void configureTransmuralBandHeterogeneity
+//- Configure region-based heterogeneity from the selected mode. 'mode'
+//  is required in heterogeneityDict: namedRegions or cellZoneRegions.
+void configureRegionHeterogeneity
 (
     const ionicModel& model,
     const scalarField& transmuralDistance,

@@ -20,7 +20,7 @@ find "$REPO_ROOT/tutorials/manufacturedSolutions" \
         cp "$f" "$OUT/provenance/${case}_provenance.json"
     done
 
-NIED="$REPO_ROOT/tutorials/NiedererEtAl2011/NiedererEtAl2011verification/setup/cachedCasePostProcessing"
+NIED="$REPO_ROOT/tutorials/NiedererEtAl2011verification/setup/cachedCasePostProcessing"
 find "$NIED" -name "*_points_DT0001_DX*.csv" -exec cp {} "$OUT/niederer/" \; 2>/dev/null || true
 
 echo "Bundle staged at: $OUT"

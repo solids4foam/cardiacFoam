@@ -30,28 +30,34 @@ files are identical except for the `ionicConstantOverrides` block:
   dispersion of repolarisation). References: Coronel et al. 2009,
   Shimizu & Antzelevitch 1999.
 
+Purkinje conduction and junction coupling: `purkinjeConductivity 0.4`
+(~3.3 m/s along the tree) and `pvjRadius 1.65e-3`, the smallest junction
+radius valid on this mesh.
+
 ## Tissue heterogeneity
 
-`monodomainSolverCoeffs.ionicHeterogeneity` classifies cells into
-`endocardialCells`/`mCells`/`epicardialCells` bands (`endoMInterface 0.3`,
-`mEpiInterface 0.7`) from `field t;`, `system/setExprFieldsDict`'s
+`monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies
+cells into `endocardialCells`/`mCells`/`epicardialCells` regions
+(`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from `field t;`,
+`system/setExprFieldsDict`'s
 `t = 1 - tm` (`tm`: 0 at epicardium, 1 at endocardium — the opposite
 orientation `ionicHeterogeneity` requires). `epicardialCells` is also
 where the `brugada` variant's `g_to`/`g_CaL` override applies.
 
-## Mesh and shared anatomy fields
+## Mesh and anatomy fields
 
-Shared with `electroHeart`/`electroMechHeart`/
-`conductionBlock` via `../../mesh/` — see `../../README.md`. `Allrun` copies in
+`Allrun` copies from `../../mesh/`:
 `fiber`/`sheet`/`sheetNormal`/`tm`/`tv`/`apicobasal`/`Conductivity`/
 `polyMesh`/`purkinjeGraph` as-is (no graph modification for either
 variant here).
 
 ## ECG electrodes
 
-`ecgDomains.ECG.electrodePositions` are transferred to this anatomy from a
-reference heart's validated V1-V6 placement — a normalized approximation.
-24-46mm from the epicardium, comparable to the reference case's own spread.
+`ecgDomains.ECG.electrodePositions` are placed by angle around the LV long
+axis in the LV frame (`L` apex-to-base, `S` LV centre to RV centre, anterior
+`A = L x S`, here `-z`): V1..V6 at 35, 65, 100, 135, 170, 205 deg from `S`
+toward `A`, each at its original apex-base height and 25 mm from the nearest
+tissue.
 
 ## Execution
 

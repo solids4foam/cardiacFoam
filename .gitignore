@@ -173,10 +173,10 @@ tutorials/idealizedHeart/electroMechHeart/0/solid/tm
 # fibres f0/f0f (MUST_READ by electroMechanicalLaw) and D carrying the
 # manufactured displacement condition. Small, hand-authored, not anatomy data.
 !tutorials/manufacturedSolutions/monodomainTotalLagrangianEM/0/solid/
-# ...and the electromechanical Niederer slab's 0/solid fields (D, f0, f0f):
-# the same kind of small hand-authored case data. They were committed before
-# the rule above applied; the exception keeps a re-created file visible.
-!tutorials/NiedererEtAl2011/electroMechanicalNiedererEtAl2011/0/solid/
+# ...and the spring-supported electromechanics slab's 0/solid fields (D, f0,
+# f0f): the same kind of small hand-authored case data. They were committed
+# before the rule above applied; the exception keeps a re-created file visible.
+!tutorials/electromechanicsProtocols/springSupportedSlab/0/solid/
 
 # idealizedHeart/mesh/constant/polyMesh: the one canonical, curated
 # mesh shared by electroHeart and electroMechHeart (see
@@ -258,7 +258,7 @@ tutorials/**/*.npz
 tutorials/**/*.html
 
 # Whole-heart Purkinje trees (3-10 MB each). The small verification-scale
-# graphs under manufacturedSolutions/ and NiedererEtAl2011/ (<=30 kB) stay
+# graphs under manufacturedSolutions/ and NiedererEtAl2011verification/ (<=30 kB) stay
 # tracked, since the 1D-3D convergence cases depend on them.
 untracked_development/PATHOS/**/constant/purkinjeGraph*
 

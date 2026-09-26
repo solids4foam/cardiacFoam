@@ -5,5 +5,8 @@
 # steady boundary-value problem, so the run writes exactly one time
 # directory, 1/, whatever endTime says. Sample that.
 #
+# 2026-09-24: was 0.0046302 with purkinjeCV 4.2; 3.33 matches the hybrid
+# variant's calibrated Purkinje velocity.
+#
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         1      2    0.0046302     1e-4
+injectionProbe/0/activationTime         1      2    0.0058399     1e-4
