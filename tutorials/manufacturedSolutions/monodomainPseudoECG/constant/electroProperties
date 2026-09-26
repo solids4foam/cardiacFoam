@@ -59,7 +59,7 @@ monodomainSolverCoeffs
                 type    manufacturedPseudoECGVerifier;
                 enabled    yes;
                 dimension    "3D";
-                anisotropic    no;
+                anisotropic    yes;
                 referenceQuadratureOrder    96;
                 checkQuadratureOrders    (6 12 24 48);
             }
