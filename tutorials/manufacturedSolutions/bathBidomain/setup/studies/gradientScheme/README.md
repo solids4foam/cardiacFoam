@@ -13,9 +13,10 @@ fixed):
 | `limitedCorrection` | `leastSquares` | `Gauss linear limited 0.5` | `limited 0.5` |
 | `orthogonalControl` | `leastSquares` | `Gauss linear orthogonal` | `orthogonal` |
 
-Each variant is its own sweep spec: `fv_scheme_overrides` is a per-case
-list-of-dicts, which the sweep engine's case-id templating cannot reference,
-so it is fixed in each spec's `base` rather than swept as an axis.
+Each variant is its own sweep spec, with its schemes fixed in `base` as
+`system/fvSchemes:` keys. A spec states only the entries that differ from
+the case's own `system/fvSchemes`, which is `current`, so
+`sweep_current.json` states none.
 
 ## Execution
 
@@ -34,15 +35,13 @@ see the root `CLAUDE.md`).
 `current` and `limitedCorrection` (`N=20`) run to completion; the
 resulting `system/fvSchemes` carries the intended `default leastSquares` /
 `Gauss linear limited 0.5` / `limited 0.5` triple for `limitedCorrection`,
-confirming `fv_scheme_overrides` actually lands. `gaussLinear` and
+confirming the scheme keys actually land. `gaussLinear` and
 `orthogonalControl` use the identical mechanism and have not been run.
 See `setup/studies/coupling/README.md` for where sweep-run output actually
 lands if you go on to aggregate these.
 
-`constant/electroProperties` must set
-`bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
-— `_apply_case` always writes this key, and a driverFOAM sweep for this
-tutorial (tet or hex) fails with `KeyError` without it.
+These specs name no boundary variant, so they run the case's own
+`electrodePair`.
 
 ## Tracking & Outputs
 

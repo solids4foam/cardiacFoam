@@ -10,9 +10,8 @@ convergence study).
 
 Formerly `setup/studies/tetConvergence/studies/coupling/run_coupling_study.sh` (relocated
 here alongside its own study, matching this tutorial's other studies); mesh
-generation and the tet electroProperties/fvSchemes overlay swap are handled
-by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG rather than
-by hand-rolled bash.
+generation is the omniD `manufacturedBathBidomain` record's tet route (see
+the top-level README) rather than hand-rolled bash.
 
 ## Execution
 
@@ -31,16 +30,14 @@ itself, described next.
 
 ### Where the output actually lands
 
-Each case runs **in-place** in the shared case root (`tutorials/manufacturedSolutions/bathBidomain/`), and the sweep engine archives it to `<case_root>/<caseId>/<archive_dir_name>/`, where `<caseId>` comes from the spec's `case_id_template` (`"<number_cells>_<bath_predictor_corrector>"`, e.g. `10_False`, `10_True`) and `<archive_dir_name>` is this spec's own `setup/studies/coupling/results/sweepCases`. So a real N=10 run leaves:
-
-```
-tutorials/manufacturedSolutions/bathBidomain/10_False/setup/studies/coupling/results/sweepCases/bathBidomainInterfaceMetrics.csv
-tutorials/manufacturedSolutions/bathBidomain/10_True/setup/studies/coupling/results/sweepCases/bathBidomainInterfaceMetrics.csv
-```
-
-This is *not* the same as `applications/scripts/paperI_results/aggregate.py`'s `_sweep_cases_and_manifest()` helper, which assumes a single shared `setup/studies/<study>/results/sweepCases/` directory populated by a postprocess-consolidation step — that step is a driverFOAM stub as of this writing (`sweep-run`'s own output prints `"postprocess": {"status": "stub", ...}`), so nothing currently populates the shared location. `summarize_coupling_study.py` and `aggregate.py::_bath_tet()` were both rewritten to read the real per-`<caseId>` layout above instead.
-
-`summarize_coupling_study.py` doesn't clean up `<caseId>` directories between runs — remove stale `N_False`/`N_True` dirs at the case root yourself before a fresh sweep if you don't want old data mixed into the summary.
+Corrected 2026-09-26 (tutorials-are-pointers 5.4a): this section described
+an in-place run archived under `<case_root>/<caseId>/<archive_dir_name>/`.
+The study now runs through the `manufacturedBathBidomain` tutorial record,
+which stages every case under the sweep's own `--output-dir`, as
+`cases/<caseId>/` (e.g. `cases/10_False/postProcessing/bathBidomainInterfaceMetrics.csv`);
+`archive_dir_name` is not a record study key and is dropped.
+`summarize_coupling_study.py` still reads the old per-`<caseId>` layout under
+the case root, so point it at the sweep's `cases/` directory.
 
 ## Status
 
@@ -55,10 +52,9 @@ the separate finest-level interface-current anomaly. `nOuterCorrectors 1`/
 defaults rather than force-set, matching the checked-in default (see the
 top-level README).
 
-`constant/electroProperties` must set
-`bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
-— `_apply_case` always writes this key, and a driverFOAM sweep for this
-tutorial (tet or hex) fails with `KeyError` without it.
+The study sets `bidomainSolverCoeffs.bathPredictorCorrector` directly
+(`false`/`true`; the case's own value is `yes`), and the `groundElectrode`
+variant as the top-level README shows.
 
 ## Tracking & Outputs
 
