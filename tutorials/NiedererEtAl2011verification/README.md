@@ -77,14 +77,29 @@ regression/regressionTest.sh
 regression/regressionTest.sh parallel
 ```
 
-Driver-managed sweep:
+Driver-managed (from the repository root; a record stages into a scratch
+directory you supply, never into this tree):
 
 ```bash
-driverFoam run --strict --entry niederer2011
+driverFoam run --strict --entry niederer2011 --cases-root tutorials --scratch-dir <dir>
+driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir <dir>
+driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/tetConvergence/sweep_tet_generic.json --output-dir <dir>
 ```
 
-Driver sweeps are controlled by the driverFOAM add-on's `niederer_2011`
-cardiacFoam plugin defaults.
+The driver reads this case as it is: `niederer2011` is a pointer at this
+directory, and each study under `setup/studies/` states only what it
+varies (`dx`/`tetDx`, `deltaT`, `endTime`). Each study's `base` names
+`cases_root` (`tutorials`, relative to the repository root), because a
+driver sweep over a tutorial record has no cases root it could discover.
+
+Both studies run Niederer et al. (2011)'s grid: Δx = 0.5, 0.2, 0.1 mm
+(`dx`/`tetDx` 5e-4, 2e-4, 1e-4 m) × Δt = 0.05, 0.01, 0.005 ms (`deltaT`
+5e-5, 1e-5, 5e-6 s), nine cases each, with `endTime` 0.2, 0.08 and 0.055 s
+for Δx 0.5, 0.2 and 0.1 mm, chosen so every probe has activated.
+Corrected 2026-09-26 (owner): the hex study's Δt were 0.01, 0.005 and
+0.001 ms, and the tet study ran Δt 0.01 ms only (three cases); neither is
+the paper's. The Δx 0.1 mm cases take hours each and are meant for an HPC
+run.
 
 ## Regression behavior
 

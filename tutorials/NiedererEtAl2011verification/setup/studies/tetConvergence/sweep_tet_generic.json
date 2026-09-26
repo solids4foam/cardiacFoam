@@ -1,14 +1,15 @@
 {
   "base": {
     "entry": "niederer2011",
+    "cases_root": "tutorials",
     "mesh": "tet"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "tetDx": [0.0005, 0.0002, 0.0001],
-      "system/controlDict:deltaT": [1e-05, 1e-05, 1e-05],
-      "system/controlDict:endTime": [0.2, 0.08, 0.055]
+      "tetDx": [0.0005, 0.0005, 0.0005, 0.0002, 0.0002, 0.0002, 0.0001, 0.0001, 0.0001],
+      "system/controlDict:deltaT": [5e-05, 1e-05, 5e-06, 5e-05, 1e-05, 5e-06, 5e-05, 1e-05, 5e-06],
+      "system/controlDict:endTime": [0.2, 0.2, 0.2, 0.08, 0.08, 0.08, 0.055, 0.055, 0.055]
     }
   }
 }
