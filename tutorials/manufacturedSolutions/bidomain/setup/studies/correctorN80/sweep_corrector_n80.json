@@ -1,37 +1,30 @@
 {
   "base": {
     "entry": "manufacturedBidomain",
-    "case_dir_name": "manufacturedSolutions/bidomain",
-    "setup_dir_name": "setup",
-    "dimensions": ["3D"],
-    "solver_types": ["implicit"],
-    "piecewise_sweep": false,
-    "mesh_family": "tet",
-    "numerics_profile": "bidomain_tet",
-    "phi_tolerance": 1e-15,
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/correctorN80/results/sweepCases"
+    "cases_root": "tutorials",
+    "mesh": "tet",
+    "dimension": "3D",
+    "tetNumberCells": 80,
+    "system/controlDict:deltaT": 0.000140174,
+    "system/controlDict:endTime": 0.020185056,
+    "system/controlDict:writeControl": "timeStep",
+    "system/controlDict:writeInterval": 144,
+    "system/controlDict:writeFormat": "ascii"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "number_cells": [80, 80, 80, 80],
-      "dt_values": [0.000140174, 0.000140174, 0.000140174, 0.000140174],
-      "end_time": [0.020185056, 0.020185056, 0.020185056, 0.020185056],
-      "n_outer_correctors": [1, 2, 1, 2],
-      "n_nonorthogonal_correctors": [0, 0, 1, 1],
-      "control_dict_overrides": [
-        [{"key": "writeControl", "value": "timeStep"}, {"key": "writeInterval", "value": 144}, {"key": "writeFormat", "value": "ascii"}],
-        [{"key": "writeControl", "value": "timeStep"}, {"key": "writeInterval", "value": 144}, {"key": "writeFormat", "value": "ascii"}],
-        [{"key": "writeControl", "value": "timeStep"}, {"key": "writeInterval", "value": 144}, {"key": "writeFormat", "value": "ascii"}],
-        [{"key": "writeControl", "value": "timeStep"}, {"key": "writeInterval", "value": 144}, {"key": "writeFormat", "value": "ascii"}]
-      ]
+      "system/fvSolution:PIMPLE.nOuterCorrectors": [1, 2, 1, 2],
+      "system/fvSolution:PIMPLE.nNonOrthogonalCorrectors": [0, 0, 1, 1]
     },
     "dependent": [
       {
         "name": "output_dir_name",
         "derive": "output_dir_name_template",
-        "of": ["number_cells", "n_outer_correctors", "n_nonorthogonal_correctors"]
+        "of": [
+          "system/fvSolution:PIMPLE.nOuterCorrectors",
+          "system/fvSolution:PIMPLE.nNonOrthogonalCorrectors"
+        ]
       }
     ]
   }
