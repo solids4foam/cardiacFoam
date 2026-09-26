@@ -15,9 +15,9 @@ driverFoam sweep-run \
     --output-dir .tmp/driverfoam/bidomain-corrector-n80
 ```
 
-**Corrected 2026-09-26 (tutorials-are-pointers, 5.4b-B):** as `corrector/`'s
-own README now says, the two `nonorth1 (0)`/`combined (1)`-carrying cases
-per pair preview cleanly against the `manufacturedBidomain` record but
-cannot be committed by a real `sweep-run` yet: `PIMPLE.nNonOrthogonalCorrectors`
-is absent from this case's `system/fvSolution`, and a tutorial record's
-direct study-key channel writes with `add_if_missing=False`.
+**Corrected 2026-09-26, then resolved the same day (controller decision), as
+`corrector/`'s own README now says:** `system/fvSolution` now states
+`nNonOrthogonalCorrectors 0;` explicitly (the default it was silently
+relying on before), proven behaviour-neutral by
+`regression/regressionTest.sh`. All four cases here now `strict_plan`
+cleanly.

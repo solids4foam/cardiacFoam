@@ -30,16 +30,19 @@ unknown key -- proven with a real `describe` preview, not assumed. This
 study's own `driverFoam sweep-run` output is not archived per case today;
 each case's raw output lives under the sweep's own `output_dir`.
 
-**Also corrected 2026-09-26:** `PIMPLE.nNonOrthogonalCorrectors` is absent
-from this case's own `system/fvSolution` (only `nOuterCorrectors` is
-committed). A tutorial record's direct study-key channel writes with
-`add_if_missing=False` (proven against a real copy of this case's
-`system/fvSolution`: attempting to write a missing key raises `KeyError`),
-so the four `nonorth1`/`combined` variants of this study (and every
-`correctorN80` case) preview cleanly but cannot be committed by a real
-`sweep-run` until a tutorial record gains a way to add a key its native
-document does not yet have. This is a real, open gap, not a Python-vocabulary
-key to rewrite away -- see the omniD side's own report for the evidence.
+**Also corrected 2026-09-26, then resolved the same day (controller
+decision):** `PIMPLE.nNonOrthogonalCorrectors` used to be absent from this
+case's own `system/fvSolution` (only `nOuterCorrectors` was committed), and
+a tutorial record's direct study-key channel writes with
+`add_if_missing=False` -- correctly: a study changes keys that exist, and
+never invents one. `system/fvSolution` now states
+`nNonOrthogonalCorrectors 0;` explicitly (OpenFOAM's and cardiacFoam's own
+default when it was absent, so this changes no behaviour -- proven by
+`regression/regressionTest.sh`, identical 23/23 checks and values before and
+after, in separate `git archive` copies; `docs/solver-learning
+/cardiacfoam.md` section B, omniD side). All 12 of this study's cases,
+including every `nonorth1`/`combined` variant, now `strict_plan` cleanly;
+the coarsest case (`N=10`, `baseline`) has been run for real end to end.
 
 ## Tracking & Outputs
 
