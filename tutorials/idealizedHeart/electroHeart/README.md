@@ -11,8 +11,7 @@ anatomy, selected at run time.
 | `eikonal` | `eikonalSolver` | `eikonalSolver1D` | `eikonalPvjCoupler` |
 | `hybrid` | `monodomainSolver` | `restitutionEikonalSolver1D` | `eikonalMonodomainPvjCoupler` |
 
-`monodomain` is the healthy baseline other tutorials reference and the
-regression-covered variant (see `regression/`); `eikonal` is the cheapest
+`monodomain` is the regression-covered variant (see `regression/`); `eikonal` is the cheapest
 combination; `hybrid` is the middle ground (full 3D myocardium, cheaper
 1D Purkinje).
 
@@ -134,10 +133,7 @@ axis in omnidriver's LV frame (`compute_lv_frame`: `L` apex-to-base, `S` LV
 centre to RV centre, anterior `A = L x S`, here `-z`): V1..V6 at 35, 65, 100,
 135, 170, 205 deg from `S` toward `A`, each at its original apex-base height
 and 25mm from the nearest tissue. V1 thus faces the anterior RV free wall
-(which spans about +-54 deg) and V6 the LV lateral wall. The earlier
-reference-frame transfer from a real heart put V1 at 75 deg, past the RV:
-this z-symmetric anatomy has no posterior QRS component, so that V1 read a
-positive QRS with no R-wave progression. With this placement the hybrid
+(which spans about +-54 deg) and V6 the LV lateral wall. With this placement the hybrid
 variant gives V1 rS, V2 RS, V3-V6 R. The mesh is mirror-symmetric in `z`, so
 the choice of `-z` as anterior is the frame's convention, not anatomy.
 All three variants share the same positions.
@@ -174,8 +170,7 @@ The regression runs every variant on both trees (`regression/injection.<variant>
 for human, `injection.<variant>.pig.reference` for pig).
 
 `constant/electroProperties` and `system/controlDict` are symlinks to
-`.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant (same
-pattern `pathos/conductionBlock` uses for its own variants).
+`.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
 `controlDict` differs per variant but all share `endTime 0.04`: the
 regression probe activates at 28.8 ms (`monodomain`) and 30.3 ms (`hybrid`)
 on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its

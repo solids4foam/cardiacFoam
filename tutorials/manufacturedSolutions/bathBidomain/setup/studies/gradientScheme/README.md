@@ -13,12 +13,9 @@ fixed):
 | `limitedCorrection` | `leastSquares` | `Gauss linear limited 0.5` | `limited 0.5` |
 | `orthogonalControl` | `leastSquares` | `Gauss linear orthogonal` | `orthogonal` |
 
-Formerly `run_gradient_scheme_screen.sh`, which delegated to
-`run_parallel_interface_sweep.sh` per variant. Each variant is now its own
-sweep spec (`fv_scheme_overrides` is a per-case list-of-dicts, which the
-sweep engine's case-id templating can't safely reference, so it's fixed in
-each spec's `base` rather than swept as an axis) — same reasoning as
-`setup/studies/interfaceCurrentConvergence/`.
+Each variant is its own sweep spec: `fv_scheme_overrides` is a per-case
+list-of-dicts, which the sweep engine's case-id templating cannot reference,
+so it is fixed in each spec's `base` rather than swept as an axis.
 
 ## Execution
 

@@ -1,11 +1,8 @@
 # Electrophysiology protocols
 
-Standard electrophysiology protocols and sanity checks: the things a cardiac
-EP practitioner would run before committing to a large 3D or coupled run —
-restitution, conduction velocity, transmural heterogeneity, and re-entry
-behaviour — on small, fast, meshless-or-1D/2D cases. Contrast
-`manufacturedSolutions/` (verifies the numerics against a known solution) and
-`idealizedHeart/` (a full anatomical case using these same protocols).
+Standard electrophysiology protocols and sanity checks — restitution,
+conduction velocity, transmural heterogeneity, and re-entry behaviour — on
+small, fast, meshless-or-1D/2D cases.
 
 ```text
 electrophysiologyProtocols/
@@ -22,8 +19,7 @@ electrophysiologyProtocols/
 ## `singleCell/`
 
 Single integration-point electrophysiology: runs an ionic model with no
-spatial PDE. The baseline sanity check for any ionic-model change, and the
-starting point for the heterogeneity and restitution protocols below.
+spatial PDE. The baseline sanity check for any ionic-model change.
 
 ## `ionicHeterogeneity/`
 
@@ -31,23 +27,20 @@ Runs the meshless `ionicHeterogeneityProbe` utility to check that the
 `ionicHeterogeneity` transmural blend itself (endo/M-cell/epi bands, with
 smoothed transitions) is stable — the action potential varies smoothly
 across the transmural coordinate, with no shape breakdown at a band
-boundary — before that same `ionicHeterogeneity` configuration is trusted
-in a spatial myocardium case. It checks the blending mechanism itself; for a
+boundary. It checks the blending mechanism itself; for a
 specific ionic model's physiology or a disease state, see "Pre-checking
 tissue types and pathologies" below.
 
 ## `restitutionCurves_s1s2Protocol/`
 
 Single-cell S1-S2 pacing sweeps that generate APD/conduction restitution
-curves — the standard check for alternans risk and rate-dependent behaviour
-before a tissue-scale run.
+curves, which show alternans risk and rate-dependent behaviour.
 
 ## `cableProtocol/`
 
 Minimal 1D tissue-scale conduction-velocity calibration, once per myocardium
 solver (`monodomain1DCableCV`, `eikonal1DCableCV`), used to tune conductivity
-against a target CV before that solver's conductivity is trusted in a larger
-case.
+against a target CV.
 
 ## `rotorInstability/`
 
@@ -65,13 +58,12 @@ reaction-diffusion network coupling in parallel.
 
 ## Pre-checking tissue types and pathologies
 
-`singleCell` and `ionicHeterogeneity` share a role: confirm the typical
-action-potential shape/duration for a tissue type or an ionic
-parametrisation (e.g. an `ionicConstantOverrides` block, as used by
-`../idealizedHeart/pathos/ionicPathology`) at single-cell or meshless scale
-before a tissue-scale run. `singleCell` supports comparisons of this kind
-as a study under `setup/studies/` — descriptive figures and a metrics
-table, not a regression gate (see its README's `tworldVsGaur` study).
+`singleCell` and `ionicHeterogeneity` also check the action-potential
+shape and duration of a tissue type or an ionic parametrisation (e.g. an
+`ionicConstantOverrides` block) at single-cell or meshless scale.
+`singleCell` holds comparisons of this kind as studies under
+`setup/studies/`, with descriptive figures and a metrics table, not a
+regression gate (e.g. its `tworldVsGaur` study).
 
 ## Regression
 

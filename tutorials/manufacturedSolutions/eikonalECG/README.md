@@ -44,14 +44,9 @@ Typical outputs include:
 `setup/studies/tetConvergence/` is an activatable overlay of this same case
 on a genuinely unstructured mesh: identical `constant/` and `system/` dicts,
 except the mesh generator changes and `setup/studies/tetConvergence/fvSolution`
-is swapped in for the duration of a tet run and restored on exit. It was
-formerly the standalone `eikonalTetMMS` tutorial, merged in here (the 5
-shared dicts were byte-identical, so this case stayed the canonical hex case
-unchanged; only the tet-specific `box.geo.template` and `fvSolution` became
-the overlay). `box.geo.template` and its `fvSolution` overlay are co-located
-with the study that drives them (`setup/studies/tetConvergence/`) rather than
-under `setup/studies/tetConvergence/`, matching `bidomain/setup/studies/tetConvergence/`
-and `monodomainPseudoECG`'s own tet variant.
+is swapped in for the duration of a tet run and restored on exit.
+`box.geo.template` and its `fvSolution` overlay live in
+`setup/studies/tetConvergence/`, next to the study that drives them.
 
 #### Tet Convergence
 

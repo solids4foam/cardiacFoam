@@ -1,11 +1,9 @@
 # Pathology techniques on the idealized biventricular heart
 
-Two sibling tutorials, each demonstrating a different *technique* for
-injecting a specific pathology into the model — a reference for
-**how** to build one. Both share the same mesh
-and anatomy as `../electroHeart`/`../electroMechHeart` (`../mesh/`) and
-default to the same healthy Purkinje graph and ionic model unless the
-technique itself says otherwise.
+Two tutorials, each demonstrating a different *technique* for injecting a
+specific pathology into the model. Both read the mesh, anatomy fields and
+healthy Purkinje graph from `../mesh/`, and keep the healthy graph and ionic
+model unless the technique itself changes them.
 
 ## `conductionBlock` — structural technique
 
@@ -31,8 +29,8 @@ structural conduction problem.
 
 `conductionBlock`'s `lbbb` variant is regression-covered (see
 `conductionBlock/regression/`) — it checks the structural technique
-actually blocks propagation, using the same injection-probe pattern
-`../electroHeart` uses to check propagation *does* happen. `ionicPathology`
+actually blocks propagation: an activation-time probe at an LV
+Purkinje-myocardial junction site must still be un-activated at t = 35 ms. `ionicPathology`
 has no automated regression yet — its pathology signatures only show up
 over timescales (its own case runs 700ms) a short automated check
 wouldn't meaningfully capture.

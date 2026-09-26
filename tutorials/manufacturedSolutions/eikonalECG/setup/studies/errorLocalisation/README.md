@@ -16,10 +16,6 @@ The workflow also writes the cellwise `activationTimeError` field, mesh-quality
 fields (`checkMesh -writeAllFields`), and cell centres after the solve. These
 are required inputs to the retained spatial-localisation analysis.
 
-Complementary to `../gradientVerification/run_error_localisation.sh`, which
-is a single-case (default `N=40`, `leastSquares`) spatial-correlation deep
-dive kept for direct/manual use -- see that script's header.
-
 ## Execution
 
 First materialize and inspect the eight driverFOAM cases:

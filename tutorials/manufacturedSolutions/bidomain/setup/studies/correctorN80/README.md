@@ -2,11 +2,9 @@
 
 ## Purpose
 
-This endpoint companion to `corrector` repeats the four
-`(nOuterCorrectors, nNonOrthogonalCorrectors)` combinations at `N=80`. It
-closes the fine-level gap left by the existing `N=10,20,40` screen, using the
-same generic-Delaunay mesh, tight linear and ODE controls, and a 144-step
-window. It is an iterative-coupling sensitivity control, testing solver-loop
+This study runs the four `(nOuterCorrectors, nNonOrthogonalCorrectors)`
+combinations at `N=80`, on the generic-Delaunay mesh with tight linear and
+ODE controls and a 144-step window. It is an iterative-coupling sensitivity control, testing solver-loop
 convergence rather than spatial resolution.
 
 ## Execution

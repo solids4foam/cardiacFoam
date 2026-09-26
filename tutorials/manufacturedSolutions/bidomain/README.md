@@ -37,7 +37,7 @@ Typical outputs include:
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh overlay, co-located with the study that drives it: a unit-cube Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length placeholder `__LC__`) and an `fvSchemes` copy with `gradSchemes.default` forced to `leastSquares`. The geometry and gradient-scheme override are byte-identical to `monodomainPseudoECG`'s and `eikonalECG`'s own tet overlays, but are kept as a local copy matching how every merged tet overlay in this repo is scoped to its own case.
+`setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh overlay, co-located with the study that drives it: a unit-cube Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length placeholder `__LC__`) and an `fvSchemes` copy with `gradSchemes.default` forced to `leastSquares`.
 
 #### Gradient-Scheme Convergence Sweep
 
