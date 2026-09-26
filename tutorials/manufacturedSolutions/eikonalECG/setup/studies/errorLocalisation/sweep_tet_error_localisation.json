@@ -1,81 +1,43 @@
 {
   "base": {
     "entry": "manufacturedEikonalECG",
-    "case_dir_name": "manufacturedSolutions/eikonalECG",
-    "setup_dir_name": "setup",
     "cases_root": "tutorials",
-    "dimensions": [
-      "3D"
-    ],
-    "solver_types": [
-      "eikonal"
-    ],
-    "mesh_family": "tet",
-    "numerics_profile": "eikonal_tet",
-    "error_localisation_analysis": true,
-    "postprocess_strict_artifacts": false,
-    "electro_property_overrides": {
-      "eikonalSolverCoeffs.verificationModel.writeErrorField": true
-    },
-    "archive_dir_name": "setup/studies/errorLocalisation/results/sweepCases"
+    "mesh": "tet-errorLocalisation",
+    "constant/electroProperties:eikonalSolverCoeffs.verificationModel.writeErrorField": true
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "grad_scheme": [
-        "gauss_linear",
-        "gauss_linear",
-        "gauss_linear",
-        "gauss_linear",
-        "least_squares",
-        "least_squares",
-        "least_squares",
-        "least_squares"
+      "system/fvSchemes:gradSchemes.default": [
+        "Gauss linear",
+        "Gauss linear",
+        "Gauss linear",
+        "Gauss linear",
+        "leastSquares",
+        "leastSquares",
+        "leastSquares",
+        "leastSquares"
       ],
-      "number_cells": [
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ]
+      "tetNumberCells": [
+        10,
+        20,
+        40,
+        80,
+        10,
+        20,
+        40,
+        80
+      ],
+      "output_dir_name": [
+        "gaussLinear_10",
+        "gaussLinear_20",
+        "gaussLinear_40",
+        "gaussLinear_80",
+        "leastSquares_10",
+        "leastSquares_20",
+        "leastSquares_40",
+        "leastSquares_80"
       ]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": [
-          "grad_scheme",
-          "number_cells"
-        ]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "grad_scheme",
-          "number_cells"
-        ]
-      }
-    ]
+    }
   }
 }
