@@ -92,6 +92,15 @@ varies (`dx`/`tetDx`, `deltaT`, `endTime`). Each study's `base` names
 `cases_root` (`tutorials`, relative to the repository root), because a
 driver sweep over a tutorial record has no cases root it could discover.
 
+Both studies run Niederer et al. (2011)'s grid: Δx = 0.5, 0.2, 0.1 mm
+(`dx`/`tetDx` 5e-4, 2e-4, 1e-4 m) × Δt = 0.05, 0.01, 0.005 ms (`deltaT`
+5e-5, 1e-5, 5e-6 s), nine cases each, with `endTime` 0.2, 0.08 and 0.055 s
+for Δx 0.5, 0.2 and 0.1 mm, chosen so every probe has activated.
+Corrected 2026-09-26 (owner): the hex study's Δt were 0.01, 0.005 and
+0.001 ms, and the tet study ran Δt 0.01 ms only (three cases); neither is
+the paper's. The Δx 0.1 mm cases take hours each and are meant for an HPC
+run.
+
 ## Regression behavior
 
 `regression/regressionTest.sh` is local to this case and validates against
