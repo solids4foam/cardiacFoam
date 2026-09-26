@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# -------------------------------------------------------------------------
+# Shared helpers for tutorials/*/regression/regressionTest.sh
+#
+# Source from a regressionTest.sh by walking up from the script location, so
+# the snippet does not depend on how deep the case sits:
+#
+#     helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+#     until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+#     do
+#         helperDir="$(dirname "${helperDir}")"
+#     done
+#     . "${helperDir}/regressionFunctions"
+#
+# Alltest-regression copies this file to the root of its scratch tree, so the
+# walk-up finds it both in-tree and in the copied cases.
+# -------------------------------------------------------------------------
+
+# Print the last lines of a log file, if it exists.
+#   regressionDumpLog <logFile> [nLines]
+regressionDumpLog()
+{
+    local logFile="$1"
+    local nLines="${2:-30}"
+
+    if [[ -f "${logFile}" ]]; then
+        echo "---- last ${nLines} lines of ${logFile} ----"
+        tail -n "${nLines}" "${logFile}"
+        echo "---- end of ${logFile} ----"
+    fi
+}
+
+# Fail if a solver or utility run did not complete cleanly.
+#
+# Allrun scripts use RunFunctions without 'set -e', so a crashed solver is
+# typically followed by further commands and Allrun still exits 0. This check
+# makes that failure explicit instead of surfacing later as "missing output".
+#
+#   checkSolverLogs [-e <regex>] [log ...]
+#
+# Every named log (default: log.cardiacFoam) must exist and contain a line
+# matching <regex> (default: the OpenFOAM '^End' line). Every log.* file in
+# the current directory must be free of "FOAM FATAL" and "FOAM aborting"
+# messages.
+checkSolverLogs()
+{
+    local IFS=' '
+    local endPattern='^End'
+    local failures=0
+    local logFile
+
+    if [[ "${1:-}" == "-e" ]]; then
+        endPattern="$2"
+        shift 2
+    fi
+
+    local logs=("$@")
+
+    if (( ${#logs[@]} == 0 )); then
+        logs=("log.cardiacFoam")
+    fi
+
+    for logFile in "${logs[@]}"; do
+        if [[ ! -f "${logFile}" ]]; then
+            echo "FAIL: expected log file not found: ${logFile}"
+            failures=$((failures + 1))
+        elif ! grep -Eq "${endPattern}" "${logFile}"; then
+            echo "FAIL: ${logFile} has no line matching '${endPattern}' (run did not complete)"
+            regressionDumpLog "${logFile}"
+            failures=$((failures + 1))
+        fi
+    done
+
+    for logFile in log.*; do
+        [[ -f "${logFile}" ]] || continue
+        if grep -Eq 'FOAM FATAL|FOAM aborting' "${logFile}"; then
+            echo "FAIL: ${logFile} reports a fatal error"
+            regressionDumpLog "${logFile}"
+            failures=$((failures + 1))
+        fi
+    done
+
+    if (( failures > 0 )); then
+        return 1
+    fi
+
+    echo "PASS: solver logs completed cleanly (${logs[*]})"
+    return 0
+}

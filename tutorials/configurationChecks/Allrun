@@ -1,0 +1,5 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+# Run all configuration checks (or the named ones); see ./checks
+./regression/regressionTest.sh "$@"

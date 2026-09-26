@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Eikonal ECG manufactured-solution regression test
 # ============================================================
@@ -290,6 +298,7 @@ checkPseudoECGHeader()
 ./Allclean > /dev/null 2>&1 || true
 checkElectrodeConfiguration
 ./Allrun parallel > "${ALLRUN_LOGFILE}" 2>&1
+checkSolverLogs log.cardiacFoam log.reconstructPar || exit 1
 
 errorFile="$(findManufacturedErrorFile)" || {
     echo "FAIL: manufactured error summary file not found."

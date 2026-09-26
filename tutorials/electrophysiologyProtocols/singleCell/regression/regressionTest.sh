@@ -2,11 +2,17 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # Single-cell regression test
 # ============================================================
-
-VM_TOL=5e-3
 
 REF_FILE="regression/singleCell.reference"
 ALLRUN_LOGFILE="log.Allrun"
@@ -124,6 +130,7 @@ if [[ "${CHECK_ONLY}" -eq 1 ]]; then
 else
     ./Allclean > /dev/null 2>&1 || true
     ./Allrun > "${ALLRUN_LOGFILE}" 2>&1
+    checkSolverLogs || exit 1
 fi
 
 if [[ ! -f "${REF_FILE}" ]]; then

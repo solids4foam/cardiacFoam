@@ -7,18 +7,17 @@ IFS=$'\n\t'
 #
 # Copies regression test cases to a separate directory and
 # runs them there to avoid polluting the original tutorials.
+#
+# Usage: Alltest-regression [-l | --list] [-h | --help] [pattern ...]
+#
+#   pattern    run only the cases whose path (relative to tutorials/)
+#              contains one of the given substrings, e.g.
+#              "Alltest-regression bidomain purkinje"
+#   -l, --list list the regression cases and exit
 # -------------------------------------------------------------------------
-
-echo "============================================================"
-echo "cardiacFoam regression tests"
-echo "============================================================"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REG_ROOT="${ROOT_DIR}/../tutorialsTest-regression"
-
-# Create regression root directory
-rm -rf "${REG_ROOT}"
-mkdir -p "${REG_ROOT}"
 
 # List of regression test directories (relative to tutorials/)
 REGRESSION_TESTS=(
@@ -28,6 +27,7 @@ REGRESSION_TESTS=(
     "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
     "manufacturedSolutions/bidomain"
     "manufacturedSolutions/monodomainPseudoECG"
+    "manufacturedSolutions/monodomain1D3D"
     "manufacturedSolutions/eikonalECG"
     "manufacturedSolutions/bathBidomain"
     "manufacturedSolutions/monodomainTotalLagrangianEM"
@@ -36,7 +36,72 @@ REGRESSION_TESTS=(
     "idealizedHeart/electroHeart"
     "idealizedHeart/electroMechHeart"
     "idealizedHeart/pathos/conductionBlock"
+    "configurationChecks"
 )
+
+usage()
+{
+    sed -n '/^# Usage:/,/^# ----/p' "${BASH_SOURCE[0]}" | sed '$d; s/^# \{0,1\}//'
+}
+
+listOnly=0
+patterns=()
+
+while (( $# > 0 )); do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -l|--list)
+            listOnly=1
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            usage
+            exit 2
+            ;;
+        *)
+            patterns+=("$1")
+            ;;
+    esac
+    shift
+done
+
+# Select the cases matching any pattern (all cases when none is given)
+selectedTests=()
+for testCase in "${REGRESSION_TESTS[@]}"; do
+    if (( ${#patterns[@]} == 0 )); then
+        selectedTests+=("${testCase}")
+        continue
+    fi
+    for pattern in "${patterns[@]}"; do
+        if [[ "${testCase}" == *"${pattern}"* ]]; then
+            selectedTests+=("${testCase}")
+            break
+        fi
+    done
+done
+
+if (( ${#selectedTests[@]} == 0 )); then
+    echo "FAIL: no regression case matches: ${patterns[*]}"
+    exit 2
+fi
+
+if (( listOnly )); then
+    printf '%s\n' "${selectedTests[@]}"
+    exit 0
+fi
+
+echo "============================================================"
+echo "cardiacFoam regression tests"
+echo "============================================================"
+
+# Create regression root directory, with the shared helpers the
+# regressionTest.sh scripts source
+rm -rf "${REG_ROOT}"
+mkdir -p "${REG_ROOT}"
+cp -a "${ROOT_DIR}/regressionFunctions" "${REG_ROOT}/"
 
 failures=0
 skips=0
@@ -63,10 +128,24 @@ FULL_SOLIDS4FOAM_ONLY_TESTS=(
     "idealizedHeart/electroMechHeart"
 )
 
+# Regression cases known to be broken on one OpenFOAM version, as
+# "<version> <case>". Their regressionTest.sh exits 77 on that version, and
+# the skip is expected there in either build mode.
+VERSION_SKIP_TESTS=(
+    "v2312 manufacturedSolutions/bathBidomain"
+)
+
 isExpectedSkip()
 {
     local skipped_case="$1"
     local fullOnlyCase
+    local versionSkip
+
+    for versionSkip in "${VERSION_SKIP_TESTS[@]}"; do
+        if [[ "${versionSkip}" == "${WM_PROJECT_VERSION:-} ${skipped_case}" ]]; then
+            return 0
+        fi
+    done
 
     [[ "${build_mode}" == "lightweight" ]] || return 1
 
@@ -79,7 +158,7 @@ isExpectedSkip()
     return 1
 }
 
-for testCase in "${REGRESSION_TESTS[@]}"; do
+for testCase in "${selectedTests[@]}"; do
     echo
     echo "------------------------------------------------------------"
     echo "Running regression test: ${testCase}"
