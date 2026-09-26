@@ -1,6 +1,6 @@
 #!/bin/bash
 #-------------------------------------------------------------------------------
-# Allclean script for electro-mechanical coupling tutorial
+# Allclean script for the spring-supported electromechanics slab
 #-------------------------------------------------------------------------------
 
 cd "${0%/*}" || exit 1

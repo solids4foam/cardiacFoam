@@ -17,17 +17,17 @@ solidModel     nonLinearGeometryTotalLagrangianTotalDisplacement;
 
 nonLinearGeometryTotalLagrangianTotalDisplacementCoeffs
 {
-    nCorrectors     200;
+    nCorrectors     1000;
 
-    // Relative residual: converge when residual < rTol * initialResidual.
-    // Solver plateaus at ~12% of initial due to under-relaxation; 0.2 accepts that.
-    rTol            0.2;
+    // Relative residual: converge when residual < rTol * initialResidual
+    rTol            0.02;
 
-    // Absolute residual: converge when residual < aTol
-    aTol            1e-6;
+    // Absolute residual: converge when residual < aTol. Kept far below the
+    // per-step residual so that rTol and sTol decide convergence at any deltaT
+    aTol            1e-9;
 
     // Step norm: converge when deltaX < sTol * xNorm
-    sTol            1e-4;
+    sTol            1e-7;
 
     infoFrequency   1;
 

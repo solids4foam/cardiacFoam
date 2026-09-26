@@ -1,6 +1,6 @@
 #!/bin/bash
 #-------------------------------------------------------------------------------
-# Allrun script for electro-mechanical coupling tutorial
+# Allrun script for the spring-supported electromechanics slab
 #
 # Usage:
 #   ./Allrun          serial

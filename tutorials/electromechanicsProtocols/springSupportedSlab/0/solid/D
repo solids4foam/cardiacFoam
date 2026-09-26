@@ -17,15 +17,19 @@ dimensions      [0 1 0 0 0 0 0];
 
 internalField   uniform (0 0 0);
 
+#include "$FOAM_CASE/system/caseParameters"
+
 boundaryField
 {
-    xFixed
+    "xMin|xMax"
     {
-        type            fixedDisplacement;
+        type            solidRobin;
+        kNormal         uniform $kEnds;
+        kTangential     uniform $kEnds;
         value           uniform (0 0 0);
     }
 
-    freeFaces
+    lateral
     {
         type            solidTraction;
         traction        uniform (0 0 0);
