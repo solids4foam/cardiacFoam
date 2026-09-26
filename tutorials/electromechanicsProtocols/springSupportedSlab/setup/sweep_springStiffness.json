@@ -1,0 +1,18 @@
+{
+  "description": "Spring stiffness sweep of the spring-supported slab, plus a time-step reference for the default stiffness. Each case sets the entries of system/caseParameters and runs ./Allrun; setup/postprocess_springStiffness.py reads the finished cases.",
+  "base": {
+    "case_dir_name": "electromechanicsProtocols/springSupportedSlab",
+    "setup_dir_name": "setup",
+    "parameters_file": "system/caseParameters",
+    "run_command": "./Allrun parallel",
+    "postprocess_command": "python3 setup/postprocess_springStiffness.py --input-dir <sweep-output>/cases --output-dir <sweep-output>"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "caseId": ["k1e10", "k1e8", "k1e7", "k1e6", "k1e5", "k1e7_dt1e-6"],
+      "kEnds": [1e10, 1e8, 1e7, 1e6, 1e5, 1e7],
+      "deltaT": [1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-6]
+    }
+  }
+}

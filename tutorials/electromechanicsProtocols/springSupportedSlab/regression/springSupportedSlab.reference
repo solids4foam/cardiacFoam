@@ -1,0 +1,18 @@
+# Default case: kEnds = 1e7 Pa/m, deltaT = 1e-5 s.
+#
+# Rows: <postProcessing file> <time> <column> <expected> <tolerance>
+#   Vm [V] at the far end (x = 19.25 mm): resting at 20 ms, activated at 50 ms
+#   Ta [Pa] at the slab centre (x = 10 mm) near its peak
+#   Dx [m] (column 2 of the surfaceFieldValue vector) on each end
+# springLaw rows: <time> <tolerance [N]>: force on xMin from the stress
+#   field versus -kEnds * A0 * <Dx>
+#
+# file                                           time   col  expected       tolerance
+Vmprobes/electro/0/Vm                            0.02   4    -0.0855739     2e-3
+Vmprobes/electro/0/Vm                            0.05   4    0.0131733      3e-3
+Taprobes/solid/0/Ta                              0.15   5    17342.8        200.0
+solid/D_xMin/0/surfaceFieldValue.dat             0.05   2    3.428912e-04   7e-06
+solid/D_xMin/0/surfaceFieldValue.dat             0.15   2    8.566150e-04   1e-05
+solid/D_xMax/0/surfaceFieldValue.dat             0.15   2    -8.600643e-04  1e-05
+springLaw                                        0.05   1e-4
+springLaw                                        0.15   1e-4

@@ -3,16 +3,18 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # ============================================================
-# Electromechanical Niederer slab regression test
+# Spring-supported electromechanics slab regression test
 # ============================================================
 
-REF_FILE="regression/electroMechHeterogeneity.reference"
+REF_FILE="regression/springSupportedSlab.reference"
 ALLRUN_LOGFILE="log.Allrun"
-PROBE_FILE="postProcessing/Taprobes/solid/0/Ta"
-DISTINCT_EPS=1.0
+FORCE_FILE="postProcessing/0/solidForcesxMin.dat"
+DISP_FILE="postProcessing/solid/D_xMin/0/surfaceFieldValue.dat"
+# Reference area of each end face: 3 mm x 7 mm (system/blockMeshDict)
+END_AREA=2.1e-5
 SKIP_CODE=77
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 
 fullSolids4FoamAvailable()
 {
@@ -110,6 +112,7 @@ extractProbeValue()
 
     awk -v target="${time}" -v col="${column}" '
         BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
+        { gsub(/[()]/, " "); $0 = $0; }
         $1 !~ /^#/ && NF >= col {
             d = $1 - target;
             if (d < 0) d = -d;
@@ -130,7 +133,7 @@ extractProbeValue()
 }
 
 echo "============================================================"
-echo "Electromechanical Niederer slab regression test"
+echo "Spring-supported electromechanics slab regression test"
 echo "============================================================"
 echo
 
@@ -167,16 +170,39 @@ if [[ ! -f "${REF_FILE}" ]]; then
     exit 1
 fi
 
-if [[ ! -f "${PROBE_FILE}" ]]; then
-    echo "FAIL: probe output not found: ${PROBE_FILE}"
+kEnds="$(awk '$1 == "kEnds" { sub(/;/, "", $2); print $2 }' system/caseParameters)"
+if [[ -z "${kEnds}" ]]; then
+    echo "FAIL: kEnds not found in system/caseParameters"
     exit 1
 fi
 
 failures=0
 checks=0
 
+# Rows: <postProcessing file> <time> <column> <expected> <tolerance>
+#   or: springLaw <time> <tolerance [N]>
 while IFS=' ' read -r fileName time column expected tolerance; do
     if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
+        continue
+    fi
+
+    checks=$((checks + 1))
+
+    if [[ "${fileName}" == "springLaw" ]]; then
+        # Force on xMin from the stress field must equal -k A0 <Dx>
+        tolerance="${column}"
+        force="$(extractProbeValue "${FORCE_FILE}" "${time}" 2)" || true
+        disp="$(extractProbeValue "${DISP_FILE}" "${time}" 2)" || true
+        if [[ -z "${force}" || -z "${disp}" ]]; then
+            echo "FAIL: spring law at t=${time}: force or displacement not found"
+            failures=$((failures + 1))
+            continue
+        fi
+        springForce="$(awk -v k="${kEnds}" -v a="${END_AREA}" -v d="${disp}" \
+            'BEGIN { print -k*a*d }')"
+        checkWithinTolerance "spring law F_xMin vs -k A0 <Dx> t=${time}" \
+            "${force}" "${springForce}" "${tolerance}" \
+            || failures=$((failures + 1))
         continue
     fi
 
@@ -184,12 +210,10 @@ while IFS=' ' read -r fileName time column expected tolerance; do
     if [[ ! -f "${dataFile}" ]]; then
         echo "FAIL: missing output file ${dataFile}"
         failures=$((failures + 1))
-        checks=$((checks + 1))
         continue
     fi
 
     actual="$(extractProbeValue "${dataFile}" "${time}" "${column}")" || true
-    checks=$((checks + 1))
 
     if [[ -z "${actual}" ]]; then
         echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
@@ -201,37 +225,6 @@ while IFS=' ' read -r fileName time column expected tolerance; do
         "${actual}" "${expected}" "${tolerance}" \
         || failures=$((failures + 1))
 done < "${REF_FILE}"
-
-endo="$(extractProbeValue "${PROBE_FILE}" "0.02" 2)" || {
-    echo "FAIL: could not extract endocardial Ta value for heterogeneity check"
-    exit 1
-}
-mid="$(extractProbeValue "${PROBE_FILE}" "0.02" 3)" || {
-    echo "FAIL: could not extract mid-wall Ta value for heterogeneity check"
-    exit 1
-}
-epi="$(extractProbeValue "${PROBE_FILE}" "0.02" 4)" || {
-    echo "FAIL: could not extract epicardial Ta value for heterogeneity check"
-    exit 1
-}
-
-if awk -v a="${endo}" -v b="${mid}" -v c="${epi}" -v eps="${DISTINCT_EPS}" '
-    BEGIN {
-        ab = a - b; if (ab < 0) ab = -ab;
-        ac = a - c; if (ac < 0) ac = -ac;
-        bc = b - c; if (bc < 0) bc = -bc;
-        exit !((ab > eps) && (ac > eps) && (bc > eps));
-    }
-' ; then
-    printf "PASS: heterogeneity check endo=%.8g mid=%.8g epi=%.8g\n" \
-        "${endo}" "${mid}" "${epi}"
-    checks=$((checks + 1))
-else
-    printf "FAIL: heterogeneity collapsed endo=%.8g mid=%.8g epi=%.8g\n" \
-        "${endo}" "${mid}" "${epi}"
-    failures=$((failures + 1))
-    checks=$((checks + 1))
-fi
 
 echo
 if (( failures == 0 )); then

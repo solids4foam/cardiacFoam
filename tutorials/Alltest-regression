@@ -24,8 +24,8 @@ mkdir -p "${REG_ROOT}"
 REGRESSION_TESTS=(
     "electrophysiologyProtocols/singleCell"
     "electrophysiologyProtocols/ionicHeterogeneity"
-    "NiedererEtAl2011/NiedererEtAl2011verification"
-    "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
+    "NiedererEtAl2011verification"
+    "electromechanicsProtocols/springSupportedSlab"
     "manufacturedSolutions/bidomain"
     "manufacturedSolutions/monodomainPseudoECG"
     "manufacturedSolutions/eikonalECG"
@@ -58,7 +58,7 @@ esac
 # lightweight mode their regressionTest.sh exits 77 and the skip is expected;
 # in with-solids4foam mode any skip is a failure.
 FULL_SOLIDS4FOAM_ONLY_TESTS=(
-    "NiedererEtAl2011/electroMechanicalNiedererEtAl2011"
+    "electromechanicsProtocols/springSupportedSlab"
     "manufacturedSolutions/monodomainTotalLagrangianEM"
     "idealizedHeart/electroMechHeart"
 )

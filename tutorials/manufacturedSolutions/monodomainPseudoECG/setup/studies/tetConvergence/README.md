@@ -4,8 +4,8 @@
 
 This study validates spatial convergence on unstructured tetrahedral meshes using the monodomainPseudoECG exact solution.
 
-It meshes the unit cube with `box.geo.template`, the Delaunay tetrahedral box
-whose meshing settings the bidomain and eikonalECG tet studies share: four
+It meshes the unit cube with `box.geo.template`, a Delaunay tetrahedral box:
+four
 resolutions for each of the axis-aligned/rotated conductivity tensors and
 Gauss--linear/least-squares gradient reconstructions. The pseudo-ECG verifier
 is enabled at every level with the same reference quadrature as the Cartesian

@@ -8,11 +8,8 @@ isolated `leastSquares` gradient reconstruction on the tet mesh across
 `N = 10, 20, 40, 80`.
 
 `sweep_gradient_tet.json` drives `gradientReconstructionOrder` as a
-`gradient_reconstruction=True` workflow_dag step (see
-`../gradientVerification/README.md` for how that step is wired) -- the
-`leastSquares`-only subset of `../gradientVerification/`'s own
-`sweep_gradient_tet.json`, which covers both gradient schemes for the
-paper's qualitative gaussLinear-vs-leastSquares discussion.
+`gradient_reconstruction=True` workflow_dag step, for the `leastSquares`
+gradient scheme only.
 
 ## Execution
 
