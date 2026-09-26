@@ -1,38 +1,31 @@
 {
   "base": {
     "entry": "manufacturedEikonalECG",
-    "case_dir_name": "manufacturedSolutions/eikonalECG",
-    "setup_dir_name": "setup",
     "cases_root": "tutorials",
-    "dimensions": ["3D"],
-    "solver_types": ["eikonal"],
-    "mesh_family": "tet",
-    "gradient_reconstruction": true,
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/gradientVerification/results/sweepCases"
+    "mesh": "tet-gradientReconstruction"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "grad_scheme": [
-        "gauss_linear",
-        "gauss_linear",
-        "gauss_linear",
-        "gauss_linear",
-        "least_squares",
-        "least_squares",
-        "least_squares",
-        "least_squares"
+      "system/fvSchemes:gradSchemes.default": [
+        "Gauss linear",
+        "Gauss linear",
+        "Gauss linear",
+        "Gauss linear",
+        "leastSquares",
+        "leastSquares",
+        "leastSquares",
+        "leastSquares"
       ],
-      "number_cells": [
-        [10],
-        [20],
-        [40],
-        [80],
-        [10],
-        [20],
-        [40],
-        [80]
+      "tetNumberCells": [
+        10,
+        20,
+        40,
+        80,
+        10,
+        20,
+        40,
+        80
       ],
       "output_dir_name": [
         "gaussLinear_10",
