@@ -11,14 +11,13 @@
     "independent": {
       "system/fvSchemes:gradSchemes.default": ["Gauss linear", "Gauss linear", "leastSquares", "leastSquares"],
       "tetNumberCells": [40, 80, 40, 80],
-      "system/controlDict:deltaT": [0.000560538, 0.000140174, 0.000560538, 0.000140174]
-    },
-    "dependent": [
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["system/fvSchemes:gradSchemes.default", "tetNumberCells", "system/controlDict:deltaT"]
-      }
-    ]
+      "system/controlDict:deltaT": [0.000560538, 0.000140174, 0.000560538, 0.000140174],
+      "output_dir_name": [
+        "gaussLinear_40_0.000560538",
+        "gaussLinear_80_0.000140174",
+        "leastSquares_40_0.000560538",
+        "leastSquares_80_0.000140174"
+      ]
+    }
   }
 }
