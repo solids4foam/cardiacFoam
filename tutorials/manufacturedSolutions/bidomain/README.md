@@ -37,7 +37,9 @@ Typical outputs include:
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh overlay, co-located with the study that drives it: a unit-cube Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length placeholder `__LC__`) and an `fvSchemes` copy with `gradSchemes.default` forced to `leastSquares`.
+`setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh overlay, co-located with the study that drives it: a unit-cube Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length set by a `DefineConstant`, overridden with `gmsh -setnumber lc <value>`).
+
+Corrected 2026-09-26 (plan §5g Q10): this study used to also ship a local `fvSchemes` copy "forcing" `gradSchemes.default` to `leastSquares`, but the case's own `system/fvSchemes` already sets that default, and the copy was byte-identical to it (`cmp`). It carried no override and is deleted; the tet route uses `system/fvSchemes` directly.
 
 #### Gradient-Scheme Convergence Sweep
 

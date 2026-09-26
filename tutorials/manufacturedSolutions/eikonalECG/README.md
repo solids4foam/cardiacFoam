@@ -42,11 +42,15 @@ Typical outputs include:
 ### Tetrahedral (unstructured) Mesh Variant
 
 `setup/studies/tetConvergence/` is an activatable overlay of this same case
-on a genuinely unstructured mesh: identical `constant/` and `system/` dicts,
-except the mesh generator changes and `setup/studies/tetConvergence/fvSolution`
-is swapped in for the duration of a tet run and restored on exit.
-`box.geo.template` and its `fvSolution` overlay live in
-`setup/studies/tetConvergence/`, next to the study that drives them.
+on a genuinely unstructured mesh: identical `constant/` and `system/` dicts;
+only the mesh generator changes. `box.geo.template` lives in
+`setup/studies/tetConvergence/`, next to the study that drives it.
+
+Corrected 2026-09-26 (plan §5g Q10): this study used to also ship a local
+`fvSolution` copy, "swapped in for the duration of a tet run and restored
+on exit", but it was byte-identical to the case's own `system/fvSolution`
+(`cmp`). It carried no override and is deleted; the tet route uses
+`system/fvSolution` directly.
 
 #### Tet Convergence
 

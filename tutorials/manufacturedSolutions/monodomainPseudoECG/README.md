@@ -41,7 +41,9 @@ Typical outputs include:
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, fvSchemes, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSolution` (a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair) is swapped in for the duration of a tet run and restored on exit.
+`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSchemes` (with `ddtSchemes.default none`/`ddt(Vm) backward` spelled out explicitly) is swapped in for the duration of a tet run and restored on exit.
+
+Corrected 2026-09-26 (plan §5g Q10): this study used to also ship a local `fvSolution` copy, described as "a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair", but it was byte-identical to the case's own `system/fvSolution` (`cmp`): both already set `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1`. It carried no override and is deleted; the tet route uses `system/fvSolution` directly. `fvSchemes` remains, since it differs from `system/fvSchemes` (only in formatting/header, not in any scheme value; both already set `gradSchemes.default leastSquares`).
 
 #### Tetrahedral Variant Purpose
 

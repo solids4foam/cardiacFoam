@@ -44,11 +44,13 @@ Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and manufacture
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/studies/tetConvergence/` holds this case's tetrahedral-mesh inputs. The mesh is built from a single Gmsh model over `[-1,2] x [0,1] x [0,1]` (left bath `-1<=x<=0`, myocardium `0<=x<=1`, right bath `1<=x<=2`) with heart-bath interfaces as internal conformal faces. It ships `three_domain_box.geo.template` and an `fvSchemes` overlay (`leastSquares` gradient); `fvSolution`'s `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1` already match hex default.
+`setup/studies/tetConvergence/` holds this case's tetrahedral-mesh inputs. The mesh is built from a single Gmsh model over `[-1,2] x [0,1] x [0,1]` (left bath `-1<=x<=0`, myocardium `0<=x<=1`, right bath `1<=x<=2`) with heart-bath interfaces as internal conformal faces. It ships `three_domain_box.geo.template`. `fvSchemes`' `leastSquares` gradient and `fvSolution`'s `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1` already match the hex default, so the tet route uses the case's own `system/fvSchemes` and `system/fvSolution` directly.
 
 The tet variant uses the case's own `constant/electroProperties`; `dimension` and the boundary-variant keys are written by `_apply_case` on every run.
 
-Mesh generation, `checkMesh`, and the tet `electroProperties`/`fvSchemes` overlay activation are handled directly by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG (`Allclean → gmsh → gmshToFoam → checkMesh → setTorsoOrganConductivityField → cardiacFoam → bathBidomainInterfaceMetrics`) for every sweep case below — there is no separate mesh-gate or smoke-test step to run by hand.
+Mesh generation, `checkMesh`, and the tet `electroProperties` overlay activation are handled directly by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG (`Allclean → gmsh → gmshToFoam → checkMesh → setTorsoOrganConductivityField → cardiacFoam → bathBidomainInterfaceMetrics`) for every sweep case below — there is no separate mesh-gate or smoke-test step to run by hand.
+
+Corrected 2026-09-26 (plan §5g Q10): `setup/studies/tetConvergence/fvSchemes` used to be a copy of `system/fvSchemes`, byte-identical to it (`cmp`). It carried no override and is deleted; nothing referenced it outside this README.
 
 #### Predictor-Corrector Coupling Study
 
