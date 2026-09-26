@@ -2,6 +2,14 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Shared regression helpers (tutorials/regressionFunctions)
+helperDir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+until [[ -f "${helperDir}/regressionFunctions" || "${helperDir}" == / ]]
+do
+    helperDir="$(dirname "${helperDir}")"
+done
+. "${helperDir}/regressionFunctions"
+
 # ============================================================
 # purkinjeRestitution2D regression test
 # ============================================================
@@ -124,7 +132,7 @@ for variant in "${VARIANTS[@]}"; do
     ./Allclean > /dev/null 2>&1 || true
 
     if ! ./Allrun "${variant}" parallel > "${ALLRUN_LOGFILE}" 2>&1 \
-        || ! grep -q "^End" log.cardiacFoam; then
+        || ! checkSolverLogs log.cardiacFoam log.reconstructPar; then
         echo "FAIL: Allrun ${variant} parallel did not complete. Surfacing logs:"
         dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
         dumpLogTail "cardiacFoam" "log.cardiacFoam"
@@ -140,7 +148,8 @@ for variant in "${VARIANTS[@]}"; do
     if [[ "${variant}" == "monodomain" ]]; then
         rm -rf postProcessing
         if runPurkinjeGraph -case . -conductionDomain purkinjeNetwork \
-            > "${GRAPH_LOGFILE}" 2>&1; then
+            > "${GRAPH_LOGFILE}" 2>&1 \
+            && checkSolverLogs "${GRAPH_LOGFILE}"; then
             graphFailures=0
             checkReference "regression/monodomain.graphUtility.reference" \
                 || graphFailures=$?

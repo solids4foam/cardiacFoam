@@ -74,6 +74,12 @@ CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression
 
 For a full build, use `CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam`. The mode must match how you built.
 
+To run a subset, pass substrings of the case paths, e.g.
+`./tutorials/Alltest-regression bidomain purkinje`; `-l` lists the cases.
+Each case's `regression/regressionTest.sh` can use the shared helpers in
+`tutorials/regressionFunctions`, e.g. `checkSolverLogs` to fail when a solver
+run did not finish cleanly.
+
 ## Licence and citation
 
 cardiacFoam is active research software, released under the [GNU GPL v3](LICENSE). If you use it in published work, please cite: **cardiacFOAM**.
