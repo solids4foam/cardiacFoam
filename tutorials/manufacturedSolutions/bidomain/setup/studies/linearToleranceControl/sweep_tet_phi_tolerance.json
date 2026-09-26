@@ -9,8 +9,6 @@
     "mesh_family": "tet",
     "numerics_profile": "bidomain_tet",
     "phi_tolerance": 1e-06,
-    "ode_abs_tolerance": 1e-10,
-    "ode_rel_tolerance": 1e-08,
     "end_time": 0.2,
     "run_in_parallel": true,
     "postprocess_strict_artifacts": false,
