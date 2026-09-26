@@ -2,8 +2,10 @@
 // (monodomainPseudoECG/setup/mesh/tet/box.geo.template -- identical geometry/lc ladder,
 // copied here verbatim so both solvers refine on the same mesh sequence).
 //
-// The characteristic length placeholder __LC__ is substituted by
-// run_tet_sweep.sh (lc = 1/N) to build a refinement ladder.
+// The characteristic length lc is a DefineConstant, overridden per
+// resolution with `gmsh -setnumber lc <value>` (lc = 1/N) to build a
+// refinement ladder; the default below (coarsest study level) applies when
+// no value is given.
 //
 // Unlike the monodomain case, the eikonal manufactured verifier does NOT
 // rely on a zero-flux boundary: eikonalMyocardiumDomain.C's
@@ -19,7 +21,7 @@
 
 SetFactory("OpenCASCADE");
 
-lc = __LC__;
+DefineConstant[ lc = { 0.1, Name "lc" } ];
 
 Box(1) = {0, 0, 0, 1, 1, 1};
 

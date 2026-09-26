@@ -3,11 +3,12 @@
 // geometry/lc ladder, copied here verbatim so all three solvers refine on
 // the same mesh sequence).
 //
-// The characteristic length placeholder __LC__ is substituted by
-// run_corrector_study.sh (lc = 1/N) to build a refinement ladder. The domain
-// is the same unit cube used by the orthogonal hex MMS case (bidomain), so
-// the manufactured exact solution, conductivity, and forcing are reused
-// unchanged.
+// The characteristic length lc is a DefineConstant, overridden per
+// resolution with `gmsh -setnumber lc <value>` (lc = 1/N) to build a
+// refinement ladder; the default below (coarsest study level) applies when
+// no value is given. The domain is the same unit cube used by the
+// orthogonal hex MMS case (bidomain), so the manufactured exact solution,
+// conductivity, and forcing are reused unchanged.
 //
 // All six boundary faces lie on the axis-aligned planes x,y,z in {0,1},
 // where the manufactured cosine field F_d has zero normal derivative, so the
@@ -18,7 +19,7 @@
 
 SetFactory("OpenCASCADE");
 
-lc = __LC__;
+DefineConstant[ lc = { 0.1, Name "lc" } ];
 
 Box(1) = {0, 0, 0, 1, 1, 1};
 
