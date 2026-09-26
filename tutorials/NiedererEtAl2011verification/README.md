@@ -80,10 +80,10 @@ regression/regressionTest.sh parallel
 Driver-managed sweep:
 
 ```bash
-driverFoam run --strict --entry niederer2012
+driverFoam run --strict --entry niederer2011
 ```
 
-Driver sweeps are controlled by the driverFOAM add-on's `niederer_2012`
+Driver sweeps are controlled by the driverFOAM add-on's `niederer_2011`
 cardiacFoam plugin defaults.
 
 ## Regression behavior

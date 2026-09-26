@@ -13,7 +13,7 @@ def _parse_probes_file(path: Path) -> tuple[list[tuple[str, float, float, float]
 
     Format: a `# Probe N (x y z)` header line per sample location, then a
     `# Time ...` header and one data row per sampled time. Only the file's
-    last data row is used -- niederer_2012.py's DAG always samples with
+    last data row is used -- niederer_2011.py's DAG always samples with
     `postProcess -func <name> -latestTime`, so there is never more than one.
     """
     probes: list[tuple[str, float, float, float]] = []

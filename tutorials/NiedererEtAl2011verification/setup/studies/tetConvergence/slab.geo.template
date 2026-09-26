@@ -9,7 +9,7 @@
 // reference activation times) is reused unchanged.
 //
 // The characteristic length placeholder __LC__ is substituted by
-// niederer_2012.py's _apply_case (lc = the nominal dx in metres, from
+// niederer_2011.py's _apply_case (lc = the nominal dx in metres, from
 // setup/studies/tetConvergence/sweep_tet_generic.json's dx sweep) to build
 // the refinement ladder {0.5, 0.2, 0.1} mm, mirroring the published
 // Niederer dx sweep.
