@@ -311,8 +311,14 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
     );
 
     // Vm is registered on mesh only after myocardiumDomain::New above
-    // constructs it -- prePacing must run after this point.
-    const word cellZoneName(electroProperties.lookup("cellZone"));
+    // constructs it -- prePacing must run after this point. cellZone is
+    // optional (absence means the whole mesh, matching
+    // myocardiumDomain::configuredCellCount's own convention).
+    const bool hasCellZone = electroProperties.found("cellZone");
+    const word cellZoneName
+    (
+        hasCellZone ? word(electroProperties.lookup("cellZone")) : "wholeMesh"
+    );
     const prePacingIO::PrePacingConfig prePaceCfg =
         prePacingIO::configFor(mesh, cellZoneName);
 
@@ -375,8 +381,16 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
             (*realStatesPtr)[cellI] = seedState;
         }
 
-        const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
-        const labelList& zoneCells = mesh.cellZones()[zoneId];
+        labelList zoneCells;
+        if (hasCellZone)
+        {
+            const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+            zoneCells = mesh.cellZones()[zoneId];
+        }
+        else
+        {
+            zoneCells = identity(mesh.nCells());
+        }
 
         const ionicModelIO::VmTransform transform =
             ionicModelPtr->ioVmTransform();
