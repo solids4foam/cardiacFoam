@@ -1,0 +1,102 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "caseParameters"
+
+application     cardiacFoam;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         $endTime;
+
+deltaT          $deltaT;
+
+writeControl    runTime;
+
+writeInterval   0.01;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable false;
+
+maxCo           0.02;
+
+functions
+{
+    Taprobes
+    {
+        #include "Taprobes"
+    }
+
+    CaiProbes
+    {
+        #include "CaiProbes"
+    }
+
+    Vmprobes
+    {
+        #include "Vmprobes"
+    }
+
+    // Area-averaged displacement of each spring-supported end
+    D_xMin
+    {
+        type            surfaceFieldValue;
+        libs            (fieldFunctionObjects);
+        region          solid;
+        regionType      patch;
+        name            xMin;
+        operation       areaAverage;
+        fields          (D);
+        writeFields     false;
+        writeControl    timeStep;
+        writeInterval   20;
+    }
+
+    D_xMax
+    {
+        $D_xMin;
+        name            xMax;
+    }
+
+    // Force on each end from the stress field, independent of the spring law
+    F_xMin
+    {
+        type            solidForces;
+        historyPatch    xMin;
+    }
+
+    F_xMax
+    {
+        type            solidForces;
+        historyPatch    xMax;
+    }
+}
+
+// ************************************************************************* //

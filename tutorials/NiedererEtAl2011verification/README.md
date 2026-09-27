@@ -10,7 +10,7 @@ monodomain simulations.
 ## Folder structure
 
 ```text
-tutorials/NiedererEtAl2011/NiedererEtAl2011verification/
+tutorials/NiedererEtAl2011verification/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -20,14 +20,19 @@ tutorials/NiedererEtAl2011/NiedererEtAl2011verification/
 │   ├── decomposeParDict
 │   ├── fvSchemes
 │   ├── fvSolution
-│   └── smokeCheck.reference
+│   ├── Niedererlines
+│   └── Niedererpoints
 ├── setup/
-│   └── postProcessing/
-│       ├── cache_postProcessing.py
-│       ├── line_postProcessing.py
-│       └── points_postProcessing.py
-├── NiedererEtAl2011.reference
-├── regressionTest.sh
+│   ├── convert_raw_samples.py
+│   ├── line_postProcessing.py
+│   ├── points_postProcessing.py
+│   ├── table_summary.py
+│   └── studies/
+│       ├── cartesianConvergence/
+│       └── tetConvergence/
+├── regression/
+│   ├── regressionTest.sh
+│   └── NiedererEtAl2011.reference
 ├── Allrun
 ├── Allclean
 └── README.md
@@ -68,8 +73,8 @@ Manual:
 ```bash
 ./Allrun
 ./Allrun parallel
-./regressionTest.sh
-./regressionTest.sh parallel
+regression/regressionTest.sh
+regression/regressionTest.sh parallel
 ```
 
 Driver-managed sweep:
@@ -83,5 +88,5 @@ cardiacFoam plugin defaults.
 
 ## Regression behavior
 
-`regressionTest.sh` is local to this case and validates against the reference
-file stored in the case directory.
+`regression/regressionTest.sh` is local to this case and validates against
+`regression/NiedererEtAl2011.reference`.

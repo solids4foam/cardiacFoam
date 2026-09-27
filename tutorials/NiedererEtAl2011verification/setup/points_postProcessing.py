@@ -5,7 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[3]
+TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
 if str(TUTORIALS_ROOT) not in sys.path:
     sys.path.insert(0, str(TUTORIALS_ROOT))
 

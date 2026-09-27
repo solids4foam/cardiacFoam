@@ -1,0 +1,39 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+// Active-tension probes.
+//   probes 0-2 (cols 2-4): transmural column at x, y = 0.75 mm inside the
+//     stimulated layer; endo, M and epi band centres (z = 1.05, 3.50,
+//     5.95 mm, t = 0.15, 0.50, 0.85)
+//   probes 3-4 (cols 5-6): slab centre and far end along the fibres
+//     (x = 10.0 and 19.25 mm; y = 1.5 mm, z = 3.5 mm)
+
+type            probes;
+region          solid;
+libs            ("libsampling.so");
+enabled         true;
+
+writeControl    timeStep;
+writeInterval   20;
+
+fields
+(
+    Ta
+    lambda
+);
+
+probeLocations
+(
+    (0.00075 0.00075 0.00105)
+    (0.00075 0.00075 0.00350)
+    (0.00075 0.00075 0.00595)
+    (0.01000 0.00150 0.00350)
+    (0.01925 0.00150 0.00350)
+);
+
+// ************************************************************************* //

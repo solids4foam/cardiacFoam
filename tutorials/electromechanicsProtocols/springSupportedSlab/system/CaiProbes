@@ -13,16 +13,16 @@
 //   probe 2 (col 4): epi   band centre, t = 0.85  (z = 5.95 mm)
 
 type            probes;
-region          solid;
+region          electro;
 libs            ("libsampling.so");
 enabled         true;
 
-writeControl    writeTime;
+writeControl    timeStep;
+writeInterval   20;
 
 fields
 (
-    Ta
-    lambda
+    Ca_i
 );
 
 probeLocations

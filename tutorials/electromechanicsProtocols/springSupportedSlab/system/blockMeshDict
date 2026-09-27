@@ -38,9 +38,7 @@ edges
 
 boundary
 (
-    // x=0 face: fixed to prevent rigid body motion.
-    // Fibers run along x so the slab shortens toward x=20mm.
-    xFixed
+    xMin
     {
         type patch;
         faces
@@ -48,15 +46,20 @@ boundary
             (0 4 7 3)
         );
     }
-
-    // All other faces: traction-free, allowing free contraction.
-    freeFaces
+    xMax
+    {
+        type patch;
+        faces
+        (
+            (2 6 5 1)
+        );
+    }
+    lateral
     {
         type patch;
         faces
         (
             (3 7 6 2)
-            (2 6 5 1)
             (1 5 4 0)
             (0 3 2 1)
             (4 5 6 7)
