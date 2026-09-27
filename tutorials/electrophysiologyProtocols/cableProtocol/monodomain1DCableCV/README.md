@@ -111,7 +111,8 @@ omnidriver --plugin cardiacfoam plan --strict --entry cable1DCVConvergence \
 That workflow mutates `blockMeshDict`, `controlDict`, and `electroProperties`
 per case (a `dx` axis, in metres, resolves the block-mesh rewrite) and
 writes the CV summary each case's own `setup/extract_cv.py`/manual sweep
-still drives (see "Outputs" below).
+still drives (see "Outputs" below). Its own committed sweep grid is
+`setup/studies/cvConvergence/sweep_cv_convergence.json`.
 
 ## omniD restitution entry
 
@@ -125,15 +126,16 @@ omnidriver --plugin cardiacfoam plan --strict --entry cable1DRestitution \
 
 The S1-S2 schedule (drive train plus an optional premature beat, in either a
 coupling-interval or a requested-DI90 form) is the record's own
-`s1s2SpatialProtocol` axis; the sweep grid lives in this directory's own
-`sweep.json`/`sweep_stewart_*.json`, each naming that axis by value rather
-than a Python keyword.
+`s1s2SpatialProtocol` axis; the sweep grid lives under this case's own
+`setup/studies/s2CouplingRestitution/`, `setup/studies/stewartAutomaticity/`,
+`setup/studies/stewartDI90Boundaries/` and `setup/studies/stewartTrueDI90/`,
+each naming that axis by value rather than a Python keyword.
 
 *Note:* Because multiple wavefronts are generated, the normalized post-processing step (`setup/postProcessing_cableRestitution.py`, run as the record's own `postprocess` step, `Allrun.post`) parses the raw voltage traces to isolate the CV of the second (S2) wavefront.
 
 ### Frozen Stewart true-DI90 reference
 
-`sweep_stewart_true_di90_dt1e-6.json` is runnable as the frozen
+`setup/studies/stewartTrueDI90/sweep_stewart_true_di90_dt1e-6.json` is runnable as the frozen
 Stewart/myocyte reference protocol: five S1 stimuli at a 1 s BCL, one S2, a
 0.1 mm cable resolution, `deltaT = 1e-6 s`, and the configured conductivity.
 Its `reference_repolarization90_s = 4.304086260869566` was measured at the
@@ -231,7 +233,7 @@ In brief, measured on this cable with Stewart/myocyte at 2.3 S/m:
 - APD90 varies only 7.7% across the whole capturable range, which is why the
   solver carries a constant `apdNominal` and no APD restitution curve.
 
-The sweep specifications in this directory (`sweep_stewart_*.json`) drive
+The sweep specifications under this case's own `setup/studies/` (`sweep_stewart_*.json`) drive
 the protocol through `cable1DRestitution`'s own `s1s2SpatialProtocol` axis.
 `requestedDI90` is an input and `measuredDI90` is a result; the calibration
 table is indexed on the measured value.

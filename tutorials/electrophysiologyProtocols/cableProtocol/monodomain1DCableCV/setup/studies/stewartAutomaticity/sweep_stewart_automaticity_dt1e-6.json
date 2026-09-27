@@ -2,7 +2,6 @@
   "base": {
     "entry": "cable1DRestitution",
     "cases_root": "tutorials",
-    "dx": 0.0001,
     "system/controlDict:deltaT": 1e-06,
     "constant/electroProperties:monodomainSolverCoeffs.conductivity": {
       "value": [
@@ -30,6 +29,12 @@
       "n_s1": 5,
       "n_s2": 0,
       "end_time_buffer_s": 1.5
+    }
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {
+      "dx": [0.0001]
     }
   }
 }
