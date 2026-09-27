@@ -248,15 +248,16 @@ dictionary prePacingModelDict
 
 
 //- Pace a single-cell copy of the model to its limit cycle and return
-//  its state vector. regionIndex selects a cellZoneRegions entry of
-//  heterogeneityDict; nullptr means no heterogeneity.
+//  its state vector. With heterogeneityDict, the single cell is configured
+//  as the tissue would be at heterogeneity field value fieldValue (region
+//  index for cellZoneRegions, t for namedRegions); nullptr means none.
 scalarField prePacedState
 (
     const dictionary& modelDict,
     const prePacingIO::PrePacingConfig& cfg,
     const scalar dt,
     const dictionary* heterogeneityDict,
-    const label regionIndex
+    const scalar fieldValue
 )
 {
     autoPtr<ionicModel> modelPtr = ionicModel::New(modelDict, 1, dt, true);
@@ -265,7 +266,7 @@ scalarField prePacedState
     {
         modelPtr->configureIonicHeterogeneity
         (
-            scalarField(1, scalar(regionIndex)),
+            scalarField(1, fieldValue),
             *heterogeneityDict
         );
     }
@@ -283,9 +284,9 @@ scalarField prePacedState
 }
 
 
-//- Pre-pace one single cell per tissue region (the 'tissue' entry, or each
-//  ionicHeterogeneity cellZoneRegions entry) and seed that region's ionic
-//  states and Vm.
+//- Pre-pace one single cell per main tissue (the 'tissue' entry, or each
+//  ionicHeterogeneity region) and seed every cell with its main tissue's
+//  ionic states and Vm.
 void prePaceAndSeed
 (
     const fvMesh& mesh,
@@ -318,11 +319,19 @@ void prePaceAndSeed
             << exit(FatalError);
     }
 
+    // One pre-paced single cell per main tissue: the 'tissue' entry, or
+    // each ionicHeterogeneity region with its own constants and overrides.
+    // Blend transitions and gradientAxes scaling are not pre-paced: those
+    // cells keep their exact constants and start from their dominant
+    // region's state.
     wordList regionNames
     (
         1, electroProperties.lookupOrDefault<word>("tissue", "myocyte")
     );
+    scalarList regionFieldValue(1, 0.0);
     labelList cellRegion(VmValues.size(), 0);
+    label nBlendedCells = 0;
+    dictionary pureHeterogeneityDict;
     const dictionary* heterogeneityDictPtr = nullptr;
 
     if (electroProperties.found("ionicHeterogeneity"))
@@ -334,39 +343,115 @@ void prePaceAndSeed
             heterogeneityDict.lookupOrDefault<word>("mode", word::null)
         );
 
-        if (mode != "cellZoneRegions" || heterogeneityDict.found("gradientAxes"))
+        const scalarField fieldValues =
+            readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
+
+        pureHeterogeneityDict = heterogeneityDict;
+
+        if (mode == "cellZoneRegions")
+        {
+            const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
+                ionicHeterogeneity::parseNamedCellZoneRegions
+                (
+                    heterogeneityDict.subDict("regions")
+                );
+
+            regionNames.setSize(regions.size());
+            regionFieldValue.setSize(regions.size());
+            forAll(regions, regionI)
+            {
+                regionNames[regionI] = regions[regionI].name;
+                regionFieldValue[regionI] = regionI;
+            }
+
+            forAll(cellRegion, cellI)
+            {
+                cellRegion[cellI] = label(round(fieldValues[cellI]));
+            }
+        }
+        else if (mode == "namedRegions")
+        {
+            const List<ionicHeterogeneity::NamedFieldRegion> regions =
+                ionicHeterogeneity::parseNamedFieldRegions
+                (
+                    heterogeneityDict.subDict("regions")
+                );
+
+            regionNames.setSize(regions.size());
+            regionFieldValue.setSize(regions.size());
+            forAll(regions, regionI)
+            {
+                regionNames[regionI] = regions[regionI].name;
+                regionFieldValue[regionI] =
+                    0.5*(regions[regionI].rangeMin + regions[regionI].rangeMax);
+            }
+
+            const word transitionMode
+            (
+                heterogeneityDict.lookupOrDefault<word>
+                (
+                    "transitionMode", "hard"
+                )
+            );
+            const scalar transitionWidth =
+                heterogeneityDict.lookupOrDefault<scalar>
+                (
+                    "transitionWidth", 0.0
+                );
+            const word smoothing
+            (
+                heterogeneityDict.lookupOrDefault<word>
+                (
+                    "smoothing", "smoothstep"
+                )
+            );
+
+            forAll(cellRegion, cellI)
+            {
+                const scalar t =
+                    min(max(fieldValues[cellI], scalar(0.0)), scalar(1.0));
+                const List<ionicHeterogeneity::NamedRegionWeight> weights =
+                    ionicHeterogeneity::namedRegionWeightsAt
+                    (
+                        t, regions, transitionWidth, smoothing, transitionMode
+                    );
+
+                label dominant = 0;
+                forAll(weights, wI)
+                {
+                    if (weights[wI].weight > weights[dominant].weight)
+                    {
+                        dominant = wI;
+                    }
+                }
+
+                cellRegion[cellI] = regionNames.find(weights[dominant].name);
+                if (weights.size() > 1)
+                {
+                    ++nBlendedCells;
+                }
+            }
+
+            // The pre-paced cell sits mid-range with no transition blend.
+            pureHeterogeneityDict.set("transitionMode", word("hard"));
+        }
+        else
         {
             FatalErrorInFunction
                 << "constant/prePacingProperties enables prePacing, but "
-                << "ionicHeterogeneity uses mode '" << mode << "'"
-                << (heterogeneityDict.found("gradientAxes")
-                    ? " with gradientAxes" : "")
-                << ". prePacing supports only mode cellZoneRegions without "
-                << "gradientAxes (one discrete ionic region per cellZone)."
+                << "ionicHeterogeneity mode '" << mode << "' is not "
+                << "supported. Supported: namedRegions, cellZoneRegions."
                 << exit(FatalError);
         }
 
-        const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
-            ionicHeterogeneity::parseNamedCellZoneRegions
-            (
-                heterogeneityDict.subDict("regions")
-            );
+        heterogeneityDictPtr = &pureHeterogeneityDict;
 
-        regionNames.setSize(regions.size());
-        forAll(regions, regionI)
+        if (heterogeneityDict.found("gradientAxes"))
         {
-            regionNames[regionI] = regions[regionI].name;
+            Info<< "prePacing: gradientAxes scaling is applied to the "
+                << "tissue only; cells start from their main tissue's "
+                << "pre-paced state." << endl;
         }
-
-        const scalarField regionIndices =
-            readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
-
-        forAll(cellRegion, cellI)
-        {
-            cellRegion[cellI] = label(round(regionIndices[cellI]));
-        }
-
-        heterogeneityDictPtr = &heterogeneityDict;
     }
 
     const ionicModelIO::VmTransform transform = tissueModel.ioVmTransform();
@@ -398,7 +483,7 @@ void prePaceAndSeed
                 cfg,
                 dt,
                 heterogeneityDictPtr,
-                regionI
+                regionFieldValue[regionI]
             );
 
         seedVmMv[regionI] =
@@ -423,6 +508,13 @@ void prePaceAndSeed
     }
 
     Vm.correctBoundaryConditions();
+
+    if (nBlendedCells)
+    {
+        Info<< "prePacing: " << nBlendedCells << " cells in blend "
+            << "transitions start from their dominant region's state."
+            << endl;
+    }
 
     forAll(regionNames, regionI)
     {
