@@ -26,6 +26,7 @@ License
 #include "error.H"
 #include "fvMeshSubset.H"
 #include "volFields.H"
+#include "prePacingIO.H"
 
 namespace Foam
 {
@@ -295,7 +296,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
     verificationModelPtr =
         electroVerificationModel::New(electroProperties);
 
-    return autoPtr<myocardiumDomainInterface>
+    autoPtr<myocardiumDomainInterface> domainPtr
     (
         myocardiumDomain::New
         (
@@ -308,6 +309,97 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
             verificationModelPtr.get()
         ).ptr()
     );
+
+    // Vm is registered on mesh only after myocardiumDomain::New above
+    // constructs it -- prePacing must run after this point.
+    const word cellZoneName(electroProperties.lookup("cellZone"));
+    const prePacingIO::PrePacingConfig prePaceCfg =
+        prePacingIO::configFor(mesh, cellZoneName);
+
+    if (prePaceCfg.enabled)
+    {
+        if (electroProperties.found("ionicHeterogeneity"))
+        {
+            FatalErrorInFunction
+                << "constant/prePacingProperties enables prePacing for "
+                << "cellZone '" << cellZoneName << "', but that region "
+                << "configures 'ionicHeterogeneity' (multiple tissue "
+                << "subtypes blended within one cellZone). Per-subtype "
+                << "prePacing is Phase 2, not yet implemented -- disable "
+                << "prePacing for this region in "
+                << "constant/prePacingProperties in the meantime."
+                << exit(FatalError);
+        }
+
+        autoPtr<ionicModel> tempModel =
+            ionicModel::New(electroProperties, 1, initialDeltaT, true);
+
+        tempModel->prePaceToConvergence
+        (
+            initialDeltaT,
+            prePaceCfg.tolerance,
+            prePaceCfg.minBeats,
+            prePaceCfg.maxBeats,
+            prePaceCfg.autorhythmicCheckInterval
+        );
+
+        const PtrList<scalarField>* seedStatesPtr = tempModel->ioStatesPtr();
+
+        if (!seedStatesPtr || seedStatesPtr->empty())
+        {
+            FatalErrorInFunction
+                << "Ionic model '" << ionicModelPtr->type() << "' does not "
+                << "expose generic state access (ioStatesPtr()); prePacing "
+                << "cannot seed it. Disable prePacing for cellZone '"
+                << cellZoneName << "'."
+                << exit(FatalError);
+        }
+
+        const scalarField& seedState = (*seedStatesPtr)[0];
+
+        PtrList<scalarField>* realStatesPtr =
+            const_cast<PtrList<scalarField>*>(ionicModelPtr->ioStatesPtr());
+
+        if (!realStatesPtr)
+        {
+            FatalErrorInFunction
+                << "Ionic model '" << ionicModelPtr->type() << "' does not "
+                << "expose generic state access (ioStatesPtr()); prePacing "
+                << "cannot seed it. Disable prePacing for cellZone '"
+                << cellZoneName << "'."
+                << exit(FatalError);
+        }
+
+        forAll(*realStatesPtr, cellI)
+        {
+            (*realStatesPtr)[cellI] = seedState;
+        }
+
+        const label zoneId = mesh.cellZones().findZoneID(cellZoneName);
+        const labelList& zoneCells = mesh.cellZones()[zoneId];
+
+        const ionicModelIO::VmTransform transform =
+            ionicModelPtr->ioVmTransform();
+        const scalar vmMv = transform ? transform(seedState) : seedState[0];
+        const scalar vmVolts = vmMv * 1e-3;
+
+        volScalarField& Vm =
+            const_cast<volScalarField&>
+            (
+                mesh.lookupObject<volScalarField>("Vm")
+            );
+
+        forAll(zoneCells, i)
+        {
+            Vm.primitiveFieldRef()[zoneCells[i]] = vmVolts;
+        }
+
+        Info<< "prePacing: seeded cellZone '" << cellZoneName << "' ("
+            << zoneCells.size() << " cells) from a converged single-cell "
+            << ionicModelPtr->type() << " state." << endl;
+    }
+
+    return domainPtr;
 }
 
 } // End namespace Foam
