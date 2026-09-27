@@ -46,16 +46,13 @@ runPurkinjeGraph -case .
 
 ### Graph-Only Convergence Rates
 
-Example of running a graph convergence study via driverFOAM (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`):
+Running a graph convergence study via driverFOAM (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`, the `graphOnly` route of the `manufacturedMonodomain1D3D` tutorial record):
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json
+driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/graphConvergence/sweep_graph_only.json
 ```
 
-Writes:
-
-- `outputs/1dGraphConvergence/graph_convergence_summary.csv`
-- `outputs/1dGraphConvergence/graph_convergence_rates.csv`
+Writes, per case: `postProcessing/graph_1D_<n>_nodes.dat` (the graph verifier's error summary), `postProcessing/purkinjeNetwork.dat` and `postProcessing/purkinjeNetworkVTK/`.
 
 ### Coupled 1D-3D Convergence Sweeps (Suggested)
 

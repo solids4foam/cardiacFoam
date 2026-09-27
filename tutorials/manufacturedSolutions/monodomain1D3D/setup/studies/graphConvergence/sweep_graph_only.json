@@ -2,20 +2,18 @@
   "base": {
     "entry": "manufacturedMonodomain1D3D",
     "cases_root": "tutorials",
-    "constant/electroProperties:monodomainSolverCoeffs.domainCouplings.couplingA.rPvj": 1e6
+    "solver": "graphOnly"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
       "graphFile": [
+        "purkinjeGraph.nodes003",
         "purkinjeGraph.nodes011",
         "purkinjeGraph.nodes021",
         "purkinjeGraph.nodes041",
-        "purkinjeGraph.nodes081"
-      ],
-      "numberCells": [10, 20, 40, 80],
-      "system/controlDict:deltaT": [
-        0.008971136, 0.002242784, 0.000560696, 0.000140174
+        "purkinjeGraph.nodes081",
+        "purkinjeGraph.nodes161"
       ]
     }
   }
