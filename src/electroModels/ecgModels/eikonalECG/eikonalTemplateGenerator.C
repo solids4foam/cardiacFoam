@@ -315,9 +315,8 @@ List<DynamicTemplate> generatePersonalizedTemplates
     const scalar tCapture =
         (stim.stimStart + scalar(nBeats - 1)*stim.stimPeriodS1)*1e-3;
 
-    // initialDeltaT is milliseconds; solveODE() below takes seconds.
     autoPtr<ionicModel> modelPtr =
-        ionicModel::New(modelDict, nPoints, dt*1000.0, true);
+        ionicModel::New(modelDict, nPoints, dt, true);
     ionicModel& model = modelPtr();
 
     model.configureIonicHeterogeneity

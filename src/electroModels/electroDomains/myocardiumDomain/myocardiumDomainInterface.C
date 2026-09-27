@@ -337,8 +337,36 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
                 << exit(FatalError);
         }
 
+        // Pacing protocol: prePacingProperties 'stimulus', else the region's
+        // own singleCellStimulus. nstim1 is forced to maxBeats so every
+        // checkpoint is paced (its default is a single pulse).
+        dictionary modelDict(electroProperties);
+        if (prePaceCfg.hasStimulus)
+        {
+            modelDict.set("singleCellStimulus", prePaceCfg.stimulus);
+        }
+
+        if (modelDict.isDict("singleCellStimulus"))
+        {
+            dictionary stimDict(modelDict.subDict("singleCellStimulus"));
+            stimDict.set("nstim1", prePaceCfg.maxBeats);
+            modelDict.set("singleCellStimulus", stimDict);
+        }
+        else if (!prePaceCfg.autorhythmicCheckIntervalSet)
+        {
+            FatalErrorInFunction
+                << "constant/prePacingProperties enables prePacing for "
+                << "cellZone '" << cellZoneName << "', but no pacing "
+                << "protocol is defined: add a 'stimulus' sub-dictionary "
+                << "(stim_start, stim_period_S1, stim_duration, "
+                << "stim_amplitude; ms) to constant/prePacingProperties. "
+                << "For an autorhythmic model paced by no stimulus, set "
+                << "'autorhythmicCheckInterval' (ms) explicitly instead."
+                << exit(FatalError);
+        }
+
         autoPtr<ionicModel> tempModel =
-            ionicModel::New(electroProperties, 1, initialDeltaT, true);
+            ionicModel::New(modelDict, 1, initialDeltaT, true);
 
         tempModel->prePaceToConvergence
         (
@@ -410,7 +438,8 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
 
         Info<< "prePacing: seeded cellZone '" << cellZoneName << "' ("
             << zoneCells.size() << " cells) from a converged single-cell "
-            << ionicModelPtr->type() << " state." << endl;
+            << ionicModelPtr->type() << " state, Vm = " << vmMv << " mV."
+            << endl;
     }
 
     return domainPtr;

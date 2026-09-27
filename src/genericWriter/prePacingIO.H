@@ -43,6 +43,11 @@ struct PrePacingConfig
     label minBeats = 10;
     label maxBeats = 3000;
     scalar autorhythmicCheckInterval = 200.0;   // ms
+    bool autorhythmicCheckIntervalSet = false;
+
+    //- singleCellStimulus-format S1 protocol (ms) used while pre-pacing
+    bool hasStimulus = false;
+    dictionary stimulus;
 };
 
 inline PrePacingConfig configFor(const fvMesh& mesh, const word& regionName)
@@ -69,11 +74,17 @@ inline PrePacingConfig configFor(const fvMesh& mesh, const word& regionName)
     cfg.tolerance = dict.lookupOrDefault<scalar>("tolerance", cfg.tolerance);
     cfg.minBeats = dict.lookupOrDefault<label>("minBeats", cfg.minBeats);
     cfg.maxBeats = dict.lookupOrDefault<label>("maxBeats", cfg.maxBeats);
+    cfg.autorhythmicCheckIntervalSet = dict.found("autorhythmicCheckInterval");
     cfg.autorhythmicCheckInterval =
         dict.lookupOrDefault<scalar>
         (
             "autorhythmicCheckInterval", cfg.autorhythmicCheckInterval
         );
+    if (dict.isDict("stimulus"))
+    {
+        cfg.hasStimulus = true;
+        cfg.stimulus = dict.subDict("stimulus");
+    }
 
     if (dict.found("regions"))
     {
@@ -92,6 +103,17 @@ inline PrePacingConfig configFor(const fvMesh& mesh, const word& regionName)
                 regionDict.lookupOrDefault<label>("minBeats", cfg.minBeats);
             cfg.maxBeats =
                 regionDict.lookupOrDefault<label>("maxBeats", cfg.maxBeats);
+            if (regionDict.found("autorhythmicCheckInterval"))
+            {
+                cfg.autorhythmicCheckIntervalSet = true;
+                cfg.autorhythmicCheckInterval =
+                    regionDict.get<scalar>("autorhythmicCheckInterval");
+            }
+            if (regionDict.isDict("stimulus"))
+            {
+                cfg.hasStimulus = true;
+                cfg.stimulus = regionDict.subDict("stimulus");
+            }
         }
     }
 

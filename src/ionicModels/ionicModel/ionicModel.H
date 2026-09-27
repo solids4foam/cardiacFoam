@@ -252,7 +252,8 @@ public:
         );
 
 
-        //- Create a ionic model
+        //- Create a ionic model. initialDeltaT is in s (runTime units); each
+        //  model's solveODE clamps step() into its own ODE time unit.
         static autoPtr<ionicModel> New
         (
             const dictionary& dict,
@@ -425,6 +426,7 @@ public:
         //  by autorhythmicCheckInterval when stimPeriodS1 <= SMALL (no
         //  external S1 protocol, e.g. autorhythmic/pacemaker models).
         //  Fatals if convergence is not reached within maxBeats.
+        //  Units: dt in s; stimPeriodS1 and autorhythmicCheckInterval in ms.
         void prePaceToConvergence
         (
             const scalar dt,
