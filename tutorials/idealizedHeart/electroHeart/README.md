@@ -107,7 +107,7 @@ All three variants conduct along the tree at ~3.3 m/s: `hybrid`'s
 `restitutionEikonalSolver1D` at its calibrated restitution maximum (3.33
 m/s), `eikonal`'s `eikonalSolver1D` via `purkinjeCV 3.33`, and
 `monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` (measured
-3.16 m/s at 0.35 and 5.8 m/s at 1.5; the former 10.0 gave ~8.7 m/s).
+3.16 m/s at 0.35, 5.8 m/s at 1.5 and ~8.7 m/s at 10.0).
 
 Two trees are available, chosen by `Allrun`'s `human`/`pig` argument and
 both copied in as `constant/purkinjeGraph`, so no dictionary changes:
@@ -130,7 +130,7 @@ Each junction's current is spread over the tissue within `pvjRadius` of it,
 so the radius is the smallest the mesh allows at every junction of both
 trees (`1.65e-3`; the coarsest junction cell, mid-wall on the pig tree, is
 1.60 mm across). A junction is physiologically a point contact, and a larger
-sphere dilutes the current: at the former `2.5e-3` only 26% of the pig
+sphere dilutes the current: at `2.5e-3` only 26% of the pig
 tree's intramural junctions captured the tissue within 40 ms under
 `hybrid`. At `1.65e-3` every junction of both trees captures; at `rPvj 1000`
 intramural junctions capture after ~11 ms against ~5 ms at the surface, so
