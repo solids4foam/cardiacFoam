@@ -1,7 +1,7 @@
 # Hybrid variant: monodomainSolver + restitutionEikonalSolver1D.
 #
 # This probe reads -1 through t=0.03 and activates at t=0.035, then holds
-# 0.0302759 flat for the rest of the run. Sampled at the run's own endTime,
+# 0.0301140 flat for the rest of the run. Sampled at the run's own endTime,
 # comfortably past activation.
 #
 # 2026-09-24: was 0.0336609 with pvjRadius 2.5e-3; the 1.65e-3 radius
@@ -23,5 +23,8 @@
 # escapeInterval do not affect it - and a 1.2% slower Purkinje velocity delays
 # this junction by 0.34 ms, 3.4x the tolerance below.
 #
+# 2026-09-28: was 0.0302759; constant/prePacingProperties now starts every
+# myocardium cell from its region's paced (1000 ms) state instead of the
+# BuenoOrovio defaults.
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0302759     1e-4
+injectionProbe/0/activationTime         0.04   2    0.0301140     1e-4

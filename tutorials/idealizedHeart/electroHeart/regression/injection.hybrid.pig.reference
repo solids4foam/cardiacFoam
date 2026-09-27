@@ -7,5 +7,8 @@
 # At 1.65e-3 every junction captures (intramural capture delay ~11 ms at
 # rPvj 1000, surface ~5 ms). Sampled at endTime.
 #
+# 2026-09-28: was 0.0339693; constant/prePacingProperties now starts every
+# myocardium cell from its region's paced (1000 ms) state instead of the
+# BuenoOrovio defaults.
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0339693     1e-4
+injectionProbe/0/activationTime         0.04   2    0.0339874     1e-4

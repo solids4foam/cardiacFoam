@@ -5,5 +5,8 @@
 # (~8.7 m/s); 0.4 gives ~3.3 m/s, the hybrid variant's calibrated Purkinje
 # velocity, so the monodomain and hybrid probes now activate 1.5 ms apart.
 #
+# 2026-09-28: was 0.0288211; constant/prePacingProperties now starts every
+# myocardium cell from its region's paced (1000 ms) state instead of the
+# BuenoOrovio defaults.
 # file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0288211     1e-4
+injectionProbe/0/activationTime         0.04   2    0.0288518     1e-4

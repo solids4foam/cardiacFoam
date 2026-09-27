@@ -76,6 +76,21 @@ activation by <0.001ms and only softens the T wave (still inverted in
 V2-V6 over a 0.5s beat): the ~20ms gradient is small against the ~70ms
 activation spread.
 
+## Pre-pacing
+
+`constant/prePacingProperties` starts the myocardium from a paced steady
+state instead of the ionic model's defaults. Before the run, one single
+BuenoOrovio cell per tissue region (`endocardialCells`, `mCells`,
+`epicardialCells`) is paced at 1000 ms (`singleCellStimulus`) until its state
+repeats beat to beat (`tolerance 1e-4`), and every myocardium cell starts
+from its region's converged state and Vm. Blend-band cells and the
+apicobasal tauSi scaling keep their own constants and start from their
+dominant region's state. The log reports each region's beat count and
+seeded Vm (`prePacing: ...` lines): 51/13/11 beats for endo/M/epi, a few
+seconds in total. `monodomain` and `hybrid` read it; `eikonal` has no ionic
+model. The Purkinje network is not pre-paced. Remove the file to start from
+the model defaults.
+
 ## Purkinje conduction network
 
 `constant/purkinjeGraph` (copied in by `Allrun` from `../mesh/constant/`)
@@ -172,7 +187,7 @@ for human, `injection.<variant>.pig.reference` for pig).
 `constant/electroProperties` and `system/controlDict` are symlinks to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
 `controlDict` differs per variant but all share `endTime 0.04`: the
-regression probe activates at 28.8 ms (`monodomain`) and 30.3 ms (`hybrid`)
+regression probe activates at 28.9 ms (`monodomain`) and 30.1 ms (`hybrid`)
 on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per
 `eikonalMyocardiumDomain::applyModelTimeControls`.
