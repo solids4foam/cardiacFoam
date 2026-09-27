@@ -395,7 +395,7 @@ void Foam::ionicModel::prePaceToConvergence
     const scalar tolerance,
     const label minBeats,
     const label maxBeats,
-    const scalar autorhythmicCheckInterval
+    const scalar beatComparisonInterval
 )
 {
     const PtrList<scalarField>* statesPtr = ioStatesPtr();
@@ -411,12 +411,12 @@ void Foam::ionicModel::prePaceToConvergence
             << exit(FatalError);
     }
 
-    // stimPeriodS1 and autorhythmicCheckInterval are ms; t and dt are s.
+    // stimPeriodS1 and beatComparisonInterval are ms; t and dt are s.
     const scalar checkpoint =
         (
             (stimulusProtocol().stimPeriodS1 > SMALL)
           ? stimulusProtocol().stimPeriodS1
-          : autorhythmicCheckInterval
+          : beatComparisonInterval
         )*1e-3;
 
     scalarField dummyVm(1, 0.0);
@@ -470,7 +470,7 @@ void Foam::ionicModel::prePaceToConvergence
             {
                 Info<< "prePaceToConvergence: " << type()
                     << " converged after " << (beat + 1)
-                    << " checkpoints (max relative state change "
+                    << " beats (max relative state change "
                     << maxRelDelta << " < tolerance " << tolerance << ")"
                     << endl;
                 return;
@@ -484,7 +484,7 @@ void Foam::ionicModel::prePaceToConvergence
 
     FatalErrorInFunction
         << "prePaceToConvergence: " << type() << " did not converge within "
-        << maxBeats << " checkpoints of " << checkpoint*1e3 << " ms (tolerance "
+        << maxBeats << " beats of " << checkpoint*1e3 << " ms (tolerance "
         << tolerance << "). Increase maxBeats, loosen tolerance, or check "
         << "for sustained alternans/instability at this pacing rate in "
         << "constant/prePacingProperties."

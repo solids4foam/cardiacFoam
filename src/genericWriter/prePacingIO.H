@@ -19,9 +19,19 @@ Class
     prePacingIO
 
 Description
-    Static utility class for reading the optional, opt-in
-    constant/prePacingProperties dictionary. Absence of the file disables
-    prePacing everywhere.
+    Reader for the optional, opt-in constant/prePacingProperties
+    dictionary. Absence of the file disables prePacing everywhere.
+
+    Top-level entries apply to every tissue region; regions.<name>
+    overrides them for one region, where <name> is an ionicHeterogeneity
+    region name, or the 'tissue' entry when there is no heterogeneity.
+
+        tolerance               1e-4;
+        minBeats                10;
+        maxBeats                3000;
+        singleCellStimulus      { stim_start ...; stim_period_S1 ...; ... }
+        beatComparisonInterval  800;    // ms, only without a stimulus
+        regions { endocardialCells { maxBeats 5000; } }
 \*---------------------------------------------------------------------------*/
 
 #ifndef prePacingIO_H
@@ -42,14 +52,40 @@ struct PrePacingConfig
     scalar tolerance = 1e-4;
     label minBeats = 10;
     label maxBeats = 3000;
-    scalar autorhythmicCheckInterval = 200.0;   // ms
-    bool autorhythmicCheckIntervalSet = false;
 
-    //- singleCellStimulus-format S1 protocol (ms) used while pre-pacing
-    bool hasStimulus = false;
-    dictionary stimulus;
+    //- ms between state comparisons when no singleCellStimulus is given
+    scalar beatComparisonInterval = 200.0;
+    bool beatComparisonIntervalSet = false;
+
+    //- Pacing protocol (ms), same keys as electroProperties
+    bool hasSingleCellStimulus = false;
+    dictionary singleCellStimulus;
 };
 
+//- Apply the entries of dict on top of cfg.
+inline void readEntries(const dictionary& dict, PrePacingConfig& cfg)
+{
+    cfg.enabled = dict.lookupOrDefault<bool>("enabled", cfg.enabled);
+    cfg.tolerance = dict.lookupOrDefault<scalar>("tolerance", cfg.tolerance);
+    cfg.minBeats = dict.lookupOrDefault<label>("minBeats", cfg.minBeats);
+    cfg.maxBeats = dict.lookupOrDefault<label>("maxBeats", cfg.maxBeats);
+
+    if (dict.found("beatComparisonInterval"))
+    {
+        cfg.beatComparisonIntervalSet = true;
+        cfg.beatComparisonInterval =
+            dict.get<scalar>("beatComparisonInterval");
+    }
+
+    if (dict.isDict("singleCellStimulus"))
+    {
+        cfg.hasSingleCellStimulus = true;
+        cfg.singleCellStimulus = dict.subDict("singleCellStimulus");
+    }
+}
+
+//- Settings for one tissue region; regionName may be word::null for the
+//  top-level settings only.
 inline PrePacingConfig configFor(const fvMesh& mesh, const word& regionName)
 {
     PrePacingConfig cfg;
@@ -71,50 +107,11 @@ inline PrePacingConfig configFor(const fvMesh& mesh, const word& regionName)
     const IOdictionary dict(dictIO);
 
     cfg.enabled = true;
-    cfg.tolerance = dict.lookupOrDefault<scalar>("tolerance", cfg.tolerance);
-    cfg.minBeats = dict.lookupOrDefault<label>("minBeats", cfg.minBeats);
-    cfg.maxBeats = dict.lookupOrDefault<label>("maxBeats", cfg.maxBeats);
-    cfg.autorhythmicCheckIntervalSet = dict.found("autorhythmicCheckInterval");
-    cfg.autorhythmicCheckInterval =
-        dict.lookupOrDefault<scalar>
-        (
-            "autorhythmicCheckInterval", cfg.autorhythmicCheckInterval
-        );
-    if (dict.isDict("stimulus"))
-    {
-        cfg.hasStimulus = true;
-        cfg.stimulus = dict.subDict("stimulus");
-    }
+    readEntries(dict, cfg);
 
-    if (dict.found("regions"))
+    if (dict.isDict("regions") && dict.subDict("regions").isDict(regionName))
     {
-        const dictionary& regionsDict = dict.subDict("regions");
-        if (regionsDict.found(regionName))
-        {
-            const dictionary& regionDict = regionsDict.subDict(regionName);
-            cfg.enabled =
-                regionDict.lookupOrDefault<bool>("enabled", cfg.enabled);
-            cfg.tolerance =
-                regionDict.lookupOrDefault<scalar>
-                (
-                    "tolerance", cfg.tolerance
-                );
-            cfg.minBeats =
-                regionDict.lookupOrDefault<label>("minBeats", cfg.minBeats);
-            cfg.maxBeats =
-                regionDict.lookupOrDefault<label>("maxBeats", cfg.maxBeats);
-            if (regionDict.found("autorhythmicCheckInterval"))
-            {
-                cfg.autorhythmicCheckIntervalSet = true;
-                cfg.autorhythmicCheckInterval =
-                    regionDict.get<scalar>("autorhythmicCheckInterval");
-            }
-            if (regionDict.isDict("stimulus"))
-            {
-                cfg.hasStimulus = true;
-                cfg.stimulus = regionDict.subDict("stimulus");
-            }
-        }
+        readEntries(dict.subDict("regions").subDict(regionName), cfg);
     }
 
     return cfg;

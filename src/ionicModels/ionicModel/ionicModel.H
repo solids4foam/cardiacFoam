@@ -420,20 +420,19 @@ public:
         //- Pace this ionic model (nIntegrationPoints == 1,
         //  solveVmWithinODESolver == true) until its full state vector
         //  reaches a periodic limit cycle: the normalized max-component
-        //  relative change between successive checkpoints falls below
-        //  tolerance for two consecutive checkpoints. Checkpoints are
-        //  spaced by stimulusProtocol().stimPeriodS1 (one paced beat), or
-        //  by autorhythmicCheckInterval when stimPeriodS1 <= SMALL (no
-        //  external S1 protocol, e.g. autorhythmic/pacemaker models).
+        //  relative change between successive beats falls below tolerance
+        //  for two consecutive beats. Beats are compared every
+        //  stimulusProtocol().stimPeriodS1, or every beatComparisonInterval
+        //  when stimPeriodS1 <= SMALL (unpaced, self-beating models).
         //  Fatals if convergence is not reached within maxBeats.
-        //  Units: dt in s; stimPeriodS1 and autorhythmicCheckInterval in ms.
+        //  Units: dt in s; stimPeriodS1 and beatComparisonInterval in ms.
         void prePaceToConvergence
         (
             const scalar dt,
             const scalar tolerance,
             const label minBeats,
             const label maxBeats,
-            const scalar autorhythmicCheckInterval
+            const scalar beatComparisonInterval
         );
 
         //- Number of ODE's to solve
