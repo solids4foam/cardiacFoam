@@ -416,6 +416,24 @@ public:
 
         virtual scalarField initialStatesForTissue(const label tissueFlag) const;
 
+        //- Pace this ionic model (nIntegrationPoints == 1,
+        //  solveVmWithinODESolver == true) until its full state vector
+        //  reaches a periodic limit cycle: the normalized max-component
+        //  relative change between successive checkpoints falls below
+        //  tolerance for two consecutive checkpoints. Checkpoints are
+        //  spaced by stimulusProtocol().stimPeriodS1 (one paced beat), or
+        //  by autorhythmicCheckInterval when stimPeriodS1 <= SMALL (no
+        //  external S1 protocol, e.g. autorhythmic/pacemaker models).
+        //  Fatals if convergence is not reached within maxBeats.
+        void prePaceToConvergence
+        (
+            const scalar dt,
+            const scalar tolerance,
+            const label minBeats,
+            const label maxBeats,
+            const scalar autorhythmicCheckInterval
+        );
+
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;
 

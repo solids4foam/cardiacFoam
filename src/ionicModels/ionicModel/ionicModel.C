@@ -387,3 +387,91 @@ void Foam::ionicModel::configureRegionHeterogeneity
         heterogeneousInitialStates
     );
 }
+
+
+void Foam::ionicModel::prePaceToConvergence
+(
+    const scalar dt,
+    const scalar tolerance,
+    const label minBeats,
+    const label maxBeats,
+    const scalar autorhythmicCheckInterval
+)
+{
+    const PtrList<scalarField>* statesPtr = ioStatesPtr();
+
+    if (!statesPtr || statesPtr->size() != 1)
+    {
+        FatalErrorInFunction
+            << "prePaceToConvergence requires a single-integration-point "
+            << "ionic model instance (nIntegrationPoints == 1) with "
+            << "generic state-vector access (ioStatesPtr() != nullptr). "
+            << "Got " << (statesPtr ? statesPtr->size() : -1)
+            << " integration point(s) for model '" << type() << "'."
+            << exit(FatalError);
+    }
+
+    const scalar checkpoint =
+        (stimulusProtocol().stimPeriodS1 > SMALL)
+      ? stimulusProtocol().stimPeriodS1
+      : autorhythmicCheckInterval;
+
+    scalarField dummyVm(1, 0.0);
+    scalarField dummyIm(1, 0.0);
+
+    scalarField previous((*statesPtr)[0]);
+    scalar t = 0.0;
+    label consecutiveConverged = 0;
+
+    for (label beat = 0; beat < maxBeats; ++beat)
+    {
+        const scalar beatEnd = t + checkpoint;
+        while (t < beatEnd - 0.5*dt)
+        {
+            solveODE(t, dt, dummyVm, dummyIm);
+            t += dt;
+        }
+
+        const scalarField& current = (*statesPtr)[0];
+
+        scalar maxRelDelta = 0.0;
+        forAll(current, stateI)
+        {
+            const scalar denom = Foam::max(mag(previous[stateI]), SMALL);
+            maxRelDelta =
+                Foam::max
+                (
+                    maxRelDelta,
+                    mag(current[stateI] - previous[stateI])/denom
+                );
+        }
+
+        previous = current;
+
+        if (beat + 1 >= minBeats && maxRelDelta < tolerance)
+        {
+            ++consecutiveConverged;
+            if (consecutiveConverged >= 2)
+            {
+                Info<< "prePaceToConvergence: " << type()
+                    << " converged after " << (beat + 1)
+                    << " checkpoints (max relative state change "
+                    << maxRelDelta << " < tolerance " << tolerance << ")"
+                    << endl;
+                return;
+            }
+        }
+        else
+        {
+            consecutiveConverged = 0;
+        }
+    }
+
+    FatalErrorInFunction
+        << "prePaceToConvergence: " << type() << " did not converge within "
+        << maxBeats << " checkpoints of " << checkpoint << " ms (tolerance "
+        << tolerance << "). Increase maxBeats, loosen tolerance, or check "
+        << "for sustained alternans/instability at this pacing rate in "
+        << "constant/prePacingProperties."
+        << exit(FatalError);
+}
