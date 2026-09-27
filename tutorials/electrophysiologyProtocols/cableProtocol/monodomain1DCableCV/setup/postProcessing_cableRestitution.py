@@ -56,8 +56,6 @@ REFERENCE_REPOLARIZATION_TOLERANCE_S = 1.0e-4
 
 REPOLARIZATION_PERCENTS = (50, 70, 90)
 
-PROTOCOL_METADATA = ".cardiacfoam_protocol.json"
-
 
 def parse_probe_file(path: Path) -> tuple[list[tuple[float, float, float]], list[float], list[list[float]]]:
     if not path.is_file():
@@ -232,9 +230,44 @@ def compute_segment_cv(positions: list[tuple[float, float, float]], activation_t
     return segments
 
 
-def load_protocol_metadata(case_dir: Path) -> dict | None:
-    path = case_dir / PROTOCOL_METADATA
-    return json.loads(path.read_text(encoding="ascii")) if path.is_file() else None
+def _read_stimulus_start_time_list(case_dir: Path) -> list[float]:
+    """The case's own schedule, direct from ``constant/electroProperties``
+    -- never a Python-side restatement of it."""
+    path = case_dir / "constant" / "electroProperties"
+    text = path.read_text(encoding="ascii")
+    match = re.search(r"stimulusStartTimeList\s*\(([^)]*)\)", text)
+    if match is None:
+        raise ValueError(f"{path} has no externalStimulus.stimulusStartTimeList entry")
+    tokens = match.group(1).split()
+    return [float(token) for token in tokens]
+
+
+def build_protocol(
+    case_dir: Path, *, n_s1: int, n_s2: int, reference_repolarization90_s: float | None,
+) -> dict:
+    """Where the S1/S2 split falls in the case's own concatenated
+    ``stimulusStartTimeList`` -- ``n_s1``/``n_s2`` are omniD's own resolved
+    ``s1s2SpatialProtocol`` study value for this run (the ONLY thing that
+    knows the split), passed in as ``--n-s1``/``--n-s2`` (the record's
+    ``cable_1d_restitution.py`` docstring has the full contract). This
+    replaces the deleted ``.cardiacfoam_protocol.json`` sidecar: the
+    schedule lives in one place (the dictionary), the split point in
+    another (omniD's own case), and neither is cached here."""
+    times = _read_stimulus_start_time_list(case_dir)
+    s1_times = times[:n_s1]
+    s2_times = times[n_s1:n_s1 + n_s2]
+    requested_di90_s = None
+    if reference_repolarization90_s is not None and s2_times:
+        requested_di90_s = s2_times[0] - reference_repolarization90_s
+    return {
+        "n_s1": n_s1,
+        "n_s2": n_s2,
+        "s1_stimulus_times_s": s1_times,
+        "s2_stimulus_times_s": s2_times,
+        "stimulus_times_s": times,
+        "reference_repolarization90_s": reference_repolarization90_s,
+        "requested_di90_s": requested_di90_s,
+    }
 
 
 def event_for_activation(events: list[dict], activation_time: float | None) -> dict | None:
@@ -549,12 +582,22 @@ def _write_restitution_csv(path: Path, summary: dict, case_id: str | None) -> No
             )
 
 
-def write_summary_files(*, case_dir: Path, output_dir: Path | None = None, case_id: str | None = None) -> dict:
+def write_summary_files(
+    *, case_dir: Path, output_dir: Path | None = None, case_id: str | None = None,
+    n_s1: int | None = None, n_s2: int | None = None,
+    reference_repolarization90_s: float | None = None,
+) -> dict:
     probe_files = list((case_dir / "postProcessing" / "cableProbes").glob("*/Vm"))
     if not probe_files:
         raise FileNotFoundError(f"No Vm probe files found in {case_dir}/postProcessing/cableProbes/")
     target_probe = max(probe_files, key=lambda path: float(path.parent.name))
-    protocol = load_protocol_metadata(case_dir)
+    protocol = (
+        None if n_s1 is None or n_s2 is None
+        else build_protocol(
+            case_dir, n_s1=n_s1, n_s2=n_s2,
+            reference_repolarization90_s=reference_repolarization90_s,
+        )
+    )
     try:
         summary = build_summary(target_probe, protocol)
     except Exception as exc:  # noqa: BLE001 - a failed case must still leave a row
@@ -609,13 +652,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--case-dir", default=".")
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--case-id", default=None)
+    parser.add_argument(
+        "--case-id", default=None,
+        help="Defaults to the case directory's own name (no sentinel file is read any more).",
+    )
+    parser.add_argument(
+        "--n-s1", type=int, default=None,
+        help="How many of constant/electroProperties's own stimulusStartTimeList entries are S1.",
+    )
+    parser.add_argument(
+        "--n-s2", type=int, default=None,
+        help="How many of the remaining entries are S2 (0: no S2 in this run).",
+    )
+    parser.add_argument("--reference-repolarization90-s", type=float, default=None)
     args = parser.parse_args()
     case_dir = Path(args.case_dir).resolve()
-    case_id = args.case_id
-    if case_id is None:
-        sentinel = case_dir / ".driverfoam_case_id"
-        if not sentinel.exists():
-            raise SystemExit(f"--case-id not supplied and sentinel {sentinel} not found")
-        case_id = sentinel.read_text(encoding="ascii").strip()
-    write_summary_files(case_dir=case_dir, output_dir=Path(args.output_dir).resolve(), case_id=case_id)
+    case_id = args.case_id if args.case_id is not None else case_dir.name
+    write_summary_files(
+        case_dir=case_dir, output_dir=Path(args.output_dir).resolve(), case_id=case_id,
+        n_s1=args.n_s1, n_s2=args.n_s2,
+        reference_repolarization90_s=args.reference_repolarization90_s,
+    )
