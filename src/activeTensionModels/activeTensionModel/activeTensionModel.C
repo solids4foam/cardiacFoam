@@ -299,6 +299,25 @@ void activeTensionModel::debugPrintFields
     );
 }
 
+bool activeTensionModel::setStates(const UList<scalarField>& states)
+{
+    PtrList<scalarField>* statesPtr =
+        const_cast<PtrList<scalarField>*>(ioStatesPtr());
+
+    if (!statesPtr || statesPtr->size() != states.size())
+    {
+        return false;
+    }
+
+    forAll(states, i)
+    {
+        (*statesPtr)[i] = states[i];
+    }
+
+    return true;
+}
+
+
 void activeTensionModel::calculateTension
 (
     const scalar t,

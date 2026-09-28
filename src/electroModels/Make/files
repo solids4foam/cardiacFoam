@@ -22,6 +22,7 @@ electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C
 electroDomains/ecgDomain/ecgDomain.C
 electroDomains/ecgDomain/ecgSolver.C
 electroDomains/myocardiumDomain/myocardiumDomainInterface.C
+electroDomains/myocardiumDomain/myocardiumPrePacing.C
 electroDomains/myocardiumDomain/myocardiumDomain.C
 electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C
 electroDomains/myocardiumDomain/myocardiumSolver.C

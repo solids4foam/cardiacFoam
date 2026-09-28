@@ -31,6 +31,9 @@ Description
         maxBeats                3000;
         singleCellStimulus      { stim_start ...; stim_period_S1 ...; ... }
         beatComparisonInterval  800;    // ms, only without a stimulus
+        singleCellIonicModel    TNNPcompactBatched;  // single cell only
+        batchedIntegrator       rushLarsen;
+        deltaT                  5e-5;   // s, single cell only
         regions { endocardialCells { maxBeats 5000; } }
 \*---------------------------------------------------------------------------*/
 
@@ -60,6 +63,11 @@ struct PrePacingConfig
     //- Pacing protocol (ms), same keys as electroProperties
     bool hasSingleCellStimulus = false;
     dictionary singleCellStimulus;
+    //- Single-cell integration; empty/0 = the tissue's ionic model, its
+    //  integrator and the case deltaT
+    word singleCellIonicModel;
+    word batchedIntegrator;
+    scalar deltaT = 0;     // s
 };
 
 //- Apply the entries of dict on top of cfg.
@@ -82,6 +90,15 @@ inline void readEntries(const dictionary& dict, PrePacingConfig& cfg)
         cfg.hasSingleCellStimulus = true;
         cfg.singleCellStimulus = dict.subDict("singleCellStimulus");
     }
+
+    cfg.singleCellIonicModel =
+        dict.lookupOrDefault<word>
+        (
+            "singleCellIonicModel", cfg.singleCellIonicModel
+        );
+    cfg.batchedIntegrator =
+        dict.lookupOrDefault<word>("batchedIntegrator", cfg.batchedIntegrator);
+    cfg.deltaT = dict.lookupOrDefault<scalar>("deltaT", cfg.deltaT);
 }
 
 //- Settings for one tissue region; regionName may be word::null for the

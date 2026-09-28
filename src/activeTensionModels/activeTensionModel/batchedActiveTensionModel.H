@@ -228,6 +228,8 @@ public:
 
     virtual void refreshRestartState(const fvMesh& mesh) override;
 
+    virtual bool setStates(const UList<scalarField>& states) override;
+
     virtual bool restartTension(scalarField& Ta) const override;
 
     // Optional legacy override, but calculateTension is the real entry point

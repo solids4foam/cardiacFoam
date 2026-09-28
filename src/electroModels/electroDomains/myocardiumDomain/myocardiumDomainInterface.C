@@ -27,6 +27,7 @@ License
 #include "fvMeshSubset.H"
 #include "volFields.H"
 #include "prePacingIO.H"
+#include "myocardiumPrePacing.H"
 
 namespace Foam
 {
@@ -207,328 +208,6 @@ scalarField readNamedScalarField
     return mappedValues;
 }
 
-//- The model dictionary a region is pre-paced with: electroProperties
-//  with the pacing protocol from prePacingProperties (else the region's own
-//  singleCellStimulus), nstim1 forced to maxBeats so every beat is paced
-//  (its default is a single pulse).
-dictionary prePacingModelDict
-(
-    const dictionary& electroProperties,
-    const prePacingIO::PrePacingConfig& cfg,
-    const word& regionName
-)
-{
-    dictionary modelDict(electroProperties);
-    if (cfg.hasSingleCellStimulus)
-    {
-        modelDict.set("singleCellStimulus", cfg.singleCellStimulus);
-    }
-
-    if (modelDict.isDict("singleCellStimulus"))
-    {
-        dictionary stimDict(modelDict.subDict("singleCellStimulus"));
-        stimDict.set("nstim1", cfg.maxBeats);
-        modelDict.set("singleCellStimulus", stimDict);
-    }
-    else if (!cfg.beatComparisonIntervalSet)
-    {
-        FatalErrorInFunction
-            << "constant/prePacingProperties enables prePacing for region '"
-            << regionName << "', but no pacing protocol is defined: add a "
-            << "'singleCellStimulus' sub-dictionary (stim_start, "
-            << "stim_period_S1, stim_duration, stim_amplitude; ms) to "
-            << "constant/prePacingProperties. For a self-beating model left "
-            << "unpaced, set 'beatComparisonInterval' (ms, its own beat "
-            << "period) explicitly instead."
-            << exit(FatalError);
-    }
-
-    return modelDict;
-}
-
-
-//- Pace a single-cell copy of the model to its limit cycle and return
-//  its state vector. With heterogeneityDict, the single cell is configured
-//  as the tissue would be at heterogeneity field value fieldValue (region
-//  index for cellZoneRegions, t for namedRegions); nullptr means none.
-scalarField prePacedState
-(
-    const dictionary& modelDict,
-    const prePacingIO::PrePacingConfig& cfg,
-    const scalar dt,
-    const dictionary* heterogeneityDict,
-    const scalar fieldValue
-)
-{
-    autoPtr<ionicModel> modelPtr = ionicModel::New(modelDict, 1, dt, true);
-
-    if (heterogeneityDict)
-    {
-        modelPtr->configureIonicHeterogeneity
-        (
-            scalarField(1, fieldValue),
-            *heterogeneityDict
-        );
-    }
-
-    modelPtr->prePaceToConvergence
-    (
-        dt,
-        cfg.tolerance,
-        cfg.minBeats,
-        cfg.maxBeats,
-        cfg.beatComparisonInterval
-    );
-
-    return scalarField((*modelPtr->ioStatesPtr())[0]);
-}
-
-
-//- Pre-pace one single cell per main tissue (the 'tissue' entry, or each
-//  ionicHeterogeneity region) and seed every cell with its main tissue's
-//  ionic states and Vm.
-void prePaceAndSeed
-(
-    const fvMesh& mesh,
-    const dictionary& electroProperties,
-    const scalar dt,
-    ionicModel& tissueModel,
-    volScalarField& Vm
-)
-{
-    PtrList<scalarField>* statesPtr =
-        const_cast<PtrList<scalarField>*>(tissueModel.ioStatesPtr());
-
-    if (!statesPtr)
-    {
-        FatalErrorInFunction
-            << "Ionic model '" << tissueModel.type() << "' does not "
-            << "expose generic state access (ioStatesPtr()); prePacing "
-            << "cannot seed it. Remove constant/prePacingProperties."
-            << exit(FatalError);
-    }
-
-    scalarField& VmValues = Vm.primitiveFieldRef();
-
-    if (statesPtr->size() != VmValues.size())
-    {
-        FatalErrorInFunction
-            << "Ionic model '" << tissueModel.type() << "' holds "
-            << statesPtr->size() << " integration points but Vm has "
-            << VmValues.size() << " cells; prePacing cannot seed it."
-            << exit(FatalError);
-    }
-
-    // One pre-paced single cell per main tissue: the 'tissue' entry, or
-    // each ionicHeterogeneity region with its own constants and overrides.
-    // Blend transitions and gradientAxes scaling are not pre-paced: those
-    // cells keep their exact constants and start from their dominant
-    // region's state.
-    wordList regionNames
-    (
-        1, electroProperties.lookupOrDefault<word>("tissue", "myocyte")
-    );
-    scalarList regionFieldValue(1, 0.0);
-    labelList cellRegion(VmValues.size(), 0);
-    label nBlendedCells = 0;
-    dictionary pureHeterogeneityDict;
-    const dictionary* heterogeneityDictPtr = nullptr;
-
-    if (electroProperties.found("ionicHeterogeneity"))
-    {
-        const dictionary& heterogeneityDict =
-            electroProperties.subDict("ionicHeterogeneity");
-        const word mode
-        (
-            heterogeneityDict.lookupOrDefault<word>("mode", word::null)
-        );
-
-        const scalarField fieldValues =
-            readTransmuralDistance(mesh, electroProperties, heterogeneityDict);
-
-        pureHeterogeneityDict = heterogeneityDict;
-
-        if (mode == "cellZoneRegions")
-        {
-            const List<ionicHeterogeneity::NamedCellZoneRegion> regions =
-                ionicHeterogeneity::parseNamedCellZoneRegions
-                (
-                    heterogeneityDict.subDict("regions")
-                );
-
-            regionNames.setSize(regions.size());
-            regionFieldValue.setSize(regions.size());
-            forAll(regions, regionI)
-            {
-                regionNames[regionI] = regions[regionI].name;
-                regionFieldValue[regionI] = regionI;
-            }
-
-            forAll(cellRegion, cellI)
-            {
-                cellRegion[cellI] = label(round(fieldValues[cellI]));
-            }
-        }
-        else if (mode == "namedRegions")
-        {
-            const List<ionicHeterogeneity::NamedFieldRegion> regions =
-                ionicHeterogeneity::parseNamedFieldRegions
-                (
-                    heterogeneityDict.subDict("regions")
-                );
-
-            regionNames.setSize(regions.size());
-            regionFieldValue.setSize(regions.size());
-            forAll(regions, regionI)
-            {
-                regionNames[regionI] = regions[regionI].name;
-                regionFieldValue[regionI] =
-                    0.5*(regions[regionI].rangeMin + regions[regionI].rangeMax);
-            }
-
-            const word transitionMode
-            (
-                heterogeneityDict.lookupOrDefault<word>
-                (
-                    "transitionMode", "hard"
-                )
-            );
-            const scalar transitionWidth =
-                heterogeneityDict.lookupOrDefault<scalar>
-                (
-                    "transitionWidth", 0.0
-                );
-            const word smoothing
-            (
-                heterogeneityDict.lookupOrDefault<word>
-                (
-                    "smoothing", "smoothstep"
-                )
-            );
-
-            forAll(cellRegion, cellI)
-            {
-                const scalar t =
-                    min(max(fieldValues[cellI], scalar(0.0)), scalar(1.0));
-                const List<ionicHeterogeneity::NamedRegionWeight> weights =
-                    ionicHeterogeneity::namedRegionWeightsAt
-                    (
-                        t, regions, transitionWidth, smoothing, transitionMode
-                    );
-
-                label dominant = 0;
-                forAll(weights, wI)
-                {
-                    if (weights[wI].weight > weights[dominant].weight)
-                    {
-                        dominant = wI;
-                    }
-                }
-
-                cellRegion[cellI] = regionNames.find(weights[dominant].name);
-                if (weights.size() > 1)
-                {
-                    ++nBlendedCells;
-                }
-            }
-
-            // The pre-paced cell sits mid-range with no transition blend.
-            pureHeterogeneityDict.set("transitionMode", word("hard"));
-        }
-        else
-        {
-            FatalErrorInFunction
-                << "constant/prePacingProperties enables prePacing, but "
-                << "ionicHeterogeneity mode '" << mode << "' is not "
-                << "supported. Supported: namedRegions, cellZoneRegions."
-                << exit(FatalError);
-        }
-
-        heterogeneityDictPtr = &pureHeterogeneityDict;
-
-        if (heterogeneityDict.found("gradientAxes"))
-        {
-            Info<< "prePacing: gradientAxes scaling is applied to the "
-                << "tissue only; cells start from their main tissue's "
-                << "pre-paced state." << endl;
-        }
-    }
-
-    const ionicModelIO::VmTransform transform = tissueModel.ioVmTransform();
-
-    boolList regionPaced(regionNames.size(), false);
-    List<scalarField> seedStates(regionNames.size());
-    scalarField seedVmMv(regionNames.size(), 0.0);
-
-    forAll(regionNames, regionI)
-    {
-        const word& regionName = regionNames[regionI];
-        const prePacingIO::PrePacingConfig cfg =
-            prePacingIO::configFor(mesh, regionName);
-
-        if (!cfg.enabled)
-        {
-            Info<< "prePacing: region '" << regionName << "' disabled in "
-                << "constant/prePacingProperties; left at its initial "
-                << "state." << endl;
-            continue;
-        }
-
-        Info<< "prePacing: pacing region '" << regionName << "'" << endl;
-
-        seedStates[regionI] =
-            prePacedState
-            (
-                prePacingModelDict(electroProperties, cfg, regionName),
-                cfg,
-                dt,
-                heterogeneityDictPtr,
-                regionFieldValue[regionI]
-            );
-
-        seedVmMv[regionI] =
-            transform
-          ? transform(seedStates[regionI])
-          : seedStates[regionI][0];
-
-        regionPaced[regionI] = true;
-    }
-
-    labelList regionCellCount(regionNames.size(), 0);
-
-    forAll(cellRegion, cellI)
-    {
-        const label regionI = cellRegion[cellI];
-        if (regionPaced[regionI])
-        {
-            (*statesPtr)[cellI] = seedStates[regionI];
-            VmValues[cellI] = seedVmMv[regionI]*1e-3;
-            ++regionCellCount[regionI];
-        }
-    }
-
-    Vm.correctBoundaryConditions();
-
-    if (nBlendedCells)
-    {
-        Info<< "prePacing: " << nBlendedCells << " cells in blend "
-            << "transitions start from their dominant region's state."
-            << endl;
-    }
-
-    forAll(regionNames, regionI)
-    {
-        if (regionPaced[regionI])
-        {
-            Info<< "prePacing: seeded region '" << regionNames[regionI]
-                << "' (" << regionCellCount[regionI] << " cells) from a "
-                << "converged single-cell " << tissueModel.type()
-                << " state, Vm = " << seedVmMv[regionI] << " mV." << endl;
-        }
-    }
-}
-
-
 } // End anonymous namespace
 
 
@@ -636,14 +315,36 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
     // follow it.
     if (prePacingIO::configFor(mesh, word::null).enabled)
     {
-        prePaceAndSeed
-        (
-            mesh,
-            electroProperties,
-            initialDeltaT,
-            ionicModelPtr(),
-            tissuePtr->VmRef()
-        );
+        volScalarField& Vm = tissuePtr->VmRef();
+
+        scalarField heterogeneityFieldValues;
+        if (electroProperties.found("ionicHeterogeneity"))
+        {
+            heterogeneityFieldValues =
+                readTransmuralDistance
+                (
+                    mesh,
+                    electroProperties,
+                    electroProperties.subDict("ionicHeterogeneity")
+                );
+        }
+
+        // Owned by Vm's mesh registry, where coupled models look it up.
+        myocardiumPrePacing* prePacingPtr =
+            new myocardiumPrePacing
+            (
+                Vm.mesh(),
+                electroProperties,
+                initialDeltaT,
+                electroProperties.found("ionicHeterogeneity")
+              ? &heterogeneityFieldValues
+              : nullptr,
+                Vm.size()
+            );
+        prePacingPtr->store();
+
+        prePacingPtr->paceIonic();
+        prePacingPtr->seedIonic(ionicModelPtr(), Vm);
     }
 
     return autoPtr<myocardiumDomainInterface>(tissuePtr.ptr());

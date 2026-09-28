@@ -389,13 +389,33 @@ void Foam::ionicModel::configureRegionHeterogeneity
 }
 
 
-void Foam::ionicModel::prePaceToConvergence
+bool Foam::ionicModel::setStates(const UList<scalarField>& states)
+{
+    PtrList<scalarField>* statesPtr =
+        const_cast<PtrList<scalarField>*>(ioStatesPtr());
+
+    if (!statesPtr || statesPtr->size() != states.size())
+    {
+        return false;
+    }
+
+    forAll(states, i)
+    {
+        (*statesPtr)[i] = states[i];
+    }
+
+    return true;
+}
+
+
+Foam::label Foam::ionicModel::prePaceToConvergence
 (
     const scalar dt,
     const scalar tolerance,
     const label minBeats,
     const label maxBeats,
-    const scalar beatComparisonInterval
+    const scalar beatComparisonInterval,
+    prePacingCoupling* coupling
 )
 {
     const PtrList<scalarField>* statesPtr = ioStatesPtr();
@@ -422,7 +442,39 @@ void Foam::ionicModel::prePaceToConvergence
     scalarField dummyVm(1, 0.0);
     scalarField dummyIm(1, 0.0);
 
-    scalarField previous((*statesPtr)[0]);
+    // Ionic state followed by the coupled system's state
+    auto fullState = [&]() -> scalarField
+    {
+        // Re-read: batched models hand out a copy synced on access.
+        const scalarField& ionicState = (*ioStatesPtr())[0];
+        if (!coupling)
+        {
+            return ionicState;
+        }
+        const scalarField coupledState = coupling->state();
+        scalarField s(ionicState.size() + coupledState.size());
+        SubList<scalar>(s, ionicState.size()) = ionicState;
+        SubList<scalar>(s, coupledState.size(), ionicState.size()) =
+            coupledState;
+        return s;
+    };
+
+    auto step = [&](const scalar t0, const scalar h)
+    {
+        solveODE(t0, h, dummyVm, dummyIm);
+        if (coupling)
+        {
+            coupling->advance(t0 + h, h);
+        }
+    };
+
+    // Every processor may pace its own single cell in parallel.
+    OSstream& os =
+        Pstream::parRun()
+      ? static_cast<OSstream&>(Pout)
+      : static_cast<OSstream&>(Info);
+
+    scalarField previous(fullState());
     scalar t = 0.0;
     label consecutiveConverged = 0;
 
@@ -436,18 +488,18 @@ void Foam::ionicModel::prePaceToConvergence
 
         for (label stepI = 0; stepI < nFullSteps; ++stepI)
         {
-            solveODE(t, dt, dummyVm, dummyIm);
+            step(t, dt);
             t = beatStart + scalar(stepI + 1)*dt;
         }
 
         const scalar remainder = beatEnd - t;
         if (remainder > SMALL)
         {
-            solveODE(t, remainder, dummyVm, dummyIm);
+            step(t, remainder);
         }
         t = beatEnd;
 
-        const scalarField& current = (*statesPtr)[0];
+        const scalarField current(fullState());
 
         scalar maxRelDelta = 0.0;
         forAll(current, stateI)
@@ -463,17 +515,24 @@ void Foam::ionicModel::prePaceToConvergence
 
         previous = current;
 
+        if ((beat + 1) % 100 == 0)
+        {
+            os  << "prePaceToConvergence: " << type() << " beat "
+                << (beat + 1) << ", max relative state change "
+                << maxRelDelta << endl;
+        }
+
         if (beat + 1 >= minBeats && maxRelDelta < tolerance)
         {
             ++consecutiveConverged;
             if (consecutiveConverged >= 2)
             {
-                Info<< "prePaceToConvergence: " << type()
+                os  << "prePaceToConvergence: " << type()
                     << " converged after " << (beat + 1)
                     << " beats (max relative state change "
                     << maxRelDelta << " < tolerance " << tolerance << ")"
                     << endl;
-                return;
+                return beat + 1;
             }
         }
         else
@@ -489,4 +548,6 @@ void Foam::ionicModel::prePaceToConvergence
         << "for sustained alternans/instability at this pacing rate in "
         << "constant/prePacingProperties."
         << exit(FatalError);
+
+    return maxBeats;
 }
