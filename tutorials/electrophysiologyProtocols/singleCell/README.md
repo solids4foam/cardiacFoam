@@ -9,7 +9,7 @@ This case is the single integration-point electrophysiology workflow.
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/singleCell/
+tutorials/electrophysiologyProtocols/singleCell/
 ├── constant/
 │   ├── electroProperties
 │   ├── physicsProperties
@@ -20,8 +20,11 @@ tutorials/coreProtocols/singleCell/
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setup/
-│   ├── run_cases.sh
-│   └── singleCellinteractivePlots.py
+│   ├── singleCellinteractivePlots.py
+│   ├── table_summary.py
+│   ├── sweep_ionic_model_tissue.json
+│   └── studies/
+│       └── tworldVsGaur/
 ├── singleCell.reference
 ├── regressionTest.sh
 ├── Allrun

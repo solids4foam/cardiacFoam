@@ -9,7 +9,7 @@ This tutorial runs single-cell S1-S2 pacing sweeps to generate restitution curve
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/restitutionCurves_s1s2Protocol/
+tutorials/electrophysiologyProtocols/restitutionCurves_s1s2Protocol/
 ├── constant/
 │   ├── electroProperties
 │   ├── physicsProperties
@@ -20,11 +20,11 @@ tutorials/coreProtocols/restitutionCurves_s1s2Protocol/
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setup/
-│   ├── run_cases.sh
-│   ├── setup_multiple_simulations_s1s2.py
 │   ├── postProcessing_restCurves.py
+│   ├── table_summary.py
 │   ├── animate_trace.py
-│   └── mainRestitutionCurves_s1s2Protocol.py
+│   └── studies/
+│       └── tworldS1S2Restitution/
 ├── plotVoltage
 ├── Allrun
 ├── Allclean
