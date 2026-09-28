@@ -6,16 +6,11 @@ derived from the filename stem (e.g. TNNP_restitution.csv → ionic_model=TNNP).
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pandas as pd
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[4]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableMetadata, TableWriter
 
 _TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
 
