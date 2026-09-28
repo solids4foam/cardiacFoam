@@ -6,17 +6,12 @@ Extracts resting voltage, peak voltage, and APD at 90% repolarisation.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[4]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableMetadata, TableWriter
 
 
 def _parse_model_and_cell(stem: str) -> tuple[str, str]:

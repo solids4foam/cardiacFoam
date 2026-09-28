@@ -6,7 +6,6 @@ import csv
 import math
 from pathlib import Path
 import re
-import sys
 
 try:
     import matplotlib
@@ -16,11 +15,7 @@ try:
 except ModuleNotFoundError:
     plt = None
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.style import (
+from omnidriver.postprocessing.style import (
     configure_matplotlib_defaults,
     finalize_matplotlib_figure,
     style_matplotlib_axes,
@@ -101,12 +96,16 @@ def _field_linf(content: str, field_name: str) -> float:
 
 def read_error_dat_files(folder_name):
     """
-    Reads all .dat files in folder_name and extracts:
+    Reads every swept case's own error .dat file under folder_name and
+    extracts:
         - Dimension  (1D, 2D, 3D)
         - N          (# cells)
         - Linf errors for Vm, gauge-corrected phiE, u1, u2
 
-    Returns one row per file.
+    Each case writes its own verifier .dat directly into its own
+    postProcessing/ (case_dir/postProcessing/<dimension>_<N>_cells.dat);
+    this reads every case in the sweep rather than one shared flat folder
+    (the old sweep wrapper's convention).  Returns one row per file.
     """
 
     folder = Path(folder_name)
@@ -114,9 +113,9 @@ def read_error_dat_files(folder_name):
         print("Folder does not exist:", folder)
         return []
 
-    files = [f for f in folder.iterdir() if f.suffix == ".dat"]
+    files = sorted(folder.glob("cases/*/postProcessing/*.dat"))
     if not files:
-        print("No .dat files found in folder:", folder)
+        print("No .dat files found under any case's postProcessing/ in:", folder)
         return []
 
     data = []

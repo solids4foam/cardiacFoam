@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 import re
 import shutil
-import sys
 
 try:
     import matplotlib.pyplot as plt
@@ -30,16 +29,67 @@ try:
 except ModuleNotFoundError:
     np = None
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.style import (
+from omnidriver.postprocessing.style import (
     configure_matplotlib_defaults,
     finalize_matplotlib_figure,
     style_matplotlib_axes,
 )
-from openfoam_driver.plugins.cardiacfoam.tutorials.defaults import manufactured_monodomain_pseudo_ecg as driver_defaults
+
+#: This tutorial's own committed 3D electrode set (the retired driver
+#: plugin's now-deleted "tutorials.defaults.manufactured_monodomain_pseudo_ecg"
+#: module used to duplicate this as a hardcoded ECG_ELECTRODES_BY_DIMENSION
+#: table). Read directly instead: electrode positions are patched per case
+#: by this tutorial's own sweep studies (they vary with `dimension`), so
+#: anything that needs a *specific case's* positions should read that
+#: case's own constant/electroProperties via _read_electrode_positions,
+#: not this module-level default -- which is only the 3D illustration
+#: geometry every study's base config ships (the E1-E5/R1-R156 set below).
+_TUTORIAL_ELECTRO_PROPERTIES = Path(__file__).resolve().parent.parent / "constant" / "electroProperties"
+
+
+def _read_electrode_positions(electro_properties_path: Path) -> dict[str, str]:
+    """Read {electrode_name: "(x y z)" literal} from an electroProperties dict.
+
+    Parses `monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions` --
+    small, targeted regex reads rather than a full OpenFOAM dictionary
+    parser, matching this tutorial's other postprocessing scripts.
+    """
+    text = electro_properties_path.read_text()
+    block = re.search(r"electrodePositions\s*\{(.*?)\n\s*\}", text, re.DOTALL)
+    if not block:
+        return {}
+    return dict(re.findall(r"^\s*(\w+)\s+(\([^)]*\));", block.group(1), re.MULTILINE))
+
+
+def _case_postprocessing_files(folder: Path, pattern: str = "*") -> list[Path]:
+    """Every swept case's own postProcessing/ file matching pattern.
+
+    Replaces the old sweep wrapper's convention of pooling every case's
+    output into one shared flat folder; each case now writes to its own
+    <output_dir>/cases/case_NNNN/postProcessing/.
+    """
+    return sorted(folder.glob(f"cases/*/postProcessing/{pattern}"))
+
+
+def _sibling_case_metadata(path: Path) -> tuple[str, int, float | None] | None:
+    """(Dimension, N, dt) for the case that produced `path`.
+
+    manufacturedPseudoECG_ECG.dat / manufacturedPseudoECGSummary_ECG.dat
+    carry no case identity in their own filename (unlike the error-summary
+    <dim>_<N>_cells[_DT<token>].dat the solver's verifier writes into the
+    same directory) -- N and dt used to come from a sweep wrapper's
+    rename-on-collect step that embedded them in the filename it copied
+    these into when pooling every case into one shared folder. Read them
+    from that sibling file instead, the same way read_error_dat_files
+    reads its own dt (dt from the file's own content, since not every
+    study sweeps it).
+    """
+    for sibling in path.parent.glob("*.dat"):
+        match = FILENAME_PATTERN.match(sibling.name)
+        if match:
+            dt = _extract_summary_scalar(TIME_STEP_PATTERN, sibling.read_text())
+            return match.group("dimension"), int(match.group("cells")), dt
+    return None
 
 RATE_FIELDS = (
     "SweepAxis",
@@ -55,14 +105,6 @@ RATE_FIELDS = (
 FILENAME_PATTERN = re.compile(
     r"(?P<dimension>\dD)_(?P<cells>\d+)_cells"
     r"(?:_DT(?P<dt_token>[^_]+))?\.dat$"
-)
-ECG_SUMMARY_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT(?P<dt_token>[^_]+)_"
-    r"manufacturedPseudoECGSummary\.dat$"
-)
-ECG_TIMESERIES_PATTERN = re.compile(
-    r"ECG_(?P<dimension>\dD)_(?P<cells>\d+)_cells_DT[^_]+_"
-    r"manufacturedPseudoECG\.dat$"
 )
 REF_PATTERN = re.compile(r"refQ(?P<q>\d+)_(?P<electrode>.+)")
 ERR_PATTERN = re.compile(r"errQ(?P<q>\d+)_(?P<electrode>.+)")
@@ -453,8 +495,15 @@ def electrode_standoff_distance(position: tuple[float, float, float]) -> float:
 
 
 def electrode_distance_table(dimension: str = "3D") -> dict[str, float]:
-    """Standoff distance for every configured electrode, keyed by name."""
-    electrodes = driver_defaults.ECG_ELECTRODES_BY_DIMENSION[dimension]
+    """Standoff distance for every configured electrode, keyed by name.
+
+    `dimension` is accepted for backward compatibility but only "3D" (this
+    function's only caller ever passes it, and that caller is itself
+    currently unused) has a source: this tutorial's own committed 3D
+    electrode geometry.
+    """
+    del dimension
+    electrodes = _read_electrode_positions(_TUTORIAL_ELECTRO_PROPERTIES)
     return {
         name: electrode_standoff_distance(_parse_vector_literal(literal))
         for name, literal in electrodes.items()
@@ -1009,7 +1058,7 @@ def export_ecg_electrode_geometry_vtp(
     vertex_index = {vertex: index for index, vertex in enumerate(cube_vertices)}
     cube_lines = [(vertex_index[start], vertex_index[end]) for start, end in _unit_cube_edges()]
 
-    electrode_items = sorted(driver_defaults.ECG_ELECTRODES_BY_DIMENSION["3D"].items())
+    electrode_items = sorted(_read_electrode_positions(_TUTORIAL_ELECTRO_PROPERTIES).items())
     electrode_points = [_parse_vector_literal(literal) for _, literal in electrode_items]
 
     points = cube_vertices + electrode_points
@@ -1151,9 +1200,9 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
         print("Folder does not exist:", folder)
         return []
 
-    files = [f for f in folder.iterdir() if f.suffix == ".dat"]
+    files = _case_postprocessing_files(folder, "*.dat")
     if not files:
-        print("No .dat files found in folder:", folder)
+        print("No .dat files found under any case's postProcessing/ in:", folder)
         return []
 
     if expected_filenames is not None:
@@ -1223,15 +1272,16 @@ def read_ecg_summary_dat_files(folder_name):
         return []
 
     rows = []
-    for path in sorted(folder.glob("ECG_*_manufacturedPseudoECGSummary.dat")):
-        match = ECG_SUMMARY_PATTERN.match(path.name)
-        if not match:
-            print("Skipping unrecognized ECG summary filename:", path.name)
-            continue
-
+    for path in _case_postprocessing_files(folder, "manufacturedPseudoECGSummary_ECG.dat"):
         metadata, electrode_rows = _parse_ecg_summary_file(path)
         if not electrode_rows:
             continue
+
+        sibling = _sibling_case_metadata(path)
+        if sibling is None:
+            print("Skipping ECG summary with no sibling case-identity file:", path)
+            continue
+        sibling_dimension, cells, dt = sibling
 
         q_checks = [
             int(token)
@@ -1290,9 +1340,9 @@ def read_ecg_summary_dat_files(folder_name):
 
         rows.append(
             {
-                "Dimension": match.group("dimension"),
-                "N": int(match.group("cells")),
-                "dt": _dt_token_to_float(match.group("dt_token")),
+                "Dimension": metadata.get("dimension", sibling_dimension),
+                "N": cells,
+                "dt": dt,
                 "samples": int(metadata.get("samples", "0")),
                 "electrodes": len(electrode_rows),
                 "qCheck": q_check,
@@ -1327,19 +1377,20 @@ def read_ecg_timeseries_dat_files(folder_name):
         return []
 
     cases = []
-    for path in sorted(folder.glob("ECG_*_manufacturedPseudoECG.dat")):
-        match = ECG_TIMESERIES_PATTERN.match(path.name)
-        if not match:
-            print("Skipping unrecognized ECG timeseries filename:", path.name)
+    for path in _case_postprocessing_files(folder, "manufacturedPseudoECG_ECG.dat"):
+        sibling = _sibling_case_metadata(path)
+        if sibling is None:
+            print("Skipping ECG timeseries with no sibling case-identity file:", path)
             continue
+        dimension, cells, _dt = sibling
 
         header, rows = _parse_timeseries(path)
         columns = _columns_from_rows(header, rows)
         cases.append(
             {
                 "path": path,
-                "Dimension": match.group("dimension"),
-                "N": int(match.group("cells")),
+                "Dimension": dimension,
+                "N": cells,
                 "times": columns["time"],
                 "groups": _group_manufactured_columns(columns),
             }
@@ -1377,7 +1428,7 @@ def _filter_supported_ecg_rows(rows, *, source_label: str):
 
 def _cleanup_unsupported_ecg_archives(output_dir: Path) -> list[Path]:
     removed: list[Path] = []
-    for path in sorted(output_dir.glob("ECG_*.dat")):
+    for path in _case_postprocessing_files(output_dir, "ECG_*.dat"):
         match = re.match(r"ECG_(?P<dimension>\dD)_", path.name)
         if match is None:
             continue
@@ -2492,7 +2543,7 @@ def plot_ecg_electrode_geometry(
     fig = plt.figure(figsize=(7.8, 6.2))
     ax3 = fig.add_subplot(1, 1, 1, projection="3d")
 
-    three_d = driver_defaults.ECG_ELECTRODES_BY_DIMENSION["3D"]
+    three_d = _read_electrode_positions(_TUTORIAL_ELECTRO_PROPERTIES)
     for start, end in _unit_cube_edges():
         ax3.plot(
             [start[0], end[0]],
@@ -2914,7 +2965,7 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
     if expected_filenames is not None:
         available_filenames = {
             path.name
-            for path in output_path.glob("*.dat")
+            for path in _case_postprocessing_files(output_path, "*.dat")
             if FILENAME_PATTERN.match(path.name)
         }
         unexpected = sorted(available_filenames - expected_filenames)

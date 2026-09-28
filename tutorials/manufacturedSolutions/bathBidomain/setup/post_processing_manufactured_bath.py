@@ -8,14 +8,8 @@ import math
 import os
 from pathlib import Path
 import re
-import sys
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-DRIVER_ROOT = REPO_ROOT / "applications" / "scripts" / "driverFoam"
-if str(DRIVER_ROOT) not in sys.path:
-    sys.path.insert(0, str(DRIVER_ROOT))
-
-from openfoam_driver.postprocessing.style import (
+from omnidriver.postprocessing.style import (
     configure_matplotlib_defaults,
     finalize_matplotlib_figure,
     style_matplotlib_axes,
@@ -34,7 +28,12 @@ ERROR_FIELDS = (
     "N",
     *(f"{norm}_{name}" for name in FIELD_NAMES for norm in ("L1", "L2", "Linf")),
 )
-FILENAME_PATTERN = re.compile(r"bathBidomain_(\dD)_(\d+)_cells\.dat$")
+#: Corrected 2026-09-28: this required a "bathBidomain_" prefix no case has
+#: ever produced -- the verifier writes plain <dim>_<N>_cells.dat (confirmed
+#: against a real sweep case's own postProcessing/; regressionTest.sh's own
+#: working match is already the unprefixed "postProcessing/*_cells.dat",
+#: only its comment claimed the prefixed name).
+FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells\.dat$")
 DISABLE_PLOT_ENV_VAR = "BATH_BIDOMAIN_DISABLE_PLOTS"
 PLOT_DISABLED = os.environ.get(DISABLE_PLOT_ENV_VAR, "").strip().lower() in {
     "1",
@@ -124,12 +123,22 @@ def _load_expected_filenames(output_dir):
 
 
 def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None):
+    """Read every swept case's own bathBidomain_*_cells.dat.
+
+    Each case writes its own verifier .dat directly into its own
+    postProcessing/ (case_dir/postProcessing/bathBidomain_<dim>_<N>_cells.dat);
+    this reads every case in the sweep rather than one shared flat folder
+    (the old sweep wrapper's convention).
+    """
     folder = Path(folder_name)
     if not folder.exists():
         print("Folder does not exist:", folder)
         return []
 
-    files = sorted(path for path in folder.glob("*.dat") if FILENAME_PATTERN.match(path.name))
+    files = sorted(
+        path for path in folder.glob("cases/*/postProcessing/*.dat")
+        if FILENAME_PATTERN.match(path.name)
+    )
     if expected_filenames is not None:
         files = [path for path in files if path.name in expected_filenames]
 

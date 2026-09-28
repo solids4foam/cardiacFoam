@@ -428,16 +428,20 @@ def postprocess_one_ionic_model(
 ):
 
 
-    output_dir = base_dir / output_folder / ionic_model
-    print(f"DEBUG: base_dir={base_dir}, output_folder={output_folder}, output_dir={output_dir}")
-    if not output_dir.exists():
-        print(f"❌ Output folder not found: {output_dir}")
+    # Traces sit directly in a swept case's own postProcessing/ (this
+    # tutorial's studies never sort them into a per-ionic-model
+    # subdirectory), so the search root is output_folder itself; only the
+    # results this function writes are organized under ionic_model.
+    input_dir = base_dir / output_folder
+    output_dir = input_dir / ionic_model
+    print(f"DEBUG: base_dir={base_dir}, output_folder={output_folder}, input_dir={input_dir}")
+    if not input_dir.exists():
+        print(f"❌ Output folder not found: {input_dir}")
         return
     print(f"\n📊 Processing ionic model: {ionic_model}")
 
     plt.figure()
     data_rows = []
-    input_dir = output_dir
 
     all_restitution_data = []
 
@@ -585,14 +589,14 @@ def run_postprocessing(
     setup_root: str | None = None,
     **kwargs,
 ) -> list:
-    """run_postprocessing entry point matching openfoam_driver.postprocessing's
+    """run_postprocessing entry point matching omnidriver.postprocessing's
     PostprocessingProtocol shape (output_dir, setup_root, **kwargs) -> list[dict].
 
-    Not currently invoked automatically -- driverFOAM has no post-DAG hook
-    calling this (openfoam_driver.postprocessing.driver, which used to wire
-    tutorial postprocessing functions into the run engine, was removed
-    2026-08-18 after being found unreachable). Run manually against a
-    completed sweep's output_dir until a replacement hand-off exists.
+    Not currently invoked automatically -- nothing in omnidriver's runtime
+    calls tutorial postprocessing scripts on its own behalf (Core declines to
+    inspect solver output trees; see run_postprocess_phase). Run manually
+    against a completed sweep's output_dir until a replacement hand-off
+    exists.
     Expected kwargs:
         ionic_models  (list[str])        - Models to post-process.
         tissue_map    (dict[str, list])  - Tissue types per ionic model.

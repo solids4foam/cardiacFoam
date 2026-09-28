@@ -9,7 +9,9 @@ IFS=$'\n\t'
 # Uses the 1D mesh (system/blockMeshDict.1D, 80 cells per block) that
 # matches the dimension "1D" entry in constant/electroProperties. The
 # manufacturedFDABathBidomainVerifier writes a per-run summary file
-# named postProcessing/bathBidomain_<DIM>_<N>_cells.dat
+# named postProcessing/<DIM>_<N>_cells.dat (corrected 2026-09-28: this said
+# a "bathBidomain_"-prefixed name no case has ever produced; the match
+# below was already the unprefixed pattern)
 # whose values are compared against bathBidomainManufactured.reference.
 
 ALLRUN_LOGFILE="log.Allrun"
