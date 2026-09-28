@@ -31,7 +31,6 @@ Description
 
 SourceFiles
     myocardiumPrePacing.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef myocardiumPrePacing_H
