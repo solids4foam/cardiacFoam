@@ -1,46 +1,85 @@
+import json
+import re
 from pathlib import Path
-import sys
-import pandas as pd
+
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
+from omnidriver.postprocessing.style import apply_plotly_layout, write_plotly_html
 
-from openfoam_driver.postprocessing.plotting_common import extract_dx_dt
-from openfoam_driver.postprocessing.style import apply_plotly_layout, write_plotly_html
+_PROBE_LINE = re.compile(r"^# Probe (\d+) \(([^)]+)\)")
+
+#: This tutorial's studies sweep dx/dt only; solutionAlgorithm is fixed to
+#: implicit in every one of them today.
+_SOLVER = "implicit"
+
+
+def _read_latest_probe_row(function_object_dir: Path, field: str):
+    """Return (probe_xyz, values) from a `probes` functionObject's last row.
+
+    See NiedererEtAl2011verification/setup/table_summary.py's identically
+    named helper for why every instance directory must be checked.
+    """
+    if not function_object_dir.is_dir():
+        return None
+    for instance_dir in sorted(p for p in function_object_dir.iterdir() if p.is_dir()):
+        sample_path = instance_dir / field
+        if not sample_path.is_file():
+            continue
+        probes: list[tuple[float, float, float]] = []
+        last_row: list[float] | None = None
+        for line in sample_path.read_text().splitlines():
+            match = _PROBE_LINE.match(line)
+            if match:
+                _, coords = match.groups()
+                x, y, z = (float(v) for v in coords.split())
+                probes.append((x, y, z))
+                continue
+            if not line.strip() or line.startswith("#"):
+                continue
+            last_row = [float(token) for token in line.split()]
+        if last_row is not None:
+            return probes, last_row[1:]
+    return None
 
 
 # -----------------------------------------------------------
-# Load all point CSVs
+# Load every swept case's benchmark point samples
 # -----------------------------------------------------------
-def load_all_point_files(folder):
-    folder = Path(folder)
-    files = sorted(folder.glob("*points_DT*_DX*.csv"))
-
-    if not files:
-        print(f"No point CSV files found in: {folder}")
+def load_all_point_cases(output_dir):
+    output_dir = Path(output_dir)
+    manifest_path = output_dir / "sweep_manifest.json"
+    if not manifest_path.is_file():
+        print(f"No sweep_manifest.json found in: {output_dir}")
         return []
+    manifest = json.loads(manifest_path.read_text())
 
     all_data = []
-
-    for fpath in files:
-        filename = fpath.name
-        dx, dt = extract_dx_dt(filename)
-        df = pd.read_csv(fpath)
-
-        activation = df["activationTime"].values * 1000.0  # to ms
+    for case in manifest.get("cases", []):
+        case_dir = output_dir / "cases" / case["case_id"]
+        axes = case.get("resolved_axis_values", {})
+        dx_m = axes.get("dx", axes.get("tetDx"))
+        dt_s = axes.get("system/controlDict:deltaT")
+        if dx_m is None or dt_s is None:
+            continue
+        sample = _read_latest_probe_row(case_dir / "postProcessing" / "Niedererpoints", "activationTime")
+        if sample is None:
+            continue
+        _probes, values = sample
+        # s -> ms, except this repository's "never activated" sentinel (-1),
+        # which is never converted -- a short verification endTime can leave
+        # any of the 9 benchmark points unactivated.
+        activation = np.array([v if v == -1.0 else v * 1000.0 for v in values])
 
         all_data.append({
-            "DX": dx,
-            "DT": dt,
+            "DX": round(float(dx_m) * 1000.0, 4),
+            "DT": round(float(dt_s) * 1000.0, 5),
+            "solver": _SOLVER,
             "activation": activation,
-            "df": df
         })
 
-    print(f"Loaded {len(all_data)} point files from {folder}")
+    print(f"Loaded {len(all_data)} swept cases from {output_dir}")
     for e in all_data:
         print(f"  - DX={e['DX']:.3f} mm, DT={e['DT']:.4f} ms")
 
@@ -64,26 +103,8 @@ def find_earliest_point(all_data):
     return int(np.argmin(avg_times))
 
 
-# -----------------------------------------------------------
-# Load geometry (shared)
-# -----------------------------------------------------------
-def load_point_geometry_from_sample(folder):
-    folder = Path(folder)
-    sample = sorted(folder.glob("points_DT*_DX*.csv"))
-    if not sample:
-        raise FileNotFoundError("No CSV files for geometry.")
-
-    df = pd.read_csv(sample[0])
-
-    xs = df["Points:0"].values
-    ys = df["Points:1"].values
-    zs = df["Points:2"].values
-
-    return xs, ys, zs
-
-
 def plot_3d_points_and_grid(folder=".", show: bool = True):
-    all_data = load_all_point_files(folder)
+    all_data = load_all_point_cases(folder)
     if not all_data:
         return None
 
@@ -122,7 +143,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
         color_here = point_colors[p]
 
         # scatter
-        for solver in ['implicit']:
+        for solver in [_SOLVER]:
             mask = (Solver_all == solver)
             if not np.any(mask): continue
             symbol = 'square'
@@ -138,7 +159,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
         # DX lines
         for dx_val in np.unique(DX_all):
-            for solver in ['implicit']:
+            for solver in [_SOLVER]:
                 mask = (DX_all == dx_val) & (Solver_all == solver)
                 if not np.any(mask): continue
                 idx_sorted = np.argsort(DT_all[mask])
@@ -154,7 +175,7 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
         # DT lines
         for dt_val in np.unique(DT_all):
-            for solver in ['implicit']:
+            for solver in [_SOLVER]:
                 mask = (DT_all == dt_val) & (Solver_all == solver)
                 if not np.any(mask): continue
                 idx_sorted = np.argsort(DX_all[mask])
@@ -214,10 +235,11 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> None:
     """Plot 3D activation-time surfaces across the benchmark's 9 probe points.
 
-    Reads every `points*.csv` in output_dir (one per swept case), and for
-    each of the 9 benchmark probe points (excluding the earliest-activated
-    one, used as the stimulus reference) draws a 3D surface of activation
-    time over the swept dx/dt grid. Writes activation_surfaces_3d.html.
+    Reads every swept case's own postProcessing/Niedererpoints output, and
+    for each of the 9 benchmark probe points (excluding the
+    earliest-activated one, used as the stimulus reference) draws a 3D
+    surface of activation time over the swept dx/dt grid. Writes
+    activation_surfaces_3d.html.
     """
     del setup_root
     output_html = plot_3d_points_and_grid(output_dir, show=False)
@@ -237,6 +259,6 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
 # Manual run
 # -----------------------------------------------------------
 if __name__ == "__main__":
-    folder = Path(__file__).resolve().parent.parent / "NiedererFoam"
+    folder = Path(__file__).resolve().parent.parent
     print(f"[points_postProcessing] Default folder = {folder}")
     plot_3d_points_and_grid(folder)
