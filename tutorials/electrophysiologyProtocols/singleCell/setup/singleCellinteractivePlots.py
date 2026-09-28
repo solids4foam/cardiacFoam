@@ -37,7 +37,6 @@ Output:
 """
 
 import os
-import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -46,17 +45,13 @@ from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 import plotly.graph_objs as go
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.plotting_common import (
+from omnidriver.postprocessing.plotting_common import (
     build_visibility_mask,
     ordered_unique,
     parse_two_part_stem,
 )
-from openfoam_driver.postprocessing.style import apply_plotly_layout
-from openfoam_driver.postprocessing.style import write_plotly_html
+from omnidriver.postprocessing.style import apply_plotly_layout
+from omnidriver.postprocessing.style import write_plotly_html
 
 
 STATE_COUNTS = {
