@@ -18,3 +18,5 @@ LIB_LIBS = \
     $(if $(CARDIAC_ENABLE_CUDA),-L$(CUDA_HOME)/lib64 -lcudart)
 
 $(if $(CARDIAC_ENABLE_CUDA),$(eval sinclude $(WM_DIR)/rules/General/cuda))
+
+$(if $(CARDIAC_ENABLE_CUDA),$(eval cuFLAGS = $$(if $$(CUDA_HOST_CXX),-ccbin $$(CUDA_HOST_CXX)) $$(GFLAGS) -DNoRepository $$(cuARCH) $$(cuOPT) $$(cuDBUG) $$(patsubst -iquote%,-I%,$$(LIB_HEADER_DIRS))))

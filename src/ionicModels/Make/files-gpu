@@ -10,3 +10,4 @@ TNNPBatched/TNNPBatched_cuda.cu
 ToRORd_dynClBatched/ToRORd_dynClBatched_cuda.cu
 TrovatoBatched/TrovatoBatched_cuda.cu
 TWorldBatched/TWorldBatched_cuda.cu
+verificationModels/monodomainFDAManufactured/monodomainFDAManufacturedBatched_cuda.cu

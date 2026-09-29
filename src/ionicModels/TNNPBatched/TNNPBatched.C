@@ -319,6 +319,17 @@ void Foam::TNNPcompactBatched::solveOnDevice
             static_cast<std::size_t>(N)
         );
     }
+    else if (!solveVm)
+    {
+        const std::size_t vmStateI =
+            static_cast<std::size_t>(voltageStateIndex());
+        cuda_.syncStateSliceHostToDevice
+        (
+            statesSoAData() + vmStateI*static_cast<std::size_t>(N),
+            vmStateI,
+            static_cast<std::size_t>(N)
+        );
+    }
 
     for (label sub = 0; sub < nSub; ++sub)
     {
@@ -333,15 +344,30 @@ void Foam::TNNPcompactBatched::solveOnDevice
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             tFlag, solveVm, stimulusPOD_
         );
-        launchTnnpRushLarsenStepKernel
-        (
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            static_cast<double>(dtSubstep),
-            static_cast<int>(N),
-            static_cast<int>(NUM_STATES),
-            solveVm,
-            static_cast<int>(V)
-        );
+        if (useEulerIntegrator())
+        {
+            launchTnnpEulerStepKernel
+            (
+                cuda_.d_states, cuda_.d_rates,
+                static_cast<double>(dtSubstep),
+                static_cast<int>(N),
+                static_cast<int>(NUM_STATES),
+                solveVm,
+                static_cast<int>(V)
+            );
+        }
+        else
+        {
+            launchTnnpRushLarsenStepKernel
+            (
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                static_cast<double>(dtSubstep),
+                static_cast<int>(N),
+                static_cast<int>(NUM_STATES),
+                solveVm,
+                static_cast<int>(V)
+            );
+        }
     }
 
     launchTnnpBatchKernel

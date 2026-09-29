@@ -243,6 +243,26 @@ protected:
             }
         }
 
+        bool useEulerIntegrator() const
+        {
+            if (integratorName_ == "euler")
+            {
+                return true;
+            }
+
+            if (integratorName_ == "rushLarsen")
+            {
+                return false;
+            }
+
+            FatalIOErrorInFunction(dict())
+                << "Unknown batchedIntegrator '" << integratorName_
+                << "' for ionic model " << type()
+                << ". Valid values are: euler, rushLarsen."
+                << exit(FatalIOError);
+            return false;
+        }
+
         void configurePersistentAlgebraics()
         {
             const bool requested =
@@ -832,9 +852,9 @@ protected:
             scalarUList& supportValues
         ) const
         {
-            evaluateState
+            (void)cellI;
+            evaluateHotPathState
             (
-                cellI,
                 modelTime,
                 stateValues,
                 rateValues,
@@ -1252,6 +1272,11 @@ public:
             scalarField& Im
         ) override
         {
+            // SBDF2 asks for a current refresh after the tissue Vm solve.
+            // A CUDA solve leaves the authoritative ionic state on device;
+            // derived GPU models synchronize it to the host in this hook.
+            prepareIOAccess(wordList(), false);
+
             const scalar modelTime = t*timeScaleFactor();
             const label vmStateI = voltageStateIndex();
             const bool useExplicitEuler = integratorName_ == "euler";

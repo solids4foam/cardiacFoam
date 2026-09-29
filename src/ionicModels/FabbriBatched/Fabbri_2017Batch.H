@@ -434,7 +434,7 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             RATES_SoA[Ito_r_gate_r * N + cellI] = (alg_AV_r_infinity - state_Ito_r_gate_r) / alg_AV_tau_r;
 
             /* *remaining* */
-            RATES_SoA[Ca_sub * N + cellI] = alg_AV_j_SRCarel * CONSTANTS[AC_V_jsr] / CONSTANTS[AC_V_sub] - ((alg_AV_i_siCa + alg_AV_i_CaT_i_CaT - 2.0 * alg_AV_i_NaCa_i_NaCa) / (2.0 * CONSTANTS[AC_F] * CONSTANTS[AC_V_sub]) + alg_AV_j_Ca_dif + CONSTANTS[AC_CM_tot] * alg_AV_delta_fCMs);
+            RATES_SoA[Ca_sub * N + cellI] = alg_AV_j_SRCarel * CONSTANTS[AC_V_jsr] / CONSTANTS[AC_V_sub] - ((alg_AV_i_siCa + alg_AV_i_CaT_i_CaT - 2.0 * alg_AV_i_NaCa_i_NaCa) / (2000.0 * CONSTANTS[AC_F] * CONSTANTS[AC_V_sub]) + alg_AV_j_Ca_dif + CONSTANTS[AC_CM_tot] * alg_AV_delta_fCMs);
             alg_AV_E_Na = CONSTANTS[AC_RTONF] * log(CONSTANTS[AC_Nao] / alg_AV_Nai);
             alg_AV_i_KACh_i_KACh = ((CONSTANTS[AC_ACh] > 0.0) ? CONSTANTS[AC_ACh_on] * CONSTANTS[AC_g_KACh] * (alg_AV_V - CONSTANTS[AC_E_K]) * (1.0 + exp((alg_AV_V + 20.0) / 20.0)) * state_IKACh_a_gate_a : 0.0);
             alg_AV_i_Kr_i_Kr = CONSTANTS[AC_g_Kr] * (alg_AV_V - CONSTANTS[AC_E_K]) * (0.9 * state_IKr_pa_gate_paF + 0.1 * state_IKr_pa_gate_paS) * state_IKr_pi_gate_piy;
@@ -446,7 +446,7 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
             alg_AV_i_fK = state_If_y_gate_y * CONSTANTS[AC_g_f_K] * (alg_AV_V - CONSTANTS[AC_E_K]) * (1.0 - CONSTANTS[AC_blockade]);
             alg_AV_i_fNa = state_If_y_gate_y * CONSTANTS[AC_g_f_Na] * (alg_AV_V - alg_AV_E_Na) * (1.0 - CONSTANTS[AC_blockade]);
             alg_AV_i_to_i_to = CONSTANTS[AC_g_to] * (alg_AV_V - CONSTANTS[AC_E_K]) * state_Ito_q_gate_q * state_Ito_r_gate_r;
-            RATES_SoA[Na_i * N + cellI] = (1.0 - CONSTANTS[AC_Nai_clamp]) * -1.0 * (alg_AV_i_Na_i_Na + alg_AV_i_fNa + alg_AV_i_siNa + 3.0 * alg_AV_i_NaK_i_NaK + 3.0 * alg_AV_i_NaCa_i_NaCa) / (1.0 * (CONSTANTS[AC_V_i] + CONSTANTS[AC_V_sub]) * CONSTANTS[AC_F]);
+            RATES_SoA[Na_i * N + cellI] = (1.0 - CONSTANTS[AC_Nai_clamp]) * -1.0 * (alg_AV_i_Na_i_Na + alg_AV_i_fNa + alg_AV_i_siNa + 3.0 * alg_AV_i_NaK_i_NaK + 3.0 * alg_AV_i_NaCa_i_NaCa) / (1000.0 * (CONSTANTS[AC_V_i] + CONSTANTS[AC_V_sub]) * CONSTANTS[AC_F]);
             alg_AV_i_f_i_f = alg_AV_i_fNa + alg_AV_i_fK;
             alg_Iion_cm = alg_AV_i_f_i_f + alg_AV_i_Kr_i_Kr + alg_AV_i_Ks_i_Ks + alg_AV_i_to_i_to + alg_AV_i_NaK_i_NaK + alg_AV_i_NaCa_i_NaCa + alg_AV_i_Na_i_Na + alg_AV_i_CaL_i_CaL + alg_AV_i_CaT_i_CaT + alg_AV_i_KACh_i_KACh + alg_AV_i_Kur_i_Kur;
 
@@ -454,7 +454,7 @@ CARDIAC_HOST_DEVICE inline void FabbriComputeVariablesBatch
 
             if (solveVm)
             {
-                RATES_SoA[membrane_V * N + cellI] = -alg_Iion_cm - alg_Istim;
+                RATES_SoA[membrane_V * N + cellI] = -(alg_Iion_cm + alg_Istim) / CONSTANTS[AC_C];
             }
             else
             {

@@ -4,6 +4,7 @@ ionicModel/ionicHeterogeneity.C
 ionicModel/ionicHeterogeneityOrchestrator.C
 
 verificationModels/monodomainFDAManufactured/monodomainFDAManufactured.C
+verificationModels/monodomainFDAManufactured/monodomainFDAManufacturedBatched.C
 verificationModels/bidomainFDAManufactured/bidomainFDAManufactured.C
 verificationModels/bathBidomainFDAManufactured/bathBidomainFDAManufactured.C
 

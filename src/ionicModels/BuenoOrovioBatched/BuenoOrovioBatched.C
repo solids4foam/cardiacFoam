@@ -314,6 +314,17 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
             static_cast<std::size_t>(N)
         );
     }
+    else if (!solveVm)
+    {
+        const std::size_t vmStateI =
+            static_cast<std::size_t>(voltageStateIndex());
+        cuda_.syncStateSliceHostToDevice
+        (
+            statesSoAData() + vmStateI*static_cast<std::size_t>(N),
+            vmStateI,
+            static_cast<std::size_t>(N)
+        );
+    }
 
     for (label sub = 0; sub < nSub; ++sub)
     {
@@ -328,15 +339,30 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             tFlag, solveVm, stimulusPOD_
         );
-        launchBuenoRushLarsenStepKernel
-        (
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            static_cast<double>(dtSubstep),
-            static_cast<int>(N),
-            static_cast<int>(NUM_STATES),
-            solveVm,
-            static_cast<int>(u)
-        );
+        if (useEulerIntegrator())
+        {
+            launchBuenoEulerStepKernel
+            (
+                cuda_.d_states, cuda_.d_rates,
+                static_cast<double>(dtSubstep),
+                static_cast<int>(N),
+                static_cast<int>(NUM_STATES),
+                solveVm,
+                static_cast<int>(u)
+            );
+        }
+        else
+        {
+            launchBuenoRushLarsenStepKernel
+            (
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                static_cast<double>(dtSubstep),
+                static_cast<int>(N),
+                static_cast<int>(NUM_STATES),
+                solveVm,
+                static_cast<int>(u)
+            );
+        }
     }
 
     launchBuenoBatchKernel
@@ -540,7 +566,8 @@ Foam::scalar Foam::BuenoOrovioBatched::ionicCurrentFromHotPathSupport
     const scalarUList& supportValues
 ) const
 {
-    return supportValues[BO_BATCH_SUPPORT_Iion];
+    // The scalar model converts reduced Jion to tissue current as 85.7*Jion.
+    return 85.7*supportValues[BO_BATCH_SUPPORT_Iion];
 }
 
 void Foam::BuenoOrovioBatched::evaluateHotPathState

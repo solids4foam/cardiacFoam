@@ -5,6 +5,7 @@ License
 
 #include <cuda_runtime.h>
 #include <cstdio>
+#include <cstdlib>
 
 #include "Gaur_2021Batch.H"
 
@@ -20,7 +21,7 @@ License
                 "[cardiacFoam CUDA] kernel error at %s:%d — %s\n",            \
                 __FILE__, __LINE__, cudaGetErrorString(_err)                   \
             );                                                                 \
-            abort();                                                           \
+            std::abort();                                                      \
         }                                                                      \
     } while (0)
 // ---------------------------------------------------------------------------
@@ -202,7 +203,7 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*exp(-dt/_tau);       \
+            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
         }
 
         GAUR_RL(I_Na_m,     GAUR_BATCH_SUPPORT_tau_m,      GAUR_BATCH_SUPPORT_gInf_m)
@@ -219,6 +220,7 @@ namespace
         GAUR_RL(IKs_xs2,    GAUR_BATCH_SUPPORT_tau_xs2,    GAUR_BATCH_SUPPORT_gInf_xs2)
         GAUR_RL(CICR_Jrel1, GAUR_BATCH_SUPPORT_tau_Jrel1,  GAUR_BATCH_SUPPORT_gInf_Jrel1)
         GAUR_RL(CICR_Jrel2, GAUR_BATCH_SUPPORT_tau_Jrel2,  GAUR_BATCH_SUPPORT_gInf_Jrel2)
+        GAUR_RL(ITo_aa,     GAUR_BATCH_SUPPORT_tau_aa,     GAUR_BATCH_SUPPORT_gInf_aa)
 
         #undef GAUR_RL
 
@@ -228,7 +230,7 @@ namespace
                 si == INaL_ml  || si == INaL_hl  || si == ICaL_d   ||
                 si == ICaL_fca || si == ICaL_ff  || si == ICaL_fs  ||
                 si == IKr_xr   || si == IKs_xs1  || si == IKs_xs2  ||
-                si == CICR_Jrel1 || si == CICR_Jrel2) continue;
+                si == CICR_Jrel1 || si == CICR_Jrel2 || si == ITo_aa) continue;
             if (!solveVm && si == vmStateI) continue;
             const int idx = si*N + cellI;
             STATES[idx] += dt*RATES[idx];

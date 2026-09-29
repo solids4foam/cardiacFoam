@@ -461,6 +461,17 @@ void Foam::PerisYaguecompactBatched::solveOnDevice
             static_cast<std::size_t>(N)
         );
     }
+    else if (!solveVm)
+    {
+        const std::size_t vmStateI =
+            static_cast<std::size_t>(voltageStateIndex());
+        cuda_.syncStateSliceHostToDevice
+        (
+            statesSoAData() + vmStateI*static_cast<std::size_t>(N),
+            vmStateI,
+            static_cast<std::size_t>(N)
+        );
+    }
 
     for (label sub = 0; sub < nSub; ++sub)
     {
@@ -471,15 +482,30 @@ void Foam::PerisYaguecompactBatched::solveOnDevice
             cuda_.d_states, cuda_.d_rates, cuda_.d_support,
             solveVm, stimulusPOD_
         );
-        launchPerisYagueRushLarsenStepKernel
-        (
-            cuda_.d_states, cuda_.d_rates, cuda_.d_support,
-            static_cast<double>(dtSubstep),
-            static_cast<int>(N),
-            static_cast<int>(NUM_STATES),
-            solveVm,
-            static_cast<int>(membrane_V)
-        );
+        if (useEulerIntegrator())
+        {
+            launchPerisYagueEulerStepKernel
+            (
+                cuda_.d_states, cuda_.d_rates,
+                static_cast<double>(dtSubstep),
+                static_cast<int>(N),
+                static_cast<int>(NUM_STATES),
+                solveVm,
+                static_cast<int>(membrane_V)
+            );
+        }
+        else
+        {
+            launchPerisYagueRushLarsenStepKernel
+            (
+                cuda_.d_states, cuda_.d_rates, cuda_.d_support,
+                static_cast<double>(dtSubstep),
+                static_cast<int>(N),
+                static_cast<int>(NUM_STATES),
+                solveVm,
+                static_cast<int>(membrane_V)
+            );
+        }
     }
 
     launchPerisYagueBatchKernel
