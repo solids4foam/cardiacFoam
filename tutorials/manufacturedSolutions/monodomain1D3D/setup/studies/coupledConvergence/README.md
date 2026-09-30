@@ -6,15 +6,10 @@ This study validates spatial and/or temporal convergence for the coupled 1D-3D m
 
 ## Execution
 
-From the repository root, use the current wrapper and one of the study specs:
+From the repository root, use the current wrapper and one of the study specs. Spec: `tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json`.
 
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json \
-    --output-dir .tmp/driverfoam/monodomain1D3D-active
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json \
-    --output-dir .tmp/driverfoam/monodomain1D3D-active
+[omnidriver command to run]
 ```
 
 The `bidirectional` and `decoupled` specs use fully scoped

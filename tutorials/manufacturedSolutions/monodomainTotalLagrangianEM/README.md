@@ -76,10 +76,10 @@ Local boundary-condition library is compiled from `src/` before case runs. Compi
 
 Full solids4foam build only: there is no lightweight variant, and `Allrun` stops if `libelectroMechanicalModels` is missing. `regression/regressionTest.sh` covers the case in `Alltest-regression` on a 20³ mesh. With `CARDIAC_REGRESSION_BUILD_MODE=lightweight` it is an expected skip, so it only runs in a `with-solids4foam` regression run; CI currently runs lightweight only.
 
-### Driver-Managed Convergence Sweeps (Suggested)
+### Omnidriver-Managed Convergence Sweeps (Suggested)
 
 ```bash
-driverFoam run --strict --entry manufacturedMonodomainTotalLagrangianEM
+[omnidriver command to run]
 ```
 
 Refinement sweep follows monodomain manufactured pattern:

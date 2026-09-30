@@ -62,33 +62,27 @@ blockMesh -dict system/blockMeshDict.1D
 ./regressionTest.sh
 ```
 
-### Driver-Managed Sweeps (Suggested)
+### Omnidriver-Managed Sweeps (Suggested)
 
-Cartesian spatial convergence:
+Cartesian spatial convergence. Spec: `setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bidomain_cartesian
 ```
 
-Temporal convergence:
+Temporal convergence. Spec: `setup/studies/temporalConvergence/sweep_temporal_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bidomain_temporal
 ```
 
-Tetrahedral gradient-scheme and corrector studies:
+Tetrahedral gradient-scheme and corrector studies. Specs: `setup/studies/tetConvergence/sweep_tet_generic.json`, `setup/studies/corrector/sweep_corrector_study.json`, `setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json`, `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`, `setup/studies/correctorN80/sweep_corrector_n80.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetConvergence/sweep_tet_generic.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
-
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
-
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json
 ```
 
 The complete rerun matrix contains 54 cases: Cartesian spatial (12), primary

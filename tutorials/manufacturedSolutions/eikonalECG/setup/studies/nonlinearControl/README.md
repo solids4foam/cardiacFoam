@@ -18,15 +18,13 @@ the planned release reruns.
 
 ## Execution
 
-First materialize and inspect the twelve driverFOAM cases:
+First materialize and inspect the twelve omnidriver cases. Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json`.
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
+    [omnidriver command to run]
 
-Then execute the same manifest with driverFOAM:
+Then execute the same manifest with omnidriver:
 
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
+    [omnidriver command to run]
 
 Compare the archived activation-time and ECG metrics against the matching rows
 of the generic tetrahedral baseline, and retain the complete four-level

@@ -26,12 +26,7 @@ Start with one normal strict entry to check the dictionaries and workflow for
 the selected manufactured tutorial:
 
 ```bash
-driverFoam plan \
-    --strict \
-    --entry manufacturedMonodomainPseudoECG
-driverFoam run \
-    --strict \
-    --entry manufacturedMonodomainPseudoECG
+[omnidriver command to run]
 ```
 
 `plan` validates and reports the generated case. `run` executes that one case
@@ -48,14 +43,11 @@ the directory contains the manifest and per-case state, so reusing one while
 another run is active can mix or resume state from the other run.
 
 Before running a case, configure the host-specific OpenFOAM/runtime file as
-described in the driverFOAM add-on's own README, then check a sweep
-without launching OpenFOAM:
+described in omnidriver's own README, then check a sweep
+without launching OpenFOAM. Spec: `tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
-export DRIVERFOAM_RUNTIME_CONFIG=/absolute/path/driverfoam-runtime.yaml
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
-    --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
+[omnidriver command to run]
 ```
 
 Use `sweep-run` only after the plan is ready. The current checkout was audited

@@ -6,21 +6,19 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-First materialize and inspect the 12 Cartesian cases:
+First materialize and inspect the 12 Cartesian cases. Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
-    driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+    [omnidriver command to run]
 
-Then run the same manifest with driverFOAM:
+Then run the same manifest with omnidriver:
 
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+    [omnidriver command to run]
 
 Each case runs both the manufactured activation-time verifier and the
 manufactured eikonal-ECG verifier. The ECG reference uses Gauss-Legendre order 48 with no check orders.
 Against order 96, the worst order-48 difference over the closest eight
 electrodes (standoff 0.051-0.082) is 9.1e-7.
-The former aggregate.py command has been removed; use the archived driverFOAM
+The former aggregate.py command has been removed; use the archived omnidriver
 outputs as the run record until an in-repository canonical collector is
 added.
 

@@ -11,14 +11,14 @@ order for this configured bath-bidomain advance.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json \
-    --output-dir .tmp/driverfoam/bathBidomain-temporal
+[omnidriver command to run]
 ```
 
 ## Status
 
-The manifest is driverFOAM-plan validated. Numerical results and any temporal
+The manifest is omnidriver-plan validated. Numerical results and any temporal
 order claim remain pending an OpenFOAM run and a check for a spatial-error
 floor at the accepted levels.

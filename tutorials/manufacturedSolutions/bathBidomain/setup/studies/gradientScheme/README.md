@@ -19,14 +19,13 @@ so it is fixed in each spec's `base` rather than swept as an axis.
 
 ## Execution
 
+Specs: `setup/studies/gradientScheme/sweep_current.json`, `setup/studies/gradientScheme/sweep_gaussLinear.json`, `setup/studies/gradientScheme/sweep_limitedCorrection.json`, `setup/studies/gradientScheme/sweep_orthogonalControl.json`.
+
 ```bash
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_current.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_gaussLinear.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_limitedCorrection.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_orthogonalControl.json
+[omnidriver command to run]
 ```
 
-`driverFoam` is the external orchestration add-on (not part of this repo;
+`omnidriver` is the external orchestration add-on (not part of this repo;
 see the root `CLAUDE.md`).
 
 ## Status
@@ -41,7 +40,7 @@ lands if you go on to aggregate these.
 
 `constant/electroProperties` must set
 `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
-— `_apply_case` always writes this key, and a driverFOAM sweep for this
+— `_apply_case` always writes this key, and an omnidriver sweep for this
 tutorial (tet or hex) fails with `KeyError` without it.
 
 ## Tracking & Outputs

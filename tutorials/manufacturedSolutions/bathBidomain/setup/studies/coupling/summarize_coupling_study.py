@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Summarise the bath predictor-corrector control.
 
-Reads driverFOAM sweep-run's own archive layout for
+Reads omnidriver sweep-run's own archive layout for
 setup/studies/coupling/sweep_coupling_study.json: each case lands at
 <case_root>/<caseId>/<archive_dir_name>/bathBidomainInterfaceMetrics.csv,
 where <archive_dir_name> is the spec's own
@@ -57,7 +57,7 @@ def main() -> None:
     if not rows:
         raise SystemExit(
             f"No sweep-run case output found under {case_root}/*/{ARCHIVE_RELPATH}/ "
-            "-- run 'driverFoam sweep-run --spec setup/studies/coupling/sweep_coupling_study.json' first."
+            "-- run the omnidriver sweep for setup/studies/coupling/sweep_coupling_study.json first."
         )
 
     baselines = {

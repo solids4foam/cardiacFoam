@@ -15,11 +15,8 @@ the pseudo-ECG metrics per electrode together with the field metrics.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
+
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json \
-    --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json \
-    --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
+[omnidriver command to run]
 ```

@@ -60,10 +60,10 @@ The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbr
 
 #### Tetrahedral Convergence Sweep
 
-Tetrahedral mesh convergence study via driverFOAM:
+Tetrahedral mesh convergence study via omnidriver. Spec: `setup/studies/tetConvergence/sweep_tet_generic.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py tet
 ```
 
@@ -78,20 +78,20 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across multi
 ./regressionTest.sh
 ```
 
-### Driver-Managed Sweeps (Suggested)
+### Omnidriver-Managed Sweeps (Suggested)
 
-Spatial convergence (hex mesh):
+Spatial convergence (hex mesh). Spec: `setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py mono_spatial
 python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 ```
 
-Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D studies use `N = 640`; 3D sweeps did not reach clean asymptotic regime:
+Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D studies use `N = 640`; 3D sweeps did not reach clean asymptotic regime. Spec: `setup/studies/temporalConvergence/sweep_temporal_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
+[omnidriver command to run]
 ```
 
 The temporal spec holds a fixed fine mesh (`N = 640` in 1D/2D and `N = 160`
@@ -106,15 +106,15 @@ unless the control change is smaller than the accepted field-error separation.
 
 The checked-in sweep JSON files are the source of truth for these studies.
 
-Tetrahedral mesh variant (example of running a study):
+Tetrahedral mesh variant (example of running a study). Spec: `setup/studies/tetConvergence/sweep_tet_generic.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py tet
 ```
 
-Tetrahedral mesh-fixed timestep controls:
+Tetrahedral mesh-fixed timestep controls. Spec: `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
+[omnidriver command to run]
 ```

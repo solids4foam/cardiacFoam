@@ -588,7 +588,7 @@ def run_postprocessing(
     """run_postprocessing entry point matching openfoam_driver.postprocessing's
     PostprocessingProtocol shape (output_dir, setup_root, **kwargs) -> list[dict].
 
-    Not currently invoked automatically -- driverFOAM has no post-DAG hook
+    Not currently invoked automatically -- omnidriver has no post-DAG hook
     calling this (openfoam_driver.postprocessing.driver, which used to wire
     tutorial postprocessing functions into the run engine, was removed
     2026-08-18 after being found unreachable). Run manually against a
