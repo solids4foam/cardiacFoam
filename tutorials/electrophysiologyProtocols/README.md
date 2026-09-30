@@ -7,6 +7,7 @@ small, fast, meshless-or-1D/2D cases.
 ```text
 electrophysiologyProtocols/
 ├── singleCell/                 single-point AP runs and ionic-model sweeps
+├── ionicModelGPUBackendParity/  2-D scalar/host-batched/CUDA ionic parity
 ├── ionicHeterogeneity/         transmural heterogeneity probe (meshless)
 ├── restitutionCurves_s1s2Protocol/  S1-S2 APD restitution curves
 ├── cableProtocol/               1D conduction-velocity calibration
@@ -20,6 +21,17 @@ electrophysiologyProtocols/
 
 Single integration-point electrophysiology: runs an ionic model with no
 spatial PDE. The baseline sanity check for any ionic-model change.
+
+Its `setup/studies/ionicModelGPUBackendParity/` companion defines the
+single-cell scalar/batched model matrix. The matching 2-D case is
+`ionicModelGPUBackendParity/`; together they separate cell-level state/current
+checks from tissue-level voltage and activation checks.
+
+## `ionicModelGPUBackendParity/`
+
+A small 2-D monodomain slab for scalar, host-batched, and CUDA-batched ionic
+model comparisons. Its case inputs and model matrix are declarative JSON;
+the case does not embed scheduler or orchestration-tool commands.
 
 ## `ionicHeterogeneity/`
 

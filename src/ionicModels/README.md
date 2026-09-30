@@ -38,13 +38,39 @@ Grouped by the tissue each model represents. "Biophysical" models describe the i
 | `Stewart` | human | biophysical | Stewart et al. (2009), Philosophical Transactions of the Royal Society A, [doi:10.1098/rsta.2008.0283](https://doi.org/10.1098/rsta.2008.0283) |
 | `Trovato` | human | biophysical, automaticity | Trovato et al. (2020), Journal of Molecular and Cellular Cardiology, [doi:10.1016/j.yjmcc.2020.04.001](https://doi.org/10.1016/j.yjmcc.2020.04.001) |
 
-### Batched versions
+### Batched and CUDA implementations
 
-Every model also comes as a GPU-ready batched version: `AlievPanfilovcompactBatched`, `BuenoOroviocompactBatched`, `CourtemanchecompactBatched`, `FabbricompactBatched`, `GaurcompactBatched`, `GrandicompactBatched`, `PerisYaguecompactBatched`, `StewartcompactBatched`, `TNNPcompactBatched`, `TWorldcompactBatched`, `ToRORd_dynClcompactBatched` and `TrovatocompactBatched`. Batched models run on the CPU; building with `CARDIAC_ENABLE_CUDA` set adds a CUDA path.
+Each of the 12 physiological models has a batched implementation in addition
+to its scalar implementation. The ordinary runtime names are
+`AlievPanfilovBatched`, `BuenoOrovioBatched`, `CourtemancheBatched`,
+`FabbriBatched`, `GaurBatched`, `GrandiBatched`, `PerisYagueBatched`,
+`StewartBatched`, `TNNPBatched`, `TWorldBatched`, `ToRORd_dynClBatched` and
+`TrovatoBatched`. The registered `*compactBatched` variants use compact
+per-cell integration support; they use the same model equations and are the
+names used by the GPU tutorial examples.
 
-The [ioniGPUKernel tutorial](../../tutorials/ioniGPUKernel/README.md) explains
-the CUDA build, the scalar/batched source layout, runtime device selection, and
-a TNNP slab comparison.
+The batched implementation stores cell variables in Structure-of-Arrays (SoA)
+layout. Each model's `.Batch.H` contains the host/device equation evaluator,
+shared by the batched CPU loop and CUDA kernels. The model's `.cu` file defines
+CUDA launches and device updates. Shared allocation, integration dispatch,
+transfers, and current coupling live in `ionicModel/` and the batched model
+support layer. This keeps the CPU-batched and CUDA paths on the same batched
+equations; scalar generated CellML equations remain in the scalar model folder
+as the independent reference.
+
+Build with `CARDIAC_ENABLE_CUDA=1` to include the model CUDA sources from
+`Make/files-gpu` and link them into `libionicModels`. A batched runtime model
+can then use CUDA when a device is visible, or its host implementation when no
+device is available. The case chooses the scalar or batched model through
+`ionicModel`; there is no separate case-dictionary `cuda` model. For a real
+GPU validation, require a visible device and confirm its selection in the
+solver log so host fallback is not counted as a GPU run.
+
+The batched integrator is configured separately from the scalar ODE solver.
+Rush--Larsen is applied only to states with a mapped gate form; remaining
+states use Euler. `batchedSubsteps` subdivides the ionic update interval within
+each tissue advance. See the [ionic-model GPU backend parity tutorial](../../tutorials/electrophysiologyProtocols/ionicModelGPUBackendParity/README.md)
+for the 2-D case and its scalar/batched backend comparison inputs.
 
 ### Cell types
 

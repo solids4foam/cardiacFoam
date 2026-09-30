@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "study": "ionicModelGPUBackendParity2D",
+  "case": "electrophysiologyProtocols/ionicModelGPUBackendParity",
+  "description": "Matched real-model comparisons across scalar, batched host, and batched CUDA implementations.",
+  "executionModes": [
+    "scalar_reference",
+    "batched_host",
+    "batched_cuda"
+  ],
+  "slab2DDefaults": {
+    "cellCount": 1500,
+    "deltaT_s": 2e-6,
+    "integrator": "rushLarsen",
+    "substeps": 5,
+    "duration_s": 0.015,
+    "timeCouplingSchemes": [
+      "godunov",
+      "sbdf2"
+    ]
+  },
+  "models": [
+    {
+      "name": "AlievPanfilov",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "BuenoOrovio",
+      "tissue": "epicardialCells",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "Courtemanche",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "Fabbri",
+      "tissue": "myocyte",
+      "slab2D": {
+        "applicable": false,
+        "reason": "AV-node model; no myocardial propagation slab comparison"
+      }
+    },
+    {
+      "name": "Gaur",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "Grandi",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "PerisYague",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "Stewart",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "TNNP",
+      "tissue": "epicardialCells",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "TWorld",
+      "tissue": "epicardialCells",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "ToRORd_dynCl",
+      "tissue": "epicardialCells",
+      "slab2D": {"applicable": true}
+    },
+    {
+      "name": "Trovato",
+      "tissue": "myocyte",
+      "slab2D": {"applicable": true}
+    }
+  ]
+}

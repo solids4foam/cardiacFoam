@@ -106,6 +106,13 @@ unless the control change is smaller than the accepted field-error separation.
 
 The checked-in sweep JSON files are the source of truth for these studies.
 
+### Batched manufactured parity
+
+[`setup/studies/monodomainBatchedParity/`](setup/studies/monodomainBatchedParity/README.md)
+copies the scalar convergence ladders for the batched manufactured ionic model.
+The shared postprocessor checks analytic convergence; the study postprocessor
+compares matching host-batched and CUDA-batched outputs directly.
+
 Tetrahedral mesh variant (example of running a study):
 
 ```bash
