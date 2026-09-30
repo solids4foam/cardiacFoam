@@ -107,6 +107,16 @@ protected:
 
 public:
 
+    //- State vector of every integration point, or nullptr
+    const PtrList<scalarField>* states() const
+    {
+        return ioStatesPtr();
+    }
+
+    //- Overwrite the state vector of every integration point; false when
+    //  the model does not expose its states
+    virtual bool setStates(const UList<scalarField>& states);
+
     virtual bool supportsRestartState() const
     {
         return false;

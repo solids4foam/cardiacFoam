@@ -387,3 +387,167 @@ void Foam::ionicModel::configureRegionHeterogeneity
         heterogeneousInitialStates
     );
 }
+
+
+bool Foam::ionicModel::setStates(const UList<scalarField>& states)
+{
+    PtrList<scalarField>* statesPtr =
+        const_cast<PtrList<scalarField>*>(ioStatesPtr());
+
+    if (!statesPtr || statesPtr->size() != states.size())
+    {
+        return false;
+    }
+
+    forAll(states, i)
+    {
+        (*statesPtr)[i] = states[i];
+    }
+
+    return true;
+}
+
+
+Foam::label Foam::ionicModel::prePaceToConvergence
+(
+    const scalar dt,
+    const scalar tolerance,
+    const label minBeats,
+    const label maxBeats,
+    const scalar beatComparisonInterval,
+    prePacingCoupling* coupling
+)
+{
+    const PtrList<scalarField>* statesPtr = ioStatesPtr();
+
+    if (!statesPtr || statesPtr->size() != 1)
+    {
+        FatalErrorInFunction
+            << "prePaceToConvergence requires a single-integration-point "
+            << "ionic model instance (nIntegrationPoints == 1) with "
+            << "generic state-vector access (ioStatesPtr() != nullptr). "
+            << "Got " << (statesPtr ? statesPtr->size() : -1)
+            << " integration point(s) for model '" << type() << "'."
+            << exit(FatalError);
+    }
+
+    // stimPeriodS1 and beatComparisonInterval are ms; t and dt are s.
+    const scalar checkpoint =
+        (
+            (stimulusProtocol().stimPeriodS1 > SMALL)
+          ? stimulusProtocol().stimPeriodS1
+          : beatComparisonInterval
+        )*1e-3;
+
+    scalarField dummyVm(1, 0.0);
+    scalarField dummyIm(1, 0.0);
+
+    // Ionic state followed by the coupled system's state
+    auto fullState = [&]() -> scalarField
+    {
+        // Re-read: batched models hand out a copy synced on access.
+        const scalarField& ionicState = (*ioStatesPtr())[0];
+        if (!coupling)
+        {
+            return ionicState;
+        }
+        const scalarField coupledState = coupling->state();
+        scalarField s(ionicState.size() + coupledState.size());
+        SubList<scalar>(s, ionicState.size()) = ionicState;
+        SubList<scalar>(s, coupledState.size(), ionicState.size()) =
+            coupledState;
+        return s;
+    };
+
+    auto step = [&](const scalar t0, const scalar h)
+    {
+        solveODE(t0, h, dummyVm, dummyIm);
+        if (coupling)
+        {
+            coupling->advance(t0 + h, h);
+        }
+    };
+
+    // Every processor may pace its own single cell in parallel.
+    OSstream& os =
+        Pstream::parRun()
+      ? static_cast<OSstream&>(Pout)
+      : static_cast<OSstream&>(Info);
+
+    scalarField previous(fullState());
+    scalar t = 0.0;
+    label consecutiveConverged = 0;
+
+    for (label beat = 0; beat < maxBeats; ++beat)
+    {
+        // Absolute checkpoint times keep every comparison at the same phase.
+        const scalar beatStart = t;
+        const scalar beatEnd = scalar(beat + 1)*checkpoint;
+        const label nFullSteps =
+            label(std::floor((beatEnd - beatStart)/dt + 1e-9));
+
+        for (label stepI = 0; stepI < nFullSteps; ++stepI)
+        {
+            step(t, dt);
+            t = beatStart + scalar(stepI + 1)*dt;
+        }
+
+        const scalar remainder = beatEnd - t;
+        if (remainder > SMALL)
+        {
+            step(t, remainder);
+        }
+        t = beatEnd;
+
+        const scalarField current(fullState());
+
+        scalar maxRelDelta = 0.0;
+        forAll(current, stateI)
+        {
+            const scalar denom = Foam::max(mag(previous[stateI]), SMALL);
+            maxRelDelta =
+                Foam::max
+                (
+                    maxRelDelta,
+                    mag(current[stateI] - previous[stateI])/denom
+                );
+        }
+
+        previous = current;
+
+        if ((beat + 1) % 100 == 0)
+        {
+            os  << "prePaceToConvergence: " << type() << " beat "
+                << (beat + 1) << ", max relative state change "
+                << maxRelDelta << endl;
+        }
+
+        if (beat + 1 >= minBeats && maxRelDelta < tolerance)
+        {
+            ++consecutiveConverged;
+            if (consecutiveConverged >= 2)
+            {
+                os  << "prePaceToConvergence: " << type()
+                    << " converged after " << (beat + 1)
+                    << " beats (max relative state change "
+                    << maxRelDelta << " < tolerance " << tolerance << ")"
+                    << endl;
+                return beat + 1;
+            }
+        }
+        else
+        {
+            consecutiveConverged = 0;
+        }
+    }
+
+    FatalErrorInFunction
+        << "prePaceToConvergence: " << type() << " did not converge within "
+        << maxBeats << " beats of " << checkpoint*1e3 << " ms (tolerance "
+        << tolerance << "). Increase maxBeats, loosen tolerance, or check "
+        << "for sustained alternans/instability at this pacing rate in "
+        << "constant/prePacingProperties."
+        << exit(FatalError);
+
+    return maxBeats;
+}

@@ -14,8 +14,8 @@ IFS=$'\n\t'
 # have activated, in every variant.
 #
 # Each variant has its own reference because each reaches the probe
-# differently: monodomain activates it at 28.8ms, hybrid's eikonal-1D
-# Purkinje to 3D monodomain coupling at 30.3ms, and eikonal solves a single
+# differently: monodomain activates it at 28.9ms, hybrid's eikonal-1D
+# Purkinje to 3D monodomain coupling at 30.1ms, and eikonal solves a single
 # steady problem that writes only time 1. The sample time in each reference
 # reflects that; the expected values were measured, not chosen.
 #

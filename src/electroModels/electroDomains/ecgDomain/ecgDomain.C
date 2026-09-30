@@ -56,23 +56,13 @@ word outputFileName(const word& solverType)
 }
 
 
-dictionary withInheritedManufacturedBidomain
+dictionary withInheritedPotentialDomain
 (
     const dictionary& dict,
-    const dictionary* inheritedManufacturedBidomainPtr,
     const dictionary* inheritedPotentialDomainPtr
 )
 {
     dictionary merged(dict);
-
-    if
-    (
-        inheritedManufacturedBidomainPtr
-     && !merged.found("manufacturedBidomain")
-    )
-    {
-        merged.add("manufacturedBidomain", *inheritedManufacturedBidomainPtr);
-    }
 
     if (inheritedPotentialDomainPtr)
     {
@@ -232,7 +222,6 @@ ecgDomain::ecgDomain
     const dictionary& dict,
     const word& domainName,
     const dictionary* inheritedElectrodePositionsPtr,
-    const dictionary* inheritedManufacturedBidomainPtr,
     const dictionary* inheritedPotentialDomainPtr
 )
 :
@@ -245,7 +234,6 @@ ecgDomain::ecgDomain
     verificationModelPtr_(),
     numericValues_(),
     inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
-    inheritedManufacturedBidomainPtr_(inheritedManufacturedBidomainPtr),
     inheritedPotentialDomainPtr_(inheritedPotentialDomainPtr),
     electrodeNames_(),
     electrodePositions_()
@@ -285,10 +273,9 @@ ecgDomain::ecgDomain
     }
 
     const dictionary verificationDict =
-        withInheritedManufacturedBidomain
+        withInheritedPotentialDomain
         (
             dict,
-            inheritedManufacturedBidomainPtr_,
             inheritedPotentialDomainPtr_
         );
 
@@ -362,10 +349,9 @@ bool ecgDomain::read(const dictionary& dict)
     }
 
     const dictionary verificationDict =
-        withInheritedManufacturedBidomain
+        withInheritedPotentialDomain
         (
             dict,
-            inheritedManufacturedBidomainPtr_,
             inheritedPotentialDomainPtr_
         );
 

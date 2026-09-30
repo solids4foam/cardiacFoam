@@ -65,8 +65,7 @@ eikonalECG::eikonalECG(const dictionary& dict)
 
     if
     (
-        dict.found("manufacturedEikonalECG")
-     || verifierType == "manufacturedEikonalECGVerifier"
+        verifierType == "manufacturedEikonalECGVerifier"
      || verifierTypeModern == "manufacturedEikonalECGVerifier"
     )
     {
@@ -103,8 +102,8 @@ eikonalECG::eikonalECG(const dictionary& dict)
             FatalErrorInFunction
                 << "eikonalECG personalizedTemplates cannot be combined "
                 << "with a manufactured ECG configuration "
-                << "(manufacturedEikonalECG / "
-                << "verificationModel.type == manufacturedEikonalECGVerifier)."
+                << "(ecgVerificationModel / verificationModel.type == "
+                << "manufacturedEikonalECGVerifier)."
                 << exit(FatalError);
         }
 
