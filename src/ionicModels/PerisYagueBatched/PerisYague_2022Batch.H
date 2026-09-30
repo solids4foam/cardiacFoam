@@ -360,7 +360,7 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
         RATES_SoA[Nai_BASE   + cellI] =
             (-3.0 * INaK - (3.0 * INaCa + IbNa + INa)) * c_Cm / (c_V_i * c_F);
         RATES_SoA[Ki_BASE    + cellI] =
-            (2.0 * INaK - (IK1 + IKur + IKr + IKs + IbK)) * c_Cm / (c_V_i * c_F);
+            (2.0 * INaK - (IK1 + IKur + IKr + IKs)) * c_Cm / (c_V_i * c_F);
         RATES_SoA[Cli_BASE   + cellI] = IClCa * c_Cm / (c_V_i * c_F);
 
         if (solveVm)

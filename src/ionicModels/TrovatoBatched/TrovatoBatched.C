@@ -330,6 +330,18 @@ void Foam::TrovatoBatched::prepareIOAccess
     }
 #endif
 
+#ifdef HAS_CUDA
+    if (useDevice_ && cuda_.allocated && gpuSelectionNeedsRates(requestedNames))
+    {
+        cuda_.syncRatesDeviceToHost
+        (
+            ratesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(nCells())
+        );
+    }
+#endif
+
     configuredBatchedIonicModel::prepareIOAccess
     (
         requestedNames,
@@ -400,6 +412,26 @@ void Foam::TrovatocompactBatched::solveOnDevice
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+    const bool useVmExtrapolant = hasVmRate() && !solveVm;
+    scalarField vmStateStart;
+    scalarField vmStateRate;
+
+    if (useVmExtrapolant)
+    {
+        vmStateStart.setSize(N);
+        vmStateRate.setSize(N);
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            const scalar vmStart = vmToState(Vm[cellI]);
+            const scalar vmEnd =
+                vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
+            vmStateStart[cellI] = vmStart;
+            vmStateRate[cellI] =
+                (mag(dtModel) > VSMALL)
+              ? (vmEnd - vmStart)/dtModel
+              : 0.0;
+        }
+    }
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
@@ -422,6 +454,15 @@ void Foam::TrovatocompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    if (useVmExtrapolant)
+    {
+        cuda_.uploadVmExtrapolant
+        (
+            vmStateStart.cdata(),
+            vmStateRate.cdata(),
+            static_cast<std::size_t>(N)
+        );
+    }
 
     if (cuda_.hostDirty)
     {
@@ -447,6 +488,16 @@ void Foam::TrovatocompactBatched::solveOnDevice
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        if (useVmExtrapolant)
+        {
+            cuda_.applyVmExtrapolant
+            (
+                static_cast<double>(tSub),
+                static_cast<double>(tStart),
+                static_cast<std::size_t>(voltageStateIndex()),
+                static_cast<std::size_t>(N)
+            );
+        }
         launchTrovatoBatchKernel
         (
             tSub, cuda_.d_constants, static_cast<int>(N),
@@ -479,6 +530,16 @@ void Foam::TrovatocompactBatched::solveOnDevice
         }
     }
 
+    if (useVmExtrapolant)
+    {
+        cuda_.applyVmExtrapolant
+        (
+            static_cast<double>(tStart + dtModel),
+            static_cast<double>(tStart),
+            static_cast<std::size_t>(voltageStateIndex()),
+            static_cast<std::size_t>(N)
+        );
+    }
     launchTrovatoBatchKernel
     (
         tStart + dtModel, cuda_.d_constants, static_cast<int>(N),

@@ -331,6 +331,18 @@ void Foam::FabbriBatched::prepareIOAccess
     }
 #endif
 
+#ifdef HAS_CUDA
+    if (useDevice_ && cuda_.allocated && gpuSelectionNeedsRates(requestedNames))
+    {
+        cuda_.syncRatesDeviceToHost
+        (
+            ratesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(nCells())
+        );
+    }
+#endif
+
     configuredBatchedIonicModel::prepareIOAccess
     (
         requestedNames,

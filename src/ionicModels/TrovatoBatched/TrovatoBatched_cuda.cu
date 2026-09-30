@@ -196,7 +196,15 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
+            const int _idx = (si)*N + cellI;                                      \
+            if (_tau > 1.0e-300 && ::isfinite(_tau) && ::isfinite(_inf))       \
+            {                                                                     \
+                STATES[_idx] = _inf + (_x - _inf)*::exp(-dt/_tau);                \
+            }                                                                     \
+            else                                                                  \
+            {                                                                     \
+                STATES[_idx] = _x + dt*RATES[_idx];                               \
+            }                                                                     \
         }
 
         TROVATO_RL(ICaT_b,      TROVATO_BATCH_SUPPORT_tau_ICaT_b,     TROVATO_BATCH_SUPPORT_gInf_ICaT_b)

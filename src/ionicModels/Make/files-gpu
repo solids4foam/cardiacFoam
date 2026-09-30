@@ -1,3 +1,4 @@
+ionicModel/batchedIonicCoreCUDA.cu
 AlievPanfilovBatched/AlievPanfilovBatched_cuda.cu
 BuenoOrovioBatched/BuenoOrovioBatched_cuda.cu
 CourtemancheBatched/CourtemancheBatched_cuda.cu

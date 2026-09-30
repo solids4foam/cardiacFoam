@@ -199,7 +199,15 @@ namespace
             const double _x   = STATES[recovery_r*N + cellI];
             const double _inf = SUPPORT[ALIEVPANFILOV_BATCH_SUPPORT_gInf_recovery_r*N + cellI];
             const double _tau = SUPPORT[ALIEVPANFILOV_BATCH_SUPPORT_tau_recovery_r*N + cellI];
-            STATES[recovery_r*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);
+            const int idx = recovery_r*N + cellI;
+            if (_tau > 1.0e-300 && ::isfinite(_tau) && ::isfinite(_inf))
+            {
+                STATES[idx] = _inf + (_x - _inf)*::exp(-dt/_tau);
+            }
+            else
+            {
+                STATES[idx] = _x + dt*RATES[idx];
+            }
         }
 
         // Euler for u (skipped when !solveVm)

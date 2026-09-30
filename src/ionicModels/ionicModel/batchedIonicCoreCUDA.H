@@ -20,11 +20,12 @@ Class
 
 Description
     Shared RAII helper for the device-side mirror of a batchedIonicCore. Owns
-    five double* device buffers (states, rates, support, constants, Im) and
-    the dirty flags that drive host<->device synchronization.
+    the state, rate, support, constant, ionic-current, and Vm-extrapolant
+    double* buffers, plus the dirty flags that drive host<->device
+    synchronization.
 
-    Header-only and guarded by HAS_CUDA. When CUDA is not enabled at compile
-    time, including this header is a no-op.
+    The shared Vm-extrapolant kernel is implemented in the CUDA translation
+    unit listed by Make/files-gpu. CUDA declarations are guarded by HAS_CUDA.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -41,6 +42,19 @@ Author
 
 namespace Foam
 {
+
+// Apply the tissue solver's linearly extrapolated voltage to the voltage
+// slice of a device-resident SoA state array before evaluating ionic rates.
+void launchBatchedVmExtrapolantKernel
+(
+    double* d_states,
+    const double* d_vmStateStart,
+    const double* d_vmStateRate,
+    std::size_t nCells,
+    std::size_t vmStateI,
+    double modelTime,
+    double modelStartTime
+);
 
 #define CARDIAC_CUDA_CHECK(expr)                                               \
     do {                                                                       \
@@ -62,6 +76,8 @@ public:
     double* d_constants = nullptr;
     double* d_cellConstants = nullptr;
     double* d_Im        = nullptr;
+    double* d_vmStateStart = nullptr;
+    double* d_vmStateRate = nullptr;
 
     bool hostDirty   = true;
     bool deviceDirty = false;
@@ -124,6 +140,56 @@ public:
         ));
     }
 
+    void uploadVmExtrapolant
+    (
+        const double* h_vmStateStart,
+        const double* h_vmStateRate,
+        const std::size_t nCells
+    )
+    {
+        if (!d_vmStateStart)
+        {
+            CARDIAC_CUDA_CHECK
+            (
+                cudaMalloc(&d_vmStateStart, sizeof(double)*nCells)
+            );
+            CARDIAC_CUDA_CHECK
+            (
+                cudaMalloc(&d_vmStateRate, sizeof(double)*nCells)
+            );
+        }
+        CARDIAC_CUDA_CHECK(cudaMemcpy
+        (
+            d_vmStateStart, h_vmStateStart,
+            sizeof(double)*nCells, cudaMemcpyHostToDevice
+        ));
+        CARDIAC_CUDA_CHECK(cudaMemcpy
+        (
+            d_vmStateRate, h_vmStateRate,
+            sizeof(double)*nCells, cudaMemcpyHostToDevice
+        ));
+    }
+
+    void applyVmExtrapolant
+    (
+        const double modelTime,
+        const double modelStartTime,
+        const std::size_t vmStateI,
+        const std::size_t nCells
+    )
+    {
+        launchBatchedVmExtrapolantKernel
+        (
+            d_states,
+            d_vmStateStart,
+            d_vmStateRate,
+            nCells,
+            vmStateI,
+            modelTime,
+            modelStartTime
+        );
+    }
+
     void syncStatesHostToDevice(const double* h_states, const std::size_t nStates, const std::size_t nCells)
     {
         CARDIAC_CUDA_CHECK(cudaMemcpy
@@ -160,6 +226,21 @@ public:
         deviceDirty = false;
     }
 
+    void syncRatesDeviceToHost
+    (
+        double* h_rates,
+        const std::size_t nStates,
+        const std::size_t nCells
+    )
+    {
+        if (!h_rates || nStates == 0 || nCells == 0) return;
+        CARDIAC_CUDA_CHECK(cudaMemcpy
+        (
+            h_rates, d_rates,
+            sizeof(double)*nStates*nCells, cudaMemcpyDeviceToHost
+        ));
+    }
+
     void syncSupportDeviceToHost(double* h_support, const std::size_t nSupport, const std::size_t nCells)
     {
         if (!h_support || nSupport == 0) return;
@@ -192,6 +273,8 @@ public:
         safeFree(d_constants);
         safeFree(d_cellConstants);
         safeFree(d_Im);
+        safeFree(d_vmStateStart);
+        safeFree(d_vmStateRate);
         allocated = false;
     }
 };

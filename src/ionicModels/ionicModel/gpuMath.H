@@ -20,8 +20,8 @@ Function
 
 Description
     Small branch-free helpers that are friendlier to batched CPU/GPU ionic
-    kernels. These are intentionally local utilities and do not replace the
-    exact OpenFOAM-style `heaviside` helper used elsewhere in the code base.
+    kernels. Models opt into these regularized functions explicitly; they do
+    not replace the exact OpenFOAM-style `heaviside` helper globally.
 
 Author
     Simao Nieto de Castro, UCD.

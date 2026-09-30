@@ -285,8 +285,10 @@ CARDIAC_HOST_DEVICE inline void CourtemancheComputeVariablesBatch
           : 0.3 * std::exp(-2.535e-07 * V) / (1.0 + std::exp(-0.1 * (V + 32.0)));
         const double j_inf = j_alpha / (j_alpha + j_beta);
         const double j_tau = 1.0 / (j_alpha + j_beta);
-        const double m_alpha = (std::fabs(V + 47.13) < 1e-12)
-          ? 3.2 : 0.32 * (V + 47.13) / (1.0 - std::exp(-0.1 * (V + 47.13)));
+        const double m_alpha = (V == -47.13)
+          ? 3.2
+          : 0.32 * (V + 47.13)
+            / (1.0 - std::exp(-0.1 * (V + 47.13)));
         const double m_beta = 0.08 * std::exp(-V / 11.0);
         const double m_inf = m_alpha / (m_alpha + m_beta);
         const double m_tau = 1.0 / (m_alpha + m_beta);

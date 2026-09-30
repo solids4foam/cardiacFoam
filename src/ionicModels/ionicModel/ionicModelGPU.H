@@ -200,6 +200,44 @@ protected:
             return selectionNeedsAlgebraics(names);
         }
 
+        bool gpuSelectionNeedsRates(const wordList& names) const
+        {
+            if (!names.size())
+            {
+                return true;
+            }
+
+            if (!hasIOMetadata())
+            {
+                return false;
+            }
+
+            List<label> stateIndex;
+            List<label> algIndex;
+            List<label> rateIndex;
+            ionicModelIO::mapVariableNames
+            (
+                names,
+                ioStateNames(),
+                ioNumStates(),
+                ioAlgebraicNames(),
+                ioNumAlgebraic(),
+                stateIndex,
+                algIndex,
+                rateIndex
+            );
+
+            forAll(names, k)
+            {
+                if (rateIndex[k] >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         bool selectionNeedsAlgebraics(const wordList& names) const
         {
             if (!names.size() || !hasIOMetadata())

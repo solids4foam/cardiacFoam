@@ -36,11 +36,31 @@ acceptance criteria:
    states agree within `2e-14`. The fixed-substep Euler sweep shows the
    expected order reduction at low substep counts and a small 400-to-800
    `Vm` difference relative to analytic error.
-6. **Physiological SBDF2 device parity.** Compare CPU-batched and
-   CUDA-batched TNNP/TWorld using identical model settings, integration,
-   mesh, and timestep. This stage currently fails its strict parity check and
-   remains open; manufactured parity does not close this model-specific
-   issue.
+6. **Physiological backend parity.** Compare CPU-batched and CUDA-batched
+   results with the same equations, integration settings, mesh, and timestep.
+   The 15 ms, 1,500-cell slab matrix now passes its strict parity gates for
+   all 11 non-Fabbri models under both Godunov and SBDF2 at `deltaT=2 us` and
+   five Rush--Larsen substeps. This is a backend parity result at that tested
+   setting, not a production timestep or full action-potential validation.
+
+### Current parity checkpoint (2026-09-30)
+
+Fresh CPU-batched/CUDA-batched single-cell traces for BuenoOrovio,
+Courtemanche, PerisYague, and ToRORd_dynCl are identical at saved precision
+for Vm, states, ionic-current columns, and rates. The other seven non-Fabbri
+models had already passed the same direct single-cell trajectory comparison.
+CUDA `RATES_*` output was previously zero because the device rates were never
+copied back; the output path now copies them after the GPU buffers are
+allocated. The fresh four-model single-cell check confirms nonzero CUDA rates
+that match CPU rates at the written precision.
+
+The same four models then passed CPU-batched/CUDA-batched 2D slab parity for
+both Godunov and SBDF2. Each run used 1,500 cells, 15 ms, `deltaT=2 us`, and
+five Rush--Larsen substeps. Together with the existing seven-model results,
+all 11 non-Fabbri models now pass the strict Vm/state/current and activation
+gates at this setting. The earlier four-model mismatches in jobs 9473/9475
+were equation-path differences that have since been corrected; their results
+remain historical. Full details and reports are in the status file.
 
 The evidence supports working CUDA ODE paths and useful speedups in the
 tested 3D workloads, but it does not certify every model at production
@@ -78,6 +98,15 @@ Targeted fixes in the target repository:
 - The CUDA build converts OpenFOAM's `-iquote` include flag for nvcc. CUDA
   launch checks call `std::abort`, and device math calls use global C math
   functions where needed, notably in Gaur and TWorld.
+- CPU-batched Courtemanche and ToRORd now call the same batch evaluators used
+  by CUDA; ToRORd's batch `a3` numerator was corrected from `nao/Knao` to
+  `ko/Kko`. Scalar generated reference code was left intact.
+- BuenoOrovio and PerisYague CPU-batched hot paths use their CUDA-shared batch
+  equations. BuenoOrovio retains the documented smooth-Heaviside difference
+  from the scalar reference.
+- Full-trace CUDA rates are copied back for I/O, but only after the CUDA
+  buffers have been allocated. This avoids an initialization-time read before
+  the first ionic solve.
 
 These changes preserve current model names, state indices, and equations.
 The scalar and batched evaluators include the same model-specific `Names.H`
@@ -239,13 +268,14 @@ RMSE/max differences of 0.000193/0.0020 mV for TNNP and 0.000869/0.0106 mV
 for TWorld, with matching activation counts. Full-case scalar/GPU runtimes
 were 59.28/21.22 s (TNNP) and 164.03/38.84 s (TWorld).
 
-The direct CPU-batched versus CUDA-batched SBDF2 comparison (job 9358) failed
+The initial direct CPU-batched versus CUDA-batched SBDF2 comparison (job 9358) failed
 the strict `1e-10` parity gate for both models. At 15 ms, TNNP had
 `Vm_max=6.296152e-3`, `ionicCurrent_max=62.13696`, and saved `V` state
 `max=6.822647`; TWorld had `Vm_max=1.154981e-2`,
 `ionicCurrent_max=153.0751`, and saved `v` state `max=12.24162`. Activation
-counts differed by one cell in each case. These are matched CPU/GPU batched
-SBDF2 runs and expose an unresolved discrepancy. They are distinct from the
+counts differed by one cell in each case. These matched CPU/GPU-batched
+SBDF2 runs exposed a missing CUDA Vm-rate extrapolant, later fixed and
+retested in the follow-up below. They are distinct from the
 scalar RKF45 versus CUDA RL/Euler comparison below. The original job stopped
 after TNNP failed; the saved TWorld cases were compared separately. The Slurm
 script now records both model comparisons before returning failure.
@@ -257,6 +287,59 @@ both the ionic integrator and backend, it does not establish a GPU mismatch.
 The Godunov-versus-SBDF2 comparison changes tissue integration and current
 refresh timing; different traces there are expected and do not isolate a GPU
 error.
+
+### Follow-up: CPU/GPU SBDF2 parity across the model set
+
+The job 9358 mismatch was traced to missing Vm-rate extrapolation in the
+TNNP/TWorld SBDF2 CUDA integration path. The wrapper audit found the same
+missing support in nine other non-Fabbri model wrappers. All 11 non-Fabbri
+models now call the same shared CUDA slice-update kernel before rate
+evaluation at every substep and before the final current refresh. TNNP and
+TWorld's former fused special path was removed to keep the ordering and time
+inputs uniform. Job 9476 reran all 11 models after this final unification:
+TNNP and TWorld still pass near-machine-precision parity, as do seven models
+overall. Four models retain small strict-gate field differences, while every
+model's activation mask/count matched. The detailed deltas are in
+`VALIDATION_STATUS_2026-09-28.md`.
+
+Job 9473 compared CPU-batched and CUDA-batched SBDF2 for all 11 non-Fabbri
+models on the 1,500-cell 2D slab (`deltaT=2 us`, five Rush--Larsen/Euler
+substeps, 15 ms). Seven passed the strict `1e-10` Vm/state/current gate.
+BuenoOrovio, Courtemanche, PerisYague, and ToRORd_dynCl retained small
+componentwise differences, but all 11 had identical activated-cell
+masks/counts and sub-microsecond activation shifts. At 15 ms the activation
+p95 / maximum absolute shift (ms) was: AlievPanfilov `1.91e-14 / 1.01e-13`,
+BuenoOrovio `5.896e-5 / 7.029e-5`, Courtemanche `2.026e-7 / 2.446e-7`, Gaur
+`9.02e-14 / 1.70e-13`, Grandi `1.006e-13 / 3.00e-13`, PerisYague
+`5.384e-9 / 5.963e-9`, Stewart `1.91e-14 / 1.01e-13`, TNNP
+`2.08e-14 / 1.01e-13`, TWorld `1.006e-13 / 1.006e-13`, ToRORd_dynCl
+`5.013e-7 / 5.232e-7`, and Trovato `3.30e-14 / 1.01e-13`.
+
+Job 9475 repeated the four flagged models using Godunov coupling. The same
+strict field gate still flagged them, so these small CPU/GPU arithmetic
+differences are not specific to SBDF2. Activation p95 shifts were 0.000207
+ms (BuenoOrovio), 2.00e-7 ms (Courtemanche), 5.39e-9 ms (PerisYague), and
+0.000735 ms (ToRORd_dynCl). This is activation parity evidence, not a waiver
+of the four componentwise differences. Sparse 5 ms field output also cannot
+establish APD or detailed aligned waveform agreement. Full metrics, hardware,
+and limitations are recorded in `VALIDATION_STATUS_2026-09-28.md`.
+
+For scalar-versus-batched BuenoOrovio comparisons, report the user's known
+Heaviside-related phase lag separately from waveform shape: scalar uses a
+discrete Heaviside while both batched backends use the same smoothed function.
+Report activation-time shift, and align traces for shape-error metrics outside
+the upstroke. That scalar/batched lag does not account for the small
+CPU-batched/CUDA-batched shifts above.
+
+The queued full-duration comparator applies this principle per cell. Its
+criteria are activation-time p95 <=0.1 ms, activated-mask disagreement
+<=max(5 cells, 1%), activation-aligned Vm RMSE outside +/-2 ms around the
+upstroke <=0.5 mV, p95 peak shift <=2 mV, and p95 APD90 shift <=max(2 ms,
+2% of reference median APD90). These match the physiological waveform gates
+already stated above. Raw unaligned Vm RMSE and the maximum activation shift
+are still reported, but an upstroke-only pointwise error is not an automatic
+failure. The 0.5 s cases write Vm at 1 ms so alignment and APD can be resolved
+on both the 2D slab and full Niederer geometry.
 
 The activation metric is computed from the solver-written `activationTime`
 field at 5, 10, and 15 ms. It reports activated-cell counts (`activationTime
@@ -468,6 +551,11 @@ fields with `compare_slab.py`.
 
 ## Actual CUDA single-cell validation
 
+The table below is the earlier scalar-reference screen. Fresh direct
+CPU-batched/CUDA-batched parity for the four equation-aligned models,
+including nonzero CUDA rates, is recorded in the current parity checkpoint
+above and in `VALIDATION_STATUS_2026-09-28.md`.
+
 The following paired traces were run on the RTX 4000 Ada with the GPU
 backend explicitly required. The baseline uses scalar RKF45 versus batched
 Rush–Larsen for exponential gate states and Euler for remaining states, with
@@ -516,6 +604,41 @@ result is a finite-state/parity check, not a failure to propagate under the
 generic stimulus.
 
 ## Actual CUDA 15 ms slab propagation
+
+### Fresh CPU/CUDA parity for the four equation-aligned models
+
+Job 9513 produced CPU baselines for BuenoOrovio, Courtemanche, PerisYague,
+and ToRORd_dynCl under Godunov and SBDF2. Its first CUDA attempt stopped
+before the first ionic update because the startup writer requested rates
+before lazy CUDA allocation. The rate-copy guard was fixed. Job 9516 rebuilt
+the CUDA library and reran all eight CUDA cases against those CPU baselines;
+all eight reports passed.
+
+| Model | Godunov | SBDF2 | Active cells at 15 ms, Godunov / SBDF2 |
+|---|---|---|---:|
+| BuenoOrovio | PASS | PASS | 749 / 756 |
+| Courtemanche | PASS | PASS | 183 / 180 |
+| PerisYague | PASS | PASS | 666 / 666 |
+| ToRORd_dynCl | PASS | PASS | 569 / 569 |
+
+Acceptance was maximum absolute Vm/state difference `<=1e-10`, current
+difference `<=1e-10 + 1e-12 * max(abs(reference current))`, and activation
+difference `<=1e-10 s` at 5, 10, and 15 ms. Across these eight reports, the
+largest saved Vm difference was `1.11e-14 mV`, the largest state difference
+was `1.11e-11`, the largest current difference was `5.70e-11`, and the largest
+activation p95 was `1.01e-16 s`. CUDA logs confirm device 0 for each GPU run.
+
+Reproduce the complete CPU/CUDA matrix from the repository root on the GPU
+node with:
+
+```bash
+sbatch tutorials/gpuValidation/run_courtemanche_torord_slab_backend_parity.slurm
+```
+
+The retry's CUDA cases and reports are under
+`/tmp/cardiac_changed_models_gpu_retry_9516/`; its CPU baselines are under
+`/tmp/cardiac_court_torord_slab_parity_9513/cpu/`. These were one-rank
+correctness runs, not CPU/GPU performance measurements.
 
 The 11 non-Fabbri models completed matched scalar and actual-GPU-batched runs
 on the 20 mm by 3 mm, 1,500-cell simple slab, using each model's tissue type,

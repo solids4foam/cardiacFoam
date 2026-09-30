@@ -196,7 +196,15 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
+            const int _idx = (si)*N + cellI;                                      \
+            if (_tau > 1.0e-300 && ::isfinite(_tau) && ::isfinite(_inf))       \
+            {                                                                     \
+                STATES[_idx] = _inf + (_x - _inf)*::exp(-dt/_tau);                \
+            }                                                                     \
+            else                                                                  \
+            {                                                                     \
+                STATES[_idx] = _x + dt*RATES[_idx];                               \
+            }                                                                     \
         }
 
         PERISYAGUE_RL(ina_m,     PERISYAGUE_BATCH_SUPPORT_tau_m,      PERISYAGUE_BATCH_SUPPORT_gInf_m)
@@ -213,6 +221,7 @@ namespace
         PERISYAGUE_RL(iclca_qCa, PERISYAGUE_BATCH_SUPPORT_tau_qCa,    PERISYAGUE_BATCH_SUPPORT_gInf_qCa)
         PERISYAGUE_RL(ryr_u,     PERISYAGUE_BATCH_SUPPORT_tau_ryr_u,  PERISYAGUE_BATCH_SUPPORT_gInf_ryr_u)
         PERISYAGUE_RL(ryr_w,     PERISYAGUE_BATCH_SUPPORT_tau_ryr_w,  PERISYAGUE_BATCH_SUPPORT_gInf_ryr_w)
+        PERISYAGUE_RL(ryr_v,     PERISYAGUE_BATCH_SUPPORT_tau_ryr_v,  PERISYAGUE_BATCH_SUPPORT_gInf_ryr_v)
 
         #undef PERISYAGUE_RL
 
@@ -222,7 +231,7 @@ namespace
                 si == ikr_xr   || si == iks_xs   || si == ikur_ua  ||
                 si == ikur_uif || si == ikur_uis  || si == ical_d  ||
                 si == ical_f   || si == ical_fCa  || si == iclca_qCa||
-                si == ryr_u    || si == ryr_w) continue;
+                si == ryr_u    || si == ryr_w   || si == ryr_v) continue;
             if (!solveVm && si == vmStateI) continue;
             const int idx = si*N + cellI;
             STATES[idx] += dt*RATES[idx];

@@ -134,7 +134,7 @@ namespace Foam
         const double* d_CELL_CONSTANTS,
         bool useCellConstants,
         int N,
-        const double* d_STATES,
+        double* d_STATES,
         double* d_RATES,
         double* d_SUPPORT,
         int tissueFlag,
@@ -315,6 +315,17 @@ void Foam::TWorldBatched::prepareIOAccess
         );
     }
 #endif
+#ifdef HAS_CUDA
+    if (useDevice_ && cuda_.allocated && gpuSelectionNeedsRates(requestedNames))
+    {
+        cuda_.syncRatesDeviceToHost
+        (
+            ratesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(nCells())
+        );
+    }
+#endif
     configuredBatchedIonicModel::prepareIOAccess(requestedNames, needsAlgebraics);
 }
 
@@ -384,6 +395,26 @@ void Foam::TWorldcompactBatched::solveOnDevice
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
     const int tFlag = static_cast<int>(tissue());
+    const bool useVmExtrapolant = hasVmRate() && !solveVm;
+    scalarField vmStateStart;
+    scalarField vmStateRate;
+
+    if (useVmExtrapolant)
+    {
+        vmStateStart.setSize(N);
+        vmStateRate.setSize(N);
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            const scalar vmStart = vmToState(Vm[cellI]);
+            const scalar vmEnd =
+                vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
+            vmStateStart[cellI] = vmStart;
+            vmStateRate[cellI] =
+                (mag(dtModel) > VSMALL)
+              ? (vmEnd - vmStart)/dtModel
+              : 0.0;
+        }
+    }
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
@@ -406,6 +437,15 @@ void Foam::TWorldcompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    if (useVmExtrapolant)
+    {
+        cuda_.uploadVmExtrapolant
+        (
+            vmStateStart.cdata(),
+            vmStateRate.cdata(),
+            static_cast<std::size_t>(N)
+        );
+    }
     scalarField flattenedCellConstants;
     if (hasHeterogeneousConstants())
     {
@@ -442,6 +482,16 @@ void Foam::TWorldcompactBatched::solveOnDevice
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        if (useVmExtrapolant)
+        {
+            cuda_.applyVmExtrapolant
+            (
+                static_cast<double>(tSub),
+                static_cast<double>(tStart),
+                static_cast<std::size_t>(voltageStateIndex()),
+                static_cast<std::size_t>(N)
+            );
+        }
         launchTWorldBatchKernel
         (
             tSub,
@@ -478,6 +528,16 @@ void Foam::TWorldcompactBatched::solveOnDevice
         }
     }
 
+    if (useVmExtrapolant)
+    {
+        cuda_.applyVmExtrapolant
+        (
+            static_cast<double>(tStart + dtModel),
+            static_cast<double>(tStart),
+            static_cast<std::size_t>(voltageStateIndex()),
+            static_cast<std::size_t>(N)
+        );
+    }
     launchTWorldBatchKernel
     (
         tStart + dtModel,

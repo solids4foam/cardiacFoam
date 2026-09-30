@@ -19,6 +19,7 @@ License
 
 #include "BuenoOrovioBatched.H"
 #include "BuenoOrovio_2008.H"
+#include "BuenoOrovio_2008Batch.H"
 #include "gpuMath.H"
 #include "batchedRushLarsenEntry.H"
 #include <array>
@@ -252,6 +253,7 @@ void Foam::BuenoOroviocompactBatched::solveODE
         return;
     }
 #endif
+    stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
@@ -270,6 +272,26 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+    const bool useVmExtrapolant = hasVmRate() && !solveVm;
+    scalarField vmStateStart;
+    scalarField vmStateRate;
+
+    if (useVmExtrapolant)
+    {
+        vmStateStart.setSize(N);
+        vmStateRate.setSize(N);
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            const scalar vmStart = vmToState(Vm[cellI]);
+            const scalar vmEnd =
+                vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
+            vmStateStart[cellI] = vmStart;
+            vmStateRate[cellI] =
+                (mag(dtModel) > VSMALL)
+              ? (vmEnd - vmStart)/dtModel
+              : 0.0;
+        }
+    }
     const int tFlag = static_cast<int>(tissue());
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
@@ -293,6 +315,15 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    if (useVmExtrapolant)
+    {
+        cuda_.uploadVmExtrapolant
+        (
+            vmStateStart.cdata(),
+            vmStateRate.cdata(),
+            static_cast<std::size_t>(N)
+        );
+    }
     scalarField flattenedCellConstants;
     if (hasHeterogeneousConstants())
     {
@@ -329,6 +360,16 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        if (useVmExtrapolant)
+        {
+            cuda_.applyVmExtrapolant
+            (
+                static_cast<double>(tSub),
+                static_cast<double>(tStart),
+                static_cast<std::size_t>(voltageStateIndex()),
+                static_cast<std::size_t>(N)
+            );
+        }
         launchBuenoBatchKernel
         (
             tSub,
@@ -365,6 +406,16 @@ void Foam::BuenoOroviocompactBatched::solveOnDevice
         }
     }
 
+    if (useVmExtrapolant)
+    {
+        cuda_.applyVmExtrapolant
+        (
+            static_cast<double>(tStart + dtModel),
+            static_cast<double>(tStart),
+            static_cast<std::size_t>(voltageStateIndex()),
+            static_cast<std::size_t>(N)
+        );
+    }
     launchBuenoBatchKernel
     (
         tStart + dtModel,
@@ -423,6 +474,17 @@ void Foam::BuenoOrovioBatched::prepareIOAccess
         );
     }
 #endif
+#ifdef HAS_CUDA
+    if (useDevice_ && cuda_.allocated && gpuSelectionNeedsRates(requestedNames))
+    {
+        cuda_.syncRatesDeviceToHost
+        (
+            ratesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(nCells())
+        );
+    }
+#endif
     configuredBatchedIonicModel::prepareIOAccess(requestedNames, needsAlgebraics);
 }
 
@@ -453,6 +515,7 @@ void Foam::BuenoOrovioBatched::solveODE
     scalarField& Im
 )
 {
+    stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
     solveODEImpl(*this, stepStartTime, deltaT, Vm, Im);
 }
 
@@ -578,33 +641,19 @@ void Foam::BuenoOrovioBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
-    using Foam::smoothHeaviside;
-
-    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
-    evaluateState(modelTime, stateValues, rateValues, algebraics);
-
-    const scalar cellV = stateValues[u];
-
-    const scalar hV = smoothHeaviside(cellV - CONSTANTS_[thetaV]);
-    const scalar invTauV =
-        (1.0 - hV)/algebraics[tauVMinus]
-      + hV/CONSTANTS_[tauVPlus];
-    supportValues[BO_BATCH_SUPPORT_tau_v] = 1.0/invTauV;
-    supportValues[BO_BATCH_SUPPORT_gInf_v] =
-        (1.0 - hV)*algebraics[vInfty]/(algebraics[tauVMinus]*invTauV);
-
-    const scalar hW = smoothHeaviside(cellV - CONSTANTS_[thetaW]);
-    const scalar invTauW =
-        (1.0 - hW)/algebraics[tauWMinus]
-      + hW/CONSTANTS_[tauWPlus];
-    supportValues[BO_BATCH_SUPPORT_tau_w] = 1.0/invTauW;
-    supportValues[BO_BATCH_SUPPORT_gInf_w] =
-        (1.0 - hW)*algebraics[wInfty]/(algebraics[tauWMinus]*invTauW);
-
-    supportValues[BO_BATCH_SUPPORT_tau_s] = algebraics[tauS];
-    supportValues[BO_BATCH_SUPPORT_gInf_s] =
-        0.5*(1.0 + std::tanh(CONSTANTS_[kS]*(cellV - CONSTANTS_[uS])));
-    supportValues[BO_BATCH_SUPPORT_Iion] = algebraics[Jion];
+    BuenoOrovioComputeVariablesBatch
+    (
+        modelTime,
+        CONSTANTS_.data(),
+        1,
+        0,
+        1,
+        const_cast<scalarUList&>(stateValues).data(),
+        rateValues.data(),
+        supportValues.data(),
+        solveVmWithinODESolver(),
+        stimulusPOD_
+    );
 }
 
 
@@ -617,34 +666,20 @@ void Foam::BuenoOrovioBatched::evaluateHotPathState
     scalarUList& supportValues
 ) const
 {
-    using Foam::smoothHeaviside;
-
     scalarField& cellConstants = constants(cellI);
-    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
-    evaluateState(cellI, modelTime, stateValues, rateValues, algebraics);
-
-    const scalar cellV = stateValues[u];
-
-    const scalar hV = smoothHeaviside(cellV - cellConstants[thetaV]);
-    const scalar invTauV =
-        (1.0 - hV)/algebraics[tauVMinus]
-      + hV/cellConstants[tauVPlus];
-    supportValues[BO_BATCH_SUPPORT_tau_v] = 1.0/invTauV;
-    supportValues[BO_BATCH_SUPPORT_gInf_v] =
-        (1.0 - hV)*algebraics[vInfty]/(algebraics[tauVMinus]*invTauV);
-
-    const scalar hW = smoothHeaviside(cellV - cellConstants[thetaW]);
-    const scalar invTauW =
-        (1.0 - hW)/algebraics[tauWMinus]
-      + hW/cellConstants[tauWPlus];
-    supportValues[BO_BATCH_SUPPORT_tau_w] = 1.0/invTauW;
-    supportValues[BO_BATCH_SUPPORT_gInf_w] =
-        (1.0 - hW)*algebraics[wInfty]/(algebraics[tauWMinus]*invTauW);
-
-    supportValues[BO_BATCH_SUPPORT_tau_s] = algebraics[tauS];
-    supportValues[BO_BATCH_SUPPORT_gInf_s] =
-        0.5*(1.0 + std::tanh(cellConstants[kS]*(cellV - cellConstants[uS])));
-    supportValues[BO_BATCH_SUPPORT_Iion] = algebraics[Jion];
+    BuenoOrovioComputeVariablesBatch
+    (
+        modelTime,
+        cellConstants.data(),
+        1,
+        0,
+        1,
+        const_cast<scalarUList&>(stateValues).data(),
+        rateValues.data(),
+        supportValues.data(),
+        solveVmWithinODESolver(),
+        stimulusPOD_
+    );
 }
 
 

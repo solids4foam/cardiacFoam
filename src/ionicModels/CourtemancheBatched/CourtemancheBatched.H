@@ -98,6 +98,15 @@ protected:
         scalarUList& supportValues
     ) const override final;
 
+    virtual void evaluateHotPathState
+    (
+        const label cellI,
+        const scalar modelTime,
+        const scalarUList& stateValues,
+        scalarUList& rateValues,
+        scalarUList& supportValues
+    ) const override final;
+
     virtual bool rushLarsenParametersFromHotPathSupport
     (
         const label stateI,

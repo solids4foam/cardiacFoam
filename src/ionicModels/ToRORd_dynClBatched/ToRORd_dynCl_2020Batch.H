@@ -574,7 +574,7 @@ CARDIAC_HOST_DEVICE inline void ToRORd_dynClComputeVariablesBatch
         const double a_h7_i = 1.0 + c_nao / c_kna3 * (1.0 + 1.0 / a_hna);
         const double a_h7_ss = 1.0 + c_nao / c_kna3 * (1.0 + 1.0 / a_hna);
         const double a_a1 = c_k1p * std::pow(s_Nai / a_Knai, 3.0) / (std::pow(1.0 + s_Nai / a_Knai, 3.0) + std::pow(1.0 + s_Ki / c_Kki, 2.0) - 1.0);
-        const double a_a3 = c_k3p * std::pow(c_nao / a_Knao, 2.0) / (std::pow(1.0 + c_nao / a_Knao, 3.0) + std::pow(1.0 + c_ko / c_Kko, 2.0) - 1.0);
+        const double a_a3 = c_k3p * std::pow(c_ko / c_Kko, 2.0) / (std::pow(1.0 + c_nao / a_Knao, 3.0) + std::pow(1.0 + c_ko / c_Kko, 2.0) - 1.0);
         const double a_b2 = c_k2m * std::pow(c_nao / a_Knao, 3.0) / (std::pow(1.0 + c_nao / a_Knao, 3.0) + std::pow(1.0 + c_ko / c_Kko, 2.0) - 1.0);
         const double a_b4 = c_k4m * std::pow(s_Ki / c_Kki, 2.0) / (std::pow(1.0 + s_Nai / a_Knai, 3.0) + std::pow(1.0 + s_Ki / c_Kki, 2.0) - 1.0);
         const double a_ICaK = a_ICaK_ss + a_ICaK_i;

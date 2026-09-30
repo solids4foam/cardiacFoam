@@ -295,6 +295,17 @@ void Foam::ToRORd_dynClBatched::prepareIOAccess
         );
     }
 #endif
+#ifdef HAS_CUDA
+    if (useDevice_ && cuda_.allocated && gpuSelectionNeedsRates(requestedNames))
+    {
+        cuda_.syncRatesDeviceToHost
+        (
+            ratesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
+            static_cast<std::size_t>(nCells())
+        );
+    }
+#endif
     configuredBatchedIonicModel::prepareIOAccess(requestedNames, needsAlgebraics);
 }
 
@@ -363,6 +374,26 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+    const bool useVmExtrapolant = hasVmRate() && !solveVm;
+    scalarField vmStateStart;
+    scalarField vmStateRate;
+
+    if (useVmExtrapolant)
+    {
+        vmStateStart.setSize(N);
+        vmStateRate.setSize(N);
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            const scalar vmStart = vmToState(Vm[cellI]);
+            const scalar vmEnd =
+                vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
+            vmStateStart[cellI] = vmStart;
+            vmStateRate[cellI] =
+                (mag(dtModel) > VSMALL)
+              ? (vmEnd - vmStart)/dtModel
+              : 0.0;
+        }
+    }
     const int tFlag = static_cast<int>(tissue());
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
@@ -386,6 +417,15 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    if (useVmExtrapolant)
+    {
+        cuda_.uploadVmExtrapolant
+        (
+            vmStateStart.cdata(),
+            vmStateRate.cdata(),
+            static_cast<std::size_t>(N)
+        );
+    }
     scalarField flattenedCellConstants;
     if (hasHeterogeneousConstants())
     {
@@ -422,6 +462,16 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        if (useVmExtrapolant)
+        {
+            cuda_.applyVmExtrapolant
+            (
+                static_cast<double>(tSub),
+                static_cast<double>(tStart),
+                static_cast<std::size_t>(voltageStateIndex()),
+                static_cast<std::size_t>(N)
+            );
+        }
         launchToRORd_dynClBatchKernel
         (
             tSub,
@@ -458,6 +508,16 @@ void Foam::ToRORd_dynClcompactBatched::solveOnDevice
         }
     }
 
+    if (useVmExtrapolant)
+    {
+        cuda_.applyVmExtrapolant
+        (
+            static_cast<double>(tStart + dtModel),
+            static_cast<double>(tStart),
+            static_cast<std::size_t>(voltageStateIndex()),
+            static_cast<std::size_t>(N)
+        );
+    }
     launchToRORd_dynClBatchKernel
     (
         tStart + dtModel,
@@ -609,21 +669,22 @@ void Foam::ToRORd_dynClBatched::evaluateHotPathState
 ) const
 {
     scalarField& cellConstants = constants(cellI);
-    scalarField algebraics(NUM_ALGEBRAIC, 0.0);
-    evaluateState(cellI, modelTime, stateValues, rateValues, algebraics);
+    const StimulusProtocolPOD stimulus =
+        stimulusIO::toPOD(stimulusProtocol());
 
-    for (label stateI = 0; stateI < NUM_STATES; ++stateI)
-    {
-        projectScalarRushLarsenEntryToSupport
-        (
-            ToRORd_dynClRushLarsenDispatch[stateI],
-            cellConstants,
-            algebraics,
-            supportValues
-        );
-    }
-    supportValues[Foam::TORORD_DYNCL_BATCH_SUPPORT_Iion_cm] =
-        algebraics[Iion_cm];
+    ToRORd_dynClComputeVariablesBatch
+    (
+        modelTime,
+        cellConstants.data(),
+        1,
+        0,
+        1,
+        const_cast<scalarUList&>(stateValues).data(),
+        rateValues.data(),
+        supportValues.data(),
+        solveVmWithinODESolver(),
+        stimulus
+    );
 }
 
 

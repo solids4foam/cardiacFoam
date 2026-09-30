@@ -301,6 +301,35 @@ void Foam::CourtemancheBatched::evaluateHotPathState
     supportValues[COURTEMANCHE_BATCH_SUPPORT_Iion_cm] = algebraics[Iion_cm];
 }
 
+
+void Foam::CourtemancheBatched::evaluateHotPathState
+(
+    const label cellI,
+    const scalar modelTime,
+    const scalarUList& stateValues,
+    scalarUList& rateValues,
+    scalarUList& supportValues
+) const
+{
+    (void)cellI;
+    const StimulusProtocolPOD stimulus =
+        stimulusIO::toPOD(stimulusProtocol());
+
+    CourtemancheComputeVariablesBatch
+    (
+        modelTime,
+        CONSTANTS_.data(),
+        1,
+        0,
+        1,
+        const_cast<scalarUList&>(stateValues).data(),
+        rateValues.data(),
+        supportValues.data(),
+        solveVmWithinODESolver(),
+        stimulus
+    );
+}
+
 bool Foam::CourtemancheBatched::rushLarsenParametersFromHotPathSupport
 (
     const label stateI,
@@ -353,6 +382,18 @@ void Foam::CourtemancheBatched::prepareIOAccess
         (
             supportSoAData(),
             static_cast<std::size_t>(NUM_COURTEMANCHE_BATCH_SUPPORT),
+            static_cast<std::size_t>(nCells())
+        );
+    }
+#endif
+
+#ifdef HAS_CUDA
+    if (useDevice_ && cuda_.allocated && gpuSelectionNeedsRates(requestedNames))
+    {
+        cuda_.syncRatesDeviceToHost
+        (
+            ratesSoAData(),
+            static_cast<std::size_t>(NUM_STATES),
             static_cast<std::size_t>(nCells())
         );
     }
@@ -428,6 +469,26 @@ void Foam::CourtemanchecompactBatched::solveOnDevice
     const scalar dtSubstep = dtModel/scalar(nSub);
     const scalar tStart = stepStartTime*timeScaleFactor();
     const bool solveVm = solveVmWithinODESolver();
+    const bool useVmExtrapolant = hasVmRate() && !solveVm;
+    scalarField vmStateStart;
+    scalarField vmStateRate;
+
+    if (useVmExtrapolant)
+    {
+        vmStateStart.setSize(N);
+        vmStateRate.setSize(N);
+        for (label cellI = 0; cellI < N; ++cellI)
+        {
+            const scalar vmStart = vmToState(Vm[cellI]);
+            const scalar vmEnd =
+                vmToState(Vm[cellI] + VmRateSI(cellI)*deltaT);
+            vmStateStart[cellI] = vmStart;
+            vmStateRate[cellI] =
+                (mag(dtModel) > VSMALL)
+              ? (vmEnd - vmStart)/dtModel
+              : 0.0;
+        }
+    }
 
     stimulusPOD_ = stimulusIO::toPOD(stimulusProtocol());
 
@@ -450,6 +511,15 @@ void Foam::CourtemanchecompactBatched::solveOnDevice
         static_cast<std::size_t>(CONSTANTS_.size())
     );
     cuda_.uploadConstants(CONSTANTS_.cdata(), CONSTANTS_.size());
+    if (useVmExtrapolant)
+    {
+        cuda_.uploadVmExtrapolant
+        (
+            vmStateStart.cdata(),
+            vmStateRate.cdata(),
+            static_cast<std::size_t>(N)
+        );
+    }
 
     if (cuda_.hostDirty)
     {
@@ -475,6 +545,16 @@ void Foam::CourtemanchecompactBatched::solveOnDevice
     for (label sub = 0; sub < nSub; ++sub)
     {
         const scalar tSub = tStart + scalar(sub)*dtSubstep;
+        if (useVmExtrapolant)
+        {
+            cuda_.applyVmExtrapolant
+            (
+                static_cast<double>(tSub),
+                static_cast<double>(tStart),
+                static_cast<std::size_t>(voltageStateIndex()),
+                static_cast<std::size_t>(N)
+            );
+        }
         launchCourtemancheBatchKernel
         (
             tSub, cuda_.d_constants, static_cast<int>(N),
@@ -507,6 +587,16 @@ void Foam::CourtemanchecompactBatched::solveOnDevice
         }
     }
 
+    if (useVmExtrapolant)
+    {
+        cuda_.applyVmExtrapolant
+        (
+            static_cast<double>(tStart + dtModel),
+            static_cast<double>(tStart),
+            static_cast<std::size_t>(voltageStateIndex()),
+            static_cast<std::size_t>(N)
+        );
+    }
     launchCourtemancheBatchKernel
     (
         tStart + dtModel, cuda_.d_constants, static_cast<int>(N),

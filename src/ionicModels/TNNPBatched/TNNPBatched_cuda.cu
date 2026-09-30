@@ -39,7 +39,7 @@ namespace
         const double* __restrict__ CELL_CONSTANTS,
         const bool useCellConstants,
         const int N,
-        const double* __restrict__ STATES,
+        double* __restrict__ STATES,
         double* __restrict__ RATES,
         double* __restrict__ SUPPORT,
         const bool solveVm,
@@ -127,7 +127,7 @@ void launchTnnpBatchKernel
     const double* d_CELL_CONSTANTS,
     bool useCellConstants,
     int N,
-    const double* d_STATES,
+    double* d_STATES,
     double* d_RATES,
     double* d_SUPPORT,
     int tissueFlag,
@@ -208,7 +208,15 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
+            const int _idx = (si)*N + cellI;                                      \
+            if (_tau > 1.0e-300 && ::isfinite(_tau) && ::isfinite(_inf))       \
+            {                                                                     \
+                STATES[_idx] = _inf + (_x - _inf)*::exp(-dt/_tau);                \
+            }                                                                     \
+            else                                                                  \
+            {                                                                     \
+                STATES[_idx] = _x + dt*RATES[_idx];                               \
+            }                                                                     \
         }
 
         TNNP_RL(Xr1, TNNP_BATCH_SUPPORT_tau_xr1, TNNP_BATCH_SUPPORT_gInf_xr1)

@@ -199,7 +199,15 @@ namespace
             const double _x   = STATES[(si)*N + cellI];                      \
             const double _inf = SUPPORT[(iSlot)*N + cellI];                  \
             const double _tau = SUPPORT[(tSlot)*N + cellI];                  \
-            STATES[(si)*N + cellI] = _inf + (_x - _inf)*::exp(-dt/_tau);       \
+            const int _idx = (si)*N + cellI;                                      \
+            if (_tau > 1.0e-300 && ::isfinite(_tau) && ::isfinite(_inf))       \
+            {                                                                     \
+                STATES[_idx] = _inf + (_x - _inf)*::exp(-dt/_tau);                \
+            }                                                                     \
+            else                                                                  \
+            {                                                                     \
+                STATES[_idx] = _x + dt*RATES[_idx];                               \
+            }                                                                     \
         }
 
         COURTEMANCHE_RL(ina_m,    COURTEMANCHE_BATCH_SUPPORT_tau_m,       COURTEMANCHE_BATCH_SUPPORT_gInf_m)
@@ -216,6 +224,7 @@ namespace
         COURTEMANCHE_RL(iks_xs,   COURTEMANCHE_BATCH_SUPPORT_tau_xs,      COURTEMANCHE_BATCH_SUPPORT_gInf_xs)
         COURTEMANCHE_RL(cajsr_u,  COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_u, COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_u)
         COURTEMANCHE_RL(cajsr_w,  COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_w, COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_w)
+        COURTEMANCHE_RL(cajsr_v,  COURTEMANCHE_BATCH_SUPPORT_tau_cajsr_v, COURTEMANCHE_BATCH_SUPPORT_gInf_cajsr_v)
 
         #undef COURTEMANCHE_RL
 
@@ -225,7 +234,7 @@ namespace
                 si == ical_d || si == ical_f   || si == ical_fCa ||
                 si == ito_oa || si == ito_oi   || si == ikur_ua  ||
                 si == ikur_ui|| si == ikr_xr   || si == iks_xs   ||
-                si == cajsr_u|| si == cajsr_w) continue;
+                si == cajsr_u|| si == cajsr_w|| si == cajsr_v) continue;
             if (!solveVm && si == vmStateI) continue;
             const int idx = si*N + cellI;
             STATES[idx] += dt*RATES[idx];
