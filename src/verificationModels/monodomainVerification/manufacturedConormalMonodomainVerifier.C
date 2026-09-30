@@ -17,14 +17,15 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "manufacturedAnisotropicMonodomainVerifier.H"
+#include "manufacturedConormalMonodomainVerifier.H"
 
 #include "OFstream.H"
 #include "OSspecific.H"
 #include "PstreamReduceOps.H"
 #include "boundBox.H"
 #include "ionicModel.H"
-#include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
+#include "mathematicalConstants.H"
+#include "monodomainVerification/manufacturedConormalMonodomainReference.H"
 #include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -33,17 +34,17 @@ namespace Foam
 
 using namespace verificationUtils;
 
-defineTypeNameAndDebug(manufacturedAnisotropicMonodomainVerifier, 0);
+defineTypeNameAndDebug(manufacturedConormalMonodomainVerifier, 0);
 addToRunTimeSelectionTable
 (
     electroVerificationModel,
-    manufacturedAnisotropicMonodomainVerifier,
+    manufacturedConormalMonodomainVerifier,
     dictionary
 );
 
 
-manufacturedAnisotropicMonodomainVerifier::
-manufacturedAnisotropicMonodomainVerifier
+manufacturedConormalMonodomainVerifier::
+manufacturedConormalMonodomainVerifier
 (
     const dictionary& dict
 )
@@ -52,11 +53,12 @@ manufacturedAnisotropicMonodomainVerifier
     errorsReported_(false),
     beta_(0.0),
     betaInitialised_(false),
-    conductivityValidated_(false)
+    profileInitialised_(false),
+    profile_{complex(0, 0), complex(0, 0), complex(0, 0), 0, 0}
 {}
 
 
-void manufacturedAnisotropicMonodomainVerifier::initialiseBeta
+void manufacturedConormalMonodomainVerifier::initialiseBeta
 (
     const ionicModel& model
 )
@@ -87,7 +89,7 @@ void manufacturedAnisotropicMonodomainVerifier::initialiseBeta
     if (betaIndex < 0)
     {
         FatalErrorInFunction
-            << "manufacturedAnisotropicMonodomainVerifier requires the "
+            << "manufacturedConormalMonodomainVerifier requires the "
             << "manufactured ionic constant 'Beta', but ionic model "
             << model.type() << " exposes constants " << constantNames << "."
             << exit(FatalError);
@@ -98,7 +100,7 @@ void manufacturedAnisotropicMonodomainVerifier::initialiseBeta
 }
 
 
-void manufacturedAnisotropicMonodomainVerifier::validateConfiguration
+void manufacturedConormalMonodomainVerifier::validateConfiguration
 (
     const ionicModel& model,
     const fvMesh& mesh
@@ -111,7 +113,7 @@ void manufacturedAnisotropicMonodomainVerifier::validateConfiguration
     )
     {
         FatalErrorInFunction
-            << "manufacturedAnisotropicMonodomainVerifier requires the 3D "
+            << "manufacturedConormalMonodomainVerifier requires the 3D "
             << "monodomainFDAManufactured ionic model. Received ionic model "
             << model.type() << " with verification family '"
             << model.verificationFamily() << "' and geometric dimension "
@@ -131,73 +133,37 @@ void manufacturedAnisotropicMonodomainVerifier::validateConfiguration
     )
     {
         FatalErrorInFunction
-            << "manufacturedAnisotropicMonodomainVerifier is defined on "
-            << "the unit cube [0,1]^3 so that its homogeneous-flux boundary "
-            << "condition is exact. Mesh bounds are " << bounds << "."
+            << "manufacturedConormalMonodomainVerifier is defined on "
+            << "the unit cube [0,1]^3. Mesh bounds are " << bounds << "."
             << exit(FatalError);
     }
 }
 
 
-void manufacturedAnisotropicMonodomainVerifier::validateConductivity
+void manufacturedConormalMonodomainVerifier::initialiseProfile
 (
     const volTensorField& conductivity
 ) const
 {
+    if (profileInitialised_)
+    {
+        return;
+    }
+
     const tensor meanSigma =
         uniformTensor(conductivity.primitiveField(), typeName);
-    const scalar tolerance = 1e-10*max(scalar(1), mag(meanSigma));
 
-    const scalar symmetryError = mag(meanSigma - meanSigma.T());
-    if (symmetryError > tolerance)
-    {
-        FatalErrorInFunction
-            << "The manufactured anisotropic conductivity must be symmetric. "
-            << "The global mean tensor is " << meanSigma
-            << " and ||K-K^T|| = " << symmetryError << "."
-            << exit(FatalError);
-    }
-
-    const tensor symmetricSigma = 0.5*(meanSigma + meanSigma.T());
-    const scalar leadingMinor1 = symmetricSigma.xx();
-    const scalar leadingMinor2 =
-        symmetricSigma.xx()*symmetricSigma.yy()
-      - Foam::sqr(symmetricSigma.xy());
-    const scalar leadingMinor3 = det(symmetricSigma);
-
-    if
+    profile_ = conormalWallProfile
     (
-        leadingMinor1 <= tolerance
-     || leadingMinor2 <= Foam::sqr(tolerance)
-     || leadingMinor3 <= Foam::pow(tolerance, 3)
-    )
-    {
-        FatalErrorInFunction
-            << "The manufactured anisotropic conductivity must be symmetric "
-            << "positive definite. Sylvester principal minors are ("
-            << leadingMinor1 << ' ' << leadingMinor2 << ' '
-            << leadingMinor3 << ") for tensor " << symmetricSigma << "."
-            << exit(FatalError);
-    }
-
-    const scalar maxOffDiagonal = max
-    (
-        mag(symmetricSigma.xy()),
-        max(mag(symmetricSigma.xz()), mag(symmetricSigma.yz()))
+        meanSigma,
+        2*constant::mathematical::pi,
+        2*constant::mathematical::pi
     );
-
-    if (maxOffDiagonal <= tolerance)
-    {
-        FatalErrorInFunction
-            << "The manufactured anisotropic conductivity must contain a "
-            << "genuine rotation (at least one non-zero off-diagonal "
-            << "component). Received " << symmetricSigma << "."
-            << exit(FatalError);
-    }
+    profileInitialised_ = true;
 }
 
 
-wordList manufacturedAnisotropicMonodomainVerifier::preProcessFieldNames
+wordList manufacturedConormalMonodomainVerifier::preProcessFieldNames
 (
     const ionicModel&
 ) const
@@ -207,7 +173,7 @@ wordList manufacturedAnisotropicMonodomainVerifier::preProcessFieldNames
 
 
 wordList
-manufacturedAnisotropicMonodomainVerifier::requiredPostProcessFieldNames
+manufacturedConormalMonodomainVerifier::requiredPostProcessFieldNames
 (
     const ionicModel&
 ) const
@@ -216,7 +182,7 @@ manufacturedAnisotropicMonodomainVerifier::requiredPostProcessFieldNames
 }
 
 
-bool manufacturedAnisotropicMonodomainVerifier::shouldPostProcess
+bool manufacturedConormalMonodomainVerifier::shouldPostProcess
 (
     const ionicModel&,
     const volScalarField& Vm
@@ -226,7 +192,7 @@ bool manufacturedAnisotropicMonodomainVerifier::shouldPostProcess
 }
 
 
-void manufacturedAnisotropicMonodomainVerifier::preProcess
+void manufacturedConormalMonodomainVerifier::preProcess
 (
     ionicModel& model,
     volScalarField& Vm,
@@ -238,7 +204,7 @@ void manufacturedAnisotropicMonodomainVerifier::preProcess
     if (fields.size() != names.size())
     {
         FatalErrorInFunction
-            << "manufacturedAnisotropicMonodomainVerifier preProcess "
+            << "manufacturedConormalMonodomainVerifier preProcess "
             << "expected " << names.size() << " preProcess fields " << names
             << " but received " << fields.size()
             << exit(FatalError);
@@ -246,6 +212,10 @@ void manufacturedAnisotropicMonodomainVerifier::preProcess
 
     validateConfiguration(model, Vm.mesh());
     initialiseBeta(model);
+
+    const volTensorField& conductivity =
+        Vm.mesh().lookupObject<volTensorField>("conductivity");
+    initialiseProfile(conductivity);
 
     const label u1Field = requireFieldIndex(names, "u1", "preProcess");
     const label u2Field = requireFieldIndex(names, "u2", "preProcess");
@@ -263,8 +233,8 @@ void manufacturedAnisotropicMonodomainVerifier::preProcess
     scalarField& u2I = u2m.primitiveFieldRef();
     scalarField& u3I = u3m.primitiveFieldRef();
 
-    computeAnisotropicManufacturedV(VmI, centres, t);
-    computeAnisotropicManufacturedU(u1I, u2I, u3I, centres, t);
+    computeConormalManufacturedV(VmI, centres, t, profile_);
+    computeConormalManufacturedU(u1I, u2I, u3I, centres, t, profile_);
 
     Vm.correctBoundaryConditions();
     u1m.correctBoundaryConditions();
@@ -275,7 +245,7 @@ void manufacturedAnisotropicMonodomainVerifier::preProcess
 }
 
 
-void manufacturedAnisotropicMonodomainVerifier::addManufacturedPdeSource
+void manufacturedConormalMonodomainVerifier::addManufacturedPdeSource
 (
     volScalarField& sourceField,
     const volTensorField& conductivity,
@@ -298,20 +268,17 @@ void manufacturedAnisotropicMonodomainVerifier::addManufacturedPdeSource
             << exit(FatalError);
     }
 
-    if (!conductivityValidated_)
-    {
-        validateConductivity(conductivity);
-        conductivityValidated_ = true;
-    }
+    initialiseProfile(conductivity);
 
     scalarField manufacturedSource;
-    computeAnisotropicManufacturedPdeSource
+    computeConormalManufacturedPdeSource
     (
         manufacturedSource,
         sourceField.mesh().C().primitiveField(),
         conductivity.primitiveField(),
         evaluationTime,
-        beta_
+        beta_,
+        profile_
     );
 
     sourceField.primitiveFieldRef() += manufacturedSource;
@@ -319,7 +286,7 @@ void manufacturedAnisotropicMonodomainVerifier::addManufacturedPdeSource
 }
 
 
-void manufacturedAnisotropicMonodomainVerifier::postProcess
+void manufacturedConormalMonodomainVerifier::postProcess
 (
     const ionicModel& model,
     const volScalarField& Vm,
@@ -336,7 +303,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
     if (fields.size() != requiredNames.size())
     {
         FatalErrorInFunction
-            << "manufacturedAnisotropicMonodomainVerifier postProcess "
+            << "manufacturedConormalMonodomainVerifier postProcess "
             << "expected " << requiredNames.size() << " scratch fields "
             << requiredNames << " but received " << fields.size()
             << exit(FatalError);
@@ -355,14 +322,15 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
     const label nSteps = max(label(0), mesh.time().timeIndex());
 
     scalarField VmExact, u1Exact, u2Exact, u3Exact;
-    computeAnisotropicManufacturedV(VmExact, centres, t);
-    computeAnisotropicManufacturedU
+    computeConormalManufacturedV(VmExact, centres, t, profile_);
+    computeConormalManufacturedU
     (
         u1Exact,
         u2Exact,
         u3Exact,
         centres,
-        t
+        t,
+        profile_
     );
 
     const auto VmNorms = computeNorms(mesh, Vm.primitiveField(), VmExact);
@@ -383,7 +351,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
 
     if (Pstream::master())
     {
-        Info << "\nRotated-anisotropy manufactured-solution error summary "
+        Info << "\nConormal manufactured-solution error summary "
              << "(t = " << t << "):" << nl
              << "-------------------------------------------------" << nl
              << "Field     L1-error       L2-error       Linf-error" << nl
@@ -396,7 +364,7 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
              << "-------------------------------------------------" << endl;
 
         OFstream out(outputFile);
-        out << "Rotated-anisotropy manufactured-solution error summary "
+        out << "Conormal manufactured-solution error summary "
             << "(t = " << t << "):\n";
         out << "Field     L1-error       L2-error       Linf-error\n";
         out << "Vm     " << VmNorms.first().first() << "   "
