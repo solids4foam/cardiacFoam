@@ -50,7 +50,11 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
     }
 
     autoPtr<fvMeshSubset> subsetPtr(new fvMeshSubset(supportMesh));
-    subsetPtr->setCellSubset(supportMesh.cellZones()[zoneId]);
+    subsetPtr->setCellSubset
+    (
+        supportMesh.cellZones()[zoneId],
+        myocardiumExposedFacesPatch(supportMesh, electroProperties)
+    );
     return subsetPtr;
 }
 
