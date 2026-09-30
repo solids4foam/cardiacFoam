@@ -87,6 +87,11 @@ public:
 
     virtual bool shouldPostProcess() const = 0;
 
+    virtual bool imposesExactValue(const fvPatch&) const
+    {
+        return true;
+    }
+
     virtual void postProcess(const volScalarField& activationTime) = 0;
 
 protected:

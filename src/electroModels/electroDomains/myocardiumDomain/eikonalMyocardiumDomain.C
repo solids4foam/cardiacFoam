@@ -25,6 +25,8 @@ License
 #include "conductivityFieldIO.H"
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
+#include "insulatedFaceConductivity.H"
+#include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
 {
@@ -55,7 +57,11 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
     }
 
     autoPtr<fvMeshSubset> subsetPtr(new fvMeshSubset(supportMesh));
-    subsetPtr->setCellSubset(supportMesh.cellZones()[zoneId]);
+    subsetPtr->setCellSubset
+    (
+        supportMesh.cellZones()[zoneId],
+        myocardiumExposedFacesPatch(supportMesh, electroProperties)
+    );
     return subsetPtr;
 }
 
@@ -92,7 +98,11 @@ const fvMesh& resolveMyocardiumMesh
 // would extrapolate those values away from the interior on the next
 // evaluate(), silently invalidating the verification while still reporting
 // error norms. checkVerificationBoundaryTypes below enforces that instead.
-void checkVerificationBoundaryTypes(const volScalarField& activationTime)
+void checkVerificationBoundaryTypes
+(
+    const volScalarField& activationTime,
+    const eikonalVerificationModel& verifier
+)
 {
     const volScalarField::Boundary& boundary = activationTime.boundaryField();
 
@@ -100,7 +110,13 @@ void checkVerificationBoundaryTypes(const volScalarField& activationTime)
     {
         const fvPatchScalarField& patchField = boundary[patchI];
 
-        if (patchField.empty() || patchField.type() == "empty" || patchField.patch().coupled())
+        if
+        (
+            patchField.empty()
+         || patchField.type() == "empty"
+         || patchField.patch().coupled()
+         || !verifier.imposesExactValue(patchField.patch())
+        )
         {
             continue;
         }
@@ -260,7 +276,8 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        fvc::grad(activationTime_)
+        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+        dimensionedVector("0", dimTime/dimLength, vector::zero)
     ),
     stimulusCellIDs_(0),
     electroProperties_(electroProperties),
@@ -295,8 +312,43 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     (
         electroProperties.lookupOrDefault<Switch>("useGraphPrePopulation", true)
     ),
+    sealedHeartBoundary_
+    (
+        electroProperties.getOrDefault<Switch>("sealedHeartBoundary", false)
+    ),
     verificationModelPtr_()
 {
+    const wordList wallTypes
+    (
+        conormalWallPatchTypes
+        (
+            mesh(),
+            electroProperties.getOrDefault<word>("sealedWallTrace", "zeroGradient")
+        )
+    );
+    volScalarField::Boundary& activationBf = activationTime_.boundaryFieldRef();
+    forAll(activationBf, patchI)
+    {
+        if
+        (
+            isA<zeroGradientFvPatchScalarField>(activationBf[patchI])
+         && wallTypes[patchI] != activationBf[patchI].type()
+        )
+        {
+            activationBf.set
+            (
+                patchI,
+                fvPatchScalarField::New
+                (
+                    wallTypes[patchI],
+                    mesh().boundary()[patchI],
+                    activationTime_
+                )
+            );
+            activationBf[patchI].evaluate();
+        }
+    }
+
     const boundBox bb
     (
         point(electroProperties.lookup("stimulusLocationMin")),
@@ -331,7 +383,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
 
     if (verificationModelPtr_)
     {
-        checkVerificationBoundaryTypes(activationTime_);
+        checkVerificationBoundaryTypes(activationTime_, verificationModelPtr_());
     }
 }
 
@@ -513,7 +565,14 @@ void eikonalMyocardiumDomain::advance
 
             fvScalarMatrix activationEqn
             (
-               -fvm::laplacian(M_, activationTime_)
+               -fvm::laplacian
+                (
+                    insulatedFaceConductivity
+                    (
+                        M_, activationTime_, sealedHeartBoundary_
+                    )(),
+                    activationTime_
+                )
               + fvm::div(phiU_, activationTime_)
               + fvm::SuSp(-divPhiU_, activationTime_)
              == one
@@ -536,7 +595,14 @@ void eikonalMyocardiumDomain::advance
         {
             fvScalarMatrix activationEqn
             (
-               -fvm::laplacian(M_, activationTime_)
+               -fvm::laplacian
+                (
+                    insulatedFaceConductivity
+                    (
+                        M_, activationTime_, sealedHeartBoundary_
+                    )(),
+                    activationTime_
+                )
               + c0_*G_
              == one
               + Smms

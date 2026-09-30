@@ -59,14 +59,48 @@ manufacturedEikonalVerifier::manufacturedEikonalVerifier
     c0_(c0.value()),
     writeErrorField_(false),
     dimension_(max(label(1), min(mesh.nGeometricD(), label(3)))),
+    k_(manufacturedEikonalK(dimension_)),
+    productionPatches_(),
     errorsReported_(false)
 {
     const dictionary& cfg = electroProperties.subDict("verificationModel");
     writeErrorField_ =
         cfg.lookupOrDefault<Switch>("writeErrorField", false);
+    k_ = cfg.getOrDefault<vector>("k", k_);
+    productionPatches_ =
+        cfg.getOrDefault<wordRes>("productionPatches", wordRes());
 
     validateManufacturedEikonalUnitDomain(mesh_, dimension_);
-    (void)manufacturedEikonalConstantConductivity(conductivity_);
+    const vector Mk
+    (
+        manufacturedEikonalM
+        (
+            manufacturedEikonalConstantConductivity(conductivity_), chi_, Cm_
+        ) & k_
+    );
+
+    forAll(mesh_.boundary(), patchI)
+    {
+        const fvPatch& p = mesh_.boundary()[patchI];
+        if (imposesExactValue(p))
+        {
+            continue;
+        }
+        scalar maxFlux = 0;
+        const vectorField nf(p.nf());
+        forAll(nf, faceI)
+        {
+            maxFlux = max(maxFlux, mag(nf[faceI] & Mk));
+        }
+        reduce(maxFlux, maxOp<scalar>());
+        if (maxFlux > 1e-10*mag(Mk))
+        {
+            FatalErrorInFunction
+                << "productionPatches requires n.(M k) = 0 on patch "
+                << p.name() << ": max |n.(M k)| = " << maxFlux
+                << ", |M k| = " << mag(Mk) << exit(FatalError);
+        }
+    }
 
     Info<< "Enabled manufactured eikonal activation-time verification."
         << endl;
@@ -78,7 +112,7 @@ tmp<volScalarField> manufacturedEikonalVerifier::sourceTerm() const
 {
     const tensor conductivity =
         manufacturedEikonalConstantConductivity(conductivity_);
-    const vector k = manufacturedEikonalK(dimension_);
+    const vector& k = k_;
 
     tmp<volScalarField> tSmms
     (
@@ -137,7 +171,17 @@ void manufacturedEikonalVerifier::applyConstraints
     reduce(minY, minOp<scalar>());
     reduce(minZ, minOp<scalar>());
 
-    const vector k = manufacturedEikonalK(dimension_);
+    const vector& k = k_;
+
+    boolList wallCell(centres.size(), false);
+    forAll(mesh_.boundary(), patchI)
+    {
+        if (!imposesExactValue(mesh_.boundary()[patchI]))
+        {
+            UIndirectList<bool>(wallCell, mesh_.boundary()[patchI].faceCells())
+                = true;
+        }
+    }
 
     scalarField& activationValues = activationTime.primitiveFieldRef();
     activationValues = -1.0;
@@ -152,7 +196,7 @@ void manufacturedEikonalVerifier::applyConstraints
         if (dimension_ >= 2 && Foam::mag(c.y() - minY) <= tolerance) constrain = true;
         if (dimension_ >= 3 && Foam::mag(c.z() - minZ) <= tolerance) constrain = true;
 
-        if (constrain)
+        if (constrain && !wallCell[cellI])
         {
             activationValues[cellI] = manufacturedEikonalTau(c, k);
         }
@@ -163,7 +207,12 @@ void manufacturedEikonalVerifier::applyConstraints
     {
         fvPatchScalarField& patchField = boundary[patchI];
 
-        if (patchField.empty() || patchField.type() == "empty")
+        if
+        (
+            patchField.empty()
+         || patchField.type() == "empty"
+         || !imposesExactValue(patchField.patch())
+        )
         {
             continue;
         }
@@ -192,7 +241,7 @@ void manufacturedEikonalVerifier::postProcess
         return;
     }
 
-    const vector k = manufacturedEikonalK(dimension_);
+    const vector& k = k_;
 
     const vectorField& centres = mesh_.C().primitiveField();
     scalarField exact(centres.size(), 0.0);
