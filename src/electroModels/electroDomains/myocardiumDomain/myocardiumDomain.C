@@ -20,6 +20,7 @@ License
 #include "myocardiumDomain.H"
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
+#include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
 {
@@ -212,7 +213,11 @@ myocardiumDomain::myocardiumDomain
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -0.084),
-        "zeroGradient"
+        conormalWallPatchTypes
+        (
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            electroProperties.getOrDefault<word>("sealedWallTrace", "zeroGradient")
+        )
     ),
     gradVm_
     (

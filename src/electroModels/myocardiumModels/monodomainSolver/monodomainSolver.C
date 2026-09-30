@@ -23,6 +23,7 @@ License
 #include "myocardiumDomain.H"
 #include "addToRunTimeSelectionTable.H"
 #include "conductivityFieldIO.H"
+#include "insulatedFaceConductivity.H"
 
 namespace Foam
 {
@@ -53,6 +54,10 @@ monodomainSolver::monodomainSolver
             meshSubsetPtr,
             electroProperties
         )
+    ),
+    sealedHeartBoundary_
+    (
+        electroProperties.getOrDefault<Switch>("sealedHeartBoundary", false)
     )
 {}
 
@@ -88,12 +93,20 @@ void monodomainSolver::solveDiffusionExplicit
 {
     (void)dt;
 
+    const tmp<surfaceTensorField> tGf
+    (
+        insulatedFaceConductivity
+        (
+            conductivity_, domain.Vm(), sealedHeartBoundary_
+        )
+    );
+
     if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
     {
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(conductivity_, domain.Vm())
+          == fvc::laplacian(tGf(), domain.Vm())
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
            - (*coeff)*domain.Vm()
@@ -104,7 +117,7 @@ void monodomainSolver::solveDiffusionExplicit
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(conductivity_, domain.Vm())
+          == fvc::laplacian(tGf(), domain.Vm())
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
         );
@@ -119,6 +132,14 @@ void monodomainSolver::solveDiffusionImplicit
 )
 {
     (void)dt;
+
+    const tmp<surfaceTensorField> tGf
+    (
+        insulatedFaceConductivity
+        (
+            conductivity_, domain.Vm(), sealedHeartBoundary_
+        )
+    );
 
     tmp<volScalarField> tIionExtrap;
     const volScalarField* IionOldPtr = domain.IionOldPtr();
@@ -141,7 +162,7 @@ void monodomainSolver::solveDiffusionImplicit
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           + fvm::Sp(*coeff, domain.VmRef())
-          == fvm::laplacian(conductivity_, domain.Vm())
+          == fvm::laplacian(tGf(), domain.Vm())
            - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );
@@ -151,7 +172,7 @@ void monodomainSolver::solveDiffusionImplicit
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvm::laplacian(conductivity_, domain.Vm())
+          == fvm::laplacian(tGf(), domain.Vm())
            - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );
