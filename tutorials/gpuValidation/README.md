@@ -62,6 +62,16 @@ gates at this setting. The earlier four-model mismatches in jobs 9473/9475
 were equation-path differences that have since been corrected; their results
 remain historical. Full details and reports are in the status file.
 
+Fabbri was checked separately as a single AV-node pacemaker cell (job 9519),
+with stimulus amplitude zero and a 2 s run. CPU-batched and CUDA-batched
+traces over the final second matched exactly at saved precision: the 33 rate
+columns and directly compared voltage/state/current columns had zero maximum
+difference across 10,001 samples. Both backends exported 289,628 nonzero rate
+values, and the CUDA case confirmed device 0. This closes single-cell backend
+parity for Fabbri; it does not add Fabbri to the tissue slab matrix. The
+single-cell CUDA runtime is dominated by launch overhead and is not a speed
+benchmark.
+
 The evidence supports working CUDA ODE paths and useful speedups in the
 tested 3D workloads, but it does not certify every model at production
 timesteps. The CPU PDE and ODE/PDE transfers remain part of the measured
@@ -667,6 +677,33 @@ one CPU core, including setup and output, on xenosim (AMD EPYC 9684X plus RTX
 4000 Ada); it is not a kernel-only speedup measurement or a comparison with a
 fully parallel CPU run. Reproduce with
 `run_slab_matrix.py --models ... --end-time 0.015 --workers 1 --require-gpu`.
+
+### Fabbri AV-node single-cell backend parity
+
+Fabbri has both `FabbriBatched` CPU and `FabbricompactBatched` CUDA
+implementations. Job 9519 compared spontaneous pacemaking with stimulus
+amplitude zero for 2 s, using `deltaT=2 us`, five Rush--Larsen substeps, and
+all-variable output every 0.1 ms. CPU and CUDA traces from 1–2 s matched
+exactly at saved precision: 10,001 samples, 33 rates, and all directly
+compared Vm/state/current fields; the rates were nonzero and matched in both
+backends. The CUDA log confirms device 0. Scalar RKF45 was also run as a
+reference; scalar and CPU-batched APD90 were 150.05343 and 150.05470 ms in
+this run, a 0.00127 ms difference. This is a single-cell correctness check,
+not AV-tissue propagation validation.
+
+The run took about 27 s for scalar CPU, 19 s for CPU-batched, 19 s for scalar
+in the CUDA build, and 505 s for CUDA-batched. Single-cell CUDA time is
+dominated by launch overhead and diagnostic output; it is not a performance
+benchmark.
+
+Reproduce from the repository root on xenosim with:
+
+```bash
+sbatch tutorials/gpuValidation/run_fabbri_singlecell_backend_parity.slurm
+```
+
+Job 9519 traces and build logs are under
+`/tmp/cardiac_fabbri_singlecell_parity_9519/`.
 
 ## Niederer GPU verification
 

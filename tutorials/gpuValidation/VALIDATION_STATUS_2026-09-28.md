@@ -1,8 +1,8 @@
 # GPU ionic-model validation: discussion brief
 
-**Snapshot:** 2026-09-30, updated after completion of jobs 9510, 9512, 9513, and 9516
-**Target:** `cardiacFoam` branch `main`, base commit `6900b946`; follow-up
-validation changes described below are in the working tree and uncommitted.
+**Snapshot:** 2026-09-30, updated after completion of jobs 9510, 9512, 9513, 9516, and 9519
+**Target:** `cardiacFoam` branch `main`, validation base commit `6900b946`;
+the parity implementation was committed as `222c8bfc`.
 **GPU:** NVIDIA RTX 4000 Ada, 20 GB; OpenFOAM 2412. The reported CUDA builds
 used CUDA 11.5 and GCC 10 for nvcc. Most benchmark jobs used one MPI rank,
 one CPU core, and one GPU.
@@ -15,6 +15,14 @@ strict field mismatches recorded by older jobs 9473/9475. See the final
 section for the criteria and reports. This confirms backend parity at this
 tested setting; it does not establish full-duration accuracy or safe larger
 time steps.
+
+Fabbri is outside that tissue-model matrix because it is an AV-node pacemaker,
+but its CPU-batched/CUDA-batched single-cell parity has now been checked
+separately (job 9519). With zero stimulus amplitude over 0–2 s, the final
+second matched exactly at saved precision for 10,001 samples, including 33
+nonzero rate columns and all directly compared Vm/state/current columns. The
+CUDA run selected device 0. This does not validate AV-tissue coupling or
+propagation.
 
 ## Equation-alignment changes after job 9481 started
 
@@ -659,3 +667,31 @@ The retry data and reports are under
 `/tmp/cardiac_court_torord_slab_parity_9513/cpu/`. The complete reproducible
 CPU/CUDA matrix is launched from the repository root with
 `sbatch tutorials/gpuValidation/run_courtemanche_torord_slab_backend_parity.slurm`.
+
+## Fabbri AV-node single-cell CPU/CUDA parity (job 9519)
+
+Fabbri has a batched CPU implementation (`FabbriBatched`) and an actual CUDA
+implementation (`FabbricompactBatched`). It was excluded from tissue slab
+parity because it is an AV-node pacemaker; this focused run validates only the
+single-cell backend path.
+
+The run used stimulus amplitude zero, 2 s duration, `deltaT=2 us`, five
+Rush--Larsen substeps, and all-variable output every 0.1 ms. CPU-batched and
+CUDA-batched traces from 1 to 2 s had 10,001 matching samples. All 33
+`RATES_*` columns and directly compared Vm/state/current columns were exactly
+equal at saved precision (maximum absolute difference zero); both had 289,628
+nonzero rate entries. The CUDA log confirms device 0. Scalar RKF45 and
+CPU-batched APD90 were 150.05343 and 150.05470 ms, respectively, a 0.00127 ms
+difference. The scalar comparison is contextual because it uses a different
+integrator than the batched Rush--Larsen/Euler path.
+
+The simulation logs report about 27 s for scalar CPU, 19 s for CPU-batched,
+19 s for scalar in the CUDA build, and 505 s for CUDA-batched. This single-cell
+CUDA runtime is dominated by kernel-launch overhead and diagnostic output; it
+is not a performance benchmark. Logs, traces, and summaries are under
+`/tmp/cardiac_fabbri_singlecell_parity_9519/`. Reproduce from the repository
+root on xenosim with:
+
+```bash
+sbatch tutorials/gpuValidation/run_fabbri_singlecell_backend_parity.slurm
+```

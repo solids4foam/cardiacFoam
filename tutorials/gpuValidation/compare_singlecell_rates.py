@@ -25,10 +25,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("cpu_case", type=Path)
     parser.add_argument("cuda_case", type=Path)
+    parser.add_argument(
+        "--start-time", type=float, default=None,
+        help="compare samples at or after this time (seconds)",
+    )
     args = parser.parse_args()
 
     cpu_names, cpu = load_trace(args.cpu_case)
     cuda_names, cuda = load_trace(args.cuda_case)
+    if args.start_time is not None:
+        cpu = cpu[cpu[:, 0] >= args.start_time]
+        cuda = cuda[cuda[:, 0] >= args.start_time]
+        if not len(cpu) or not len(cuda):
+            raise SystemExit("no samples at or after requested start time")
     if cpu_names != cuda_names or cpu.shape != cuda.shape:
         raise SystemExit("CPU and CUDA traces have different headers or shapes")
     names = [name for name in cpu_names if name.startswith("RATES_")]
