@@ -42,6 +42,10 @@ Grouped by the tissue each model represents. "Biophysical" models describe the i
 
 Every model also comes as a GPU-ready batched version: `AlievPanfilovcompactBatched`, `BuenoOroviocompactBatched`, `CourtemanchecompactBatched`, `FabbricompactBatched`, `GaurcompactBatched`, `GrandicompactBatched`, `PerisYaguecompactBatched`, `StewartcompactBatched`, `TNNPcompactBatched`, `TWorldcompactBatched`, `ToRORd_dynClcompactBatched` and `TrovatocompactBatched`. Batched models run on the CPU; building with `CARDIAC_ENABLE_CUDA` set adds a CUDA path.
 
+The [ioniGPUKernel tutorial](../../tutorials/ioniGPUKernel/README.md) explains
+the CUDA build, the scalar/batched source layout, runtime device selection, and
+a TNNP slab comparison.
+
 ### Cell types
 
 `TNNP`, `BuenoOrovio`, `ToRORd_dynCl` and `TWorld` carry their own endocardial, mid-myocardial and epicardial constants. The other eight hold one cell type and support only `myocyte`, scalar and batched alike: heterogeneity there means regions with `baseline myocyte;` plus per-region `ionicConstantOverrides`, since without overrides every region gets identical cells. Cell types can vary across the tissue by named regions (`namedRegions`, from a scalar field) or mesh cell zones (`cellZoneRegions`), with an optional gradient on top.
