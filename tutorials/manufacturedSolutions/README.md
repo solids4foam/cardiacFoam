@@ -10,6 +10,9 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
 - `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
 - `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
+- [`monodomainPseudoECG/insulatedWall`](monodomainPseudoECG/insulatedWall/README.md) : monodomain with conormally insulated walls
+- [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
+- [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
 
 ## Naming Pattern
 

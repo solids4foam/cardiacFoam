@@ -2,6 +2,8 @@
 
 Manufactured-solution verification for the monodomain stack with pseudo-ECG verification.
 
+Origin: the monodomain field problem (`manufacturedFDAMonodomainVerifier`) is the monodomain problem of the FDA regulatory science tool (Pathmanathan & Gray 2014). The rotated-anisotropy extension (`manufacturedAnisotropicMonodomainVerifier`) and the pseudo-ECG problem (`manufacturedPseudoECGVerifier`) are this work.
+
 ## Overview
 
 ### Stack
@@ -38,6 +40,10 @@ Typical outputs include:
 - `postProcessing/manufacturedPseudoECGSummary.dat`
 
 ## Variants & Extensions
+
+### Insulated-Wall Case
+
+[`insulatedWall/`](insulatedWall/README.md) is a separate case with walls that are insulated in the conormal sense, `n.G.grad(Vm) = 0` with `n.grad(Vm) != 0`, on a domain periodic in `y` and `z`. The exact solution here satisfies both `n.grad(Vm) = 0` and `n.G.grad(Vm) = 0` on every wall, so it cannot tell the two apart; `insulatedWall/` can. It has its own regression and tetrahedral study.
 
 ### Tetrahedral (unstructured) Mesh Variant
 

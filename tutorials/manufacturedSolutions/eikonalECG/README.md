@@ -2,6 +2,8 @@
 
 Manufactured-solution verification for the eikonal activation-time solve and its template ECG calculation.
 
+Origin: this work, for both the activation-time and the eikonal-driven ECG problems.
+
 ## Overview
 
 ### Stack
@@ -38,6 +40,10 @@ Typical outputs include:
 - `postProcessing/manufacturedEikonalECGSummary.dat`
 
 ## Variants & Extensions
+
+### Insulated-Wall Case
+
+[`insulatedWall/`](insulatedWall/README.md) is a separate case that leaves the faces `x = 0, 1` to the solver's insulated-wall treatment (`productionPatches`) instead of prescribing the exact activation time there, with `k` chosen so that `n.M.grad(psi) = 0` on those faces. It has its own regression and tetrahedral study.
 
 ### Tetrahedral (unstructured) Mesh Variant
 

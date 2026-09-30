@@ -2,6 +2,8 @@
 
 FDA bidomain-with-bath manufactured-solution verification.
 
+Origin: the bidomain-with-bath problem of the FDA regulatory science tool (Pathmanathan & Gray 2014).
+
 ## Overview
 
 ### Stack

@@ -2,6 +2,8 @@
 
 Manufactured-solution verification for the one-mesh bidomain stack.
 
+Origin: the bidomain problem of the FDA regulatory science tool (Pathmanathan & Gray 2014).
+
 ## Overview
 
 ### Stack
@@ -34,6 +36,10 @@ Typical outputs include:
 - `Vm`, `phiE`, `phiI`
 
 ## Variants & Extensions
+
+### Insulated-Wall Case
+
+[`insulatedWall/`](insulatedWall/README.md) is a separate case with unequal anisotropy and walls that are insulated in the conormal sense, `n.G_i.grad(phi_i) = 0` and `n.G_e.grad(phi_e) = 0`, on a domain periodic in `y` and `z`. The diagonal conductivities here make `n.grad(u) = 0` and `n.G.grad(u) = 0` coincide on the walls; in `insulatedWall/` they differ. It has its own regression and tetrahedral study.
 
 ### Tetrahedral (unstructured) Mesh Variant
 
