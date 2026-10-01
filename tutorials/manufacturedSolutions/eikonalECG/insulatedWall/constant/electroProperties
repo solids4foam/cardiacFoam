@@ -51,7 +51,7 @@ eikonalSolverCoeffs
             {
                 type    manufacturedEikonalECGVerifier;
                 enabled    yes;
-                referenceQuadratureOrder    48;
+                referenceQuadratureOrder    96;
                 checkQuadratureOrders    ();
                 k    (0.5 0.78097651867925399 2.0745795101815179);
             }
