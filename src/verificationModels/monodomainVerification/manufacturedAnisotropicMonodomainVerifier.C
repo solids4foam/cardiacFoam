@@ -144,45 +144,9 @@ void manufacturedAnisotropicMonodomainVerifier::validateConductivity
     const volTensorField& conductivity
 ) const
 {
-    const tensorField& sigma = conductivity.primitiveField();
-
-    tensor sigmaSum(tensor::zero);
-    forAll(sigma, cellI)
-    {
-        sigmaSum += sigma[cellI];
-    }
-    reduce(sigmaSum, sumOp<tensor>());
-
-    label nCells = sigma.size();
-    reduce(nCells, sumOp<label>());
-
-    if (nCells <= 0)
-    {
-        FatalErrorInFunction
-            << "Cannot validate anisotropic conductivity on an empty mesh."
-            << exit(FatalError);
-    }
-
-    const tensor meanSigma = sigmaSum/scalar(nCells);
-    scalar maxDeviation = 0.0;
-    forAll(sigma, cellI)
-    {
-        maxDeviation = max(maxDeviation, mag(sigma[cellI] - meanSigma));
-    }
-    reduce(maxDeviation, maxOp<scalar>());
-
-    const scalar scale = max(scalar(1), mag(meanSigma));
-    const scalar tolerance = 1e-10*scale;
-
-    if (maxDeviation > tolerance)
-    {
-        FatalErrorInFunction
-            << "manufacturedAnisotropicMonodomainVerifier assumes a "
-            << "spatially constant conductivity tensor. Maximum cellwise "
-            << "deviation from the global mean is " << maxDeviation
-            << ", exceeding tolerance " << tolerance << "."
-            << exit(FatalError);
-    }
+    const tensor meanSigma =
+        uniformTensor(conductivity.primitiveField(), typeName);
+    const scalar tolerance = 1e-10*max(scalar(1), mag(meanSigma));
 
     const scalar symmetryError = mag(meanSigma - meanSigma.T());
     if (symmetryError > tolerance)

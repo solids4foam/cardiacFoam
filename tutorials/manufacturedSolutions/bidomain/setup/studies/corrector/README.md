@@ -6,13 +6,15 @@ This study validates the predictor-corrector inner loop convergence and stabilit
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json`.
+
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
+[omnidriver command to run]
 ```
 
 Sweeps `N = 10, 20, 40` across the four reported variants (`baseline`,
 `outer2`, `nonorth1`, `combined`), each a `(nOuterCorrectors,
-nNonOrthogonalCorrectors)` pair applied via driverFOAM's own
+nNonOrthogonalCorrectors)` pair applied via omnidriver's own
 `n_outer_correctors`/`n_nonorthogonal_correctors` overrides
 (`manufactured_monodomain_pseudo_ecg._apply_case`); the short, fixed
 step-count screening window (2/9/36 steps) is set via `control_dict_overrides`

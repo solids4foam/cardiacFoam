@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Regenerate eikonalECG's gauss-linear-vs-leastSquares gradient comparison CSV.
 
-Reads this study's driverFOAM sweep archive (results/sweepCases, produced by
-`driverFoam sweep-run --spec sweep_gradient_tet.json`, see README.md) via
+Reads this study's omnidriver sweep archive (results/sweepCases, produced by
+the omnidriver sweep-run for sweep_gradient_tet.json, see README.md) via
 adapters.from_eikonal_gradient_reconstruction, and writes
 results/eikonal_gradient_tet.csv -- the full leastSquares-vs-gaussLinear
 comparison used in the paper's qualitative discussion.

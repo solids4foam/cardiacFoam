@@ -48,6 +48,7 @@ class bidomainSolver
     volTensorField Gi_;
     volTensorField Ge_;
     volTensorField GiPlusGe_;
+    Switch sealedHeartBoundary_;
     scalar phiEReferenceValue_;
     point phiEReferencePoint_;
     bool hasPhiEReferencePoint_;

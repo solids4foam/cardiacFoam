@@ -34,6 +34,7 @@ Author
 #include "dimensionedScalar.H"
 #include "dictionary.H"
 #include "volFields.H"
+#include "wordRes.H"
 
 namespace Foam
 {
@@ -53,6 +54,8 @@ class manufacturedEikonalVerifier : public eikonalVerificationModel
     Switch writeErrorField_;
 
     label dimension_;
+    vector k_;
+    wordRes productionPatches_;
     bool errorsReported_;
 
     manufacturedEikonalVerifier
@@ -99,6 +102,11 @@ public:
     virtual bool shouldPostProcess() const override
     {
         return !errorsReported_;
+    }
+
+    virtual bool imposesExactValue(const fvPatch& p) const override
+    {
+        return !productionPatches_.match(p.name());
     }
 
     virtual void postProcess(const volScalarField& activationTime) override;

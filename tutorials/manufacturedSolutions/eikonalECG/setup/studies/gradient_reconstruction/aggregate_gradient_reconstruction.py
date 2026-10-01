@@ -2,13 +2,13 @@
 """Regenerate the registered "eikonal_gradient_tet" Paper I table.
 
 Canonical entry point for the registered `eikonal_gradient_tet` verification
-experiment (the driverFOAM add-on's `verification_experiments.json`):
+experiment (omnidriver's `verification_experiments.json`):
 isolated `leastSquares` gradient reconstruction on the tet mesh across
 N = 10, 20, 40, 80.
 
-Reads this study's own driverFOAM sweep archive (results/sweepCases +
-results/sweepRun/sweep_manifest.json, produced by `driverFoam sweep-run
---spec sweep_gradient_tet.json`, see README.md) via
+Reads this study's own omnidriver sweep archive (results/sweepCases +
+results/sweepRun/sweep_manifest.json, produced by the omnidriver sweep-run
+for sweep_gradient_tet.json, see README.md) via
 adapters.from_eikonal_gradient_reconstruction, and writes
 setup/results/eikonal_gradient_tet.csv.
 

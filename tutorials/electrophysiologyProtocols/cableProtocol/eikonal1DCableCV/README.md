@@ -101,7 +101,7 @@ similarly named `cable1DCVConvergence` entry is registered, but the current
 registry resolves it to the *monodomain* cable case, not this eikonal folder:
 
 ```bash
-driverFoam describe --entry cable1DCVConvergence
+[omnidriver command to run]
 ```
 
 Use `Allrun` above for this eikonal case until a dedicated driver factory is

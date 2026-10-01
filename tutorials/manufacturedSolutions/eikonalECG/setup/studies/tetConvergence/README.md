@@ -11,18 +11,16 @@ eikonalECG exact solution.
 
 ## Execution
 
-First materialize the 16 baseline cases and inspect the generated plans:
+First materialize the 16 baseline cases and inspect the generated plans. Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json`.
 
-    driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+    [omnidriver command to run]
 
-Then run the same manifest with driverFOAM:
+Then run the same manifest with omnidriver:
 
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+    [omnidriver command to run]
 
 The previous reference to applications/scripts/paperI_results/aggregate.py has
-been removed. Use the driverFOAM sweep manifest and its archived verification
+been removed. Use the omnidriver sweep manifest and its archived verification
 outputs as the canonical run record; add an analysis command only alongside a
 versioned in-repository postprocessor.
 
