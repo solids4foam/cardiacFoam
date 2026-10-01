@@ -23,6 +23,12 @@ device; each coupled update transfers only its current inputs and `Ta`.
 Restart and exported-state requests deliberately synchronize the complete
 arrays back to the host.
 
+Set `batchedCUDAProfile true` for an aggregate diagnostic at solver shutdown.
+It reports steady-state H2D input, ODE-kernel, D2H `Ta`, and total wrapper
+time; the one-time allocation/initial-state upload is excluded from the H2D
+subtotal but remains in total time. It is for characterization, not a normal
+production setting.
+
 ## Folders
 
 ```text

@@ -77,9 +77,15 @@ protected:
         // falls back to the host path when no usable device is visible.
         mutable batchedActiveTensionCoreCUDA cuda_;
         Switch useCUDA_;
+        Switch cudaProfile_;
         bool cudaEnabled_;
         mutable bool cudaAnnounced_;
         mutable bool cudaHostStateStale_;
+        mutable label cudaProfileCalls_;
+        mutable double cudaProfileH2DSeconds_;
+        mutable double cudaProfileKernelSeconds_;
+        mutable double cudaProfileD2HSeconds_;
+        mutable double cudaProfileTotalSeconds_;
 #endif
 
         // Private Member Functions
@@ -255,7 +261,7 @@ protected:
 
 public:
 
-    virtual ~batchedActiveTensionModel() = default;
+    virtual ~batchedActiveTensionModel();
 
     virtual void calculateTension
     (

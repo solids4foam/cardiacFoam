@@ -37,6 +37,7 @@ sequentialElectroMechanicalCoeffs
     // batchedSubsteps       10;    // Number of explicit substeps per mechanics dt
     // batchedParallelCells  true;  // Enable OpenMP multi-threading on CPU
     // batchedUseCUDA        false; // Force host-batched path for parity checks
+    // batchedCUDAProfile    true;  // Aggregate CUDA H2D/kernel/D2H timing at shutdown
     // batchedPreconditioningMaxStep 0.1; // ms; safe explicit startup increment
 
     // ODE solver settings used by scalar LandNiedererTWorld (ignored by Batched models).

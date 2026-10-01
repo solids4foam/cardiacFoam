@@ -30,6 +30,7 @@ Author
 #include "restartStateIO.H"
 #ifdef HAS_CUDA
 #include "Pstream.H"
+#include <chrono>
 #endif
 
 namespace Foam
@@ -62,9 +63,15 @@ batchedActiveTensionModel::batchedActiveTensionModel
     ,
     cuda_(),
     useCUDA_(dict.lookupOrDefault<Switch>("batchedUseCUDA", true)),
+    cudaProfile_(dict.lookupOrDefault<Switch>("batchedCUDAProfile", false)),
     cudaEnabled_(false),
     cudaAnnounced_(false),
-    cudaHostStateStale_(false)
+    cudaHostStateStale_(false),
+    cudaProfileCalls_(0),
+    cudaProfileH2DSeconds_(0.0),
+    cudaProfileKernelSeconds_(0.0),
+    cudaProfileD2HSeconds_(0.0),
+    cudaProfileTotalSeconds_(0.0)
 #endif
 {
     if (nSubsteps_ < 1) nSubsteps_ = 1;
@@ -129,6 +136,28 @@ bool batchedActiveTensionModel::solveOnCUDA
         return false;
     }
 
+    const auto totalStart = std::chrono::steady_clock::now();
+    cudaEvent_t timingStart = nullptr;
+    cudaEvent_t timingStop = nullptr;
+    if (cudaProfile_)
+    {
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventCreate(&timingStart));
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventCreate(&timingStop));
+    }
+    const auto accumulateElapsed =
+        [&](double& accumulator)
+        {
+            if (!cudaProfile_) return;
+            CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventRecord(timingStop));
+            CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventSynchronize(timingStop));
+            float milliseconds = 0.0f;
+            CARDIAC_ACTIVE_TENSION_CUDA_CHECK
+            (
+                cudaEventElapsedTime(&milliseconds, timingStart, timingStop)
+            );
+            accumulator += 1.0e-3*milliseconds;
+        };
+
     const scalarField* constants = ioConstantsPtr();
     if (!constants)
     {
@@ -152,9 +181,18 @@ bool batchedActiveTensionModel::solveOnCUDA
         cuda_.stateResident = true;
     }
     prepareCUDAInputs(driveSignals_, lambda);
+    if (cudaProfile_)
+    {
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventRecord(timingStart));
+    }
     uploadCUDAInputs();
+    accumulateElapsed(cudaProfileH2DSeconds_);
 
     const scalar dtModel = dt*timeScaleFactor()/scalar(nSubsteps_);
+    if (cudaProfile_)
+    {
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventRecord(timingStart));
+    }
     for (label substep = 0; substep < nSubsteps_; ++substep)
     {
         launchCUDAKernel();
@@ -168,8 +206,25 @@ bool batchedActiveTensionModel::solveOnCUDA
     // algebraics are evaluated at the advanced state, not at the last Euler
     // right-hand-side state.
     launchCUDAKernel();
+    accumulateElapsed(cudaProfileKernelSeconds_);
+    if (cudaProfile_)
+    {
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventRecord(timingStart));
+    }
     downloadCUDATension(Ta);
+    accumulateElapsed(cudaProfileD2HSeconds_);
     cudaHostStateStale_ = true;
+
+    if (cudaProfile_)
+    {
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventDestroy(timingStart));
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaEventDestroy(timingStop));
+        ++cudaProfileCalls_;
+        cudaProfileTotalSeconds_ += std::chrono::duration<double>
+        (
+            std::chrono::steady_clock::now() - totalStart
+        ).count();
+    }
 
     if (!cudaAnnounced_)
     {
@@ -182,6 +237,21 @@ bool batchedActiveTensionModel::solveOnCUDA
     return true;
 }
 #endif
+
+
+batchedActiveTensionModel::~batchedActiveTensionModel()
+{
+#ifdef HAS_CUDA
+    if (cudaProfile_ && cudaProfileCalls_ > 0)
+    {
+        Info<< type() << " CUDA profile: calls=" << cudaProfileCalls_
+            << " H2D_s=" << cudaProfileH2DSeconds_
+            << " kernels_s=" << cudaProfileKernelSeconds_
+            << " D2H_s=" << cudaProfileD2HSeconds_
+            << " total_s=" << cudaProfileTotalSeconds_ << nl;
+    }
+#endif
+}
 
 
 void batchedActiveTensionModel::prepareSolveScratch(const label nThreads) const

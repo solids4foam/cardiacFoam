@@ -67,6 +67,29 @@ the maximum absolute difference is 9.29e-14 at 10 ms and 8.41e-14 at 20 ms
 (RMS 4.02e-15 and 3.88e-15). This is accepted roundoff, not a restart-state
 mapping or residency error.
 
+The same 20 ms host/CUDA check was completed for `NashPanfilovBatched`.
+Both runs reached `End`; the complete `Ta` probe file is byte-identical. The
+host and CUDA wall times were 153.98 s and 144.38 s, respectively. Restart
+state roundoff at 10 and 20 ms has maximum absolute error 7.11e-15 (RMS
+6.22e-16 and 7.79e-16), so it also passes the sustained backend-parity gate.
+
+`LandNiederer` does **not** yet pass this particular long spring-supported
+slab. It is not a CUDA or batched regression: the scalar model stopped at
+18.12 ms and host-batched at 18.07 ms when the nonlinear solid solver reached
+its 1,000-corrector limit. A deliberately relaxed solid relative residual
+criterion (`rTol` 0.15 instead of 0.02) still stopped at 18.09 ms, and a
+scalar temporal-refinement run (`deltaT=5 us`, original solid tolerances)
+stopped at 17.535 ms. These tests rule out a near-threshold convergence setting
+and a simple 10-us time-step artifact. This is an unresolved Land-2017/
+mechanical-law coupling issue; the 20-step result above remains only its short
+parity gate.
+
+At the failed interval the Land probe tension is about 1.0--1.1 kPa, not an
+obvious kPa/Pa scale explosion. The model declares `Tref=120 kPa` and its
+active output is converted once through the shared `TaScale=1000` kPa-to-Pa
+interface. Full-twitch amplitude/timing checks against the Land reference are
+still required before it can be accepted in deforming tissue.
+
 ## CUDA residency and performance interpretation
 
 CUDA ODE state, rates, and algebraics now remain resident after the first
@@ -77,11 +100,20 @@ for them.  A post-change 20-step LandNiedererTWorld CUDA slab reproduced the
 host probe file exactly and completed in 2.83 s wall time (including Slurm
 launch and complete solver work).
 
+With `batchedCUDAProfile true`, the 3,360-cell / 2,000-step TWorld CUDA run
+reported 0.103586 s H2D input, 0.147324 s kernels, 0.0368411 s D2H `Ta`, and
+0.542988 s total active-tension wrapper time. This is 51.8, 73.7, 18.4, and
+271.5 us per coupled update, respectively. The named device operations take
+0.288 s (0.20% of the 141.00 s profiled whole-case time); the wrapper takes
+0.39%. Timed CUDA events deliberately synchronize operations, so those
+profiling-run wall-time figures must not be substituted for production wall
+time. The matched unprofiled TWorld A/B wall time is 149.43 s host versus
+139.64 s CUDA (1.070x speedup; 6.6% time reduction), while the PDE and solid
+solver remain host-resident.
+
 The recorded 100 ms single-cell CUDA wall times—4.86 s (Nash), 6.91 s (Land),
 and 6.88 s (LandTWorld)—include solver startup, host ionic work, I/O, and Slurm
-launch.  They are not an ionic- or active-tension-kernel speedup measurement.
-Kernel-level timings and an A/B transfer benchmark on a representative slab
-remain required before reporting acceleration.
+launch. They are not ionic- or active-tension-kernel speedup measurements.
 
 ## Reproduction
 
@@ -100,8 +132,11 @@ same model in `constant/electroMechanicalProperties`.
 
 ## Remaining work
 
-- Run the complete 0.25 s coupled benchmark and timestep-convergence study.
-- Add GPU-event timing around H2D, ODE kernels, D2H, and synchronization.
+- Resolve and validate Land-2017 length/rate feedback with the deforming solid;
+  do not enable it as a long coupled production case until then.
+- Run the complete 0.25 s coupled benchmark and timestep-convergence study
+  for models whose spring cases are stable.
 - Validate restart continuation across a write/restart boundary on CUDA.
 - Complete the requested per-ionic-model single-cell/slab matrix and the
-  Niederer benchmark characterization.
+  Niederer benchmark characterization, including its own compute/transfer
+  profiling rather than extrapolating this active-tension result.
