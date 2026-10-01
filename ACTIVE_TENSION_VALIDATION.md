@@ -59,6 +59,14 @@ and 20 ms `LandNiedererTWorldBatchedState` restart files. This explicitly
 exercises the device-resident state synchronization used by restart/export;
 it is a sustained-stability gate, not a CPU/GPU performance comparison.
 
+A matched host-batched 20 ms run also reached `End` (149.43 s). Its complete
+2,000-sample `Ta` probe file is byte-identical to CUDA. The serialized restart
+states are not byte-identical because host and CUDA expression evaluation use
+different floating-point instruction order: across all 23,520 saved values,
+the maximum absolute difference is 9.29e-14 at 10 ms and 8.41e-14 at 20 ms
+(RMS 4.02e-15 and 3.88e-15). This is accepted roundoff, not a restart-state
+mapping or residency error.
+
 ## CUDA residency and performance interpretation
 
 CUDA ODE state, rates, and algebraics now remain resident after the first
