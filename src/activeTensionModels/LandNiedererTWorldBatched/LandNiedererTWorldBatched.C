@@ -26,6 +26,20 @@ License
 
 #include <cmath>
 
+#ifdef HAS_CUDA
+namespace Foam
+{
+void launchLandNiedererTWorldBatchKernel
+(
+    const double* constants,
+    int nCells,
+    const double* states,
+    double* rates,
+    double* algebraics
+);
+}
+#endif
+
 namespace Foam
 {
     defineTypeNameAndDebug(LandNiedererTWorldBatched, 0);
@@ -125,6 +139,7 @@ void Foam::LandNiedererTWorldBatched::writeRestartState(const fvMesh& mesh) cons
 
 void Foam::LandNiedererTWorldBatched::refreshRestartState(const fvMesh& mesh)
 {
+    syncAllToIO();
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
     const volTensorField gradD(fvc::grad(D));
@@ -286,10 +301,24 @@ void Foam::LandNiedererTWorldBatched::preconditionToRestingState
         return;
     }
 
-    // Match the scalar LandNiedererTWorld model: integrate to resting steady state
-    // over a fixed number of substeps rather than a dictionary-configurable
-    // step size.
-    const label nSteps = 100;
+    // A 10 ms explicit-Euler increment is unstable for the crossbridge
+    // subsystem at a TNNP resting Cai. Bound the step instead; 0.1 ms is
+    // conservative for the fastest ~0.7 ms active-tension time scale.
+    const scalar maxPreconditioningStep = dict_.lookupOrDefault<scalar>
+    (
+        "batchedPreconditioningMaxStep", 0.1
+    );
+    if (maxPreconditioningStep <= SMALL)
+    {
+        FatalIOErrorInFunction(dict_)
+            << "batchedPreconditioningMaxStep must be positive, got "
+            << maxPreconditioningStep << exit(FatalIOError);
+    }
+    const label nSteps = max
+    (
+        label(1),
+        label(std::ceil(preconditioningTime/maxPreconditioningStep))
+    );
     const scalar step = preconditioningTime/scalar(nSteps);
     const bool uniform = (max(restingCai) - min(restingCai)) <= SMALL;
 
@@ -330,7 +359,7 @@ void Foam::LandNiedererTWorldBatched::preconditionToRestingState
         << " points to resting steady state" << nl
         << "      restingCai = " << min(restingCai) << " .. " << max(restingCai)
         << " mM (" << preconditioningTime << " ms integration, "
-        << nSteps << " steps)" << nl
+        << nSteps << " steps, max step " << maxPreconditioningStep << " ms)" << nl
         << "      Ca_TRPN   = " << state(0, Ca_TRPN) << nl
         << "      TmBlocked = " << state(0, TmBlocked) << nl
         << "      XW        = " << state(0, XW) << nl
@@ -352,6 +381,16 @@ void Foam::LandNiedererTWorldBatched::calculateTension
         if (dt > SMALL)
         {
             lambdaRate_[i] = (lambda[i] - prevLambda_[i]) / dt;
+
+            // Match the scalar LandNiedererTWorld safeguard.  The mechanics
+            // predictor can transiently produce an unphysical stretch-rate;
+            // without this cap its velocity-distortion states destabilise the
+            // coupled solid solve on the following time step.
+            lambdaRate_[i] = max
+            (
+                min(lambdaRate_[i], scalar(20.0)),
+                scalar(-20.0)
+            );
         }
         else
         {
@@ -391,5 +430,59 @@ void Foam::LandNiedererTWorldBatched::evaluateHotPathStateForCell
         algebraicValues.begin()
     );
 }
+
+
+#ifdef HAS_CUDA
+void Foam::LandNiedererTWorldBatched::prepareCUDAInputs
+(
+    const scalarField& driveSignals,
+    const scalarField& lambda
+) const
+{
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        algebraic(cellI, AV_Cai) = driveSignals[cellI];
+        algebraic(cellI, AV_lambda) = lambda[cellI];
+        algebraic(cellI, AV_lambda_rate) = lambdaRate_[cellI];
+    }
+}
+
+
+void Foam::LandNiedererTWorldBatched::uploadCUDAInputs() const
+{
+    cuda_.uploadAlgebraicRow
+    (
+        core_.algebraicsSoAData() + std::size_t(AV_Cai)*nCells_, AV_Cai, nCells_
+    );
+    cuda_.uploadAlgebraicRow
+    (
+        core_.algebraicsSoAData() + std::size_t(AV_lambda)*nCells_, AV_lambda, nCells_
+    );
+    cuda_.uploadAlgebraicRow
+    (
+        core_.algebraicsSoAData() + std::size_t(AV_lambda_rate)*nCells_,
+        AV_lambda_rate, nCells_
+    );
+}
+
+
+void Foam::LandNiedererTWorldBatched::launchCUDAKernel() const
+{
+    launchLandNiedererTWorldBatchKernel
+    (
+        cuda_.d_constants,
+        nCells_,
+        cuda_.d_states,
+        cuda_.d_rates,
+        cuda_.d_algebraics
+    );
+}
+
+
+void Foam::LandNiedererTWorldBatched::downloadCUDATension(scalarField& Ta) const
+{
+    cuda_.downloadAlgebraicRow(Ta.data(), AV_Ta, nCells_);
+}
+#endif
 
 // ************************************************************************* //

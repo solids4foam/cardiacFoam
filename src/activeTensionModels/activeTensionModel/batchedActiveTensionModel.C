@@ -28,6 +28,9 @@ Author
 
 #include "batchedActiveTensionModel.H"
 #include "restartStateIO.H"
+#ifdef HAS_CUDA
+#include "Pstream.H"
+#endif
 
 namespace Foam
 {
@@ -55,6 +58,14 @@ batchedActiveTensionModel::batchedActiveTensionModel
     ioSynchronized_(false),
     solveScratch_(),
     solveScratchThreads_(-1)
+#ifdef HAS_CUDA
+    ,
+    cuda_(),
+    useCUDA_(dict.lookupOrDefault<Switch>("batchedUseCUDA", true)),
+    cudaEnabled_(false),
+    cudaAnnounced_(false),
+    cudaHostStateStale_(false)
+#endif
 {
     if (nSubsteps_ < 1) nSubsteps_ = 1;
     if (parallelMinCells_ < 1) parallelMinCells_ = 1;
@@ -73,6 +84,24 @@ batchedActiveTensionModel::batchedActiveTensionModel
 
     core_.setAlgebraicsStorageEnabled(persistAlgebraics_);
 
+#ifdef HAS_CUDA
+    // CUDA evaluation needs an algebraic mirror even when callers elect not
+    // to expose/store algebraics through the restart/output API.
+    if (!persistAlgebraics_)
+    {
+        core_.setAlgebraicsStorageEnabled(true);
+    }
+
+    int nDevices = 0;
+    const cudaError_t cudaStatus = cudaGetDeviceCount(&nDevices);
+    if (useCUDA_ && cudaStatus == cudaSuccess && nDevices > 0)
+    {
+        const int device = Pstream::myProcNo() % nDevices;
+        CARDIAC_ACTIVE_TENSION_CUDA_CHECK(cudaSetDevice(device));
+        cudaEnabled_ = true;
+    }
+#endif
+
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
         ioStates_.set(cellI, new scalarField(nStates_, 0.0));
@@ -84,6 +113,75 @@ batchedActiveTensionModel::batchedActiveTensionModel
         }
     }
 }
+
+
+#ifdef HAS_CUDA
+bool batchedActiveTensionModel::solveOnCUDA
+(
+    const scalar t,
+    const scalar dt,
+    const scalarField& lambda,
+    scalarField& Ta
+) const
+{
+    if (!cudaEnabled_)
+    {
+        return false;
+    }
+
+    const scalarField* constants = ioConstantsPtr();
+    if (!constants)
+    {
+        FatalErrorInFunction
+            << "CUDA active-tension model " << type()
+            << " did not supply its constants." << abort(FatalError);
+    }
+
+    cuda_.allocate(nCells_, nStates_, nAlgebraics_, constants->size());
+    if (!cuda_.constantsUploaded)
+    {
+        cuda_.uploadConstants(constants->cdata(), constants->size());
+    }
+    if (!cuda_.stateResident)
+    {
+        cuda_.uploadInitialFields
+        (
+            core_.statesSoAData(), core_.algebraicsSoAData(),
+            driveSignals_.data(), nCells_, nStates_, nAlgebraics_
+        );
+        cuda_.stateResident = true;
+    }
+    prepareCUDAInputs(driveSignals_, lambda);
+    uploadCUDAInputs();
+
+    const scalar dtModel = dt*timeScaleFactor()/scalar(nSubsteps_);
+    for (label substep = 0; substep < nSubsteps_; ++substep)
+    {
+        launchCUDAKernel();
+        launchBatchedActiveTensionEulerKernel
+        (
+            cuda_.d_states, cuda_.d_rates, nCells_, nStates_, dtModel
+        );
+    }
+
+    // Preserve the host executor's post-step convention: output rates and
+    // algebraics are evaluated at the advanced state, not at the last Euler
+    // right-hand-side state.
+    launchCUDAKernel();
+    downloadCUDATension(Ta);
+    cudaHostStateStale_ = true;
+
+    if (!cudaAnnounced_)
+    {
+        Info<< type() << ": rank " << Pstream::myProcNo()
+            << " using CUDA device for active-tension ODE updates" << nl;
+        cudaAnnounced_ = true;
+    }
+
+    (void)t;
+    return true;
+}
+#endif
 
 
 void batchedActiveTensionModel::prepareSolveScratch(const label nThreads) const
@@ -112,6 +210,18 @@ void batchedActiveTensionModel::prepareSolveScratch(const label nThreads) const
 void batchedActiveTensionModel::syncAllToIO() const
 {
     if (ioSynchronized_) return;
+
+#ifdef HAS_CUDA
+    if (cudaHostStateStale_)
+    {
+        cuda_.downloadOutputs
+        (
+            core_.statesSoAData(), core_.ratesSoAData(), core_.algebraicsSoAData(),
+            nCells_, nStates_, nAlgebraics_
+        );
+        cudaHostStateStale_ = false;
+    }
+#endif
 
     for (label cellI = 0; cellI < nCells_; ++cellI)
     {
@@ -149,6 +259,11 @@ void batchedActiveTensionModel::syncStatesFromIO() const
         }
     }
     ioSynchronized_ = false;
+#ifdef HAS_CUDA
+    // A restart/pre-pacing/state injection changed the host source of truth.
+    cuda_.stateResident = false;
+    cudaHostStateStale_ = false;
+#endif
 }
 
 
@@ -201,6 +316,7 @@ void batchedActiveTensionModel::writeRestartState(const fvMesh& mesh) const
 
 void batchedActiveTensionModel::refreshRestartState(const fvMesh& mesh)
 {
+    syncAllToIO();
     CellScratch scratch(nStates_, nAlgebraics_);
     BatchedTensionBackend backend(*this);
 
@@ -286,6 +402,14 @@ void batchedActiveTensionModel::calculateTension
     {
         driveSignals_[cellI] = coupledDriveSignal(cellI);
     }
+
+#ifdef HAS_CUDA
+    if (solveOnCUDA(t, dt, lambda, Ta))
+    {
+        ioSynchronized_ = false;
+        return;
+    }
+#endif
 
     // Prepare threads and scratch
     const bool parallel = useParallelCellLoops();

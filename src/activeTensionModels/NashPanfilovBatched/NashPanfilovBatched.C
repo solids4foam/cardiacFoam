@@ -22,6 +22,21 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "../NashPanfilov/NashPanfilov_2004Names.H"
 
+#ifdef HAS_CUDA
+namespace Foam
+{
+void launchNashPanfilovBatchKernel
+(
+    const double* driveSignals,
+    const double* constants,
+    int nCells,
+    const double* states,
+    double* rates,
+    double* algebraics
+);
+}
+#endif
+
 namespace Foam
 {
     defineTypeNameAndDebug(NashPanfilovBatched, 0);
@@ -141,6 +156,46 @@ void Foam::NashPanfilovBatched::evaluateHotPathStateForCell
         algebraicValues.begin()
     );
 }
+
+
+#ifdef HAS_CUDA
+void Foam::NashPanfilovBatched::prepareCUDAInputs
+(
+    const scalarField& driveSignals,
+    const scalarField& lambda
+) const
+{
+    // NashPanfilov receives Vm through its dedicated device drive buffer.
+    (void)driveSignals;
+    (void)lambda;
+}
+
+
+void Foam::NashPanfilovBatched::uploadCUDAInputs() const
+{
+    cuda_.uploadDriveSignals(driveSignals_.data(), nCells_);
+}
+
+
+void Foam::NashPanfilovBatched::launchCUDAKernel() const
+{
+    launchNashPanfilovBatchKernel
+    (
+        cuda_.d_driveSignals,
+        cuda_.d_constants,
+        nCells_,
+        cuda_.d_states,
+        cuda_.d_rates,
+        cuda_.d_algebraics
+    );
+}
+
+
+void Foam::NashPanfilovBatched::downloadCUDATension(scalarField& Ta) const
+{
+    cuda_.downloadStateRow(Ta.data(), ::Ta, nCells_);
+}
+#endif
 
 
 // ************************************************************************* //

@@ -11,6 +11,10 @@ License
 #include <cuda_runtime.h>
 #include <cstdio>
 
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE __host__ __device__
+#endif
+
 #include "../LandNiederer/LandNiederer_2017.H"
 
 #define CUDA_LAND_NIEDERER_CHECK()                                           \
@@ -78,7 +82,9 @@ __global__ void landNiedererBatchedKernel
 
     for (int stateI = 0; stateI < NUM_STATES; ++stateI)
     {
-        rates[stateI * nCells + cellI] = localRates[stateI] * 1000.0;
+        // Keep ODE rates in model units (ms^-1), as the host batched
+        // executor does before its time-scaled Euler update.
+        rates[stateI * nCells + cellI] = localRates[stateI];
     }
     for (int algebraicI = 0; algebraicI < NUM_ALGEBRAIC; ++algebraicI)
     {

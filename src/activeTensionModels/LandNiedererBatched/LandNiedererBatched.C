@@ -27,6 +27,20 @@ License
 #include <cmath>
 #include <fstream>
 
+#ifdef HAS_CUDA
+namespace Foam
+{
+void launchLandNiedererBatchedKernel
+(
+    const double* constants,
+    int nCells,
+    const double* states,
+    double* rates,
+    double* algebraics
+);
+}
+#endif
+
 namespace Foam
 {
 
@@ -188,7 +202,21 @@ void LandNiedererBatched::preconditionToRestingState(const scalarField& restingC
         return;
     }
 
-    const label nSteps = 100;
+    const scalar maxPreconditioningStep = dict_.lookupOrDefault<scalar>
+    (
+        "batchedPreconditioningMaxStep", 0.1
+    );
+    if (maxPreconditioningStep <= SMALL)
+    {
+        FatalIOErrorInFunction(dict_)
+            << "batchedPreconditioningMaxStep must be positive, got "
+            << maxPreconditioningStep << exit(FatalIOError);
+    }
+    const label nSteps = max
+    (
+        label(1),
+        label(std::ceil(preconditioningTime/maxPreconditioningStep))
+    );
     const scalar dt = preconditioningTime / scalar(nSteps);
     const bool uniform = (max(restingCai) - min(restingCai)) <= SMALL;
     CellScratch scratch(nStates_, nAlgebraics_);
@@ -271,6 +299,61 @@ void LandNiedererBatched::evaluateHotPathStateForCell
 }
 
 
+#ifdef HAS_CUDA
+void LandNiedererBatched::prepareCUDAInputs
+(
+    const scalarField& driveSignals,
+    const scalarField& lambda
+) const
+{
+    for (label cellI = 0; cellI < nCells_; ++cellI)
+    {
+        algebraic(cellI, AV_Cai) = driveSignals[cellI];
+        algebraic(cellI, AV_lambda) = lambda[cellI];
+        // The device wrapper converts this physical s^-1 input to ms^-1.
+        algebraic(cellI, AV_lambda_rate) = lambdaRate_[cellI];
+    }
+}
+
+
+void LandNiedererBatched::uploadCUDAInputs() const
+{
+    cuda_.uploadAlgebraicRow
+    (
+        core_.algebraicsSoAData() + std::size_t(AV_Cai)*nCells_, AV_Cai, nCells_
+    );
+    cuda_.uploadAlgebraicRow
+    (
+        core_.algebraicsSoAData() + std::size_t(AV_lambda)*nCells_, AV_lambda, nCells_
+    );
+    cuda_.uploadAlgebraicRow
+    (
+        core_.algebraicsSoAData() + std::size_t(AV_lambda_rate)*nCells_,
+        AV_lambda_rate, nCells_
+    );
+}
+
+
+void LandNiedererBatched::launchCUDAKernel() const
+{
+    launchLandNiedererBatchedKernel
+    (
+        cuda_.d_constants,
+        nCells_,
+        cuda_.d_states,
+        cuda_.d_rates,
+        cuda_.d_algebraics
+    );
+}
+
+
+void LandNiedererBatched::downloadCUDATension(scalarField& Ta) const
+{
+    cuda_.downloadAlgebraicRow(Ta.data(), AV_Ta, nCells_);
+}
+#endif
+
+
 bool LandNiedererBatched::readRestartState(const fvMesh& mesh)
 {
     const fileName statePath = restartStateIO::path(mesh, type() + "State");
@@ -336,6 +419,7 @@ void LandNiedererBatched::writeRestartState(const fvMesh& mesh) const
 
 void LandNiedererBatched::refreshRestartState(const fvMesh& mesh)
 {
+    syncAllToIO();
     const volVectorField& D = mesh.lookupObject<volVectorField>("D");
     const volVectorField& f0 = mesh.lookupObject<volVectorField>("f0");
     const volTensorField gradD(fvc::grad(D));

@@ -16,6 +16,11 @@ Author
 
 #include <cuda_runtime.h>
 #include <cstdio>
+
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE __host__ __device__
+#endif
+
 #include "NashPanfilovBatch.H"
 
 #define CUDA_LAUNCH_CHECK()                                                    \

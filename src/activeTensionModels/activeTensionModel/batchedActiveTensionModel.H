@@ -32,6 +32,9 @@ Author
 #include "activeTensionModel.H"
 #include "batchedActiveTensionCore.H"
 #include "batchedActiveTensionExecution.H"
+#ifdef HAS_CUDA
+#include "batchedActiveTensionCoreCUDA.H"
+#endif
 
 namespace Foam
 {
@@ -68,6 +71,16 @@ protected:
 
         // Buffer to gather per-cell drive signals (Vm or Cai) before batch dispatch
         mutable scalarField driveSignals_;
+
+#ifdef HAS_CUDA
+        // Device execution is optional at runtime: a CUDA-built library still
+        // falls back to the host path when no usable device is visible.
+        mutable batchedActiveTensionCoreCUDA cuda_;
+        Switch useCUDA_;
+        bool cudaEnabled_;
+        mutable bool cudaAnnounced_;
+        mutable bool cudaHostStateStale_;
+#endif
 
         // Private Member Functions
 
@@ -137,6 +150,38 @@ protected:
             const scalarUList& stateValues,
             const scalarUList& algebraicValues
         ) const = 0;
+
+#ifdef HAS_CUDA
+        // Fill model-specific input algebraics in the host SoA buffer before
+        // it is mirrored to the device.  Land models require Cai, lambda and
+        // lambda-rate; NashPanfilov takes its drive signal separately.
+        virtual void prepareCUDAInputs
+        (
+            const scalarField& driveSignals,
+            const scalarField& lambda
+        ) const = 0;
+
+        // Upload only time-varying input rows after the persistent state has
+        // been established on the device.
+        virtual void uploadCUDAInputs() const = 0;
+
+        // Evaluate one model-specific right-hand side over all device cells.
+        // The shared base applies the Euler state update between invocations.
+        virtual void launchCUDAKernel() const = 0;
+
+        // `Ta` is the only active-tension quantity required by the coupled
+        // solver every step.  Download its model-specific state/algebraic row
+        // without forcing all ODE state and diagnostic arrays back to host.
+        virtual void downloadCUDATension(scalarField& Ta) const = 0;
+
+        bool solveOnCUDA
+        (
+            const scalar t,
+            const scalar dt,
+            const scalarField& lambda,
+            scalarField& Ta
+        ) const;
+#endif
 
         // timeScaleFactor() is declared pure virtual on activeTensionModel;
         // every concrete model states its own scale.

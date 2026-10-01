@@ -16,6 +16,11 @@ Author
 
 #include <cuda_runtime.h>
 #include <cstdio>
+
+#ifndef CARDIAC_HOST_DEVICE
+#define CARDIAC_HOST_DEVICE __host__ __device__
+#endif
+
 #include "../LandNiedererTWorld/LandNiedererTWorld_2025.H"
 
 #define CUDA_LAUNCH_CHECK()                                                    \
@@ -80,12 +85,6 @@ namespace
             localStates,
             localAlgebraics
         );
-
-        // Convert computed rates from ms^-1 back to s^-1
-        for (int i = 0; i < NUM_STATES; ++i)
-        {
-            localRates[i] *= 1000.0;
-        }
 
         // Scatter to Global SoA
         for (int i = 0; i < NUM_STATES; ++i)

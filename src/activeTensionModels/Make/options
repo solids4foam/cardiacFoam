@@ -4,10 +4,17 @@ EXE_INC = \
     -I$(LIB_SRC)/meshTools/lnInclude \
     -I$(PWD)/../couplingModels/lnInclude \
     -I$(PWD)/../couplingModels \
-    -I$(PWD)/../genericWriter/lnInclude
+    -I$(PWD)/../genericWriter/lnInclude \
+    -I$(PWD)/activeTensionModel \
+    $(if $(CARDIAC_ENABLE_CUDA),-DHAS_CUDA -I$(CUDA_HOME)/include)
 
 LIB_LIBS = \
     -lfiniteVolume \
     -lmeshTools \
     -lODE \
-    -L$(FOAM_USER_LIBBIN) -lgenericWriter
+    -L$(FOAM_USER_LIBBIN) -lgenericWriter \
+    $(if $(CARDIAC_ENABLE_CUDA),-L$(CUDA_HOME)/lib64 -lcudart)
+
+$(if $(CARDIAC_ENABLE_CUDA),$(eval sinclude $(WM_DIR)/rules/General/cuda))
+
+$(if $(CARDIAC_ENABLE_CUDA),$(eval cuFLAGS = $$(if $$(CUDA_HOST_CXX),-ccbin $$(CUDA_HOST_CXX)) $$(GFLAGS) -DNoRepository $$(cuARCH) $$(cuOPT) $$(cuDBUG) $$(patsubst -iquote%,-I%,$$(LIB_HEADER_DIRS))))

@@ -13,6 +13,16 @@ Cell-level models of the mechanical response: the same kind of model as the ioni
 
 Each model reads its one signal through `ElectromechanicalSignalProvider` in [couplingModels](../couplingModels/README.md). The batched versions run on the CPU, with an optional CUDA path.
 
+`batchedUseCUDA` defaults to `true` when a CUDA-enabled build sees a device;
+set it to `false` to force the host-batched path for parity checks.
+`batchedSubsteps` controls explicit-Euler substeps in model time. Land-based
+batched models precondition at the coupled resting calcium; use the positive
+`batchedPreconditioningMaxStep` (default `0.1` ms) to bound that Euler step.
+After the first CUDA update, batched state/rate/algebraic arrays remain on the
+device; each coupled update transfers only its current inputs and `Ta`.
+Restart and exported-state requests deliberately synchronize the complete
+arrays back to the host.
+
 ## Folders
 
 ```text

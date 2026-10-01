@@ -97,6 +97,20 @@ protected:
         return algebraicValues[AV_Ta];
     }
 
+#ifdef HAS_CUDA
+    virtual void prepareCUDAInputs
+    (
+        const scalarField& driveSignals,
+        const scalarField& lambda
+    ) const override;
+
+    virtual void uploadCUDAInputs() const override;
+
+    virtual void launchCUDAKernel() const override;
+
+    virtual void downloadCUDATension(scalarField& Ta) const override;
+#endif
+
 public:
 
     OverrideTypeName("LandNiedererBatched");
