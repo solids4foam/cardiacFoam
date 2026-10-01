@@ -52,6 +52,13 @@ This also verifies the corrected Land-family preconditioning path.  The former
 Land models now default to a maximum 0.1 ms startup increment through
 `batchedPreconditioningMaxStep`.
 
+An additional CUDA `LandNiedererTWorldBatched` stress run completed 20 ms
+(2,000 coupled steps) in the same 3,360-cell spring slab. It reached `End` in
+139.64 s, converged the momentum equation at every step, and wrote both 10 ms
+and 20 ms `LandNiedererTWorldBatchedState` restart files. This explicitly
+exercises the device-resident state synchronization used by restart/export;
+it is a sustained-stability gate, not a CPU/GPU performance comparison.
+
 ## CUDA residency and performance interpretation
 
 CUDA ODE state, rates, and algebraics now remain resident after the first
