@@ -6,15 +6,9 @@
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 
-// Single probe on the LV free wall at a Purkinje-myocardial-junction site,
-// picked from the shared purkinjeGraph (node 211): the PMJ with the
-// earliest healthy activation time (~3.6ms, see PVJ diagnostic notes) whose
-// downstream tissue is fully cut off from the root in conductionBlock's
-// lbbb variant (severed LV subtree, no alternate path in the tree graph).
-// Regression uses this same point/probe in both electroHeart
-// (healthy - confirms Purkinje-to-myocardium injection fires and reaches
-// tissue) and conductionBlock lbbb (confirms it does not, since the LBB
-// bridge disconnects this subtree from the root entirely).
+// Probe 0: LV free wall near graph PMJ node 211, blocked in LBBB.
+// Probe 1: RV tissue cell near graph PMJ node 8151, blocked in RBBB.
+// The intact side activates before the regression cutoff in each variant.
 
 type            probes;
 libs            ("libsampling.so");
@@ -31,6 +25,7 @@ fields
 probeLocations
 (
     (0.02395 0.01743 -0.00191)
+    (0.0326963 0.019231 -0.0155543)
 );
 
 // ************************************************************************* //

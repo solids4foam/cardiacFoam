@@ -7,3 +7,6 @@
 #
 # file                                  time   col  expected      tolerance
 injectionProbe/0/activationTime         0.04   2    0.0319412     1e-4
+pseudoECG.dat                           0.025  5    0.0008818167  2e-4
+pseudoECG.dat                           0.04   3    0.002457606   2e-4
+pseudoECG.dat                           0.04   7    0.004256238   2e-4
