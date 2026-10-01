@@ -143,6 +143,7 @@ bidomainSolver::bidomainSolver
     externalPhiEBasePtr_(nullptr),
     externalPhiECellMapPtr_(nullptr)
 {
+    setConormalWallConductivity(phiE_, Ge_.name(), word::null);
 }
 
 

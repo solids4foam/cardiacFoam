@@ -29,6 +29,7 @@ Author
 #define conormalZeroFluxFvPatchScalarField_H
 
 #include "fixedGradientFvPatchFields.H"
+#include "volFieldsFwd.H"
 
 namespace Foam
 {
@@ -84,11 +85,20 @@ public:
         );
     }
 
+    void setConductivity(const word& conductivity, const word& offsetField);
+
     virtual void updateCoeffs();
     virtual void write(Ostream&) const;
 };
 
 wordList conormalWallPatchTypes(const fvMesh& mesh, const word& trace);
+
+void setConormalWallConductivity
+(
+    volScalarField& field,
+    const word& conductivity,
+    const word& offsetField
+);
 
 } // End namespace Foam
 

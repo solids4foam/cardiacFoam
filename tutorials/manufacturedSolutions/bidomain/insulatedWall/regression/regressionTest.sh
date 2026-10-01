@@ -13,6 +13,7 @@ REF_FILE="regression/insulatedWall.reference"
 echo "============================================================"
 echo "Bidomain insulated-wall manufactured-solution regression test"
 echo "Manufactured error summary must be present"
+echo "Mesh: system/blockMeshDict.3D, run mode: parallel"
 echo "============================================================"
 echo
 
@@ -169,7 +170,7 @@ checkReferenceValues()
 
 ./Allclean > /dev/null 2>&1 || true
 blockMesh -dict system/blockMeshDict.3D > "${BLOCKMESH_LOGFILE}" 2>&1
-./Allrun > "${ALLRUN_LOGFILE}" 2>&1
+./Allrun parallel > "${ALLRUN_LOGFILE}" 2>&1
 
 errorFile="$(findManufacturedErrorFile)" || {
     echo "FAIL: manufactured error summary file not found."

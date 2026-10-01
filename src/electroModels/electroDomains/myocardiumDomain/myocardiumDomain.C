@@ -378,6 +378,15 @@ myocardiumDomain::myocardiumDomain
     ),
     setDeltaT_(true)
 {
+    setConormalWallConductivity
+    (
+        Vm_,
+        diffusionSolverPtr_->intracellularConductivityPtr()->name(),
+        diffusionSolverPtr_->phiEPtr()
+      ? diffusionSolverPtr_->phiEPtr()->name()
+      : word::null
+    );
+
     if (timeCouplingScheme_ != "godunov" && timeCouplingScheme_ != "sbdf2")
     {
         FatalErrorInFunction

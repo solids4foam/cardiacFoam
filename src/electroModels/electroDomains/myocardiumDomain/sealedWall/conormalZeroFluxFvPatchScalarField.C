@@ -82,6 +82,31 @@ conormalZeroFluxFvPatchScalarField::conormalZeroFluxFvPatchScalarField
 {}
 
 
+void conormalZeroFluxFvPatchScalarField::setConductivity
+(
+    const word& conductivity,
+    const word& offsetField
+)
+{
+    if
+    (
+        (!conductivityName_.empty() && conductivityName_ != conductivity)
+     || (!offsetFieldName_.empty() && offsetFieldName_ != offsetField)
+    )
+    {
+        FatalErrorInFunction
+            << "conormalZeroFlux patch " << patch().name() << " of field "
+            << internalField().name() << " reads conductivity "
+            << conductivityName_ << " offsetField " << offsetFieldName_
+            << ", the solver uses conductivity " << conductivity
+            << " offsetField " << offsetField
+            << exit(FatalError);
+    }
+    conductivityName_ = conductivity;
+    offsetFieldName_ = offsetField;
+}
+
+
 void conormalZeroFluxFvPatchScalarField::updateCoeffs()
 {
     if (updated())
@@ -89,71 +114,52 @@ void conormalZeroFluxFvPatchScalarField::updateCoeffs()
         return;
     }
 
-    const word& fieldName = internalField().name();
-    const word gradName("grad(" + fieldName + ")");
-    const word Gname
-    (
-        !conductivityName_.empty() ? conductivityName_
-      : fieldName == "phiE"
-     && db().foundObject<volTensorField>("conductivityExtracellular")
-      ? word("conductivityExtracellular")
-      : db().foundObject<volTensorField>("conductivityIntracellular")
-      ? word("conductivityIntracellular")
-      : word("conductivity")
-    );
-    const word offsetName
-    (
-        !offsetFieldName_.empty() ? offsetFieldName_
-      : fieldName != "phiE"
-     && Gname == "conductivityIntracellular"
-     && db().foundObject<volScalarField>("phiE")
-      ? word("phiE")
-      : word::null
-    );
-
-    if
-    (
-        db().foundObject<volVectorField>(gradName)
-     && db().foundObject<volTensorField>(Gname)
-     && (
-            offsetName.empty()
-         || db().foundObject<volVectorField>("grad(" + offsetName + ")")
-        )
-    )
+    if (conductivityName_.empty())
     {
-        vectorField gradP
-        (
-            patch().lookupPatchField<volVectorField, vector>(gradName)
-           .patchInternalField()
-        );
-        if (!offsetName.empty())
-        {
-            gradP +=
-                patch().lookupPatchField<volVectorField, vector>
-                (
-                    "grad(" + offsetName + ")"
-                ).patchInternalField();
-        }
-        const tensorField G
-        (
-            patch().lookupPatchField<volTensorField, tensor>(Gname)
-           .patchInternalField()
-        );
-        const vectorField n(patch().nf());
-        const vectorField Gn(G & n);
-        const scalarField nGn(n & Gn);
-
-        gradient() = -((Gn - nGn*n) & gradP)/max(nGn, SMALL);
-        if (!offsetName.empty())
-        {
-            gradient() -=
-                patch().lookupPatchField<volScalarField, scalar>(offsetName)
-               .snGrad();
-        }
+        FatalErrorInFunction
+            << "conormalZeroFlux patch " << patch().name() << " of field "
+            << internalField().name() << " has no conductivity"
+            << exit(FatalError);
     }
-    else
+
+    vectorField gradP
+    (
+        patch().lookupPatchField<volVectorField, vector>
+        (
+            "grad(" + internalField().name() + ")"
+        ).patchInternalField()
+    );
+    if (!offsetFieldName_.empty())
     {
-        gradient() = Zero;
+        gradP +=
+            patch().lookupPatchField<volVectorField, vector>
+            (
+                "grad(" + offsetFieldName_ + ")"
+            ).patchInternalField();
+    }
+    const tensorField G
+    (
+        patch().lookupPatchField<volTensorField, tensor>(conductivityName_)
+       .patchInternalField()
+    );
+    const vectorField n(patch().nf());
+    const vectorField Gn(G & n);
+    const scalarField nGn(n & Gn);
+    if (min(nGn) <= 0)
+    {
+        FatalErrorInFunction
+            << "conormalZeroFlux patch " << patch().name() << " of field "
+            << internalField().name() << ": n.G.n <= 0 for conductivity "
+            << conductivityName_
+            << exit(FatalError);
+    }
+
+    gradient() = -((Gn - nGn*n) & gradP)/nGn;
+    if (!offsetFieldName_.empty())
+    {
+        gradient() -=
+            patch().lookupPatchField<volScalarField, scalar>(offsetFieldName_)
+           .snGrad();
     }
 
     fixedGradientFvPatchScalarField::updateCoeffs();
@@ -196,6 +202,25 @@ wordList conormalWallPatchTypes(const fvMesh& mesh, const word& trace)
         types[patchI] = polyPatch::constraintType(t) ? t : physicalType;
     }
     return types;
+}
+
+
+void setConormalWallConductivity
+(
+    volScalarField& field,
+    const word& conductivity,
+    const word& offsetField
+)
+{
+    volScalarField::Boundary& bf = field.boundaryFieldRef();
+    forAll(bf, patchI)
+    {
+        if (isA<conormalZeroFluxFvPatchScalarField>(bf[patchI]))
+        {
+            refCast<conormalZeroFluxFvPatchScalarField>(bf[patchI])
+               .setConductivity(conductivity, offsetField);
+        }
+    }
 }
 
 

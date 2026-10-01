@@ -327,6 +327,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
         )
     );
     volScalarField::Boundary& activationBf = activationTime_.boundaryFieldRef();
+    boolList replaced(activationBf.size(), false);
     forAll(activationBf, patchI)
     {
         if
@@ -345,6 +346,14 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
                     activationTime_
                 )
             );
+            replaced[patchI] = true;
+        }
+    }
+    setConormalWallConductivity(activationTime_, conductivity_.name(), word::null);
+    forAll(activationBf, patchI)
+    {
+        if (replaced[patchI])
+        {
             activationBf[patchI].evaluate();
         }
     }
