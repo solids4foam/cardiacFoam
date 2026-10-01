@@ -57,7 +57,7 @@ bidomainSolver::bidomainSolver
         conormalWallPatchTypes
         (
             mesh,
-            electroProperties.getOrDefault<word>("sealedWallTrace", "zeroGradient")
+            electroProperties.get<word>("sealedWallTrace")
         )
     ),
     gradPhiE_
@@ -127,7 +127,7 @@ bidomainSolver::bidomainSolver
     ),
     sealedHeartBoundary_
     (
-        electroProperties.getOrDefault<Switch>("sealedHeartBoundary", false)
+        electroProperties.get<Switch>("sealedHeartBoundary")
     ),
     phiEReferenceValue_
     (

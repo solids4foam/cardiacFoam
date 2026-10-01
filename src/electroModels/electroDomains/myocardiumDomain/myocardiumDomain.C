@@ -216,7 +216,7 @@ myocardiumDomain::myocardiumDomain
         conormalWallPatchTypes
         (
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            electroProperties.getOrDefault<word>("sealedWallTrace", "zeroGradient")
+            electroProperties.get<word>("sealedWallTrace")
         )
     ),
     gradVm_

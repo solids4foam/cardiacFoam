@@ -57,7 +57,7 @@ monodomainSolver::monodomainSolver
     ),
     sealedHeartBoundary_
     (
-        electroProperties.getOrDefault<Switch>("sealedHeartBoundary", false)
+        electroProperties.get<Switch>("sealedHeartBoundary")
     )
 {}
 

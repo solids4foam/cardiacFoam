@@ -314,7 +314,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     ),
     sealedHeartBoundary_
     (
-        electroProperties.getOrDefault<Switch>("sealedHeartBoundary", false)
+        electroProperties.get<Switch>("sealedHeartBoundary")
     ),
     verificationModelPtr_()
 {
@@ -323,7 +323,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
         conormalWallPatchTypes
         (
             mesh(),
-            electroProperties.getOrDefault<word>("sealedWallTrace", "zeroGradient")
+            electroProperties.get<word>("sealedWallTrace")
         )
     );
     volScalarField::Boundary& activationBf = activationTime_.boundaryFieldRef();
