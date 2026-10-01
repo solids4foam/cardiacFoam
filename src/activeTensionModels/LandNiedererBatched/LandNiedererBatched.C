@@ -123,8 +123,16 @@ LandNiedererBatched::LandNiedererBatched
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     prevLambda_(num, 1.0),
     lambdaRate_(num, 0.0),
+    maxLambdaRate_(dict.lookupOrDefault<scalar>("maxLambdaRate", GREAT)),
     restartTa_(num, 0.0)
 {
+    if (maxLambdaRate_ <= 0.0)
+    {
+        FatalErrorInFunction
+            << "LandNiedererBatched maxLambdaRate must be positive, got "
+            << maxLambdaRate_ << exit(FatalError);
+    }
+
     const word requestedSignal = dict_.lookupOrDefault<word>("couplingSignal", "Cai");
     if (!(requestedSignal == "Cai" || requestedSignal == "cai"))
     {
@@ -266,6 +274,10 @@ void LandNiedererBatched::calculateTension
     {
         lambdaRate_[cellI] =
             dt > SMALL ? (lambda[cellI] - prevLambda_[cellI])/dt : 0.0;
+        lambdaRate_[cellI] = max
+        (
+            min(lambdaRate_[cellI], maxLambdaRate_), -maxLambdaRate_
+        );
         prevLambda_[cellI] = lambda[cellI];
     }
 

@@ -61,6 +61,7 @@ class LandNiederer
 
     mutable scalarField CONSTANTS_;
     scalarField prevLambda_;
+    scalar maxLambdaRate_;
 
     mutable scalar currentLambda_;
     mutable scalar currentLambdaRate_;

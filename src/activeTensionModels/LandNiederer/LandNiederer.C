@@ -111,9 +111,17 @@ LandNiederer::LandNiederer
     RATES_(nIntegrationPoints),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     prevLambda_(nIntegrationPoints, 1.0),
+    maxLambdaRate_(dict.lookupOrDefault<scalar>("maxLambdaRate", GREAT)),
     currentLambda_(1.0),
     currentLambdaRate_(0.0)
 {
+    if (maxLambdaRate_ <= 0.0)
+    {
+        FatalErrorInFunction
+            << "LandNiederer maxLambdaRate must be positive, got "
+            << maxLambdaRate_ << exit(FatalError);
+    }
+
     scalarField protoStates(NUM_STATES, 0.0);
     scalarField protoRates(NUM_STATES, 0.0);
 
@@ -281,6 +289,7 @@ void LandNiederer::solveAtPoint
     if (currentDt_ > SMALL)
     {
         lambdaRate = (lambda - prevLambda_[i])/currentDt_;
+        lambdaRate = max(min(lambdaRate, maxLambdaRate_), -maxLambdaRate_);
     }
     prevLambda_[i] = lambda;
 

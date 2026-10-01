@@ -18,6 +18,9 @@ set it to `false` to force the host-batched path for parity checks.
 `batchedSubsteps` controls explicit-Euler substeps in model time. Land-based
 batched models precondition at the coupled resting calcium; use the positive
 `batchedPreconditioningMaxStep` (default `0.1` ms) to bound that Euler step.
+For Land-2017 sensitivity studies, `maxLambdaRate` bounds the supplied fibre
+stretch rate in s^-1; it defaults to `GREAT` (no cap), so existing behaviour is
+unchanged. The TWorld model has its own fixed ±20 s^-1 safeguard.
 After the first CUDA update, batched state/rate/algebraic arrays remain on the
 device; each coupled update transfers only its current inputs and `Ta`.
 Restart and exported-state requests deliberately synchronize the complete

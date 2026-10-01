@@ -90,6 +90,19 @@ active output is converted once through the shared `TaScale=1000` kPa-to-Pa
 interface. Full-twitch amplitude/timing checks against the Land reference are
 still required before it can be accepted in deforming tissue.
 
+An opt-in sensitivity control, `maxLambdaRate 20` (s^-1), is now available
+for Land-2017; its default is unlimited, so it does not silently alter the
+uncapped model. This matches the magnitude of the existing TWorld safeguard.
+With the control enabled, scalar Land reached 20 ms (151.38 s), host-batched
+reached 20 ms (142.35 s), and a CUDA-11.5 run that explicitly logged device
+dispatch reached 20 ms (140.82 s); all momentum solves converged. The
+host-batched/CUDA 2,000-sample coupled probe traces have a 9.62 Pa maximum
+difference (0.90% of the 1.076 kPa sampled maximum; 0.937 Pa RMS), peaking at
+18 ms. This is coupled mechanical sensitivity, not a device crash; it is not
+yet a physiological validation of the cap. The next acceptance step is a
+full-twitch, isometric Land-reference comparison plus sensitivity to the cap
+value before selecting a production default.
+
 ## CUDA residency and performance interpretation
 
 CUDA ODE state, rates, and algebraics now remain resident after the first

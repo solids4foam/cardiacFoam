@@ -46,6 +46,7 @@ class LandNiedererBatched
     mutable scalarField CONSTANTS_;
     mutable scalarField prevLambda_;
     mutable scalarField lambdaRate_;
+    scalar maxLambdaRate_;
     mutable scalarField restartTa_;
 
     void updateDerivedConstants();
