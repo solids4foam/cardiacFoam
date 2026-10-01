@@ -103,6 +103,17 @@ yet a physiological validation of the cap. The next acceptance step is a
 full-twitch, isometric Land-reference comparison plus sensitivity to the cap
 value before selecting a production default.
 
+A six-rank scalar full-twitch run of that explicit capped configuration
+completed the documented 250 ms spring case in 430 s with momentum convergence
+at every step. The five tension probes peak at 14.70--15.68 kPa, at 83.0,
+83.0, 83.2, 97.4, and 123.2 ms respectively; their 250 ms values are
+1.21--3.29 kPa. This establishes a tens-of-kPa response, consistent in order
+of magnitude with the model's `Tref=120 kPa` scaling and without a 1,000x unit
+defect. It is deliberately not called a Land-2017 physiological validation:
+spring shortening, heterogeneous activation timing, and the cap influence the
+observed peak. An isometric trace against the released Land reference remains
+the acceptance test for amplitude and time-to-peak.
+
 ## CUDA residency and performance interpretation
 
 CUDA ODE state, rates, and algebraics now remain resident after the first
