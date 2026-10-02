@@ -1,0 +1,5 @@
+# Where omnidriver finds this solver repository's plugin, tutorials, C++ source and helper scripts.
+plugin = "cardiacfoam"
+tutorials = "tutorials"
+source = "src"
+scripts = "applications/scripts"
