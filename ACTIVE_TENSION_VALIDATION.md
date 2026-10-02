@@ -90,6 +90,13 @@ active output is converted once through the shared `TaScale=1000` kPa-to-Pa
 interface. Full-twitch amplitude/timing checks against the Land reference are
 still required before it can be accepted in deforming tissue.
 
+A clean run of the same uncapped scalar Land spring case with the stricter
+solid relative tolerance `rTol 0.005` was completed on 2026-10-02. It again
+reached the 1,000-corrector limit near 18.1 ms and aborted; the last sampled
+active tension was approximately 1.09 kPa. Tightening this tolerance does not
+resolve the failure. Reproduction details and log paths are in
+`LAND_TOLERANCE_FAILURE_REPORT.md`.
+
 An opt-in sensitivity control, `maxLambdaRate 20` (s^-1), is now available
 for Land-2017; its default is unlimited, so it does not silently alter the
 uncapped model. This matches the magnitude of the existing TWorld safeguard.
