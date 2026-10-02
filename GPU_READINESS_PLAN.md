@@ -6,9 +6,12 @@ The target is the CUDA execution path for the batched ionic and active-tension
 models in `cardiacFoam`.  The tissue PDE remains CPU-resident; a successful
 result must not be described as a full-PDE GPU port.
 
-This worktree starts from `a6813e26` on branch
-`gpu-characterization-20261001`.  The source and untracked outputs in the two
-existing repository directories are not modified.
+This worktree continues from `a6813e26`, the tip of
+`GPU-ionicModels-ready` (`origin/GPU-ionicModels-ready`), on branch
+`GPU-ionicModels-activeTension-characterization`. It retains the ionic-model
+work and adds active-tension CUDA implementation, validation, and performance
+characterization. The source and untracked outputs in the two original
+repository directories are not modified.
 
 ### Active-tension validation route
 
