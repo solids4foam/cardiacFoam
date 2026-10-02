@@ -97,9 +97,9 @@ active tension was approximately 1.09 kPa. Tightening this tolerance does not
 resolve the failure. Reproduction details and log paths are in
 `LAND_TOLERANCE_FAILURE_REPORT.md`.
 
-An opt-in sensitivity control, `maxLambdaRate 20` (s^-1), is now available
-for Land-2017; its default is unlimited, so it does not silently alter the
-uncapped model. This matches the magnitude of the existing TWorld safeguard.
+A stretch-rate control, `maxLambdaRate` (s^-1), is available for Land-2017.
+It was introduced with an unlimited default; it now defaults to 20, the
+magnitude of the existing TWorld safeguard (see the end of this section).
 With the control enabled, scalar Land reached 20 ms (151.38 s), host-batched
 reached 20 ms (142.35 s), and a CUDA-11.5 run that explicitly logged device
 dispatch reached 20 ms (140.82 s); all momentum solves converged. The
@@ -109,6 +109,14 @@ difference (0.90% of the 1.076 kPa sampled maximum; 0.937 Pa RMS), peaking at
 yet a physiological validation of the cap. The next acceptance step is a
 full-twitch, isometric Land-reference comparison plus sensitivity to the cap
 value before selecting a production default.
+
+The uncapped failure is an explicit stretch-rate feedback: Ta uses
+`(lambda - prevLambda)/deltaT` from the previous step and is held fixed during
+the solid solve, so halving `deltaT` makes the case fail earlier (17.6 ms at
+5 us). Capped and uncapped runs agree until the instability (Ta to 1e-3 kPa up
+to 17.5 ms). `maxLambdaRate` therefore defaults to 20 s^-1 in `LandNiederer` and
+`LandNiedererBatched`; with that default both complete the case that fails
+uncapped. Details are in `LAND_TOLERANCE_FAILURE_REPORT.md`.
 
 A six-rank scalar full-twitch run of that explicit capped configuration
 completed the documented 250 ms spring case in 430 s with momentum convergence

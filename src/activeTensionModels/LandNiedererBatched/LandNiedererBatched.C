@@ -123,7 +123,7 @@ LandNiedererBatched::LandNiedererBatched
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     prevLambda_(num, 1.0),
     lambdaRate_(num, 0.0),
-    maxLambdaRate_(dict.lookupOrDefault<scalar>("maxLambdaRate", GREAT)),
+    maxLambdaRate_(dict.lookupOrDefault<scalar>("maxLambdaRate", 20.0)),
     restartTa_(num, 0.0)
 {
     if (maxLambdaRate_ <= 0.0)

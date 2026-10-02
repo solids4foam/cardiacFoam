@@ -111,7 +111,7 @@ LandNiederer::LandNiederer
     RATES_(nIntegrationPoints),
     CONSTANTS_(NUM_CONSTANTS, 0.0),
     prevLambda_(nIntegrationPoints, 1.0),
-    maxLambdaRate_(dict.lookupOrDefault<scalar>("maxLambdaRate", GREAT)),
+    maxLambdaRate_(dict.lookupOrDefault<scalar>("maxLambdaRate", 20.0)),
     currentLambda_(1.0),
     currentLambdaRate_(0.0)
 {

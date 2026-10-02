@@ -61,6 +61,7 @@ class LandNiederer
 
     mutable scalarField CONSTANTS_;
     scalarField prevLambda_;
+    //- Fibre stretch-rate cap [1/s], as in LandNiedererTWorld
     scalar maxLambdaRate_;
 
     mutable scalar currentLambda_;

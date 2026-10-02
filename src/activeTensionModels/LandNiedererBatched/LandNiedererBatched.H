@@ -46,6 +46,7 @@ class LandNiedererBatched
     mutable scalarField CONSTANTS_;
     mutable scalarField prevLambda_;
     mutable scalarField lambdaRate_;
+    //- Fibre stretch-rate cap [1/s], as in LandNiedererTWorld
     scalar maxLambdaRate_;
     mutable scalarField restartTa_;
 
