@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from omnidriver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableWriter
 
 _TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
 
@@ -43,16 +43,13 @@ def run_postprocessing(
     if not rows:
         return []
 
-    meta = TableMetadata(
-        tutorial=_TUTORIAL_NAME,
-        units={"DI_ms": "ms", "APD90_ms": "ms"},
-    )
     return TableWriter.write(
         rows,
         output_path,
         "restitutionCurves_summary",
         "Restitution curve APD90 summary",
-        meta,
+        _TUTORIAL_NAME,
+        units={"DI_ms": "ms", "APD90_ms": "ms"},
     )
 
 

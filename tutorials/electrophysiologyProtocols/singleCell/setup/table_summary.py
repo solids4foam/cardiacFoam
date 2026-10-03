@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from omnidriver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableWriter
 
 
 def _parse_model_and_cell(stem: str) -> tuple[str, str]:
@@ -79,16 +79,13 @@ def run_postprocessing(
     if not rows:
         return []
 
-    meta = TableMetadata(
-        tutorial="singleCell",
-        units={"APD_ms": "ms", "peak_voltage_mV": "mV", "resting_voltage_mV": "mV"},
-    )
     return TableWriter.write(
         rows,
         output_path,
         "singleCell_summary",
         "Single cell voltage and APD summary",
-        meta,
+        "singleCell",
+        units={"APD_ms": "ms", "peak_voltage_mV": "mV", "resting_voltage_mV": "mV"},
     )
 
 
