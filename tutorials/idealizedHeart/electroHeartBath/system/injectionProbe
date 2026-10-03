@@ -1,0 +1,33 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+// Same LV free-wall Purkinje-myocardial-junction point as electroHeart's
+// injection probe (purkinjeGraph node 211), with phiE added: activation
+// there confirms Purkinje-to-myocardium injection under the bidomain
+// myocardium, and phiE is the extracellular potential of the heart+torso
+// solve at the same point.
+
+type            probes;
+libs            ("libsampling.so");
+enabled         true;
+
+writeControl    writeTime;
+
+fields
+(
+    Vm
+    phiE
+    activationTime
+);
+
+probeLocations
+(
+    (0.02395 0.01743 -0.00191)
+);
+
+// ************************************************************************* //

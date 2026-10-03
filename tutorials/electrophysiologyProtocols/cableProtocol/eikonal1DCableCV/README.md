@@ -92,7 +92,9 @@ The decomposition is defined in `system/decomposeParDict`.
 
 1. generate the mesh with `blockMesh`
 2. run `cardiacFoam` in serial or parallel
-3. compute the CV summary from the probe outputs
+
+To extract CV from a manual run, call `python3 setup/extract_cv.py` separately.
+The script is under `setup/` for post-processing workflows.
 
 ## Driver convergence entry
 

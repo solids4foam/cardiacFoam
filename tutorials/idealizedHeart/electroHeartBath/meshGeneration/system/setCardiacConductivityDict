@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      setCardiacConductivityDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// cardiacCore setCardiacConductivity input. Each tensor is
+// df f f + ds s s + dn n n in the fibre (f), sheet (s) and sheet-normal
+// (n = f x s) frame; torso cells carry f = s = 0 and get a zero tensor.
+//
+// Bidomain set: Johnston, "Six conductivity values to use in the bidomain
+// model of cardiac tissue", IEEE TBME 63(7), 2016, nominal values
+// (mS/cm -> S/m):
+//   intracellular  gil 0.24  git 0.035  gin 0.008
+//   extracellular  gel 0.24  get 0.20   gen 0.11
+//
+// df/ds/dn is the monodomain-equivalent bulk tensor, the per-direction
+// harmonic mean gi ge/(gi + ge):
+//   0.24*0.24/0.48 = 0.12, 0.035*0.20/0.235 = 0.0297872340,
+//   0.008*0.11/0.118 = 0.0074576271.
+
+df          0.12;
+ds          0.0297872340;
+dn          0.0074576271;
+
+conductivityIntracellular
+{
+    df      0.24;
+    ds      0.035;
+    dn      0.008;
+}
+
+conductivityExtracellular
+{
+    df      0.24;
+    ds      0.20;
+    dn      0.11;
+}
+
+fiberField  "fiber";
+sheetField  "sheet";
+
+// ************************************************************************* //

@@ -1,0 +1,67 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      setExprFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Zero-valued heart+torso copies of the anatomy fields, created before
+// mapFields fills the heart cells from heartMesh/0. The torso cells keep 0.
+
+expressions
+(
+    fiber
+    {
+        field       fiber;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ vector(0, 0, 0) #};
+    }
+    sheet
+    {
+        field       sheet;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ vector(0, 0, 0) #};
+    }
+    sheetNormal
+    {
+        field       sheetNormal;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ vector(0, 0, 0) #};
+    }
+    tm
+    {
+        field       tm;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ 0 #};
+    }
+    tv
+    {
+        field       tv;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ 0 #};
+    }
+    apicobasal
+    {
+        field       apicobasal;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ 0 #};
+    }
+);
+
+// ************************************************************************* //

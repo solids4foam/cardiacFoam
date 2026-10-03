@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Builds the heart+torso mesh and its fields once and writes them to
+# ../../mesh/heartTorso, the copy electroHeartBath/Allrun reads. Rerun only
+# to change the torso, the organs or the conductivities.
+#
+# Needs: OpenFOAM, cardiacFoam utilities (setTorsoOrganConductivityField),
+# cardiacCore's setCardiacConductivity, and the gmsh Python module.
+
+cd "${0%/*}" || exit 1
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+target=../../mesh/heartTorso
+
+for app in setTorsoOrganConductivityField setCardiacConductivity; do
+    if ! command -v $app > /dev/null; then
+        echo "ERROR: $app not found on PATH." 1>&2
+        exit 1
+    fi
+done
+if ! python3 -c "import gmsh" 2>/dev/null; then
+    echo "ERROR: build_torso_mesh.py needs the gmsh Python module" \
+         "(pip install gmsh)." 1>&2
+    exit 1
+fi
+if head -c 40 ../../mesh/constant/polyMesh/points 2>/dev/null \
+    | grep -q "git-lfs.github.com"; then
+    echo "ERROR: ../../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
+    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+    exit 1
+fi
+
+# -------------------------
+# Heart: the shared idealized heart, unchanged
+# -------------------------
+mkdir -p heartMesh/constant heartMesh/0 constant 0
+cp -a ../../mesh/constant/polyMesh heartMesh/constant/polyMesh
+for field in fiber sheet sheetNormal tm tv apicobasal; do
+    cp ../../mesh/0/$field heartMesh/0/$field
+done
+
+# -------------------------
+# Torso, conformal to the heart
+# -------------------------
+python3 build_torso_mesh.py --case-dir . > log.build_torso_mesh 2>&1 || {
+    echo "ERROR: build_torso_mesh.py failed, see log.build_torso_mesh" 1>&2
+    exit 1
+}
+runApplication -s torso gmshToFoam -case torsoMesh torsoMesh/torso.msh
+
+# Heart first, torso appended: heart cells keep their labels 0..nHeart-1.
+cp -a heartMesh/constant/polyMesh constant/polyMesh
+runApplication mergeMeshes -overwrite . torsoMesh
+runApplication stitchMesh -overwrite
+rm -rf 0/meshPhi constant/polyMesh/meshModifiers
+runApplication createPatch -overwrite
+runApplication checkMesh
+
+# -------------------------
+# Zones and fields
+# -------------------------
+runApplication topoSet
+runApplication setTorsoOrganConductivityField
+
+runApplication -s init setExprFields -dict system/setExprFieldsDict.init
+runApplication mapFieldsPar heartMesh -sourceTime 0 -mapMethod cellVolumeWeight
+runApplication setExprFields
+runApplication setCardiacConductivity
+
+# -------------------------
+# Write the baked copy
+# -------------------------
+rm -rf "$target"
+mkdir -p "$target/constant" "$target/0"
+cp -a constant/polyMesh "$target/constant/polyMesh"
+rm -rf "$target/constant/polyMesh/sets"
+cp constant/torsoGeometry "$target/constant/torsoGeometry"
+for field in fiber sheet sheetNormal tm tv apicobasal t \
+             Conductivity ConductivityIntracellular ConductivityExtracellular \
+             bodyAndOrgansConductivity; do
+    cp 0/$field "$target/0/$field"
+done
+echo "Wrote $target"

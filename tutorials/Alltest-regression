@@ -33,6 +33,7 @@ REGRESSION_TESTS=(
     "manufacturedSolutions/eikonalECG"
     "manufacturedSolutions/eikonalECG/insulatedWall"
     "manufacturedSolutions/bathBidomain"
+    "manufacturedSolutions/bathBidomain/insulatedWall"
     "manufacturedSolutions/monodomainTotalLagrangianEM"
     "electrophysiologyProtocols/rotorInstability"
     "electrophysiologyProtocols/purkinjeRestitution2D"

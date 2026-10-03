@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      stitchMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// The torso mesh is built on the heart boundary triangles node for node
+// (build_torso_mesh.py), so each heart patch and its torso counterpart
+// coincide exactly and become internal heart-torso faces.
+
+EPI
+{
+    match   perfect;
+    master  EPI;
+    slave   heart_EPI;
+}
+
+BASE
+{
+    match   perfect;
+    master  BASE;
+    slave   heart_BASE;
+}
+
+ENDO_LV
+{
+    match   perfect;
+    master  ENDO_LV;
+    slave   heart_ENDO_LV;
+}
+
+ENDO_RV
+{
+    match   perfect;
+    master  ENDO_RV;
+    slave   heart_ENDO_RV;
+}
+
+// ************************************************************************* //

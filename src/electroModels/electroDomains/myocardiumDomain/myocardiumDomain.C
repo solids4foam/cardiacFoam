@@ -765,10 +765,7 @@ void myocardiumDomain::solveDiffusionStep
 }
 
 
-// Called twice per step by the bath-PDE predictor/corrector (the outer
-// Vm(phiE^n) -> phiE^n+1 -> Vm(phiE^n+1) sweep owned by the advance scheme).
-// Each call here is only the inner, single-stage non-orthogonal reassembly
-// for that one Vm solve; it does not itself predict or correct anything.
+// One Vm solve per bath outer PIMPLE pass of the advance scheme.
 void myocardiumDomain::solveDiffusionStepOnce
 (
     scalar t0,

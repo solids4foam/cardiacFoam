@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+# Removes the intermediate generation files. Leaves ../../mesh/heartTorso,
+# the baked output, in place.
+
+cd "${0%/*}" || exit 1
+
+rm -f log.*
+rm -rf constant 0
+rm -rf heartMesh/constant heartMesh/0
+rm -rf torsoMesh/constant torsoMesh/torso.msh

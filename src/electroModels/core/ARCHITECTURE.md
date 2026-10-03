@@ -323,10 +323,13 @@ system.preparePotentialDomain(t0, dt);
 
 if (bathPredictorCorrector_)   // default true
 {
-    // Predict Vm, update phiE, then correct Vm.
+    // Predict Vm, then per outer PIMPLE pass: update phiE, correct Vm.
     myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
-    system.advancePotentialDomain(t0, dt);
-    myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+    while (pimplePtr->loop())
+    {
+        system.advancePotentialDomain(t0, dt);
+        myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+    }
 }
 else
 {
@@ -343,7 +346,10 @@ This is how the bath/extracellular-potential coupling (unified phiE) is
 implemented: `staggeredElectrophysicsAdvanceScheme` owns a
 `bathPredictorCorrector_` switch (dictionary key
 `bathPredictorCorrector`, default `true`) that picks between the two
-sub-variants above.
+sub-variants above. The number of phiE/Vm passes is `PIMPLE
+nOuterCorrectors` in `fvSolution`, and `PIMPLE residualControl` stops them
+early; it must name `phiE`, since the Vm residuals live on the heart
+submesh and are not seen by the base-mesh `pimpleControl`.
 
 ---
 

@@ -17,7 +17,8 @@ IFS=$'\n\t'
 # differently: monodomain activates it at 28.9ms, hybrid's eikonal-1D
 # Purkinje to 3D monodomain coupling at 30.1ms, and eikonal solves a single
 # steady problem that writes only time 1. The sample time in each reference
-# reflects that; the expected values were measured, not chosen.
+# reflects that; the expected values were measured, not chosen. ECG rows
+# also sample three lead/time combinations from each variant's trace.
 #
 # Every variant runs on both Purkinje trees (Allrun's human/pig argument):
 # the human tree keeps all terminals on the endocardium, the pig tree inserts
@@ -49,7 +50,7 @@ dumpLogTail()
     fi
 }
 
-# Compare one reference file's rows against this variant's output.
+# Compare one reference file's probe and ECG rows against this variant's output.
 # Echoes PASS/FAIL per row; returns the number of failures.
 checkReference()
 {
@@ -104,10 +105,10 @@ checkReference()
         )"
 
         if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d < t)}'; then
-            printf "PASS: %s col=%s t=%s activationTime=%.7g (difference = %.3g)\n" \
+            printf "PASS: %s col=%s t=%s value=%.7g (difference = %.3g)\n" \
                 "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
         else
-            printf "FAIL: %s col=%s t=%s activationTime=%.7g (difference = %.3g)\n" \
+            printf "FAIL: %s col=%s t=%s value=%.7g (difference = %.3g)\n" \
                 "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
             variantFailures=$((variantFailures + 1))
         fi

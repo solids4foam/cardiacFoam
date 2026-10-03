@@ -1,0 +1,186 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Bidomain myocardium embedded in a conductive torso. The heart cells, fibre
+// fields, ionic heterogeneity, Purkinje tree and stimulus are those of the
+// electroHeart monodomain variant; the torso (cellZones blood, lungs,
+// chestWall, torso) carries the extracellular potential to the electrodes.
+
+myocardiumSolver bidomainSolver;
+
+bidomainSolverCoeffs
+{
+    sealedHeartBoundary false;
+    sealedWallTrace     zeroGradient;
+    cellZone    myocardium;
+
+    // 0/ConductivityIntracellular and 0/ConductivityExtracellular are
+    // written into ../mesh/heartTorso by cardiacCore's setCardiacConductivity
+    // (Johnston 2016 bidomain values, meshGeneration/system/
+    // setCardiacConductivityDict).
+    conductivitySource field;
+    chi         [ 0 -1 0 0 0 0 0 ] 140000;
+    cm          [ -1 -4 4 0 0 2 0 ] 0.01;
+
+    ionicModel  BuenoOrovio;
+    tissue      epicardialCells;
+
+    ionicHeterogeneity
+    {
+        mode              namedRegions;
+        field             t;
+        transitionMode    blend;
+        transitionWidth   0.1;
+        smoothing         smoothstep;
+        regions
+        {
+            endocardialCells { range (0 0.3); }
+            mCells           { range (0.3 0.7); }
+            epicardialCells  { range (0.7 1); }
+        }
+
+        gradientAxes
+        {
+            apicobasal
+            {
+                field       apicobasal;
+                beta        1.2;
+                scalingMin  0.97;
+                scalingMax  1.04;
+                variables   (tauSi);
+            }
+        }
+    }
+
+    solutionAlgorithm implicit;
+    solver            RKF45;
+    maxSteps          1000000000;
+
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    bathPredictorCorrector yes;
+
+    bathPotentialDomain
+    {
+        bathCellZones   ( blood lungs chestWall torso );
+        bathConductivityField bodyAndOrgansConductivity;
+        interfaceConductivityInterpolation distanceWeightedHarmonic;
+        groundPatches
+        {
+        }
+        surfaceCurrentPatches
+        {
+        }
+        // Posterior-caudal-right corner of the torso, inside the chest wall
+        // (build_torso_mesh.py prints this point).
+        phiERefPoint    (0.0174906176 0.174255908 0.197011104);
+        phiEReferenceValue 0;
+    }
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver monodomain1DSolver;
+                graphFile              purkinjeGraph;
+
+                ionicModel             BuenoOrovio;
+                tissue                 epicardialCells;
+
+                chi                    14000;
+                cm                     0.01;
+                purkinjeConductivity   0.4;
+                vm1DRest               -0.084;
+
+                rootStimulus
+                {
+                    node      0;
+                    startTime 0.0;
+                    duration  0.002;
+                    intensity 500000.0;
+                }
+
+                solver         RKF45;
+                maxSteps       1000000000;
+
+                outputVariables
+                {
+                    export (Vm activationTime Icoupling);
+                    debug  (Vm Iion);
+                }
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCoupler    reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            rPvj                    1000;
+            pvjRadius               1.65e-3;
+            couplingMode            unidirectional;
+            debugCoupling           true;
+        }
+    }
+
+    // Same precordial electrodes as electroHeart. torsoECG samples phiE in
+    // the torso at each electrode; pseudoECG evaluates the infinite
+    // homogeneous-medium integral at the same points for comparison.
+    // build_torso_mesh.py places the torso anterior face on V1-V3 and the
+    // left face on V4-V6 from the torsoECG block below.
+    ecgDomains
+    {
+        torsoECG
+        {
+            ecgSolver torsoECG;
+
+            electrodePositions
+            {
+                V1 (0.010407  0.056280  -0.050468);
+                V2 (0.030086  0.016628  -0.061925);
+                V3 (0.052524 -0.019359  -0.050439);
+                V4 (0.070768 -0.037057  -0.026220);
+                V5 (0.073474 -0.043547  -0.003609);
+                V6 (0.068323 -0.043011   0.018866);
+            }
+        }
+
+        pseudoECG
+        {
+            ecgSolver pseudoECG;
+            sigmaExtracellular 0.2;
+
+            electrodePositions
+            {
+                V1 (0.010407  0.056280  -0.050468);
+                V2 (0.030086  0.016628  -0.061925);
+                V3 (0.052524 -0.019359  -0.050439);
+                V4 (0.070768 -0.037057  -0.026220);
+                V5 (0.073474 -0.043547  -0.003609);
+                V6 (0.068323 -0.043011   0.018866);
+            }
+        }
+    }
+}
+
+// ************************************************************************* //
