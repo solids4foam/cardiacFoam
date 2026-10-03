@@ -10,7 +10,7 @@ import json
 import re
 from pathlib import Path
 
-from omnidriver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableWriter
 
 _PROBE_LINE = re.compile(r"^# Probe (\d+) \(([^)]+)\)")
 
@@ -102,16 +102,13 @@ def run_postprocessing(
     rows = build_summary_rows(output_path)
     if not rows:
         return []
-    meta = TableMetadata(
-        tutorial="NiedererEtAl2011",
-        units={"activationTime": "ms", "DX": "mm", "DT": "ms"},
-    )
     return TableWriter.write(
         rows,
         output_path,
         "NiedererEtAl2011_summary",
         "Niederer activation time summary",
-        meta,
+        "NiedererEtAl2011",
+        units={"activationTime": "ms", "DX": "mm", "DT": "ms"},
     )
 
 

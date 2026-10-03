@@ -6,6 +6,7 @@ import io
 import json
 import re
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -21,7 +22,6 @@ from omnidriver.postprocessing.style import (
     finalize_matplotlib_figure,
     style_matplotlib_axes,
 )
-from omnidriver.postprocessing.table_writer import TableMetadata
 
 #: Every study this tutorial sweeps today fixes solver/ionicModel/tissue/
 #: conductivity across the whole sweep -- only dx/dt vary -- so there is
@@ -150,7 +150,8 @@ def _write_summary_csv(
     *,
     output_dir: Path,
     filename_stem: str,
-    metadata: TableMetadata,
+    entry: str,
+    units: dict[str, str],
     label: str,
 ) -> dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -159,9 +160,9 @@ def _write_summary_csv(
 
     fieldnames = list(rows[0].keys()) if rows else []
     lines = [
-        f"# entry: {metadata.entry}",
-        f"# generated_at: {metadata.generated_at}",
-        f"# units: {json.dumps(metadata.units)}",
+        f"# entry: {entry}",
+        f"# generated_at: {datetime.now(timezone.utc).isoformat()}",
+        f"# units: {json.dumps(units)}",
     ]
     if fieldnames:
         buffer = io.StringIO()
@@ -334,19 +335,16 @@ def _plot_group_convergence(
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> list[dict]:
     del setup_root
     output_path = Path(output_dir)
-    meta = TableMetadata(
-        tutorial="cable1DCVConvergence",
-        units={
-            "DX_mm": "mm",
-            "DT_ms": "ms",
-            "central_dx_mm": "mm",
-            "central_dt_ms": "ms",
-            "central_cv_m_per_s": "m/s",
-            "reference_cv_m_per_s": "m/s",
-            "abs_error_m_per_s": "m/s",
-            "rel_error_percent": "%",
-        },
-    )
+    units = {
+        "DX_mm": "mm",
+        "DT_ms": "ms",
+        "central_dx_mm": "mm",
+        "central_dt_ms": "ms",
+        "central_cv_m_per_s": "m/s",
+        "reference_cv_m_per_s": "m/s",
+        "abs_error_m_per_s": "m/s",
+        "rel_error_percent": "%",
+    }
     rows = build_summary_rows(output_path)
     if not rows:
         return []
@@ -357,7 +355,8 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
             output_dir=output_path,
             filename_stem="cable1DCVConvergence_summary",
             label="1D cable CV convergence summary",
-            metadata=meta,
+            entry="cable1DCVConvergence",
+            units=units,
         )
     ]
 
