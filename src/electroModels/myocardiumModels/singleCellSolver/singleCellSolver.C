@@ -100,6 +100,37 @@ singleCellSolver::singleCellSolver(Time& runTime, const word& region)
     outFields_(),
     dummyIonicCurrentField_(1, 0.0)
 {
+    if (ionicModelPtr_->readRestartState(mesh()))
+    {
+        IOobject vmHeader
+        (
+            "Vm",
+            runTime.timeName(),
+            mesh(),
+            IOobject::MUST_READ
+        );
+
+        if (!vmHeader.typeHeaderOk<volScalarField>(true))
+        {
+            const PtrList<scalarField>* states = ionicModelPtr_->ioStatesPtr();
+            if (!states || states->size() != Vm_.size())
+            {
+                FatalErrorInFunction
+                    << "Single-cell restart state does not match Vm field size"
+                    << exit(FatalError);
+            }
+
+            const ionicModelIO::VmTransform transform =
+                ionicModelPtr_->ioVmTransform();
+            forAll(Vm_, cellI)
+            {
+                const scalarField& state = (*states)[cellI];
+                Vm_[cellI] = transform ? transform(state) : state[0];
+            }
+            Vm_.correctBoundaryConditions();
+        }
+    }
+
     const fileName outputDir(runTime.path() / "postProcessing");
     mkDir(outputDir);
 

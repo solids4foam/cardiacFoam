@@ -63,8 +63,8 @@ class extracellularPotentialDomain
     // submesh and injected separately.
     autoPtr<surfaceTensorField> sigmaExtracellularfPtr_;
 
-    // Face interpolation selected by bathPotentialDomain. The legacy
-    // unweighted harmonic behavior remains the default.
+    // Face interpolation selected by bathPotentialDomain. The default is
+    // distance-weighted harmonic interpolation.
     word interfaceConductivityInterpolation_;
 
     // Global potential and the V_m field projected to the base mesh.

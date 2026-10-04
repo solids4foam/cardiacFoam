@@ -29,7 +29,7 @@ Author
     {
         const dictionary& coeffs = this->subDict(myoSolver + "Coeffs");
 
-        const word advanceScheme(this->lookupOrDefault<word>("electrophysicsAdvanceScheme", "staggeredElectrophysicsAdvanceScheme"));
+        const word advanceScheme(coeffs.lookupOrDefault<word>("electrophysicsAdvanceScheme", "staggeredElectrophysicsAdvanceScheme"));
 
         const label meshDim = this->mesh().nGeometricD();
         string dimStr = Foam::name(meshDim) + "D";
