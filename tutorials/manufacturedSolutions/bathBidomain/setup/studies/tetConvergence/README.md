@@ -6,15 +6,10 @@ This study validates spatial convergence on unstructured tetrahedral meshes usin
 
 ## Execution
 
-From the repository root, use the current wrapper:
+From the repository root, use the current wrapper. Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetConvergence/sweep_tet_generic.json`.
 
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetConvergence/sweep_tet_generic.json \
-    --output-dir .tmp/driverfoam/bathBidomain-tet
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetConvergence/sweep_tet_generic.json \
-    --output-dir .tmp/driverfoam/bathBidomain-tet
+[omnidriver command to run]
 ```
 
 Resolve the runtime preflight before expecting OpenFOAM execution.

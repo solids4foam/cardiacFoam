@@ -72,7 +72,7 @@ error from its interior (bulk) error.
 exercises the gradient reconstruction operator alone against an exact
 analytic field. It is driven as a `gradient_reconstruction=True` workflow_dag
 step, appended after the case's solve (see `manufactured_eikonal_ecg.py`'s
-`_workflow_dag_for`) -- a real driverFOAM sweep, not bash, the same as every
+`_workflow_dag_for`) -- a real omnidriver sweep, not bash, the same as every
 other study here. `setup/studies/gradientVerification/` covers the full
 gaussLinear-vs-leastSquares comparison; `setup/studies/gradient_reconstruction/`
 restricts that same matrix to the registered `eikonal_gradient_tet`
@@ -81,56 +81,38 @@ exact commands.
 
 ## Usage
 
-### Driver-Managed Sweeps
+### Omnidriver-Managed Sweeps
 
-Run this verification suite through driverFOAM. The study manifests below are
+Run this verification suite through omnidriver. The study manifests below are
 the supported execution paths.
 
 Cartesian spatial convergence (1D/2D/3D):
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+    [omnidriver command to run]
 
 Tet convergence:
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/tetConvergence/sweep_tet_generic.json
+    [omnidriver command to run]
 
 Nonlinear stopping-criterion control (least-squares tet cases; axis and both
 rotated configurations, N=10/20/40/80):
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json
+    [omnidriver command to run]
 
 Bulk/boundary error decomposition:
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
+    [omnidriver command to run]
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py <sweep output dir>
 
 Isolated gradient-operator reconstruction (registered `eikonal_gradient_tet` table, leastSquares only):
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
+    [omnidriver command to run]
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py <sweep output dir>
 
 Full gaussLinear-vs-leastSquares gradient-operator comparison (not a registered table):
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
+    [omnidriver command to run]
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py <sweep output dir>
 
 ## Effective mesh spacing and observed order
 

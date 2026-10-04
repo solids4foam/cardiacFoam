@@ -29,15 +29,16 @@ direct invocation.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/sweep_gradient_tet.json
-python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
+[omnidriver command to run]
+python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py <sweep output dir>
 ```
 
-This writes `results/eikonal_gradient_tet.csv` (full gaussLinear/leastSquares
-comparison; distinct from the canonical `setup/results/eikonal_gradient_tet.csv`
-the registered experiment writes).
+This writes `eikonal_gradient_tet.csv` into the sweep output directory (full
+gaussLinear/leastSquares comparison; the registered experiment's leastSquares-only
+table is `../gradient_reconstruction/`'s).
 
 ## Tracking & Outputs
 

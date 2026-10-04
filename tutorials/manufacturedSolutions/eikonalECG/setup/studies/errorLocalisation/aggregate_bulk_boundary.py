@@ -1,41 +1,28 @@
 #!/usr/bin/env python3
-"""Regenerate eikonalECG's canonical solved-field bulk/boundary CSV.
+"""Regenerate eikonalECG's solved-field bulk/boundary CSV.
 
-Reads this study's own driverFOAM sweep archive (results/sweepCases +
-results/sweepRun/sweep_manifest.json, produced by `driverFoam sweep-run
---spec sweep_tet_error_localisation.json`, see README.md) via
-adapters.from_eikonal_bulk_boundary, and writes
-setup/results/eikonal_bulk_boundary_tet.csv.
+Reads an omnidriver sweep of sweep_tet_error_localisation.json: each case's
+`postProcessing/manufacturedEikonalActivationTime.dat` carries the
+`activationTimeSplit` line the verifier writes when `writeErrorField` is on.
+Writes eikonal_bulk_boundary_tet.csv into the sweep directory.
 
-Naming follows applications/scripts/paperI_results/README.md's
-<physics>_<operator>_<mesh> convention for isolated operator diagnostics
-(e.g. eikonal_gradient_tet), which this decomposition is a sibling of: this
-one is the SOLVED field's bulk/boundary split (from
-manufacturedEikonalVerifier.C, only computed when writeErrorField is
-enabled), not the standalone gradient-operator-only split gradientReconstru
-ctionOrder / eikonal_gradient_tet.csv reports.
+This is the SOLVED field's bulk/boundary split, not the gradient-operator-only
+split of ../gradientVerification/.
 
-Not a keyset-gated convergence table (no committed reference, no 'field'/
-rate columns), so this writes its own bespoke CSV shape directly rather than
-going through schema.write_canonical -- see adapters.from_eikonal_bulk_boundary's
-docstring.
-
-Usage (run after `driverFoam sweep-run --spec sweep_tet_error_localisation.json`,
-see README.md):
-    python3 aggregate_bulk_boundary.py
+Usage:
+    python3 aggregate_bulk_boundary.py SWEEP_DIR
 """
 from __future__ import annotations
 
 import csv
+import re
 import sys
 from pathlib import Path
 
-_STUDY_DIR = Path(__file__).resolve().parent               # .../errorLocalisation
-_CASE_DIR = _STUDY_DIR.parents[2]                           # .../eikonalECG
-_REPO_ROOT = _STUDY_DIR.parents[5]                          # repo root
-sys.path.insert(0, str(_REPO_ROOT / "applications/scripts/paperI_results"))
-import adapters  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import sweep_cases  # noqa: E402
 
+_SPLIT = re.compile(r"^activationTimeSplit\s+(\S+)\s+(\S+)\s+(\S+)\s*$", re.MULTILINE)
 _FIELDS = [
     "case", "variant", "dim", "N", "h",
     "L2_bulk", "L2_boundary", "L2_total", "boundary_energy_fraction",
@@ -43,18 +30,35 @@ _FIELDS = [
 
 
 def main() -> None:
-    sweep_cases = _STUDY_DIR / "results" / "sweepCases"
-    manifest = _STUDY_DIR / "results" / "sweepRun" / "sweep_manifest.json"
-    rows = adapters.from_eikonal_bulk_boundary(sweep_cases, manifest)
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: aggregate_bulk_boundary.py SWEEP_DIR")
+    sweep_dir = Path(sys.argv[1]).resolve()
+    rows = []
+    for axes, case_dir in sweep_cases.completed_cases(sweep_dir):
+        dat = case_dir / "postProcessing" / "manufacturedEikonalActivationTime.dat"
+        if not dat.is_file():
+            continue
+        text = dat.read_text(errors="ignore")
+        split = _SPLIT.search(text)
+        if split is None:
+            continue
+        bulk, boundary, total = (float(value) for value in split.groups())
+        n = int(axes["tetNumberCells"])
+        rows.append({
+            "case": "eikonal_tet_split", "variant": sweep_cases.grad_scheme(case_dir),
+            "dim": "3D", "N": str(n), "h": sweep_cases.measured_h(text) or f"{1.0 / n:g}",
+            "L2_bulk": f"{bulk:g}", "L2_boundary": f"{boundary:g}", "L2_total": f"{total:g}",
+            "boundary_energy_fraction": f"{(boundary / total) ** 2 if total else 0.0:g}",
+        })
+    if not rows:
+        raise SystemExit(f"no completed case with an activationTimeSplit under {sweep_dir}")
     rows.sort(key=lambda r: (r["variant"], -float(r["h"])))
 
-    dest = _CASE_DIR / "setup" / "results" / "eikonal_bulk_boundary_tet.csv"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with dest.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=_FIELDS)
+    dest = sweep_dir / "eikonal_bulk_boundary_tet.csv"
+    with dest.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=_FIELDS)
         writer.writeheader()
-        for row in rows:
-            writer.writerow({key: row.get(key, "") for key in _FIELDS})
+        writer.writerows(rows)
     print(f"wrote {len(rows)} rows -> {dest}")
 
 

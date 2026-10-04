@@ -3,7 +3,7 @@
 ## Purpose
 
 Canonical entry point for the registered `eikonal_gradient_tet` verification
-experiment (the driverFOAM add-on's `verification_experiments.json`):
+experiment (omnidriver's `verification_experiments.json`):
 isolated `leastSquares` gradient reconstruction on the tet mesh across
 `N = 10, 20, 40, 80`.
 
@@ -13,13 +13,14 @@ gradient scheme only.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/sweep_gradient_tet.json
-python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
+[omnidriver command to run]
+python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py <sweep output dir>
 ```
 
-This writes the canonical `setup/results/eikonal_gradient_tet.csv`.
+This writes `eikonal_gradient_tet.csv` into the sweep output directory.
 
 ## Tracking & Outputs
 

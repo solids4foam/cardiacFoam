@@ -627,7 +627,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", required=True)
     parser.add_argument(
         "--case-id", default=None,
-        help="Defaults to the case directory's own name (no sentinel file is read any more).",
+        help="Defaults to the case directory's own name.",
     )
     parser.add_argument(
         "--n-s1", type=int, default=None,

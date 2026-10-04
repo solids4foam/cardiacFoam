@@ -779,7 +779,7 @@ def run_postprocessing(
     setup_root: str | None = None,
     **_: object,
 ) -> list[dict]:
-    """driverFOAM post-processing entry point (called for 'all' runs)."""
+    """omnidriver post-processing entry point (called for 'all' runs)."""
     root = Path(output_dir)
     postprocess(root)
 

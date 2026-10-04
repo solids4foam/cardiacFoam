@@ -15,12 +15,7 @@ native mesh and time-step defaults.
 From the repository root:
 
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/graphConvergence/sweep_graph_only.json \
-    --output-dir .tmp/driverfoam/monodomain1D3D-graph-only
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/graphConvergence/sweep_graph_only.json \
-    --output-dir .tmp/driverfoam/monodomain1D3D-graph-only
+[omnidriver command to run]
 ```
 
 ## Tracking & Outputs

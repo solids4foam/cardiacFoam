@@ -23,7 +23,6 @@ tutorials/NiedererEtAl2011verification/
 │   ├── Niedererlines
 │   └── Niedererpoints
 ├── setup/
-│   ├── convert_raw_samples.py
 │   ├── line_postProcessing.py
 │   ├── points_postProcessing.py
 │   ├── table_summary.py
@@ -77,20 +76,18 @@ regression/regressionTest.sh
 regression/regressionTest.sh parallel
 ```
 
-Driver-managed (from the repository root; a record stages into a scratch
+Omnidriver-managed (from the repository root; a record stages into a scratch
 directory you supply, never into this tree):
 
 ```bash
-driverFoam run --strict --entry niederer2011 --cases-root tutorials --scratch-dir <dir>
-driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir <dir>
-driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/tetConvergence/sweep_tet_generic.json --output-dir <dir>
+[omnidriver command to run]
 ```
 
-The driver reads this case as it is: `niederer2011` is a pointer at this
+omnidriver reads this case as it is: `niederer2011` is a pointer at this
 directory, and each study under `setup/studies/` states only what it
 varies (`dx`/`tetDx`, `deltaT`, `endTime`). Each study's `base` names
 `cases_root` (`tutorials`, relative to the repository root), because a
-driver sweep over a tutorial record has no cases root it could discover.
+omnidriver sweep over a tutorial record has no cases root it could discover.
 
 Both studies run Niederer et al. (2011)'s grid: Δx = 0.5, 0.2, 0.1 mm
 (`dx`/`tetDx` 5e-4, 2e-4, 1e-4 m) × Δt = 0.05, 0.01, 0.005 ms (`deltaT`

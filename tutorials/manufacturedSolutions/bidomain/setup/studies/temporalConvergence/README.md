@@ -6,12 +6,10 @@ This study validates temporal convergence (timestep refinement) using the bidoma
 
 ## Execution
 
-From the repository root:
+From the repository root. Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json`.
 
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json \
-    --output-dir .tmp/driverfoam/bidomain-temporal
+[omnidriver command to run]
 ```
 
 The eight cases are fixed-mesh timestep ladders: four levels at `N=640` in

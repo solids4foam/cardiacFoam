@@ -11,8 +11,8 @@ tolerance is a monitor, not an error estimate.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json \
-    --output-dir .tmp/driverfoam/bidomain-linear-tolerance
+[omnidriver command to run]
 ```

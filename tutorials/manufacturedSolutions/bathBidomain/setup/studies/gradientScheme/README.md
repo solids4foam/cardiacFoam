@@ -21,14 +21,9 @@ the case's own `system/fvSchemes`, which is `current`, so
 ## Execution
 
 ```bash
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_current.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_gaussLinear.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_limitedCorrection.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_orthogonalControl.json
+[omnidriver command to run]
 ```
 
-`driverFoam` is the external orchestration add-on (not part of this repo;
-see the root `CLAUDE.md`).
 
 ## Status
 

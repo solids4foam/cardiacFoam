@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Regenerate eikonalECG's gauss-linear-vs-leastSquares gradient comparison CSV.
 
-Reads this study's driverFOAM sweep archive (results/sweepCases, produced by
-`driverFoam sweep-run --spec sweep_gradient_tet.json`, see README.md) via
-adapters.from_eikonal_gradient_reconstruction, and writes
-results/eikonal_gradient_tet.csv -- the full leastSquares-vs-gaussLinear
-comparison used in the paper's qualitative discussion.
+Reads an omnidriver sweep of sweep_gradient_tet.json: each case's
+`workflow_logs/gradientReconstructionOrder.attempt*.stdout.log` is the report
+of `gradientReconstructionOrder` (`applications/test/gradientReconstructionOrder/`).
+Writes eikonal_gradient_tet.csv into the sweep directory.
 
-For the registered "eikonal_gradient_tet" Paper I table (leastSquares only),
-see ../gradient_reconstruction/aggregate_gradient_reconstruction.py instead.
+For the registered leastSquares-only table, see
+../gradient_reconstruction/aggregate_gradient_reconstruction.py.
 
-Usage (run after the sweep above):
-    python3 aggregate_gradient_verification.py
+Usage:
+    python3 aggregate_gradient_verification.py SWEEP_DIR
 """
 from __future__ import annotations
 
@@ -19,10 +18,8 @@ import csv
 import sys
 from pathlib import Path
 
-_STUDY_DIR = Path(__file__).resolve().parent               # .../gradientVerification
-_REPO_ROOT = _STUDY_DIR.parents[5]                          # repo root
-sys.path.insert(0, str(_REPO_ROOT / "applications/scripts/paperI_results"))
-import adapters  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import sweep_cases  # noqa: E402
 
 _FIELDS = [
     "scheme", "N", "h", "n_cells",
@@ -32,18 +29,19 @@ _FIELDS = [
 
 
 def main() -> None:
-    sweep_cases = _STUDY_DIR / "results" / "sweepCases"
-    manifest = _STUDY_DIR / "results" / "sweepRun" / "sweep_manifest.json"
-    rows = adapters.from_eikonal_gradient_reconstruction(sweep_cases, manifest)
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: aggregate_gradient_verification.py SWEEP_DIR")
+    sweep_dir = Path(sys.argv[1]).resolve()
+    rows = sweep_cases.gradient_rows(sweep_dir)
+    if not rows:
+        raise SystemExit(f"no completed gradientReconstructionOrder case under {sweep_dir}")
     rows.sort(key=lambda r: (r["scheme"], int(r["N"])))
 
-    dest = _STUDY_DIR / "results" / "eikonal_gradient_tet.csv"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with dest.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=_FIELDS)
+    dest = sweep_dir / "eikonal_gradient_tet.csv"
+    with dest.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=_FIELDS)
         writer.writeheader()
-        for row in rows:
-            writer.writerow({key: row[key] for key in _FIELDS})
+        writer.writerows(rows)
     print(f"Wrote {dest} ({len(rows)} rows)")
 
 

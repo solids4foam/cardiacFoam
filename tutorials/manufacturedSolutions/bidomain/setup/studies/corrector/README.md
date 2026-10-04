@@ -7,7 +7,7 @@ This study validates the predictor-corrector inner loop convergence and stabilit
 ## Execution
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
+[omnidriver command to run]
 ```
 
 Sweeps `N = 10, 20, 40` across the four reported variants (`baseline`,

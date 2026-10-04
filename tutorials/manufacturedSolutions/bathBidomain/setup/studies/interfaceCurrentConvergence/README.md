@@ -9,15 +9,14 @@ Mesh generation and `checkMesh` are the record's tet route.
 ## Execution
 
 ```bash
-driverFoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
-driverFoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
+[omnidriver command to run]
 ```
 
 Each method is its own spec. `sweep_tet_unweightedHarmonic.json` sets `bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation` in its `base`; `distanceWeightedHarmonic` is the case's own value, so its spec states nothing.
 
 ## Status
 
-Run with `driverFoam sweep-run` at `N=10` (`unweightedHarmonic`) only: the case meshes, solves, and writes `bathBidomainInterfaceMetrics.csv`. `N=20,40,80` and the `distanceWeightedHarmonic` spec use the same mechanism and are not yet run. Predictor-corrector coupling is the case's own `bathPredictorCorrector yes`.
+Run with omnidriver at `N=10` (`unweightedHarmonic`) only: the case meshes, solves, and writes `bathBidomainInterfaceMetrics.csv`. `N=20,40,80` and the `distanceWeightedHarmonic` spec use the same mechanism and are not yet run. Predictor-corrector coupling is the case's own `bathPredictorCorrector yes`.
 
 ## Tracking & Outputs
 

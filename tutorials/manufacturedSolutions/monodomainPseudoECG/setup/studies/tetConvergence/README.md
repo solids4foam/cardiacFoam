@@ -13,15 +13,10 @@ sweep.
 
 ## Execution
 
-From the repository root, use the current wrapper:
+From the repository root, use the current wrapper. Spec: `tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json`.
 
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json \
-    --output-dir .tmp/driverfoam/monodomainPseudoECG-tet
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json \
-    --output-dir .tmp/driverfoam/monodomainPseudoECG-tet
+[omnidriver command to run]
 ```
 
 Resolve the runtime preflight before expecting OpenFOAM execution.
