@@ -1,9 +1,4 @@
-"""table_summary.py — Restitution curve summary table for restitutionCurves_s1s2Protocol.
-
-Reads per-model *_restitution.csv files from output_dir and consolidates them
-into a single restitutionCurves_summary.csv / .html.  The ionic model name is
-derived from the filename stem (e.g. TNNP_restitution.csv → ionic_model=TNNP).
-"""
+"""table_summary.py — Restitution summary table: consolidates the per-model *_restitution.csv files in output_dir into restitutionCurves_summary.csv / .html."""
 from __future__ import annotations
 
 from pathlib import Path

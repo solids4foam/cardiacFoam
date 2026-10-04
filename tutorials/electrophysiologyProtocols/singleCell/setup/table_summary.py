@@ -1,9 +1,4 @@
-"""table_summary.py — Voltage and APD summary table for singleCell tutorial.
-
-Reads .txt simulation output files from output_dir.  Each file contains a
-space-separated time series with columns: time, Vm, [additional state vars...].
-Extracts resting voltage, peak voltage, and APD at 90% repolarisation.
-"""
+"""table_summary.py — Voltage and APD90 summary table for the singleCell tutorial, from the .txt outputs in output_dir (time, Vm, ...)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -35,7 +30,6 @@ def _compute_apd90(time: np.ndarray, vm: np.ndarray) -> float | None:
     threshold = resting + _APD_REPOL_FRACTION * (peak - resting)
     for i in range(peak_idx + 1, len(vm)):
         if vm[i] <= threshold:
-            # Linear interpolation for sub-sample accuracy
             frac = (threshold - float(vm[i - 1])) / (float(vm[i]) - float(vm[i - 1]))
             t_repol = float(time[i - 1]) + frac * (float(time[i]) - float(time[i - 1]))
             return (t_repol - float(time[peak_idx])) * 1000.0  # s → ms

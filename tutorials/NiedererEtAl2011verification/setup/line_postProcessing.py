@@ -25,20 +25,15 @@ def rename_cardiacfoam_trace(name: str) -> str:
 # --- Helper Functions -------------------------------------
 # ----------------------------------------------------------
 
-# Base colors per DX group
 DX_COLORS = {
-    0.1: "#eb1616",   # red
-    0.2: "#1f77b4",   # blue
-    0.5: "#2ca02c",   # green
+    0.1: "#eb1616",
+    0.2: "#1f77b4",
+    0.5: "#2ca02c",
 }
 
 
 def _read_latest_probe_row(function_object_dir: Path, field: str) -> tuple[list[tuple[float, float, float]], list[float]] | None:
-    """Return (probe_xyz, values) from a `probes` functionObject's last row.
-
-    See table_summary.py's identically-named helper for why every instance
-    directory must be checked rather than trusting its name.
-    """
+    """Return (probe_xyz, values) from a `probes` functionObject's last row, checking every instance directory."""
     if not function_object_dir.is_dir():
         return None
     for instance_dir in sorted(p for p in function_object_dir.iterdir() if p.is_dir()):
@@ -63,14 +58,7 @@ def _read_latest_probe_row(function_object_dir: Path, field: str) -> tuple[list[
 
 
 def load_swept_cases(output_dir) -> list[tuple[float, float, pd.DataFrame]]:
-    """Build [(DX_mm, DT_ms, DataFrame(arc_length_m, activationTime_s)), ...].
-
-    Replaces the old convention of many `*line*.csv` files (one per dx/dt,
-    dropped into one shared folder with dx/dt encoded in the filename) with
-    this sweep's own `<output_dir>/cases/case_NNNN/postProcessing/
-    Niedererlines/` -- one directory per case, dx/dt read from
-    sweep_manifest.json instead of decoded from a name.
-    """
+    """Build [(DX_mm, DT_ms, DataFrame(arc_length_m, activationTime_s)), ...] from `cases/case_NNNN/postProcessing/Niedererlines/`; dx/dt come from sweep_manifest.json."""
     output_dir = Path(output_dir)
     manifest_path = output_dir / "sweep_manifest.json"
     if not manifest_path.is_file():
@@ -94,7 +82,7 @@ def load_swept_cases(output_dir) -> list[tuple[float, float, pd.DataFrame]]:
         rows = [
             {"activationTime": value, "arc_length": math.dist(origin, xyz)}
             for xyz, value in zip(probes, values)
-            if value != -1.0  # this repository's "never activated" sentinel; never plotted as a distance
+            if value != -1.0  # never-activated sentinel
         ]
         if not rows:
             continue
@@ -158,30 +146,25 @@ def add_case_traces(fig, sorted_items, dt_target=None):
     """Add CardiacFoam case traces, return indices of traces matching dt_target."""
     matching_indices = []
 
-    # --- STEP 1: discover DT values for each DX dynamically ---
     dx_dt_map: dict[float, set[float]] = {}
     for dx, dt, _df in sorted_items:
         dx_dt_map.setdefault(dx, set()).add(dt)
 
-    # Sort DT list for each DX
     for dx in dx_dt_map:
         dx_dt_map[dx] = sorted(dx_dt_map[dx])
 
-    # --- STEP 2: add traces with shading ---
     for dx, dt, df in sorted_items:
         full_label = f"ΔX={dx:.1f} mm, ΔT={dt:.3f} ms"
 
-        # activationTime, arc_length columns; both still in SI units (s, m)
+        # SI units (s, m)
         y_col, x_col = "activationTime", "arc_length"
 
-        # Base color for this DX
         base_color = DX_COLORS.get(dx, "#808080")
 
-        # Determine shade for this DT
         dt_list = dx_dt_map[dx]
         dt_index = dt_list.index(dt)
         count = len(dt_list)
-        shade_amount = dt_index / max(count - 1, 1) * 0.4  # 0 → darkest, 1 → lightest
+        shade_amount = dt_index / max(count - 1, 1) * 0.4
 
         color = lighten_hex_color(base_color, shade_amount)
         dash_style = 'dashdot'
@@ -201,9 +184,7 @@ def add_case_traces(fig, sorted_items, dt_target=None):
     return matching_indices
 
 
-# ----------------------------------------------------------
-# --- Toggling system unchanged ----------------------------
-# ----------------------------------------------------------
+# --- Toggle button ---
 
 def add_toggle_button(fig, excel_indices, csv_indices, dt_target):
     """Add the Niederer-vs-CSV toggle button with reversible behavior."""
@@ -253,7 +234,7 @@ def add_toggle_button(fig, excel_indices, csv_indices, dt_target):
 # ----------------------------------------------------------
 
 def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
-    """Main plotting function (logic unchanged, just organized)."""
+    """Build and save the activation-time line plots."""
 
     output_folder = Path(folder)
     sorted_items = sorted(load_swept_cases(output_folder), key=lambda item: (item[0], item[1]))
@@ -301,11 +282,10 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
         )
     )
 
-    # --- SAVE INITIAL PLOT (CSV only) ---
     fig_initial = deepcopy(fig)
 
     for i in range(len(fig_initial.data)):
-        if i in excel_indices:   # hide all Niederer
+        if i in excel_indices:
             fig_initial.data[i].visible = False
         else:
             fig_initial.data[i].visible = True
@@ -314,7 +294,6 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
     with open(output_folder / "cardiacFoam_allSimulations.json", "w") as f:
         f.write(fig_initial.to_json())
 
-    # --- SAVE COMPARISON PLOT (Niederer + matching CSV only) ---
     fig_compare = deepcopy(fig)
 
     toggle_set = set(excel_indices + csv_indices)
@@ -322,7 +301,6 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
     for i in range(len(fig_compare.data)):
         fig_compare.data[i].visible = (i in toggle_set)
 
-    # Remove DT and add "cardiacFoam" in label for CSV traces
     for tr in fig_compare.data:
         tr.name = rename_cardiacfoam_trace(tr.name)
 
@@ -344,11 +322,8 @@ def run_postprocessing(
 ):
     """Plot activation time along the benchmark's diagonal probe line.
 
-    Reads every case in this sweep's own `postProcessing/Niedererlines/`
-    output, shades traces by dx/dt, and -- when excel_path points at the
-    digitized Niederer et al. 2012 reference curves -- overlays them for
-    comparison. Writes cardiacFoam_allSimulations.html (every case) and
-    Niederer_vs_cardiacFoam.html (cases matching the reference's dt only).
+    excel_path: digitized Niederer et al. reference curves, overlaid when given.
+    Writes cardiacFoam_allSimulations.html and Niederer_vs_cardiacFoam.html.
     """
     del setup_root
     plot_line_csvs(folder=output_dir, excel_path=excel_path, show=False)
