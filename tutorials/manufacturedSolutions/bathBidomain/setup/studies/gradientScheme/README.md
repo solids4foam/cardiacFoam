@@ -24,7 +24,6 @@ the case's own `system/fvSchemes`, which is `current`, so
 [omnidriver command to run]
 ```
 
-
 ## Status
 
 `current` and `limitedCorrection` (`N=20`) have been run and land the intended
