@@ -1,0 +1,34 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      setExprFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// t: transmural coordinate for ionicHeterogeneity, 0 at the endocardium and
+// 1 at the epicardium; the shared heart's tm runs the other way.
+
+readFields      ( tm );
+
+expressions
+(
+    t
+    {
+        field       t;
+        create      true;
+        dimensions  [0 0 0 0 0 0 0];
+        expression  #{ 1 - tm #};
+    }
+);
+
+// ************************************************************************* //

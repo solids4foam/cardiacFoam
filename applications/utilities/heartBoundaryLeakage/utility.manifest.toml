@@ -1,0 +1,119 @@
+# applications/utilities/heartBoundaryLeakage/utility.manifest.toml
+
+name = "heartBoundaryLeakage"
+description = "Net current through the sealed heart boundary."
+category = "diagnostics"
+
+inputs = [
+  "constant/polyMesh",
+  "<time>/Vm",
+  "<time>/phiE",
+  "0/<conductivity>",
+  "0/<sigmaBath>",
+]
+
+outputs = []
+
+requires_mesh = true
+
+example = "heartBoundaryLeakage -time '0.01,0.02' -refPoint '(0 0 0)'"
+
+[[flags]]
+name = "-zone"
+description = "Heart cellZone, or none for the whole mesh (default myocardium)."
+takes_value = true
+
+[[flags]]
+name = "-exposedPatch"
+description = "Patch holding the faces exposed by the zone (default first non-empty non-coupled patch)."
+takes_value = true
+
+[[flags]]
+name = "-conductivity"
+description = "Conductivity field in 0/ (default ConductivityIntracellular)."
+takes_value = true
+
+[[flags]]
+name = "-fields"
+description = "Potentials (default (Vm phiE))."
+takes_value = true
+
+[[flags]]
+name = "-refPoint"
+description = "phiERefPoint; enables the reference-cell columns."
+takes_value = true
+
+[[flags]]
+name = "-refValue"
+description = "phiEReferenceValue (default 0)."
+takes_value = true
+
+[[flags]]
+name = "-sigmaBath"
+description = "Bath conductivity field in 0/ (default bodyAndOrgansConductivity)."
+takes_value = true
+
+[[flags]]
+name = "-analyticField"
+description = "xy: replace each potential by x*y."
+takes_value = true
+
+[[flags]]
+name = "-insulated"
+description = "Use insulatedFaceConductivity."
+takes_value = false
+
+[[flags]]
+name = "-insulationDelta"
+description = "max|laplacian sealed - laplacian| per field."
+takes_value = false
+
+[[flags]]
+name = "-gradientBias"
+description = "Wall-cell grad(phiE) departure from the global mesh."
+takes_value = false
+
+[[flags]]
+name = "-phiETrace"
+description = "Heart phiE trace for -gradientBias: zeroGradient (default), global or conductivityWeighted."
+takes_value = true
+
+[[flags]]
+name = "-conductivityExtracellular"
+description = "Extracellular conductivity field in 0/ for -phiETrace conductivityWeighted (default ConductivityExtracellular)."
+takes_value = true
+
+[[flags]]
+name = "-exactPhiE"
+description = "bathFDA: exact manufactured grad(phiE) as the -gradientBias reference."
+takes_value = true
+
+[[flags]]
+name = "-mmsK"
+description = "bathFDA k (default 1/sqrt(2))."
+takes_value = true
+
+[[flags]]
+name = "-mmsAlpha"
+description = "bathFDA alpha (default 0.01)."
+takes_value = true
+
+[[flags]]
+name = "-mmsSe"
+description = "bathFDA s_e (required with -exactPhiE)."
+takes_value = true
+
+[[flags]]
+name = "-conormalIterations"
+description = "conormalZeroFlux boundary passes (default 0)."
+takes_value = true
+
+[[flags]]
+name = "-restDrift"
+description = "max|Vm - restValue| on wall and interior heart cells."
+takes_value = false
+
+[[flags]]
+name = "-restValue"
+description = "Vm rest value for -restDrift (default -0.084)."
+takes_value = true

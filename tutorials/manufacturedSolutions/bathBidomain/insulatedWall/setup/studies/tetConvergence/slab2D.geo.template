@@ -1,0 +1,34 @@
+SetFactory("OpenCASCADE");
+
+lc = __LC__;
+H = 0.05;
+eps = 1e-6;
+
+Rectangle(1) = {-1, 0, 0, 1, 1};
+Rectangle(2) = { 0, 0, 0, 1, 1};
+Rectangle(3) = { 1, 0, 0, 1, 1};
+s() = BooleanFragments{ Surface{1, 2, 3}; Delete; }{};
+
+For i In {0:2}
+    x0 = i - 1;
+    cy0 = Curve In BoundingBox{x0 - eps, -eps, -eps, x0 + 1 + eps, eps, eps};
+    cy1 = Curve In BoundingBox{x0 - eps, 1 - eps, -eps, x0 + 1 + eps, 1 + eps, eps};
+    Periodic Curve{cy1} = {cy0} Translate{0, 1, 0};
+EndFor
+
+MeshSize{:} = lc;
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.Algorithm = 5;
+
+e() = Extrude{0, 0, H}{ Surface{s()}; Layers{1}; Recombine; };
+
+Physical Volume("bath") = {Volume In BoundingBox{-1 - eps, -eps, -eps, eps, 1 + eps, H + eps}, Volume In BoundingBox{1 - eps, -eps, -eps, 2 + eps, 1 + eps, H + eps}};
+Physical Volume("myocardium") = {Volume In BoundingBox{-eps, -eps, -eps, 1 + eps, 1 + eps, H + eps}};
+Physical Surface("xMin") = {Surface In BoundingBox{-1 - eps, -eps, -eps, -1 + eps, 1 + eps, H + eps}};
+Physical Surface("xMax") = {Surface In BoundingBox{2 - eps, -eps, -eps, 2 + eps, 1 + eps, H + eps}};
+Physical Surface("y0") = {Surface In BoundingBox{-1 - eps, -eps, -eps, 2 + eps, eps, H + eps}};
+Physical Surface("y1") = {Surface In BoundingBox{-1 - eps, 1 - eps, -eps, 2 + eps, 1 + eps, H + eps}};
+Physical Surface("frontAndBack") = {Surface In BoundingBox{-1 - eps, -eps, -eps, 2 + eps, 1 + eps, eps}, Surface In BoundingBox{-1 - eps, -eps, H - eps, 2 + eps, 1 + eps, H + eps}};
+
+Mesh.MshFileVersion = 2.2;

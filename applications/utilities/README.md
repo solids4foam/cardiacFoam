@@ -1,6 +1,6 @@
 # Utilities
 
-Fourteen tools for preparing a case before `cardiacFoam` runs, and for inspecting it afterwards.
+Tools for preparing a case before `cardiacFoam` runs, and for inspecting it afterwards.
 
 ```mermaid
 flowchart TB
@@ -60,6 +60,7 @@ flowchart TB
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |
 | measure bath–bidomain interface fluxes | `bathBidomainInterfaceMetrics` | [README](bathBidomainInterfaceMetrics/README.md) |
+| test an exact affine heart–bath interface flux | `bathInterfacePatchTest` | [README](bathInterfacePatchTest/README.md) |
 
 ## Importing an external mesh
 

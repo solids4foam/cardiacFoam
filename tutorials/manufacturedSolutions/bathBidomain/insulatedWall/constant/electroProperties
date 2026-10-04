@@ -1,0 +1,69 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver bidomainSolver;
+
+bidomainSolverCoeffs
+{
+    conductivitySource uniform;
+    cellZone        myocardium;
+    bathPredictorCorrector yes;
+    conductivityIntracellular [ -1 -3 3 0 0 2 0 ] ( 0.09878815375 0.0394860234186752 0 0.05319362125 0 0.030396355 );
+    conductivityExtracellular [ -1 -3 3 0 0 2 0 ] ( 0.0409193930850485 0.0163556464241969 0 0.0220335193534877 0 0.0125905824877072 );
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    ionicModel      bidomainFDAManufactured;
+    timeCouplingScheme godunov;
+    sealedHeartBoundary true;
+    bathHeartPhiETrace global;
+    sealedWallTrace conormal;
+    outputVariables
+    {
+        ionic
+        {
+            export          ( V u1 u2 u3 Iion );
+            debug           ( V u1 u2 u3 Iion );
+        }
+    }
+    verificationModel
+    {
+        type            manufacturedConormalBathBidomainVerifier;
+        k               0.70710678118654746;
+        sigmaB          0.0230827345;
+    }
+    dimension       "2D";
+    solutionAlgorithm implicit;
+    solver          RKF45;
+    maxSteps        1000000000;
+    bathPotentialDomain
+    {
+        bathCellZones   ( bath );
+        bathConductivityField bodyAndOrgansConductivity;
+        interfaceConductivityInterpolation conormalHarmonic;
+        groundPatches
+        {
+        }
+        surfaceCurrentPatches
+        {
+        }
+        phiERefPoint    ( -0.4375 0.4375 0.025 );
+        phiEReferenceValue 0;
+    }
+}
+
+
+// ************************************************************************* //

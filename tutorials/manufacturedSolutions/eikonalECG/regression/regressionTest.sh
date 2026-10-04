@@ -154,8 +154,9 @@ extractFinalPseudoECGValue()
 {
     local dataFile="$1"
     local electrode="$2"
+    local sampleTime="${3:--}"
 
-    awk -v electrode="${electrode}" '
+    awk -v electrode="${electrode}" -v sampleTime="${sampleTime}" '
         NR == 1 && $1 == "#" {
             for (i = 1; i <= NF; i++) {
                 if ($i == "numeric_"electrode || $i == electrode) {
@@ -165,7 +166,9 @@ extractFinalPseudoECGValue()
             next;
         }
         $1 !~ /^#/ && column > 0 && NF >= column {
-            value = $column;
+            if (sampleTime == "-" || ($1 - sampleTime < 1e-6 && sampleTime - $1 < 1e-6)) {
+                value = $column;
+            }
         }
         END {
             if (value != "") {
@@ -205,6 +208,9 @@ checkReferenceValues()
                 ;;
             pseudoECG)
                 actual="$(extractFinalPseudoECGValue "${pseudoECGFile}" "${key}")"
+                ;;
+            trace)
+                actual="$(extractFinalPseudoECGValue "${pseudoECGFile}" "${key}" "${metric}")"
                 ;;
             *)
                 echo "FAIL: unknown reference kind '${kind}' in ${REF_FILE}"

@@ -1,0 +1,39 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      prePacingProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Before the run, one single BuenoOrovio cell per tissue region
+// (endocardialCells, mCells, epicardialCells) is paced at 1000 ms until its
+// state repeats beat to beat, and every myocardium cell starts from its
+// region's converged state. Blend-band cells and the apicobasal tauSi
+// scaling keep their own constants and start from their dominant region's
+// state.
+
+tolerance   1e-4;   // max relative state change between successive beats
+minBeats    10;
+maxBeats    3000;
+
+singleCellStimulus
+{
+    stim_start      20;     // ms
+    stim_duration   1;      // ms
+    stim_amplitude  0.4;    // BuenoOrovio stimulus units
+    stim_period_S1  1000;   // ms: pacing cycle length
+    stim_period_S2  0;
+    nstim2          0;
+}
+
+// ************************************************************************* //

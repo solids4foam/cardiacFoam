@@ -27,6 +27,7 @@ eikonalSolverCoeffs
     cm              [ -1 -4 4 0 0 2 0 ] 2;
     c0              [ 0 0 -0.5 0 0 0 0 ] 1;
     eikonalAdvectionDiffusionApproach true;
+    useGraphPrePopulation false;
     stimulusLocationMin ( 0 0 0 );
     stimulusLocationMax ( 0.05 1 1 );
     verificationModel
@@ -225,4 +226,3 @@ eikonalSolverCoeffs
 
 
 // ************************************************************************* //
-useGraphPrePopulation false;

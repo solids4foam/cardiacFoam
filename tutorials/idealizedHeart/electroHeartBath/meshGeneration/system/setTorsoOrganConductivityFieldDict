@@ -1,0 +1,48 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      setTorsoOrganConductivityFieldDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Isotropic bath conductivities [S/m] per torso cellZone.
+//
+// blood, lungs, torso: nominal forward-ECG torso values tabulated in
+// "Quantifying variabilities in cardiac digital twin models of the
+// electrocardiogram", arXiv:2407.17146 (Table 2): blood 0.7, lungs 0.0389,
+// torso tissue 0.22, fat 0.037, skin 0.01, bone 0.006. Keller et al., IEEE
+// TBME 57(7), 2010, rank blood, skeletal muscle, fat and lungs as the
+// conductivities the ECG amplitude is most sensitive to.
+//
+// chestWall: one layer standing in for skin (0.01), subcutaneous fat
+// (0.037), skeletal muscle (~0.2) and rib bone (0.006). Current reaches
+// the precordial electrodes across this layer, so its conductivity is the
+// series (harmonic) mean of a fat/muscle wall, lowered for skin and ribs.
+//
+// myocardium is not listed: bidomainSolver takes the heart cells'
+// conductivity from ConductivityIntracellular/ConductivityExtracellular, and
+// defaultSigma only fills the field there.
+
+fieldName bodyAndOrgansConductivity;
+
+cellZones
+{
+    blood      0.7;
+    lungs      0.0389;
+    chestWall  0.05;
+    torso      0.22;
+}
+
+defaultSigma 0.22;
+
+// ************************************************************************* //

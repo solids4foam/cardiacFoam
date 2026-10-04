@@ -1,0 +1,164 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Partitions the heart+torso mesh into the cellZones read by
+// bidomainSolverCoeffs: myocardium (the heart cells) and the disjoint bath
+// zones blood, lungs, chestWall and torso. Organs are analytic shapes in the
+// torso frame; their global coordinates come from constant/torsoGeometry,
+// written by build_torso_mesh.py. Organ boundaries follow the tetrahedra,
+// not the shapes: only the heart-torso interface is conformal.
+//
+// Order sets precedence: chestWall, then blood, then lungs; torso is the
+// remainder.
+
+#include "$FOAM_CASE/constant/torsoGeometry"
+
+// Base plane of the idealized heart (x = 0, apex towards +x) and one point
+// inside each ventricular cavity, midway between its endocardial walls.
+basePoint       (0 0 0);
+baseNormal      (1 0 0);
+lvCavityPoint   (0.02 0 0);
+rvCavityPoint   (0.02 0.041 0);
+
+actions
+(
+    // Heart and bath cells as merged from heartMesh (zone BASE) and
+    // torsoMesh (zone bath).
+    {
+        name    myocardiumCells;
+        type    cellSet;
+        action  new;
+        source  zoneToCell;
+        zone    BASE;
+    }
+    {
+        name    bathCells;
+        type    cellSet;
+        action  new;
+        source  zoneToCell;
+        zone    bath;
+    }
+
+    // chestWall: the outer CHEST_WALL_THICKNESS layer of the torso box.
+    {
+        name    chestWallCells;
+        type    cellSet;
+        action  new;
+        source  cellToCell;
+        set     bathCells;
+    }
+    {
+        name    chestWallCells;
+        type    cellSet;
+        action  subtract;
+        source  rotatedBoxToCell;
+        origin  $innerTorsoOrigin;
+        i       $innerTorsoI;
+        j       $innerTorsoJ;
+        k       $innerTorsoK;
+    }
+
+    // blood: the torso cells apical of the base plane that are connected to
+    // a cavity point. The myocardium closes each cavity below the base
+    // plane, so the flood fill stays inside the LV and RV.
+    {
+        name    apicalBathCells;
+        type    cellSet;
+        action  new;
+        source  cellToCell;
+        set     bathCells;
+    }
+    {
+        name    apicalBathCells;
+        type    cellSet;
+        action  subset;
+        source  clipPlaneToCell;
+        point   $basePoint;
+        normal  $baseNormal;
+    }
+    {
+        name    bloodCells;
+        type    cellSet;
+        action  new;
+        source  regionToCell;
+        set     apicalBathCells;
+        insidePoints ( $lvCavityPoint $rvCavityPoint );
+    }
+
+    // lungs: two cylinders along the cranio-caudal axis.
+    {
+        name    lungCells;
+        type    cellSet;
+        action  new;
+        source  cylinderToCell;
+        p1      $leftLungP1;
+        p2      $leftLungP2;
+        radius  $leftLungRadius;
+    }
+    {
+        name    lungCells;
+        type    cellSet;
+        action  add;
+        source  cylinderToCell;
+        p1      $rightLungP1;
+        p2      $rightLungP2;
+        radius  $rightLungRadius;
+    }
+    {
+        name    lungCells;
+        type    cellSet;
+        action  subset;
+        source  cellToCell;
+        set     bathCells;
+    }
+    {
+        name    lungCells;
+        type    cellSet;
+        action  subtract;
+        source  cellToCell;
+        sets    (chestWallCells bloodCells);
+    }
+
+    // torso: every remaining bath cell.
+    {
+        name    torsoCells;
+        type    cellSet;
+        action  new;
+        source  cellToCell;
+        set     bathCells;
+    }
+    {
+        name    torsoCells;
+        type    cellSet;
+        action  subtract;
+        source  cellToCell;
+        sets    (chestWallCells bloodCells lungCells);
+    }
+
+    // cellZones
+    { name myocardium; type cellZoneSet; action new; source setToCellZone; set myocardiumCells; }
+    { name blood;      type cellZoneSet; action new; source setToCellZone; set bloodCells; }
+    { name lungs;      type cellZoneSet; action new; source setToCellZone; set lungCells; }
+    { name chestWall;  type cellZoneSet; action new; source setToCellZone; set chestWallCells; }
+    { name torso;      type cellZoneSet; action new; source setToCellZone; set torsoCells; }
+
+    // Merge-time zones, superseded by the zones above.
+    { name BASE; type cellZoneSet; action remove; }
+    { name bath; type cellZoneSet; action remove; }
+);
+
+// ************************************************************************* //

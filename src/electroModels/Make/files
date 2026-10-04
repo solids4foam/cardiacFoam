@@ -27,6 +27,7 @@ electroDomains/myocardiumDomain/myocardiumDomain.C
 electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C
 electroDomains/myocardiumDomain/myocardiumSolver.C
 electroDomains/myocardiumDomain/sealedWall/insulatedFaceConductivity.C
+electroDomains/myocardiumDomain/sealedWall/exposedPhiETrace.C
 electroDomains/myocardiumDomain/sealedWall/conormalZeroFluxFvPatchScalarField.C
 
 /* Myocardium models */
