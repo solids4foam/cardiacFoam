@@ -3,7 +3,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # ============================================================
-# Idealized heart conduction-block (lbbb) regression test
+# Idealized heart conduction-block regression test
 # ============================================================
 #
 # Confirms the LBB bridge severing actually blocks fast conduction: probes
@@ -13,9 +13,8 @@ IFS=$'\n\t'
 # the LV subtree disconnected from the root (a tree - no alternate path), it
 # must still be un-activated (activationTime == -1) at t=0.035: the point is
 # reached only by myocardial spread from the intact RV side, at 43.2 ms. The
-# cutoff sits between the two with margin on both sides. Only the lbbb
-# variant is covered - rbbb is exercised manually, not part of automated
-# regression.
+# cutoff sits between the two with margin on both sides. The RV probe
+# provides the positive control in LBBB and the blocked control in RBBB.
 #
 # conductionBlock's own controlDict runs to 0.7s (full ECG-scale, for real
 # use of the tutorial), but this check only needs t=0.035. Running the full
@@ -24,11 +23,11 @@ IFS=$'\n\t'
 # for this script's invocation, then restored - the tracked controlDict is
 # never left changed. Allrun itself is reused unmodified.
 
-REF_FILE="regression/lbbb.reference"
+VARIANTS=(lbbb rbbb)
 ALLRUN_LOGFILE="log.Allrun"
 
 echo "============================================================"
-echo "Idealized heart conduction-block (lbbb) regression test"
+echo "Idealized heart conduction-block regression test"
 echo "============================================================"
 echo
 
@@ -60,20 +59,28 @@ dumpLogTail()
     fi
 }
 
+failures=0
+checks=0
+
+for variant in "${VARIANTS[@]}"; do
+REF_FILE="regression/${variant}.reference"
+echo "Checking ${variant}"
+
 ./Allclean > /dev/null 2>&1 || true
-if ! ./Allrun lbbb > "${ALLRUN_LOGFILE}" 2>&1; then
-    echo "FAIL: Allrun exited non-zero. Surfacing logs:"
+if ! ./Allrun "${variant}" > "${ALLRUN_LOGFILE}" 2>&1 \
+    || ! grep -q '^End$' log.cardiacFoam; then
+    echo "FAIL: ${variant} did not complete. Surfacing logs:"
     dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
-    exit 1
+    dumpLogTail "cardiacFoam" "log.cardiacFoam"
+    failures=$((failures + 1))
+    continue
 fi
 
 if [[ ! -f "${REF_FILE}" ]]; then
     echo "FAIL: reference file not found: ${REF_FILE}"
-    exit 1
+    failures=$((failures + 1))
+    continue
 fi
-
-failures=0
-checks=0
 
 while IFS=' ' read -r fileName time column expected tolerance; do
     if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
@@ -137,6 +144,7 @@ while IFS=' ' read -r fileName time column expected tolerance; do
         failures=$((failures + 1))
     fi
 done < "${REF_FILE}"
+done
 
 echo
 if (( failures == 0 )); then

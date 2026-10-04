@@ -821,17 +821,24 @@ void conductionSystemDomain::write()
 
             if (sIdx >= 0 && statesPtr)
             {
-                forAll(varField, nodeI)
+                for (label localI = 0; localI < nLocalNodes_; ++localI)
                 {
-                    varField[nodeI] = (*statesPtr)[nodeI][sIdx];
+                    varField[localStartNode_ + localI] =
+                        (*statesPtr)[localI][sIdx];
                 }
             }
             else if (aIdx >= 0 && algebraicPtr)
             {
-                forAll(varField, nodeI)
+                for (label localI = 0; localI < nLocalNodes_; ++localI)
                 {
-                    varField[nodeI] = (*algebraicPtr)[nodeI][aIdx];
+                    varField[localStartNode_ + localI] =
+                        (*algebraicPtr)[localI][aIdx];
                 }
+            }
+
+            if (Pstream::parRun())
+            {
+                Pstream::listCombineGather(varField, plusEqOp<scalar>());
             }
 
             ionicFields.set(i, new scalarField(varField));
