@@ -15,9 +15,5 @@ driverFoam sweep-run \
     --output-dir .tmp/driverfoam/bidomain-corrector-n80
 ```
 
-**Corrected 2026-09-26, then resolved the same day (controller decision), as
-`corrector/`'s own README now says:** `system/fvSolution` now states
-`nNonOrthogonalCorrectors 0;` explicitly (the default it was silently
-relying on before), proven behaviour-neutral by
-`regression/regressionTest.sh`. All four cases here now `strict_plan`
-cleanly.
+`system/fvSolution` states `nNonOrthogonalCorrectors 0;` explicitly, as
+`corrector/`'s README explains.

@@ -65,34 +65,20 @@ monodomainSolverCoeffs
             }
             electrodePositions
             {
-                // Legacy 5-point set, retained for continuity with the
-                // existing tet per-electrode table (tbl-tet-pseudoecg-electrodes).
+                // 5-point set kept for the existing tet per-electrode table (tbl-tet-pseudoecg-electrodes).
                 E1    (-0.5 0.5 0.5);
                 E2    (1.5 0.5 0.5);
                 E3    (1.2 0.23 0.61);
                 E4    (1.35 0.74 0.28);
                 E5    (1.55 0.41 0.83);
 
-                // Random scatter: 156 points, each independently drawn --
-                // direction uniform on the sphere, standoff distance
-                // uniform in [0.05, 1.0] from the nearest cube surface
-                // point (below 0.05 risks the near-boundary mesh layer;
-                // above ~1.0, a full cube-width past the surface, the
-                // field has decayed enough that distance stops
-                // discriminating). Replaces two earlier, more structured
-                // designs in turn: an axis+diagonal set where 44 of 61
-                // electrodes sat exactly on the x=0.5 or z=0.5 symmetry
-                // plane (analytically-zero reference for the isotropic
-                // case), and a Fibonacci-sphere shell set (7 fixed
-                // standoffs x 8 repeated directions) that avoided the
-                // symmetry-plane problem but was still a fixed pattern,
-                // not a random scatter. R1-R56 and R57-R156 are two
-                // independent random draws (different seeds), concatenated
-                // so the first 56 stay fixed if this set is extended
-                // again. Placement rule unchanged: exit the cube along the
-                // ray from the centre (0.5,0.5,0.5) in the sampled
-                // direction, then go the sampled standoff distance
-                // further.
+                // Random scatter: 156 points, direction uniform on the sphere, standoff
+                // uniform in [0.05, 1.0] from the nearest cube surface point (below 0.05
+                // risks the near-boundary mesh layer; above ~1.0 the field has decayed
+                // too far for distance to discriminate). R1-R56 and R57-R156 are
+                // independent draws, concatenated so the first 56 stay fixed if the set
+                // is extended. Placement: exit the cube along the ray from the centre
+                // (0.5,0.5,0.5), then go the standoff distance further.
                 R1    (1.336870 1.061103 -0.151150);
                 R2    (-0.253831 0.889985 -0.260892);
                 R3    (-0.386491 1.036830 0.318377);

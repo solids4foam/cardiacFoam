@@ -28,11 +28,6 @@ ERROR_FIELDS = (
     "N",
     *(f"{norm}_{name}" for name in FIELD_NAMES for norm in ("L1", "L2", "Linf")),
 )
-#: Corrected 2026-09-28: this required a "bathBidomain_" prefix no case has
-#: ever produced -- the verifier writes plain <dim>_<N>_cells.dat (confirmed
-#: against a real sweep case's own postProcessing/; regressionTest.sh's own
-#: working match is already the unprefixed "postProcessing/*_cells.dat",
-#: only its comment claimed the prefixed name).
 FILENAME_PATTERN = re.compile(r"(\dD)_(\d+)_cells\.dat$")
 DISABLE_PLOT_ENV_VAR = "BATH_BIDOMAIN_DISABLE_PLOTS"
 PLOT_DISABLED = os.environ.get(DISABLE_PLOT_ENV_VAR, "").strip().lower() in {
@@ -123,13 +118,7 @@ def _load_expected_filenames(output_dir):
 
 
 def read_error_dat_files(folder_name, expected_filenames: set[str] | None = None):
-    """Read every swept case's own bathBidomain_*_cells.dat.
-
-    Each case writes its own verifier .dat directly into its own
-    postProcessing/ (case_dir/postProcessing/bathBidomain_<dim>_<N>_cells.dat);
-    this reads every case in the sweep rather than one shared flat folder
-    (the old sweep wrapper's convention).
-    """
+    """Read every swept case's own `<dim>_<N>_cells.dat` from its postProcessing/."""
     folder = Path(folder_name)
     if not folder.exists():
         print("Folder does not exist:", folder)

@@ -8,10 +8,8 @@ conformal tetrahedral mesh. Source of the paperI `bath_bidomain_tet_conformal`
 experiment (`@tbl-bath-bidomain-corrector`-style sensitivity, not a spatial
 convergence study).
 
-Formerly `setup/studies/tetConvergence/studies/coupling/run_coupling_study.sh` (relocated
-here alongside its own study, matching this tutorial's other studies); mesh
-generation is the omniD `manufacturedBathBidomain` record's tet route (see
-the top-level README) rather than hand-rolled bash.
+Mesh generation is the omniD `manufacturedBathBidomain` record's tet route (see
+the top-level README).
 
 ## Execution
 
@@ -30,26 +28,17 @@ itself, described next.
 
 ### Where the output actually lands
 
-Corrected 2026-09-26 (tutorials-are-pointers 5.4a): this section described
-an in-place run archived under `<case_root>/<caseId>/<archive_dir_name>/`.
-The study now runs through the `manufacturedBathBidomain` tutorial record,
-which stages every case under the sweep's own `--output-dir`, as
-`cases/<caseId>/` (e.g. `cases/10_False/postProcessing/bathBidomainInterfaceMetrics.csv`);
-`archive_dir_name` is not a record study key and is dropped.
-`summarize_coupling_study.py` still reads the old per-`<caseId>` layout under
-the case root, so point it at the sweep's `cases/` directory.
+The study runs through the `manufacturedBathBidomain` tutorial record, which
+stages every case under the sweep's `--output-dir` as `cases/<caseId>/` (e.g.
+`cases/10_False/postProcessing/bathBidomainInterfaceMetrics.csv`). Point
+`summarize_coupling_study.py` at the sweep's `cases/` directory.
 
 ## Status
 
-`N=10` (both `baseline` and `predictor`) runs to completion; `summarize_coupling_study.py`
-correctly reads the archived output and reports a genuine physical
-difference (predictor-corrector coupling reduces `heartPhiE_L2`/`bathPhiE_L2`
-by roughly 50% at N=10 relative to baseline — sane and paper-consistent in
-direction). `N=20,40,80` use the identical mechanism and have not been run.
-The `N=80` pair is required to distinguish a bath-coupling sensitivity from
-the separate finest-level interface-current anomaly. `nOuterCorrectors 1`/
-`nNonOrthogonalCorrectors 1` are left at this case's own tet-overlay
-defaults rather than force-set, matching the checked-in default (see the
+Only `N=10` (both `baseline` and `predictor`) has been run; `N=20,40,80` use the
+same mechanism. The `N=80` pair is needed to tell a bath-coupling sensitivity
+from the separate finest-level interface-current anomaly. `nOuterCorrectors 1`/
+`nNonOrthogonalCorrectors 1` are left at the case's own defaults (see the
 top-level README).
 
 The study sets `bidomainSolverCoeffs.bathPredictorCorrector` directly

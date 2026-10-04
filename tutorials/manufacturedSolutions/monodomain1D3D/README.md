@@ -4,7 +4,7 @@ Manufactured 1D-3D monodomain coupling test case. Couples a 3D monodomain myocar
 
 ## Overview
 
-Default graph lies on `y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. Terminal faces satisfy homogeneous Neumann boundary condition for 3D manufactured solution because terminals are on `x=0` and `x=1` where `d cos(π x)/dx = 0`. Terminal values do not cancel: `F_3D = -0.5 F_1D` at PVJs (unlike older `y=0.5, z=1/3` placement).
+Default graph lies on `y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. Terminal faces satisfy homogeneous Neumann boundary condition for 3D manufactured solution because terminals are on `x=0` and `x=1` where `d cos(π x)/dx = 0`. Terminal values do not cancel: `F_3D = -0.5 F_1D` at PVJs.
 
 ## Graph Configuration
 
@@ -110,7 +110,4 @@ order.
   diagnostics.
 - The default graph uses the non-cancelling `y=1/6, z=1/3` terminal placement.
   Boundary fluxes remain zero when terminals lie on x-boundary faces, but the
-  PVJ terms are no longer hidden by a cancelling placement.
-
-A first-step bug (V_1D uninitialised at `t=0`, fixed via `preInitialize()`) found
-during this work is documented in the notes file.
+  PVJ terms are not hidden by a cancelling placement.

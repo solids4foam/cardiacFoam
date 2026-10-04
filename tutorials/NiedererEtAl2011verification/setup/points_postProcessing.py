@@ -10,17 +10,12 @@ from omnidriver.postprocessing.style import apply_plotly_layout, write_plotly_ht
 
 _PROBE_LINE = re.compile(r"^# Probe (\d+) \(([^)]+)\)")
 
-#: This tutorial's studies sweep dx/dt only; solutionAlgorithm is fixed to
-#: implicit in every one of them today.
+#: Every study here fixes solutionAlgorithm to implicit.
 _SOLVER = "implicit"
 
 
 def _read_latest_probe_row(function_object_dir: Path, field: str):
-    """Return (probe_xyz, values) from a `probes` functionObject's last row.
-
-    See NiedererEtAl2011verification/setup/table_summary.py's identically
-    named helper for why every instance directory must be checked.
-    """
+    """Return (probe_xyz, values) from a `probes` functionObject's last row, checking every instance directory."""
     if not function_object_dir.is_dir():
         return None
     for instance_dir in sorted(p for p in function_object_dir.iterdir() if p.is_dir()):
@@ -67,9 +62,7 @@ def load_all_point_cases(output_dir):
         if sample is None:
             continue
         _probes, values = sample
-        # s -> ms, except this repository's "never activated" sentinel (-1),
-        # which is never converted -- a short verification endTime can leave
-        # any of the 9 benchmark points unactivated.
+        # s -> ms, except the -1 never-activated sentinel, which is never converted.
         activation = np.array([v if v == -1.0 else v * 1000.0 for v in values])
 
         all_data.append({
@@ -122,15 +115,12 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
     DT_all = np.array([e["DT"] for e in all_data])
     Solver_all = np.array([e["solver"] for e in all_data])
 
-    # ------------------------------------------
-    # USE make_subplots WITH 3D SUBPLOTS
-    # ------------------------------------------
     fig = make_subplots(
         rows=2, cols=4,
         specs=[[{'type': 'scene'}] * 4,
                [{'type': 'scene'}] * 4],
-        horizontal_spacing=0.04,   # spacing between columns
-        vertical_spacing=0.08      # spacing between rows
+        horizontal_spacing=0.04,
+        vertical_spacing=0.08
     )
 
     scene_id = 1
@@ -142,7 +132,6 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
         Z = np.array([e["activation"][p] for e in all_data])
         color_here = point_colors[p]
 
-        # scatter
         for solver in [_SOLVER]:
             mask = (Solver_all == solver)
             if not np.any(mask): continue
@@ -157,7 +146,6 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
                 row=row, col=col
             )
 
-        # DX lines
         for dx_val in np.unique(DX_all):
             for solver in [_SOLVER]:
                 mask = (DX_all == dx_val) & (Solver_all == solver)
@@ -173,7 +161,6 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
                     row=row, col=col
                 )
 
-        # DT lines
         for dt_val in np.unique(DT_all):
             for solver in [_SOLVER]:
                 mask = (DT_all == dt_val) & (Solver_all == solver)
@@ -196,7 +183,6 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
                 yaxis_title="ΔT (ms)",
                 zaxis_title="Activation (ms)",
 
-                # Shrink box inside its subplot
                 aspectmode="manual",
                 aspectratio=dict(x=1, y=1, z=1),
 
@@ -233,13 +219,9 @@ def plot_3d_points_and_grid(folder=".", show: bool = True):
 
 
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> None:
-    """Plot 3D activation-time surfaces across the benchmark's 9 probe points.
+    """Plot 3D activation-time surfaces over the swept dx/dt grid for the 9 benchmark probe points.
 
-    Reads every swept case's own postProcessing/Niedererpoints output, and
-    for each of the 9 benchmark probe points (excluding the
-    earliest-activated one, used as the stimulus reference) draws a 3D
-    surface of activation time over the swept dx/dt grid. Writes
-    activation_surfaces_3d.html.
+    The earliest-activated point (the stimulus reference) is excluded; writes activation_surfaces_3d.html.
     """
     del setup_root
     output_html = plot_3d_points_and_grid(output_dir, show=False)

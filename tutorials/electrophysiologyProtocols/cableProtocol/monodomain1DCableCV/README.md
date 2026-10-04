@@ -100,8 +100,7 @@ The decomposition is defined in `system/decomposeParDict`.
 
 This case is also exposed as the `cable1DCVConvergence` tutorial record
 (`omnidriver-cardiacfoam`'s `records/cable_1d_cv_convergence.py`), a thin
-pointer at this case plus the axes it allows -- no sweep config lives here
-as Python any more:
+pointer at this case plus the axes it allows:
 
 ```bash
 omnidriver --plugin cardiacfoam plan --strict --entry cable1DCVConvergence \
@@ -155,8 +154,7 @@ reference measurement rather than this Stewart value.
 this case's own `constant/electroProperties:monodomainSolverCoeffs
 .externalStimulus.stimulusStartTimeList`, split into S1/S2 by the `--n-s1`/
 `--n-s2` (and, for a DI90 run, `--reference-repolarization90-s`) arguments
-the record's own `s1s2SpatialProtocol` axis passes it -- no sidecar file
-any more. It associates each detected activation with a labelled stimulus,
+the record's own `s1s2SpatialProtocol` axis passes it. It associates each detected activation with a labelled stimulus,
 and classifies the branch into exactly one `protocol_outcome`:
 
 | Outcome | Meaning |
@@ -182,10 +180,8 @@ CV. `measured_di90_s` is a per-probe quantity: repolarization90 varies by about
 choices are recorded in `measurement_settings`.
 
 Stimulus-to-activation association uses a per-probe window,
-`latency allowance + probe distance / CV floor`, rather than a flat one. A flat
-50 ms window bound the measured automaticity beat at 5.203520 s to an S2
-stimulus 49.4 ms earlier and reported a fabricated capture; the derived window
-is bounded above by that collision.
+`latency allowance + probe distance / CV floor`, rather than a flat one, so an
+unforced beat shortly after S2 is not bound to it.
 
 ## Main calibration knob
 
@@ -221,10 +217,7 @@ the CV and APD90 tables, the capture boundary, and the mesh and time-step
 convergence behind them -- is in
 [Purkinje_S1_S2_Calibration.md](Purkinje_S1_S2_Calibration.md).
 
-It is deliberately not repeated here. An earlier version of this README carried
-a second copy of those numbers, and the two drifted: both asserted a conditioned
-APD near 450 ms and a capture boundary at DI 0.330 s, neither of which
-reproduces.
+It is deliberately not repeated here, so the numbers cannot drift apart.
 
 In brief, measured on this cable with Stewart/myocyte at 2.3 S/m:
 

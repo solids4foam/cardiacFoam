@@ -37,20 +37,13 @@ Typical outputs include:
 - `postProcessing/manufacturedPseudoECG_ECG.dat`
 - `postProcessing/manufacturedPseudoECGSummary_ECG.dat`
 
-Corrected 2026-09-27 (tutorials-are-pointers 5.4b-P): the last two names used
-to omit the `_ECG` suffix (the `ecgDomains` sub-dict name, `ECG` here) --
-confirmed against a real `blockMesh`/`cardiacFoam` run's actual output
-filenames, not assumed.
-
 ## Variants & Extensions
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSchemes` (with `ddtSchemes.default none`/`ddt(Vm) backward` spelled out explicitly) is swapped in for the duration of a tet run and restored on exit.
+`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, controlDict, decomposeParDict), except the mesh generator changes.
 
-Corrected 2026-09-26 (plan §5g Q10): this study used to also ship a local `fvSolution` copy, described as "a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair", but it was byte-identical to the case's own `system/fvSolution` (`cmp`): both already set `nOuterCorrectors 1`/`nNonOrthogonalCorrectors 1`. It carried no override and is deleted; the tet route uses `system/fvSolution` directly. `fvSchemes` remains, since it differs from `system/fvSchemes` (only in formatting/header, not in any scheme value; both already set `gradSchemes.default leastSquares`).
-
-Corrected 2026-09-27 (tutorials-are-pointers 5.4b-P, `manufacturedMonodomainPseudoECG`'s tutorial record): every entry `fvSchemes` sets (`ddtSchemes.default`/`ddt(Vm)`, `gradSchemes.default`, `divSchemes.default`, `laplacianSchemes.default`, `interpolationSchemes.default`, `snGradSchemes.default`) already equals `system/fvSchemes`'s own value -- confirmed by a real tet run using `system/fvSchemes` directly, with no swap. So this file, while not byte-identical to `system/fvSchemes` (Q10 only deletes byte-identical overlays), is never actually installed by the omniD record's tet route: it stays here as a native quirk, unused.
+`setup/studies/tetConvergence/fvSchemes` sets every entry to `system/fvSchemes`'s own value and is not installed by the record's tet route; the tet route uses the case's own `system/fvSolution` and `system/fvSchemes`.
 
 #### Tetrahedral Variant Purpose
 
@@ -63,20 +56,9 @@ Verifies that OpenFOAM's non-orthogonal `Gauss linear corrected` Laplacian schem
 
 `setup/studies/tetConvergence/box.geo.template` is a gmsh (OpenCASCADE) unit cube. Resolution is set with `gmsh -3 box.geo.template -setnumber lc <value>` (`lc = 1/N`), meshes with gmsh (legacy msh2 format), and imports via `gmshToFoam`. All six boundary faces lie on axis-aligned planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal derivative, so the solver's default zeroGradient boundary stays compatible with the exact solution.
 
-Corrected 2026-09-27 (plan §5g Q2/Q3/Q8, tutorials-are-pointers 5.4b-P): this
-used to describe a characteristic-length placeholder `__LC__`, substituted by
-`setup/studies/tetConvergence/run_mono_tet.sh`. The template now carries a
-`DefineConstant[ lc = {0.1, Name "lc"} ]` instead (native `21f7bc82e`), set
-directly on the `gmsh` command line; `run_mono_tet.sh` no longer exists.
-
 #### Effective Mesh Spacing and Observed Order
 
 The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count. For an unstructured tet mesh this is the mean cell size and the correct convergence abscissa, `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming factor-of-two refinement.
-
-Corrected 2026-09-27: this used to also cite
-`setup/studies/tetConvergence/summarize_tet.py` computing the observed order
-next to `checkMesh`'s max non-orthogonality and max skewness. That script no
-longer exists in this study directory; nothing here recomputes it.
 
 #### Tetrahedral Convergence Sweep
 

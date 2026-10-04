@@ -32,11 +32,9 @@ see the root `CLAUDE.md`).
 
 ## Status
 
-`current` and `limitedCorrection` (`N=20`) run to completion; the
-resulting `system/fvSchemes` carries the intended `default leastSquares` /
-`Gauss linear limited 0.5` / `limited 0.5` triple for `limitedCorrection`,
-confirming the scheme keys actually land. `gaussLinear` and
-`orthogonalControl` use the identical mechanism and have not been run.
+`current` and `limitedCorrection` (`N=20`) have been run and land the intended
+scheme keys; `gaussLinear` and `orthogonalControl` use the same mechanism and
+have not been run.
 See `setup/studies/coupling/README.md` for where sweep-run output actually
 lands if you go on to aggregate these.
 

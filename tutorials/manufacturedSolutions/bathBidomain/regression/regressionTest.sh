@@ -6,13 +6,9 @@ IFS=$'\n\t'
 # Bath-bidomain manufactured-solution regression test
 # ============================================================
 #
-# Uses the 1D mesh (system/blockMeshDict.1D, 80 cells per block) that
-# matches the dimension "1D" entry in constant/electroProperties. The
-# manufacturedFDABathBidomainVerifier writes a per-run summary file
-# named postProcessing/<DIM>_<N>_cells.dat (corrected 2026-09-28: this said
-# a "bathBidomain_"-prefixed name no case has ever produced; the match
-# below was already the unprefixed pattern)
-# whose values are compared against bathBidomainManufactured.reference.
+# Uses the 1D mesh (system/blockMeshDict.1D, 80 cells per block) that matches the
+# dimension "1D" entry in constant/electroProperties. The verifier's summary,
+# postProcessing/<DIM>_<N>_cells.dat, is compared against bathBidomainManufactured.reference.
 
 ALLRUN_LOGFILE="log.Allrun"
 REF_FILE="regression/bathBidomainManufactured.reference"
@@ -23,15 +19,9 @@ echo "Mesh: system/blockMeshDict.1D, run mode: serial"
 echo "============================================================"
 echo
 
-# Known-broken on OpenFOAM v2312 (both lightweight and with-solids4foam).
-# v2312's dictionary lookup throws FATAL for
-# 'laplacian(conductivityIntracellular,Vm)' against system/fvSchemes even
-# when the literal entry is present and the heart sub-mesh is registered
-# with the base mesh name (region0) and the field names exactly match.
-# The same case passes on v2412 and v2512 in both modes. A diagnostic
-# Info<< probe at extracellularPotentialDomain.C:647 confirmed the lookup
-# key, sub-mesh name, and field names are correct; the bug is internal to
-# v2312's schemesLookup machinery. Suppress the regression for v2312 only.
+# Known-broken on OpenFOAM v2312: its dictionary lookup throws FATAL for
+# 'laplacian(conductivityIntracellular,Vm)' against system/fvSchemes even when the
+# entry is present. v2412 and v2512 pass, so the regression is suppressed on v2312 only.
 ofVersion="${WM_PROJECT_VERSION:-unknown}"
 if [[ "${ofVersion}" == *2312* ]]; then
     echo "SKIP: bathBidomain regression is suppressed on OpenFOAM v2312."

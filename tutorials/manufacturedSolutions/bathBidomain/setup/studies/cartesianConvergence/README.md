@@ -6,7 +6,7 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-From the repository root, use the current wrapper:
+From the repository root:
 
 ```bash
 driverFoam sweep-plan \
@@ -21,9 +21,7 @@ Resolve the runtime preflight before expecting OpenFOAM execution.
 
 `sweep_hex_convergence.json` and `sweep_hex_groundElectrode.json` run the
 `groundElectrode` variant; `sweep_hex_electrodePair.json` runs the case's own
-`electrodePair`. The first two differed only in their archive directory,
-which a record study does not carry, so they are now the same study (both
-kept, plan §5g Q10).
+`electrodePair`. The first two are the same study.
 
 ## Tracking & Outputs
 

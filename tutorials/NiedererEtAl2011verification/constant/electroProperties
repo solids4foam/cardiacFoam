@@ -24,11 +24,7 @@ monodomainSolverCoeffs
     chi   [0 -1 0 0 0 0 0] 140000;
     cm    [-1 -4 4 0 0 2 0] 0.01;
 
-    // The batched TNNP with Rush-Larsen gating (owner, 2026-09-26): at
-    // dx 0.2 mm over 1000 steps it ran 5.6x faster than TNNP with RKF45
-    // (93 s against 527 s) with the same wavefront at 10 ms (max |dVm|
-    // 0.059 mV, 4021 cells above 0 mV in both). Evidence: omniD
-    // docs/solver-learning/cardiacfoam.md, section T.
+    // Batched TNNP with Rush–Larsen gating: same wavefront as TNNP, much faster.
     ionicModel    TNNPcompactBatched;
     batchedIntegrator rushLarsen;
     tissue    epicardialCells;
@@ -43,10 +39,7 @@ monodomainSolverCoeffs
     }
 
     solutionAlgorithm    implicit;
-    // No `solver`/`maxSteps`: they configure OpenFOAM's ODESolver, which
-    // ionicModel::odeSolver() builds only when a scalar model calls it
-    // (src/ionicModels/ionicModel/ionicModel.H); the batched models
-    // integrate in batchedIonicModel.H and never do.
+    // No `solver`/`maxSteps`: the batched models do not use the ODESolver.
 
     externalStimulus
     {

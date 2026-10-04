@@ -35,25 +35,13 @@ from omnidriver.postprocessing.style import (
     style_matplotlib_axes,
 )
 
-#: This tutorial's own committed 3D electrode set (the retired driver
-#: plugin's now-deleted "tutorials.defaults.manufactured_monodomain_pseudo_ecg"
-#: module used to duplicate this as a hardcoded ECG_ELECTRODES_BY_DIMENSION
-#: table). Read directly instead: electrode positions are patched per case
-#: by this tutorial's own sweep studies (they vary with `dimension`), so
-#: anything that needs a *specific case's* positions should read that
-#: case's own constant/electroProperties via _read_electrode_positions,
-#: not this module-level default -- which is only the 3D illustration
-#: geometry every study's base config ships (the E1-E5/R1-R156 set below).
+#: The 3D electrode set committed with this tutorial. Per-case positions vary with
+#: `dimension`: read them with _read_electrode_positions from the case's own electroProperties.
 _TUTORIAL_ELECTRO_PROPERTIES = Path(__file__).resolve().parent.parent / "constant" / "electroProperties"
 
 
 def _read_electrode_positions(electro_properties_path: Path) -> dict[str, str]:
-    """Read {electrode_name: "(x y z)" literal} from an electroProperties dict.
-
-    Parses `monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions` --
-    small, targeted regex reads rather than a full OpenFOAM dictionary
-    parser, matching this tutorial's other postprocessing scripts.
-    """
+    """Read {electrode_name: "(x y z)" literal} from `monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions`."""
     text = electro_properties_path.read_text()
     block = re.search(r"electrodePositions\s*\{(.*?)\n\s*\}", text, re.DOTALL)
     if not block:
@@ -62,27 +50,16 @@ def _read_electrode_positions(electro_properties_path: Path) -> dict[str, str]:
 
 
 def _case_postprocessing_files(folder: Path, pattern: str = "*") -> list[Path]:
-    """Every swept case's own postProcessing/ file matching pattern.
-
-    Replaces the old sweep wrapper's convention of pooling every case's
-    output into one shared flat folder; each case now writes to its own
-    <output_dir>/cases/case_NNNN/postProcessing/.
-    """
+    """Every swept case's own `<output_dir>/cases/case_NNNN/postProcessing/` file matching pattern."""
     return sorted(folder.glob(f"cases/*/postProcessing/{pattern}"))
 
 
 def _sibling_case_metadata(path: Path) -> tuple[str, int, float | None] | None:
     """(Dimension, N, dt) for the case that produced `path`.
 
-    manufacturedPseudoECG_ECG.dat / manufacturedPseudoECGSummary_ECG.dat
-    carry no case identity in their own filename (unlike the error-summary
-    <dim>_<N>_cells[_DT<token>].dat the solver's verifier writes into the
-    same directory) -- N and dt used to come from a sweep wrapper's
-    rename-on-collect step that embedded them in the filename it copied
-    these into when pooling every case into one shared folder. Read them
-    from that sibling file instead, the same way read_error_dat_files
-    reads its own dt (dt from the file's own content, since not every
-    study sweeps it).
+    The ECG .dat files carry no case identity in their name, so N and dt are read
+    from the sibling `<dim>_<N>_cells[_DT<token>].dat` (dt from its content, since
+    not every study sweeps it).
     """
     for sibling in path.parent.glob("*.dat"):
         match = FILENAME_PATTERN.match(sibling.name)
@@ -481,11 +458,10 @@ DISTANCE_BAND_EDGES = (0.05, 0.2, 0.4, 0.7, 1.0)
 
 
 def electrode_standoff_distance(position: tuple[float, float, float]) -> float:
-    """Distance from a point to the surface of the unit cube [0,1]^3.
+    """Distance from a point to the surface of the unit cube [0,1]^3 (zero inside or on it).
 
-    Matches the placement rule the electrode positions were generated
-    with: exit the cube along a ray from its centre, then go this far
-    further. Zero inside/on the cube, positive outside it.
+    Matches the placement rule the electrode positions were generated with:
+    exit the cube along a ray from its centre, then go this far further.
     """
     x, y, z = position
     dx = max(0.0 - x, 0.0, x - 1.0)
@@ -495,13 +471,7 @@ def electrode_standoff_distance(position: tuple[float, float, float]) -> float:
 
 
 def electrode_distance_table(dimension: str = "3D") -> dict[str, float]:
-    """Standoff distance for every configured electrode, keyed by name.
-
-    `dimension` is accepted for backward compatibility but only "3D" (this
-    function's only caller ever passes it, and that caller is itself
-    currently unused) has a source: this tutorial's own committed 3D
-    electrode geometry.
-    """
+    """Standoff distance for every configured electrode, keyed by name; only "3D" has committed geometry."""
     del dimension
     electrodes = _read_electrode_positions(_TUTORIAL_ELECTRO_PROPERTIES)
     return {
@@ -511,13 +481,11 @@ def electrode_distance_table(dimension: str = "3D") -> dict[str, float]:
 
 
 def assign_distance_band(distance: float, bin_edges: tuple[float, ...] = DISTANCE_BAND_EDGES) -> str:
-    """Label a standoff distance with the band it falls in, e.g. '0.05-0.20'.
+    """Label a standoff distance with its band, e.g. '0.05-0.20'.
 
-    Electrodes below the first edge sit in a 'near' band of their own --
-    the pseudo-ECG lead-field kernel scales like 1/r^2 (see
-    pseudoECGSolver.C), so distances that small can inflate the error
-    relative to farther electrodes for reasons that have nothing to do with
-    the gradient reconstruction scheme under test.
+    Electrodes below the first edge get a 'near' band: the lead-field kernel
+    scales like 1/r^2 (see pseudoECGSolver.C), so near-field error is not
+    attributable to the gradient reconstruction scheme.
     """
     edges = [0.0] + list(bin_edges)
     for lower, upper in zip(edges, edges[1:]):
@@ -532,15 +500,10 @@ def group_electrode_errors_by_distance_band(
     dimension: str = "3D",
     error_column: str = "Linf_err_ref",
 ) -> dict[str, dict[str, float]]:
-    """Bucket per-electrode error rows (from `_parse_ecg_summary_file`) by
-    standoff-distance band and summarize each band's error statistics.
+    """Bucket per-electrode error rows (from `_parse_ecg_summary_file`) by standoff band and summarize each band's errors.
 
-    Purpose: separate a genuine gradient-reconstruction error trend from an
-    artifact of the pseudo-ECG kernel's near-field 1/r^2 growth. If the
-    nearest band's error is orders of magnitude above the others and does
-    not shrink with mesh refinement the way the farther bands do, that
-    band's numbers reflect proximity to the source, not the reconstruction
-    scheme, and should be reported/interpreted separately from the rest.
+    Separates a gradient-reconstruction error trend from the pseudo-ECG kernel's
+    near-field 1/r^2 growth, which does not shrink with refinement.
     """
     distances = electrode_distance_table(dimension)
     bands: dict[str, list[float]] = {}
@@ -1151,29 +1114,19 @@ def export_ecg_electrode_geometry_vtp(
 
 
 def organize_dat_files(folder_name):
-    """
-    Move all .dat files from the parent directory into a subfolder
-    inside the parent directory.
-
-    Parameters:
-        folder_name (str): Name of the folder inside the parent directory.
-    """
-    # Absolute path of parent directory
+    """Move all .dat files from the parent directory into the subfolder folder_name."""
     parent_dir = os.path.abspath("..")
     dest_dir = os.path.join(parent_dir, folder_name)
     print(f"Looking for .dat files in parent directory: {parent_dir}")
 
-    # List all .dat files in parent directory
     dat_files = [f for f in os.listdir(parent_dir) if f.endswith(".dat")]
 
     if not dat_files:
         print("No .dat files found in the parent directory.")
         return
 
-    # Create destination folder inside parent directory
     os.makedirs(dest_dir, exist_ok=True)
 
-    # Move each .dat file to the folder
     for f in dat_files:
         src = os.path.join(parent_dir, f)
         dst = os.path.join(dest_dir, f)
@@ -1186,14 +1139,7 @@ def organize_dat_files(folder_name):
 
 
 def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = None):
-    """
-    Reads all .dat files in folder_name and extracts:
-        - Dimension  (1D, 2D, 3D)
-        - N          (# cells)
-        - Linf errors for Vm, u1, u2
-
-    Returns one row per file.
-    """
+    """Read all .dat files in folder_name: one row per file, with dimension, N and the Linf errors for Vm, u1, u2."""
 
     folder = Path(folder_name)
     if not folder.exists():
@@ -1214,9 +1160,7 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
     data = []
 
     for f in files:
-        # Expected filename formats:
-        #   1D_320_cells.dat
-        #   3D_80_cells_DT0p000560538.dat
+        # Filename formats: 1D_320_cells.dat, 3D_80_cells_DT0p000560538.dat
         m = FILENAME_PATTERN.match(f.name)
         if not m:
             print("Skipping unrecognized filename:", f.name)
@@ -1230,7 +1174,6 @@ def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = N
         dt_from_content = _extract_summary_scalar(TIME_STEP_PATTERN, content)
         dx_from_content = _extract_summary_scalar(GRID_SPACING_PATTERN, content)
 
-        # Extract Linf errors
         linf_matches = re.findall(
             r"Vm\s+\S+\s+\S+\s+(\S+).*?"
             r"u1\s+\S+\s+\S+\s+(\S+).*?"
@@ -1504,13 +1447,7 @@ def group_ecg_timeseries_cases(cases):
 
 
 def compute_convergence_rates(rows, *, convergence_axis: str = "spatial"):
-    """
-    Compute convergence rates for Linf errors of Vm, u1, u2.
-
-    - Groups by Dimension (if present).
-    - Sorts by the selected sweep axis.
-    - Skips pairs that do not refine along that axis.
-    """
+    """Compute convergence rates of the Linf errors of Vm, u1, u2, per dimension along the selected sweep axis, skipping pairs that do not refine along it."""
     axis_meta = _sweep_axis_metadata(convergence_axis)
 
     grouped_rows = {}
@@ -2577,9 +2514,7 @@ def plot_errors(
     save_path: str | Path | None = None,
     show: bool = True,
 ):
-    """
-    Plot Linf errors for Vm, u1, u2 vs N.
-    """
+    """Plot Linf errors for Vm, u1, u2 vs N."""
     if not _has_matplotlib():
         print("matplotlib is not available; skipping manufactured error plot.")
         return None
@@ -2633,10 +2568,7 @@ def plot_errors(
     save_dir: str | Path | None = None,
     show: bool = True,
 ):
-    """
-    Plot Linf errors for Vm, u1, u2 vs N.
-    Grouped per dimension.
-    """
+    """Plot Linf errors for Vm, u1, u2 vs N, grouped per dimension."""
     if not _has_matplotlib():
         print("matplotlib is not available; skipping manufactured error plots.")
         return []
@@ -2667,9 +2599,7 @@ def plot_Vm_across_dimensions(
     save_path: str | Path | None = None,
     show: bool = True,
 ):
-    """
-    Plot Linf_V (Vm error) vs N across all dimensions.
-    """
+    """Plot Linf_V (Vm error) vs N across all dimensions."""
     if not _has_matplotlib():
         print("matplotlib is not available; skipping manufactured Vm plot.")
         return None
