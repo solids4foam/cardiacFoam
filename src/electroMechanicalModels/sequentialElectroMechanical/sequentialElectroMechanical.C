@@ -152,11 +152,34 @@ sequentialElectroMechanical::sequentialElectroMechanical
         }
     }
 
+    const myocardiumPrePacing* prePacingPtr =
+        electro().mesh().foundObject<myocardiumPrePacing>
+        (
+            myocardiumPrePacing::typeName
+        )
+      ? &electro().mesh().lookupObject<myocardiumPrePacing>
+        (
+            myocardiumPrePacing::typeName
+        )
+      : nullptr;
+
+    bool allRegionsPrePaced = false;
+    if (prePacingPtr)
+    {
+        allRegionsPrePaced = true;
+        forAll(prePacingPtr->regionNames(), regionI)
+        {
+            allRegionsPrePaced =
+                allRegionsPrePaced && prePacingPtr->paced(regionI);
+        }
+    }
+
     if
     (
         prov
      && activeTensionRequirements_.needCai
      && !activeTensionRestarted
+     && !allRegionsPrePaced
     )
     {
         scalarField restingCai(electro().mesh().nCells());
@@ -165,6 +188,11 @@ sequentialElectroMechanical::sequentialElectroMechanical
             restingCai[cellI] = prov->signal(cellI, CouplingSignal::CAI);
         }
         activeTensionModel_->preconditionToRestingState(restingCai);
+    }
+
+    if (prov && prePacingPtr && !activeTensionRestarted)
+    {
+        prePaceActiveTension(*prePacingPtr);
     }
 
     if
@@ -208,6 +236,161 @@ void sequentialElectroMechanical::writeFields(const Time& runTime)
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+void sequentialElectroMechanical::prePaceActiveTension
+(
+    const myocardiumPrePacing& prePacing
+)
+{
+    // Single tension cell at lambda = 1, driven by its ionic cell's signal
+    class isometricTension
+    :
+        public prePacingCoupling
+    {
+        activeTensionModel& model_;
+        const scalarField lambda_;
+        scalarField Ta_;
+
+    public:
+
+        explicit isometricTension(activeTensionModel& model)
+        :
+            model_(model),
+            lambda_(1, 1.0),
+            Ta_(1, 0.0)
+        {}
+
+        virtual void advance(const scalar t, const scalar dt)
+        {
+            model_.calculateTension(t, dt, lambda_, Ta_);
+        }
+
+        virtual scalarField state() const
+        {
+            return (*model_.states())[0];
+        }
+
+        scalar Ta() const
+        {
+            return Ta_[0];
+        }
+    };
+
+    const labelList& cellRegion = prePacing.cellRegion();
+    const PtrList<scalarField>* tissueStatesPtr = activeTensionModel_->states();
+
+    if
+    (
+        !tissueStatesPtr
+     || tissueStatesPtr->size() != cellRegion.size()
+    )
+    {
+        FatalErrorInFunction
+            << "Active tension model '" << activeTensionModel_->type()
+            << "' does not expose states for all " << cellRegion.size()
+            << " myocardium cells; prePacing cannot seed it. Remove "
+            << "constant/prePacingProperties."
+            << exit(FatalError);
+    }
+
+    const wordList& regionNames = prePacing.regionNames();
+    List<scalarField> regionStates(regionNames.size());
+    scalarField regionTa(regionNames.size(), 0.0);
+    labelList beats(regionNames.size(), 0);
+
+    forAll(regionNames, regionI)
+    {
+        if
+        (
+            !prePacing.paced(regionI)
+         || Pstream::myProcNo() != myocardiumPrePacing::owner(regionI)
+        )
+        {
+            continue;
+        }
+
+        const prePacingIO::PrePacingConfig& cfg = prePacing.config(regionI);
+        autoPtr<ionicModel> cellPtr = prePacing.newSingleCell(regionI, true);
+
+        autoPtr<activeTensionModel> tensionPtr =
+            activeTensionModel::New(electroMechanicalProperties(), 1);
+        tensionPtr->setElectromechanicalSignalProvider(cellPtr());
+        tensionPtr->validateProvider();
+
+        if (!tensionPtr->states())
+        {
+            FatalErrorInFunction
+                << "Active tension model '" << tensionPtr->type()
+                << "' does not expose its states; prePacing cannot pace it."
+                << exit(FatalError);
+        }
+
+        isometricTension coupling(tensionPtr());
+
+        beats[regionI] =
+            cellPtr->prePaceToConvergence
+            (
+                prePacing.singleCellDt(regionI),
+                cfg.tolerance,
+                cfg.minBeats,
+                cfg.maxBeats,
+                cfg.beatComparisonInterval,
+                &coupling
+            );
+
+        regionStates[regionI] = coupling.state();
+        regionTa[regionI] = coupling.Ta();
+    }
+
+    // Share each region's result from the processor that paced it.
+    struct takeComputed
+    {
+        void operator()(scalarField& x, const scalarField& y) const
+        {
+            if (x.empty())
+            {
+                x = y;
+            }
+        }
+    };
+    Pstream::listCombineReduce(regionStates, takeComputed());
+    Pstream::listCombineReduce(beats, maxEqOp<label>());
+    Pstream::listCombineReduce(regionTa, plusEqOp<scalar>());
+
+    List<scalarField> states(*tissueStatesPtr);
+    labelList regionCellCount(regionNames.size(), 0);
+
+    forAll(cellRegion, cellI)
+    {
+        const label regionI = cellRegion[cellI];
+        if (prePacing.paced(regionI))
+        {
+            states[cellI] = regionStates[regionI];
+            ++regionCellCount[regionI];
+        }
+    }
+
+    if (!activeTensionModel_->setStates(states))
+    {
+        FatalErrorInFunction
+            << "Active tension model '" << activeTensionModel_->type()
+            << "' does not accept seeded states; prePacing cannot seed it."
+            << exit(FatalError);
+    }
+
+    forAll(regionNames, regionI)
+    {
+        if (prePacing.paced(regionI))
+        {
+            Info<< "prePacing: active tension of region '"
+                << regionNames[regionI] << "' converged after "
+                << beats[regionI] << " beats; seeded "
+                << regionCellCount[regionI] << " cells, diastolic Ta = "
+                << regionTa[regionI] << " (model units)." << endl;
+        }
+    }
+}
+
 
 void sequentialElectroMechanical::updateLambda()
 {

@@ -51,6 +51,22 @@ namespace Foam
 {
 
 
+//- A system advanced in lockstep with a pre-paced single ionic cell and
+//  included in its convergence check.
+class prePacingCoupling
+{
+public:
+
+    virtual ~prePacingCoupling() = default;
+
+    //- Advance over (t - dt, t], after the ionic cell's step
+    virtual void advance(const scalar t, const scalar dt) = 0;
+
+    //- Current state vector
+    virtual scalarField state() const = 0;
+};
+
+
 /*---------------------------------------------------------------------------*\
                          Class ionicModel Declaration
 \*---------------------------------------------------------------------------*/
@@ -118,6 +134,10 @@ class ionicModel
         mutable ionicModelIO::ExportedNamesCache debugNamesCache_;
 
     public:
+        //- Overwrite the state vector of every integration point; false when
+        //  the model does not expose its states
+        virtual bool setStates(const UList<scalarField>& states);
+
         // Derived models can override these and then rely on base
         virtual const PtrList<scalarField>* ioStatesPtr() const
         {
@@ -252,7 +272,8 @@ public:
         );
 
 
-        //- Create a ionic model
+        //- Create a ionic model. initialDeltaT is in s (runTime units); each
+        //  model's solveODE clamps step() into its own ODE time unit.
         static autoPtr<ionicModel> New
         (
             const dictionary& dict,
@@ -415,6 +436,27 @@ public:
         virtual scalarField constantsForTissue(const label tissueFlag) const;
 
         virtual scalarField initialStatesForTissue(const label tissueFlag) const;
+
+        //- Pace this ionic model (nIntegrationPoints == 1,
+        //  solveVmWithinODESolver == true) until its full state vector
+        //  reaches a periodic limit cycle: the normalized max-component
+        //  relative change between successive beats falls below tolerance
+        //  for two consecutive beats. Beats are compared every
+        //  stimulusProtocol().stimPeriodS1, or every beatComparisonInterval
+        //  when stimPeriodS1 <= SMALL (unpaced, self-beating models).
+        //  Fatals if convergence is not reached within maxBeats.
+        //  Units: dt in s; stimPeriodS1 and beatComparisonInterval in ms.
+        //  A coupling, when given, is stepped after every ionic step and
+        //  its state must converge too. Returns the number of beats.
+        label prePaceToConvergence
+        (
+            const scalar dt,
+            const scalar tolerance,
+            const label minBeats,
+            const label maxBeats,
+            const scalar beatComparisonInterval,
+            prePacingCoupling* coupling = nullptr
+        );
 
         //- Number of ODE's to solve
         virtual label nEqns() const override = 0;

@@ -76,6 +76,21 @@ activation by <0.001ms and only softens the T wave (still inverted in
 V2-V6 over a 0.5s beat): the ~20ms gradient is small against the ~70ms
 activation spread.
 
+## Pre-pacing
+
+`constant/prePacingProperties` starts the myocardium from a paced steady
+state instead of the ionic model's defaults. Before the run, one single
+BuenoOrovio cell per tissue region (`endocardialCells`, `mCells`,
+`epicardialCells`) is paced at 1000 ms (`singleCellStimulus`) until its state
+repeats beat to beat (`tolerance 1e-4`), and every myocardium cell starts
+from its region's converged state and Vm. Blend-band cells and the
+apicobasal tauSi scaling keep their own constants and start from their
+dominant region's state. The log reports each region's beat count and
+seeded Vm (`prePacing: ...` lines): 51/13/11 beats for endo/M/epi, a few
+seconds in total. `monodomain` and `hybrid` read it; `eikonal` has no ionic
+model. The Purkinje network is not pre-paced. Remove the file to start from
+the model defaults.
+
 ## Purkinje conduction network
 
 `constant/purkinjeGraph` (copied in by `Allrun` from `../mesh/constant/`)
@@ -92,7 +107,7 @@ All three variants conduct along the tree at ~3.3 m/s: `hybrid`'s
 `restitutionEikonalSolver1D` at its calibrated restitution maximum (3.33
 m/s), `eikonal`'s `eikonalSolver1D` via `purkinjeCV 3.33`, and
 `monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` (measured
-3.16 m/s at 0.35 and 5.8 m/s at 1.5; the former 10.0 gave ~8.7 m/s).
+3.16 m/s at 0.35, 5.8 m/s at 1.5 and ~8.7 m/s at 10.0).
 
 Two trees are available, chosen by `Allrun`'s `human`/`pig` argument and
 both copied in as `constant/purkinjeGraph`, so no dictionary changes:
@@ -115,7 +130,7 @@ Each junction's current is spread over the tissue within `pvjRadius` of it,
 so the radius is the smallest the mesh allows at every junction of both
 trees (`1.65e-3`; the coarsest junction cell, mid-wall on the pig tree, is
 1.60 mm across). A junction is physiologically a point contact, and a larger
-sphere dilutes the current: at the former `2.5e-3` only 26% of the pig
+sphere dilutes the current: at `2.5e-3` only 26% of the pig
 tree's intramural junctions captured the tissue within 40 ms under
 `hybrid`. At `1.65e-3` every junction of both trees captures; at `rPvj 1000`
 intramural junctions capture after ~11 ms against ~5 ms at the surface, so
@@ -172,7 +187,7 @@ for human, `injection.<variant>.pig.reference` for pig).
 `constant/electroProperties` and `system/controlDict` are symlinks to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
 `controlDict` differs per variant but all share `endTime 0.04`: the
-regression probe activates at 28.8 ms (`monodomain`) and 30.3 ms (`hybrid`)
+regression probe activates at 28.9 ms (`monodomain`) and 30.1 ms (`hybrid`)
 on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per
 `eikonalMyocardiumDomain::applyModelTimeControls`.

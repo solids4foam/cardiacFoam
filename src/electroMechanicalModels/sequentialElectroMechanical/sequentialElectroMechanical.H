@@ -35,6 +35,7 @@ SourceFiles
 
 #include "electroMechanicalModel.H"
 #include "activeTensionModel.H"
+#include "myocardiumPrePacing.H"
 #include "electromechanicalVerificationModel.H"
 #include "overrideTypeName.H"
 
@@ -89,6 +90,10 @@ class sequentialElectroMechanical
         //  coupling), consistent with the sequential scheme. Falls back to
         //  1.0 if D or f0 are not available on the solid mesh.
         void updateLambda();
+
+        //- Pace an isometric single tension cell coupled to each pre-paced
+        //  main tissue and seed the tissue's tension states from them
+        void prePaceActiveTension(const myocardiumPrePacing& prePacing);
 
         //- Disallow default bitwise copy construct
         sequentialElectroMechanical(const sequentialElectroMechanical&);

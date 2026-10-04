@@ -26,6 +26,8 @@ License
 #include "error.H"
 #include "fvMeshSubset.H"
 #include "volFields.H"
+#include "prePacingIO.H"
+#include "myocardiumPrePacing.H"
 
 namespace Foam
 {
@@ -295,7 +297,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
     verificationModelPtr =
         electroVerificationModel::New(electroProperties);
 
-    return autoPtr<myocardiumDomainInterface>
+    autoPtr<myocardiumDomain> tissuePtr
     (
         myocardiumDomain::New
         (
@@ -306,8 +308,46 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
             postProcessFields,
             ionicModelPtr(),
             verificationModelPtr.get()
-        ).ptr()
+        )
     );
+
+    // Vm exists only once myocardiumDomain::New has run -- prePacing must
+    // follow it.
+    if (prePacingIO::configFor(mesh, word::null).enabled)
+    {
+        volScalarField& Vm = tissuePtr->VmRef();
+
+        scalarField heterogeneityFieldValues;
+        if (electroProperties.found("ionicHeterogeneity"))
+        {
+            heterogeneityFieldValues =
+                readTransmuralDistance
+                (
+                    mesh,
+                    electroProperties,
+                    electroProperties.subDict("ionicHeterogeneity")
+                );
+        }
+
+        // Owned by Vm's mesh registry, where coupled models look it up.
+        myocardiumPrePacing* prePacingPtr =
+            new myocardiumPrePacing
+            (
+                Vm.mesh(),
+                electroProperties,
+                initialDeltaT,
+                electroProperties.found("ionicHeterogeneity")
+              ? &heterogeneityFieldValues
+              : nullptr,
+                Vm.size()
+            );
+        prePacingPtr->store();
+
+        prePacingPtr->paceIonic();
+        prePacingPtr->seedIonic(ionicModelPtr(), Vm);
+    }
+
+    return autoPtr<myocardiumDomainInterface>(tissuePtr.ptr());
 }
 
 } // End namespace Foam

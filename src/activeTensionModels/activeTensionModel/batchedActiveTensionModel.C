@@ -172,6 +172,26 @@ bool batchedActiveTensionModel::readRestartState(const fvMesh& mesh)
 }
 
 
+bool batchedActiveTensionModel::setStates(const UList<scalarField>& states)
+{
+    syncAllToIO();
+
+    if (ioStates_.size() != states.size())
+    {
+        return false;
+    }
+
+    forAll(states, i)
+    {
+        ioStates_[i] = states[i];
+    }
+
+    syncStatesFromIO();
+    core_.clearTransientSolveData(persistAlgebraics_);
+    return true;
+}
+
+
 void batchedActiveTensionModel::writeRestartState(const fvMesh& mesh) const
 {
     syncAllToIO();

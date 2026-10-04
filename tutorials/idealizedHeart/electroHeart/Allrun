@@ -35,8 +35,8 @@ done
 ln -sf "electroProperties.$variant" constant/electroProperties
 echo "Active solver variant: $variant (constant/electroProperties -> electroProperties.$variant)"
 
-# controlDict is still per-variant, but all three now share endTime 0.04.
-# The regression probe activates at 28.8ms (monodomain) and 30.3ms (hybrid)
+# controlDict is per-variant, but all three share endTime 0.04.
+# The regression probe activates at 28.9ms (monodomain) and 30.1ms (hybrid)
 # on the human tree, 31.9ms and 34.0ms on the pig tree. 0.04 clears all four
 # and keeps the variants comparable. eikonal is unaffected either way - it
 # overrides the case time controls and solves one steady problem, writing

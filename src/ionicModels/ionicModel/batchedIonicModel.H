@@ -953,6 +953,26 @@ protected:
             return &ioStates_;
         }
 
+        virtual bool setStates(const UList<scalarField>& states) override
+        {
+            ensureIOSynchronized();
+
+            if (ioStates_.size() != states.size())
+            {
+                return false;
+            }
+
+            forAll(states, cellI)
+            {
+                ioStates_[cellI] = states[cellI];
+            }
+
+            syncStatesFromIO();
+            clearTransientIOData();
+            markIODirty();
+            return true;
+        }
+
         virtual const PtrList<scalarField>* ioAlgebraicPtr() const override
         {
             if (!transientAlgebraicsSynchronized_)
