@@ -2508,7 +2508,7 @@ def plot_ecg_electrode_geometry(
 
 def plot_errors(
     rows,
-    
+
     *,
     convergence_axis: str = "spatial",
     save_path: str | Path | None = None,
@@ -3111,7 +3111,7 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
     )
     for case in representative_cases:
         dimension_token = str(case["Dimension"]).lower()
-        
+
         surface_vtp_paths = export_ecg_error_surface_case_vtp(
             case,
             save_dir=output_path,
