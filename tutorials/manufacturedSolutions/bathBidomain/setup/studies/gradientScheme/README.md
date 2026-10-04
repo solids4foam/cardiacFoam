@@ -26,7 +26,6 @@ Specs: `setup/studies/gradientScheme/sweep_current.json`, `setup/studies/gradien
 [omnidriver command to run]
 ```
 
-
 ## Status
 
 `current` and `limitedCorrection` (`N=20`) have been run and land the intended
