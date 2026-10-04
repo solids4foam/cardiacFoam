@@ -6,7 +6,7 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-From the repository root, plan and run the sweep with. Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
+From the repository root, plan and run the sweep. Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
 [omnidriver command to run]

@@ -1,20 +1,15 @@
-#!/usr/bin/env python3
 """Summarise the bath predictor-corrector control.
 
-Reads omnidriver sweep-run's own archive layout for
-setup/studies/coupling/sweep_coupling_study.json: each case lands at
-<case_root>/<caseId>/<archive_dir_name>/bathBidomainInterfaceMetrics.csv,
-where <archive_dir_name> is the spec's own
-"setup/studies/coupling/results/sweepCases" and <caseId> is
-"<number_cells>_<bath_predictor_corrector>" (e.g. "10_False", "10_True"),
-per the spec's case_id_template derive. Verified against a real N=10
-baseline/predictor run (2026-08-19).
+Reads an omnidriver sweep of sweep_coupling_study.json: each case's
+`<sweep>/<caseId>/case_record.json` carries its resolved axis values, and its
+metrics are `<sweep>/cases/<caseId>/postProcessing/bathBidomainInterfaceMetrics.csv`.
+Writes raw_results.csv and summary.md into the sweep directory.
 """
 
 from __future__ import annotations
 
 import csv
-import re
+import json
 from pathlib import Path
 import sys
 
@@ -27,22 +22,23 @@ METRICS = (
     "x0AssembledFlux_L2",
 )
 
-ARCHIVE_RELPATH = Path("setup/studies/coupling/results/sweepCases")
-CASE_ID_RE = re.compile(r"^(?P<resolution>\d+)_(?P<predictor>True|False)$")
+RESOLUTION_AXIS = "tetNumberCells"
+PREDICTOR_AXIS = "constant/electroProperties:bidomainSolverCoeffs.bathPredictorCorrector"
 
 
-def discover_rows(case_root: Path) -> list[dict[str, str]]:
+def discover_rows(sweep_dir: Path) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    for csv_path in sorted(case_root.glob(f"*/{ARCHIVE_RELPATH}/bathBidomainInterfaceMetrics.csv")):
-        case_id = csv_path.parents[len(ARCHIVE_RELPATH.parts)].name
-        match = CASE_ID_RE.match(case_id)
-        if match is None:
+    for record_path in sorted(sweep_dir.glob("*/case_record.json")):
+        case_id = record_path.parent.name
+        csv_path = sweep_dir / "cases" / case_id / "postProcessing" / "bathBidomainInterfaceMetrics.csv"
+        if not csv_path.is_file():
             continue
+        axes = json.loads(record_path.read_text())["resolved_axis_values"]
         with csv_path.open() as handle:
             values = next(csv.DictReader(handle))
         row = {
-            "resolution": match["resolution"],
-            "variant": "predictor" if match["predictor"] == "True" else "baseline",
+            "resolution": str(axes[RESOLUTION_AXIS]),
+            "variant": "predictor" if axes[PREDICTOR_AXIS] else "baseline",
         }
         row.update({name: values[name] for name in METRICS})
         rows.append(row)
@@ -51,14 +47,11 @@ def discover_rows(case_root: Path) -> list[dict[str, str]]:
 
 def main() -> None:
     if len(sys.argv) != 2:
-        raise SystemExit("usage: summarize_coupling_study.py CASE_ROOT")
-    case_root = Path(sys.argv[1]).resolve()
-    rows = discover_rows(case_root)
+        raise SystemExit("usage: summarize_coupling_study.py SWEEP_DIR")
+    sweep_dir = Path(sys.argv[1]).resolve()
+    rows = discover_rows(sweep_dir)
     if not rows:
-        raise SystemExit(
-            f"No sweep-run case output found under {case_root}/*/{ARCHIVE_RELPATH}/ "
-            "-- run the omnidriver sweep for setup/studies/coupling/sweep_coupling_study.json first."
-        )
+        raise SystemExit(f"No completed coupling-study case found under {sweep_dir}")
 
     baselines = {
         row["resolution"]: row for row in rows if row["variant"] == "baseline"
@@ -73,8 +66,7 @@ def main() -> None:
                 100.0 * (float(row[name]) - reference) / reference
             )
 
-    output_dir = case_root / "setup" / "studies" / "coupling" / "results"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = sweep_dir
 
     fields = list(rows[0])
     with (output_dir / "raw_results.csv").open("w", newline="") as handle:

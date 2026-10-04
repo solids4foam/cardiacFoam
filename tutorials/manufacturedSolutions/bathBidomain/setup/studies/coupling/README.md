@@ -16,22 +16,20 @@ the top-level README).
 Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json --output-dir <scratch output dir>
-python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain
+[omnidriver command to run]
+python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py <sweep output dir>
 ```
 
-`omnidriver` is the external orchestration add-on (not part of this repo;
-see the root `CLAUDE.md`). Run the summarizer from the repository root.
-`--output-dir` holds run-tracking state (`sweep_manifest.json`, per-case
-`run_document.json`) while the actual OpenFOAM data lands in the case root
-itself, described next.
+Run the summarizer from the repository root. It writes `raw_results.csv` and
+`summary.md` into the sweep output directory.
 
 ### Where the output actually lands
 
 The study runs through the `manufacturedBathBidomain` tutorial record, which
-stages every case under the sweep's `--output-dir` as `cases/<caseId>/` (e.g.
-`cases/10_False/postProcessing/bathBidomainInterfaceMetrics.csv`). Point
-`summarize_coupling_study.py` at the sweep's `cases/` directory.
+stages every case under the sweep's output directory as `cases/<caseId>/` (e.g.
+`cases/10_False/postProcessing/bathBidomainInterfaceMetrics.csv`), with the
+case's axis values in `<caseId>/case_record.json`. Point
+`summarize_coupling_study.py` at the sweep's output directory.
 
 ## Status
 
@@ -47,5 +45,5 @@ variant as the top-level README shows.
 
 ## Tracking & Outputs
 
-All generated outputs are saved to the local `results/` folder, gitignored.
+Generated outputs stay in the sweep output directory.
 Do not commit generated OpenFOAM data.

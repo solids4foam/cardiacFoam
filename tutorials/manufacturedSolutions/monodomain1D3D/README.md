@@ -49,7 +49,7 @@ runPurkinjeGraph -case .
 Running a graph convergence study via omnidriver (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`, the `graphOnly` route of the `manufacturedMonodomain1D3D` tutorial record):
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/graphConvergence/sweep_graph_only.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Writes, per case: `postProcessing/graph_1D_<n>_nodes.dat` (the graph verifier's error summary), `postProcessing/purkinjeNetwork.dat` and `postProcessing/purkinjeNetworkVTK/`.
@@ -59,19 +59,19 @@ Writes, per case: `postProcessing/graph_1D_<n>_nodes.dat` (the graph verifier's 
 Active coupling (bidirectional PVJ). Spec: `setup/studies/coupledConvergence/sweep_active.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Bidirectional coupling. Spec: `setup/studies/coupledConvergence/sweep_bidirectional.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_bidirectional.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Decoupled (negligible PVJ coupling with `rPvj=1e6`). Spec: `setup/studies/coupledConvergence/sweep_decoupled.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_decoupled.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Coupled sweeps run `cardiacFoam` under joint 1D/3D refinement, copy verifier summaries, and write:

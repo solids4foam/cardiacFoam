@@ -96,6 +96,6 @@ python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
 The complete rerun matrix contains 54 cases: Cartesian spatial (12), primary
 tetrahedral reconstruction (8), fixed-grid temporal (8), ODE (2), loose
 `phiE|phiI` tolerance (4), mesh-fixed tetrahedral `dt/2` (4), and corrector
-controls (12 plus 4 at `N=80`). Run the listed driver-managed specifications;
+controls (12 plus 4 at `N=80`). Run the listed omnidriver-managed specifications;
 do not rely on an aggregate wrapper unless it has been versioned with the
 release.

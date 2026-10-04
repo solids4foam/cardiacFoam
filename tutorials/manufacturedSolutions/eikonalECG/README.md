@@ -108,17 +108,17 @@ rotated configurations, N=10/20/40/80). Spec: `setup/studies/nonlinearControl/sw
 Bulk/boundary error decomposition. Spec: `setup/studies/errorLocalisation/sweep_tet_error_localisation.json`.
 
     [omnidriver command to run]
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py <sweep output dir>
 
 Isolated gradient-operator reconstruction (registered `eikonal_gradient_tet` table, leastSquares only). Spec: `setup/studies/gradient_reconstruction/sweep_gradient_tet.json`.
 
     [omnidriver command to run]
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py <sweep output dir>
 
 Full gaussLinear-vs-leastSquares gradient-operator comparison (not a registered table). Spec: `setup/studies/gradientVerification/sweep_gradient_tet.json`.
 
     [omnidriver command to run]
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py <sweep output dir>
 
 ## Effective mesh spacing and observed order
 
