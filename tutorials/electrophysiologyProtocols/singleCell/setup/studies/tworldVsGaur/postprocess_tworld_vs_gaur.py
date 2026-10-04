@@ -1,6 +1,6 @@
 """Compare the pig/Gaur and human/TWORLD single-cell traces.
 
-The script consumes the per-case directories produced by the focused driverFOAM
+The script consumes the per-case directories produced by the focused omnidriver
 sweep. It creates an audience-facing six-panel waveform figure (Vm, Ca, ICaL,
 SR fluxes, repolarisation currents, and Land--Niederer tension), a rate-
 dependence figure, and a machine-readable metrics table. Model-specific names

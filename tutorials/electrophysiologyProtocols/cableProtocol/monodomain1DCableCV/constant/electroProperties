@@ -19,6 +19,8 @@ myocardiumSolver  monodomainSolver;
 
 monodomainSolverCoeffs
 {
+    sealedHeartBoundary false;
+    sealedWallTrace     zeroGradient;
     conductivitySource uniform;
     // Main calibration knob for this tutorial.
     // 3.3 S/m should give roughly ~3.0 m/s with Stewart/myocyte

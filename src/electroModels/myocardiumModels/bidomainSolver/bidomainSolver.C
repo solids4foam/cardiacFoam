@@ -22,6 +22,8 @@ License
 #include "IOmanip.H"
 #include "PstreamReduceOps.H"
 #include "myocardiumDomain.H"
+#include "insulatedFaceConductivity.H"
+#include "conormalZeroFluxFvPatchScalarField.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
 
@@ -52,7 +54,11 @@ bidomainSolver::bidomainSolver
         ),
         mesh,
         dimensionedScalar("phiE", dimVoltage, 0.0),
-        "zeroGradient"
+        conormalWallPatchTypes
+        (
+            mesh,
+            electroProperties.get<word>("sealedWallTrace")
+        )
     ),
     gradPhiE_
     (
@@ -119,6 +125,10 @@ bidomainSolver::bidomainSolver
         ),
         Gi_ + Ge_
     ),
+    sealedHeartBoundary_
+    (
+        electroProperties.get<Switch>("sealedHeartBoundary")
+    ),
     phiEReferenceValue_
     (
         electroProperties.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)
@@ -133,6 +143,7 @@ bidomainSolver::bidomainSolver
     externalPhiEBasePtr_(nullptr),
     externalPhiECellMapPtr_(nullptr)
 {
+    setConormalWallConductivity(phiE_, Ge_.name(), word::null);
 }
 
 
@@ -190,6 +201,20 @@ void bidomainSolver::bindExternalPhiE
 {
     externalPhiEBasePtr_ = &phiE;
     externalPhiECellMapPtr_ = &heartCellMap;
+
+    bool conormalPhiE = false;
+    forAll(phiE_.boundaryField(), patchI)
+    {
+        conormalPhiE = conormalPhiE
+         || isA<conormalZeroFluxFvPatchScalarField>(phiE_.boundaryField()[patchI]);
+    }
+    if (sealedHeartBoundary_ || conormalPhiE)
+    {
+        FatalErrorInFunction
+            << "sealedHeartBoundary and sealedWallTrace conormal are not "
+            << "supported with a bath potential domain"
+            << exit(FatalError);
+    }
 }
 
 
@@ -259,6 +284,11 @@ void bidomainSolver::solveDiffusionExplicit
 {
     (void)dt;
 
+    const tmp<surfaceTensorField> tGif
+    (
+        insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_)
+    );
+
     if (externalPhiEBound())
     {
         restrictExternalPhiE();
@@ -270,8 +300,16 @@ void bidomainSolver::solveDiffusionExplicit
         updateGradPhiE();
         fvScalarMatrix phiEqn
         (
-            fvm::laplacian(GiPlusGe_, phiE_)
-         == -fvc::laplacian(Gi_, domain.Vm())
+            fvm::laplacian
+            (
+                insulatedFaceConductivity(GiPlusGe_, phiE_, sealedHeartBoundary_),
+                phiE_
+            )
+         == -fvc::laplacian
+            (
+                insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_),
+                domain.Vm()
+            )
         );
         if (refCell >= 0)
         {
@@ -285,7 +323,7 @@ void bidomainSolver::solveDiffusionExplicit
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(Gi_, domain.Vm() + phiE_)
+          == fvc::laplacian(tGif(), domain.Vm() + phiE_)
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
            - (*coeff)*domain.Vm()
@@ -296,7 +334,7 @@ void bidomainSolver::solveDiffusionExplicit
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(Gi_, domain.Vm() + phiE_)
+          == fvc::laplacian(tGif(), domain.Vm() + phiE_)
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
         );
@@ -343,8 +381,16 @@ void bidomainSolver::solvePhiEImplicitOnce
         updateGradPhiE();
         fvScalarMatrix phiEqn
         (
-            fvm::laplacian(GiPlusGe_, phiE_)
-         == -fvc::laplacian(Gi_, domain.Vm())
+            fvm::laplacian
+            (
+                insulatedFaceConductivity(GiPlusGe_, phiE_, sealedHeartBoundary_),
+                phiE_
+            )
+         == -fvc::laplacian
+            (
+                insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_),
+                domain.Vm()
+            )
         );
         if (refCell >= 0)
         {
@@ -360,6 +406,11 @@ void bidomainSolver::solveVmImplicitOnce
     electroVolumeFieldDomain& domain
 )
 {
+    const tmp<surfaceTensorField> tGif
+    (
+        insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_)
+    );
+
     tmp<volScalarField> tIionExtrap;
     const volScalarField* IionOldPtr = domain.IionOldPtr();
     const volScalarField* IionOldOldPtr = domain.IionOldOldPtr();
@@ -381,8 +432,8 @@ void bidomainSolver::solveVmImplicitOnce
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           + fvm::Sp(*coeff, domain.VmRef())
-          == fvm::laplacian(Gi_, domain.Vm())
-           + fvc::laplacian(Gi_, phiE_)
+          == fvm::laplacian(tGif(), domain.Vm())
+           + fvc::laplacian(tGif(), phiE_)
            - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );
@@ -392,8 +443,8 @@ void bidomainSolver::solveVmImplicitOnce
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvm::laplacian(Gi_, domain.Vm())
-           + fvc::laplacian(Gi_, phiE_)
+          == fvm::laplacian(tGif(), domain.Vm())
+           + fvc::laplacian(tGif(), phiE_)
            - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );

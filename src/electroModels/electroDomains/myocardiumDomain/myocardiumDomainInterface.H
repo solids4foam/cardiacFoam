@@ -175,6 +175,17 @@ public:
     }
 };
 
+
+//- Support-mesh patch that receives the faces a myocardium cellZone exposes.
+//  electroProperties' exposedFacesPatch names it; otherwise the first patch
+//  that is neither empty nor coupled. OpenFOAM's own default for exposed
+//  faces is an empty patch, which gradients and Laplacian corrections skip.
+label myocardiumExposedFacesPatch
+(
+    const fvMesh& supportMesh,
+    const dictionary& electroProperties
+);
+
 } // End namespace Foam
 
 #endif

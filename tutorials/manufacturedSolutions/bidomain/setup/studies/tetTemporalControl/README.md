@@ -10,8 +10,8 @@ spatially dominated over the accepted levels.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json \
-    --output-dir .tmp/driverfoam/bidomain-tet-dt-half
+[omnidriver command to run]
 ```

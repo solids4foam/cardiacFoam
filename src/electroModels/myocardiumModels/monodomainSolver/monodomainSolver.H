@@ -41,6 +41,7 @@ class monodomainSolver
     public myocardiumSolver
 {
     volTensorField conductivity_;
+    Switch sealedHeartBoundary_;
 
     tmp<volTensorField> initialiseConductivity
     (

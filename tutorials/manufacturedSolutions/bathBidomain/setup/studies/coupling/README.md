@@ -11,19 +11,19 @@ convergence study).
 Formerly `setup/studies/tetConvergence/studies/coupling/run_coupling_study.sh` (relocated
 here alongside its own study, matching this tutorial's other studies); mesh
 generation and the tet electroProperties/fvSchemes overlay swap are handled
-by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG rather than
+by omnidriver's own `manufacturedBathBidomain` tet workflow DAG rather than
 by hand-rolled bash.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json \
-    --output-dir .tmp/driverfoam/bathBidomain-coupling
+[omnidriver command to run]
 python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain
 ```
 
-`driverFoam` is the external orchestration add-on (not part of this repo;
+`omnidriver` is the external orchestration add-on (not part of this repo;
 see the root `CLAUDE.md`). Run the summarizer from the repository root.
 `--output-dir` holds run-tracking state (`sweep_manifest.json`, per-case
 `run_document.json`) while the actual OpenFOAM data lands in the case root
@@ -38,7 +38,7 @@ tutorials/manufacturedSolutions/bathBidomain/10_False/setup/studies/coupling/res
 tutorials/manufacturedSolutions/bathBidomain/10_True/setup/studies/coupling/results/sweepCases/bathBidomainInterfaceMetrics.csv
 ```
 
-This is *not* the same as `applications/scripts/paperI_results/aggregate.py`'s `_sweep_cases_and_manifest()` helper, which assumes a single shared `setup/studies/<study>/results/sweepCases/` directory populated by a postprocess-consolidation step — that step is a driverFOAM stub as of this writing (`sweep-run`'s own output prints `"postprocess": {"status": "stub", ...}`), so nothing currently populates the shared location. `summarize_coupling_study.py` and `aggregate.py::_bath_tet()` were both rewritten to read the real per-`<caseId>` layout above instead.
+This is *not* the same as `applications/scripts/paperI_results/aggregate.py`'s `_sweep_cases_and_manifest()` helper, which assumes a single shared `setup/studies/<study>/results/sweepCases/` directory populated by a postprocess-consolidation step — that step is an omnidriver stub as of this writing (`sweep-run`'s own output prints `"postprocess": {"status": "stub", ...}`), so nothing currently populates the shared location. `summarize_coupling_study.py` and `aggregate.py::_bath_tet()` were both rewritten to read the real per-`<caseId>` layout above instead.
 
 `summarize_coupling_study.py` doesn't clean up `<caseId>` directories between runs — remove stale `N_False`/`N_True` dirs at the case root yourself before a fresh sweep if you don't want old data mixed into the summary.
 
@@ -57,7 +57,7 @@ top-level README).
 
 `constant/electroProperties` must set
 `bidomainSolverCoeffs.{verificationModel,manufacturedBidomain}.fdaBathVariant`
-— `_apply_case` always writes this key, and a driverFOAM sweep for this
+— `_apply_case` always writes this key, and an omnidriver sweep for this
 tutorial (tet or hex) fails with `KeyError` without it.
 
 ## Tracking & Outputs

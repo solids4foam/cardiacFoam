@@ -9,8 +9,8 @@ convergence rather than spatial resolution.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json \
-    --output-dir .tmp/driverfoam/bidomain-corrector-n80
+[omnidriver command to run]
 ```

@@ -64,10 +64,10 @@ Manual:
 Driver-managed sweeps:
 
 ```bash
-driverFoam run --strict --entry restitutionCurves
+[omnidriver command to run]
 ```
 
-Driver defaults live in the driverFOAM add-on's `restitution_curves`
+Driver defaults live in omnidriver's `restitution_curves`
 cardiacFoam plugin defaults.
 
 The driver mutates ionic model/tissue/stimulus values per case, updates end time,

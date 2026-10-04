@@ -2,6 +2,8 @@
 
 FDA bidomain-with-bath manufactured-solution verification.
 
+Origin: the bidomain-with-bath problem of the FDA regulatory science tool (Pathmanathan & Gray 2014).
+
 ## Overview
 
 ### Stack
@@ -48,7 +50,7 @@ Typical outputs include global `phiE`, `sigmaTotal`, `VmGlobal`, and manufacture
 
 The tet variant uses the case's own `constant/electroProperties`; `dimension` and the boundary-variant keys are written by `_apply_case` on every run.
 
-Mesh generation, `checkMesh`, and the tet `electroProperties`/`fvSchemes` overlay activation are handled directly by driverFOAM's own `manufacturedBathBidomain` tet workflow DAG (`Allclean → gmsh → gmshToFoam → checkMesh → setTorsoOrganConductivityField → cardiacFoam → bathBidomainInterfaceMetrics`) for every sweep case below — there is no separate mesh-gate or smoke-test step to run by hand.
+Mesh generation, `checkMesh`, and the tet `electroProperties`/`fvSchemes` overlay activation are handled directly by omnidriver's own `manufacturedBathBidomain` tet workflow DAG (`Allclean → gmsh → gmshToFoam → checkMesh → setTorsoOrganConductivityField → cardiacFoam → bathBidomainInterfaceMetrics`) for every sweep case below — there is no separate mesh-gate or smoke-test step to run by hand.
 
 #### Predictor-Corrector Coupling Study
 
@@ -80,36 +82,34 @@ blockMesh -dict system/blockMeshDict.1D
 ./regressionTest.sh
 ```
 
-### Driver-Managed Sweeps (Suggested)
+### Omnidriver-Managed Sweeps (Suggested)
 
 Cartesian (1D/2D/3D) spatial convergence:
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bath_bidomain_cartesian
 ```
 
 Tetrahedral predictor-corrector coupling study:
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json
+[omnidriver command to run]
 python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/results/sweepCases
 ```
 
-Tetrahedral interface-current convergence:
+Tetrahedral interface-current convergence. Specs: `setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json`, `setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json
+[omnidriver command to run]
 ```
 
-Bath temporal convergence and tet time-step control:
+Bath temporal convergence and tet time-step control. Specs: `setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json`, `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
+[omnidriver command to run]
 ```
 
 Gradient-scheme screen: see [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md) for all four variant specs.
 
-All of the above are JSON sweep specs driven entirely through `driverFoam sweep-run` — there is no bash left in this tutorial's `setup/` beyond the standard OpenFOAM `Allrun`/`Allclean`/`regressionTest.sh` entrypoints. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs haven't been re-run against OpenFOAM since being converted from their old bash scripts (see each study's own README "Status" section) — dry-run with `driverFoam sweep-plan --spec <file>` before relying on them, and expect to iterate on the JSON if a case fails to reproduce the old numbers exactly.
+All of the above are JSON sweep specs driven entirely through omnidriver — there is no bash left in this tutorial's `setup/` beyond the standard OpenFOAM `Allrun`/`Allclean`/`regressionTest.sh` entrypoints. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs haven't been re-run against OpenFOAM since being converted from their old bash scripts (see each study's own README "Status" section) — dry-run with omnidriver's plan command before relying on them, and expect to iterate on the JSON if a case fails to reproduce the old numbers exactly.

@@ -83,7 +83,7 @@ def run_postprocessing(
 ):
     """Convert this case's archived raw probe samples into labeled CSVs.
 
-    driverFOAM's sweep loop (base.archive_dir_name in the sweep spec)
+    omnidriver's sweep loop (base.archive_dir_name in the sweep spec)
     archives each case's raw postProcessing/ output -- OpenFOAM's own
     `probes` functionObject format, coordinates in a comment header, one
     data row per sampled time -- directly into that case's own output_dir,

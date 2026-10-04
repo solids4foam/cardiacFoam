@@ -35,11 +35,9 @@ From the repository root, source the host OpenFOAM installation and run:
 
 ```bash
 source /Volumes/OpenFOAM-v2412/etc/bashrc
-export DRIVERFOAM_RUNTIME_CONFIG=/Users/simaocastro/omnidriver/driverfoam-runtime.yaml
+export OMNIDRIVER_RUNTIME_CONFIG=/Users/simaocastro/omnidriver/omnidriver-runtime.yaml
 
-driverFoam sweep-run \
-    --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
-    --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
+[omnidriver command to run]
 
 python3 tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/postprocess_tworld_vs_gaur.py \
     --input-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun/cases \

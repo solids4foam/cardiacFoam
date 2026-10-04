@@ -28,7 +28,7 @@ Usage
 
 With no timeDir given, resolves the latest numeric time directory under the
 current directory itself (same convention as `foamListTimes -latestTime`),
-so this can run as a driverFOAM workflow_dag step -- a static command with
+so this can run as an omnidriver workflow_dag step -- a static command with
 no data flow from a preceding step's output -- immediately after a
 `postProcess -func writeCellCentres -latestTime` step.
 """

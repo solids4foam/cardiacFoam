@@ -19,6 +19,8 @@ myocardiumSolver eikonalSolver;
 
 eikonalSolverCoeffs
 {
+    sealedHeartBoundary false;
+    sealedWallTrace     zeroGradient;
     conductivitySource uniform;
     conductivity    [ -1 -3 3 0 0 2 0 ] ( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 );
     chi             [ 0 -1 0 0 0 0 0 ] 3;

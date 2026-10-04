@@ -15,8 +15,8 @@ ladder supplies the unstructured temporal-order measurement.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json \
-    --output-dir .tmp/driverfoam/bathBidomain-tet-dt-half
+[omnidriver command to run]
 ```
