@@ -38,25 +38,8 @@ PIMPLE
 {
     nOuterCorrectors     2;
 
-    // Stated explicitly (2026-09-26, tutorials-are-pointers 5.4b-B) so the
-    // corrector/correctorN80 studies have a key to set rather than one to
-    // invent: OpenFOAM v2412's solutionControl.C reads
-    // solutionDict.getOrDefault<label>("nNonOrthogonalCorrectors", 0), and
-    // cardiacFoam's extracellularPotentialDomain.C reads
-    // pimpleDict.lookupOrDefault<label>("nNonOrthogonalCorrectors", 0) --
-    // both default to 0, so this changes nothing (proven by
-    // regression/regressionTest.sh, unchanged before/after; see
-    // docs/solver-learning/cardiacfoam.md section B in the omniD repo).
+    // Stated explicitly so the corrector studies have a key to set; OpenFOAM and cardiacFoam both default it to 0.
     nNonOrthogonalCorrectors 0;
-
-    // residualControl
-    // {
-    //     Vm
-    //     {
-    //         relTol          0.0;
-    //         tolerance       1e-10;
-    //     }
-    // }
 }
 
 

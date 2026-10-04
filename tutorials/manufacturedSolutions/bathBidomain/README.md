@@ -64,8 +64,6 @@ The tet variant uses the case's own `constant/electroProperties`. A tet study na
 
 The omniD `manufacturedBathBidomain` record runs the tet route as `gmsh → gmshToFoam → checkMesh → setTorsoOrganConductivityField → cardiacFoam → bathBidomainInterfaceMetrics -latestTime` for every tet sweep case below; there is no separate mesh-gate or smoke-test step to run by hand. No `topoSet`: the template's two Physical Volumes become the `myocardium` and `bath` cellZones.
 
-Corrected 2026-09-26 (plan §5g Q10): `setup/studies/tetConvergence/fvSchemes` used to be a copy of `system/fvSchemes`, byte-identical to it (`cmp`). It carried no override and is deleted; nothing referenced it outside this README.
-
 #### Predictor-Corrector Coupling Study
 
 `setup/studies/coupling/` compares the decoupled/baseline vs. predictor-corrector bath coupling at `N=10,20,40,80`. This is the source of the paperI `bath_bidomain_tet_conformal` experiment. See [`setup/studies/coupling/README.md`](setup/studies/coupling/README.md).
@@ -128,4 +126,4 @@ omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions
 
 Gradient-scheme screen: see [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md) for all four variant specs.
 
-All of the above are JSON sweep specs driven entirely through omnidriver — there is no bash left in this tutorial's `setup/` beyond the standard OpenFOAM `Allrun`/`Allclean`/`regressionTest.sh` entrypoints. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs haven't been re-run against OpenFOAM since being converted from their old bash scripts (see each study's own README "Status" section) — dry-run with omnidriver's plan command before relying on them, and expect to iterate on the JSON if a case fails to reproduce the old numbers exactly.
+All of the above are JSON sweep specs driven through omnidriver. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs have only been partly run against OpenFOAM (see each study's README "Status" section); dry-run them with omnidriver's plan command before relying on them.

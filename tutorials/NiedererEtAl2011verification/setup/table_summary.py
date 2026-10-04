@@ -1,9 +1,4 @@
-"""table_summary.py — Activation time summary table for NiedererEtAl2011.
-
-Reads each swept case's own `postProcessing/Niedererpoints/<time>/activationTime`
-(OpenFOAM's raw `probes` functionObject output) and writes
-NiedererEtAl2011_summary.csv + .html via TableWriter.
-"""
+"""Activation-time summary table for NiedererEtAl2011: reads each swept case's `postProcessing/Niedererpoints` and writes NiedererEtAl2011_summary.csv + .html."""
 from __future__ import annotations
 
 import json
@@ -14,20 +9,15 @@ from omnidriver.postprocessing.table_writer import TableWriter
 
 _PROBE_LINE = re.compile(r"^# Probe (\d+) \(([^)]+)\)")
 
-#: `probes` never activates every point at a short/coarse verification
-#: endTime; this repository's sentinel for "never activated" -- never
-#: converted s -> ms (CLAUDE.md: "a sentinel is never converted").
+#: Sentinel for "never activated"; never converted s -> ms.
 _UNACTIVATED_SENTINEL = -1.0
 
 
 def _read_latest_probe_row(function_object_dir: Path) -> list[float] | None:
-    """Return the last data row of a `probes` functionObject's output file.
+    """Return the last data row of a `probes` output file.
 
-    `postProcess -latestTime` writes exactly one data row per probe sample
-    call; the instance directory it lands under is named for when that
-    postProcess invocation itself started (often "0"), not for the
-    simulated time in the row, so every time subdirectory must be checked
-    and the row's own leading Time column used instead.
+    The instance directory is named for when postProcess started, not for the
+    row's time, so every one is checked and the row's own Time column is used.
     """
     if not function_object_dir.is_dir():
         return None
@@ -47,13 +37,7 @@ def _read_latest_probe_row(function_object_dir: Path) -> list[float] | None:
 
 
 def _iter_swept_cases(output_dir: Path):
-    """Yield (case_id, case_dir, resolved_axis_values) for every case in this sweep.
-
-    A tutorial-record case's own case_record.json never carries sweep axis
-    values (Core's standalone case record does not scan for them); the
-    sweep's own sweep_manifest.json, written once per sweep in output_dir,
-    is the authoritative source.
-    """
+    """Yield (case_id, case_dir, resolved_axis_values) per case, read from sweep_manifest.json."""
     manifest_path = output_dir / "sweep_manifest.json"
     if not manifest_path.is_file():
         return
@@ -65,12 +49,7 @@ def _iter_swept_cases(output_dir: Path):
 
 
 def _dx_dt_solver(resolved_axis_values: dict) -> tuple[float, float, str]:
-    """Return (DX_mm, DT_ms, solver) from a case's resolved sweep axes.
-
-    `dx` (hex mesh) or `tetDx` (tet mesh) is in metres; `system/controlDict:
-    deltaT` is in seconds. Both studies fix `solutionAlgorithm implicit` (the
-    only value NiedererEtAl2011verification's studies sweep today).
-    """
+    """Return (DX_mm, DT_ms, solver) from a case's resolved sweep axes (`dx` or `tetDx` in m, `deltaT` in s)."""
     dx_m = resolved_axis_values.get("dx", resolved_axis_values.get("tetDx"))
     dt_s = resolved_axis_values.get("system/controlDict:deltaT")
     dx_mm = round(float(dx_m) * 1000.0, 4) if dx_m is not None else float("nan")

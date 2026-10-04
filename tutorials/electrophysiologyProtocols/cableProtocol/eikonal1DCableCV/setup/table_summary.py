@@ -23,11 +23,7 @@ from omnidriver.postprocessing.style import (
     style_matplotlib_axes,
 )
 
-#: Every study this tutorial sweeps today fixes solver/ionicModel/tissue/
-#: conductivity across the whole sweep -- only dx/dt vary -- so there is
-#: exactly one convergence group per sweep. conductivity_id stays a constant
-#: instead of decoding a COND<n> filename token (nothing generates one any
-#: more); extend this if a future study actually sweeps conductivity.
+#: One convergence group per sweep: every study fixes solver/ionicModel/tissue/conductivity and varies only dx/dt.
 _CONDUCTIVITY_ID = 1
 
 
@@ -37,14 +33,7 @@ def _dict_scalar(text: str, keyword: str) -> str | None:
 
 
 def _case_labels(case_dir: Path) -> tuple[str, str, str]:
-    """Read (solver, ionic_model, tissue) from this case's own committed dict.
-
-    These used to be decoded from a `solver_model_tissue_..._cv_summary.json`
-    filename that driverFoam's sweep wrapper produced by dumping every case's
-    output into one shared folder. A staged sweep case owns its own
-    electroProperties, so reading it directly is correct whether a value is
-    swept or -- as in every study today -- fixed across the whole sweep.
-    """
+    """Read (solver, ionic_model, tissue) from the case's own electroProperties."""
     text = (case_dir / "constant" / "electroProperties").read_text()
     solver = (_dict_scalar(text, "myocardiumSolver") or "unknown").removesuffix("Solver")
     ionic_model = _dict_scalar(text, "ionicModel") or "unknown"
@@ -53,13 +42,7 @@ def _case_labels(case_dir: Path) -> tuple[str, str, str]:
 
 
 def _iter_cv_summaries(output_dir: Path):
-    """Yield (case_dir, resolved_axis_values, payload) per case in this sweep.
-
-    `<output_dir>/cases/case_NNNN/postProcessing/case_NNNN_cv_summary.json`
-    replaces the old shared-folder convention; a case's own
-    case_record.json carries no axis values for a tutorial-record sweep, so
-    dx/dt come from the sweep's own sweep_manifest.json instead.
-    """
+    """Yield (case_dir, resolved_axis_values, payload) per case from `cases/case_NNNN/postProcessing/case_NNNN_cv_summary.json`; axis values come from sweep_manifest.json."""
     axis_values_by_case: dict[str, dict] = {}
     manifest_path = output_dir / "sweep_manifest.json"
     if manifest_path.is_file():

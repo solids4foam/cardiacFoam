@@ -95,17 +95,10 @@ def _field_linf(content: str, field_name: str) -> float:
 
 
 def read_error_dat_files(folder_name):
-    """
-    Reads every swept case's own error .dat file under folder_name and
-    extracts:
-        - Dimension  (1D, 2D, 3D)
-        - N          (# cells)
-        - Linf errors for Vm, gauge-corrected phiE, u1, u2
+    """Read every swept case's own `<dim>_<N>_cells.dat` from its postProcessing/ under folder_name.
 
-    Each case writes its own verifier .dat directly into its own
-    postProcessing/ (case_dir/postProcessing/<dimension>_<N>_cells.dat);
-    this reads every case in the sweep rather than one shared flat folder
-    (the old sweep wrapper's convention).  Returns one row per file.
+    Returns one row per file: dimension, N and the Linf errors for Vm,
+    gauge-corrected phiE, u1 and u2.
     """
 
     folder = Path(folder_name)
@@ -121,15 +114,13 @@ def read_error_dat_files(folder_name):
     data = []
 
     for f in files:
-        # Expected filename format:
-        #   1D_320_cells.dat
         m = FILENAME_PATTERN.match(f.name)
         if not m:
             print("Skipping unrecognized filename:", f.name)
             continue
 
-        dimension = m.group(1)   # "1D"
-        N = int(m.group(2))      # 320
+        dimension = m.group(1)
+        N = int(m.group(2))
 
         content = f.read_text()
 
@@ -156,13 +147,7 @@ def read_error_dat_files(folder_name):
 
 
 def compute_convergence_rates(rows):
-    """
-    Compute convergence rates for Linf errors of Vm, phiE, u1, u2.
-
-    - Groups by Dimension (if present).
-    - Sorts by N.
-    - Skips pairs where N_lower == N_higher.
-    """
+    """Compute convergence rates of the Linf errors of Vm, phiE, u1, u2, per dimension and sorted by N, skipping pairs with equal N."""
 
     grouped_rows = {}
     for row in rows:
@@ -355,9 +340,7 @@ def plot_Vm_across_dimensions(
     save_path: str | Path | None = None,
     show: bool = True,
 ):
-    """
-    Plot Linf_V (Vm error) vs N across all dimensions.
-    """
+    """Plot Linf_V (Vm error) vs N across all dimensions."""
     if not _has_matplotlib():
         print("matplotlib is not available; skipping manufactured Vm plot.")
         return None

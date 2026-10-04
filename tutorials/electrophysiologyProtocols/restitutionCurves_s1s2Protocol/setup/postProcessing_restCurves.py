@@ -23,10 +23,7 @@ PEAK_SEARCH    = 2          # window to find AP peak
 
 
 def extract_S2_value(path):
-    """
-    Extract numeric S2 value from filename.
-    Example matches: S2_300, S2-300, S2_300ms
-    """
+    """Extract the numeric S2 value from a filename (S2_300, S2-300, S2_300ms)."""
     match = re.search(r"S2[_-]?(\d+)", path.name)
     if match:
         return int(match.group(1))
@@ -37,8 +34,8 @@ def extract_S2_value(path):
 def load_trace(filename):
     data = np.genfromtxt(
         filename,
-        names=True,       # reads header
-        delimiter=None    # auto-detect whitespace
+        names=True,
+        delimiter=None
     )
 
     time = data["time"]
@@ -72,13 +69,11 @@ def detect_beats(time, vm):
 
     for k, t_up in enumerate(candidates):
 
-        # ---- baseline
         mask_base = (time >= t_up - baseline_s) & (time < t_up)
         if not np.any(mask_base):
             continue
         v_base = np.min(vm[mask_base])
 
-        # ---- peak
         mask_peak = (time >= t_up) & (time <= t_up + peak_s)
         if not np.any(mask_peak):
             continue
@@ -87,7 +82,6 @@ def detect_beats(time, vm):
         seg_v = vm[mask_peak]
         v_peak = np.max(seg_v)
 
-        # ---- APD90
         v90 = v_base + 0.1 * (v_peak - v_base)
 
         j_peak = np.argmax(seg_v)
@@ -130,7 +124,6 @@ def detect_beats(time, vm):
                     candidates.append(t_cand)
                     last_t = t_cand
 
-    # ---- DEBUG: list all dv/dt candidates
     print("\n=== DV/DT CANDIDATES ===")
     for k, t in enumerate(candidates):
         print(f"[{k}] t_up = {t:.6f}")
@@ -148,14 +141,12 @@ def detect_beats(time, vm):
         else:
             print("next t_up = NONE")
 
-        # ---- baseline
         mask_base = (time >= t_up - baseline_s) & (time < t_up)
         if not np.any(mask_base):
             print("❌ No baseline samples")
             continue
         v_base = np.min(vm[mask_base])
 
-        # ---- peak / repolarization window
         t_end = t_up + peak_s
         if k < len(candidates) - 1:
             t_end = min(t_end, candidates[k+1])
@@ -169,8 +160,7 @@ def detect_beats(time, vm):
         seg_v = vm[mask_peak]
         v_peak = np.max(seg_v)
 
-        # ---- Reject fake beats (stimulus artifact only)
-        # We ensure the cell actually captured by checking the voltage 3 ms after t_up (i.e. after a 2ms stimulus + 1ms grace)
+        # Reject stimulus artifacts: the voltage must still be above -10 mV 3 ms after t_up (2 ms stimulus + 1 ms grace).
         t_check = t_up + 0.003
         mask_check = (seg_t >= t_check)
         if np.any(mask_check):
@@ -183,7 +173,6 @@ def detect_beats(time, vm):
                 print(f"❌ Peak voltage too low ({v_peak:.3f} mV). Likely just a stimulus artifact.")
                 continue
 
-        # ---- APD90, APD70, APD50
         v90 = v_base + 0.1 * (v_peak - v_base)
         v70 = v_base + 0.3 * (v_peak - v_base)
         v50 = v_base + 0.5 * (v_peak - v_base)
@@ -262,7 +251,6 @@ def get_s1_s2_beats(beats, filepath=None, config=None):
     m_s2 = re.search(r"S2_(\d+)", name)
     s2_val = int(m_s2.group(1)) if m_s2 else 250
 
-    # The S1 train ends and the first S2 happens based on the config intervals
     s1_target_time = ((n_s1 - 1) * s1_val) / 1000.0
 
     s1_beat = None
@@ -280,14 +268,12 @@ def get_s1_s2_beats(beats, filepath=None, config=None):
     if idx + 1 < len(beats):
         potential_s2 = beats[idx + 1]
 
-        # We must ensure this is actually the S2 beat.
-        # If the true S2 beat failed, this might accidentally be the S3 beat!
+        # If the true S2 beat failed, this may be the S3 beat.
         actual_interval_ms = (potential_s2["t_up"] - s1_beat["t_up"]) * 1000.0
 
         if abs(actual_interval_ms - s2_val) < 2.0:
             s2_beat = potential_s2
         else:
-            # The next successful beat was NOT the S2 beat, meaning S2 failed!
             return None, None
     else:
         return None, None
@@ -301,8 +287,7 @@ def compute_apd_di(beats, filepath=None, config=None):
 
     res = {}
 
-    # We don't strictly require valid APD90 for APD70/50 to be valid!
-    # But we calculate what we can.
+    # APD70/50 do not require a valid APD90.
 
     for level in [90, 70, 50]:
         t_rep_s1 = s1.get(f"t_repol{level}", np.nan)
@@ -326,7 +311,6 @@ def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
     plt.figure(figsize=(11, 4))
     plt.plot(time, vm, color="black", lw=1.2, label="Vm")
 
-    # ---- mark all upstrokes and repolarizations
     for b in beats:
         plt.axvline(
             b["t_up"],
@@ -343,11 +327,9 @@ def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
                 lw=1,
                 alpha=0.6
             )
-    # ---- annotate last S1–S2 pair
     s1, s2 = get_s1_s2_beats(beats, filepath, config)
     if s1 is not None and s2 is not None:
 
-        # Find best available repolarization level
         best_level = None
         for level in [90, 70, 50]:
             t_rep = s1.get(f"t_repol{level}", np.nan)
@@ -359,7 +341,6 @@ def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
             t_rep_s1 = s1[f"t_repol{best_level}"]
             t_rep_s2 = s2[f"t_repol{best_level}"]
 
-            # ---- DI
             plt.axvspan(
                 t_rep_s1,
                 s2["t_up"],
@@ -368,7 +349,6 @@ def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
                 label=f"DI{best_level}"
             )
 
-            # ---- APD
             if np.isfinite(t_rep_s2):
                 plt.axvspan(
                     s2["t_up"],
@@ -394,7 +374,6 @@ def plot_trace(time, vm, beats, filepath=None, savepath=None, config=None):
             )
 
 
-        # ---- unified text box (always shown)
         plt.text(
             0.1, 0.8,
             text,
@@ -428,10 +407,7 @@ def postprocess_one_ionic_model(
 ):
 
 
-    # Traces sit directly in a swept case's own postProcessing/ (this
-    # tutorial's studies never sort them into a per-ionic-model
-    # subdirectory), so the search root is output_folder itself; only the
-    # results this function writes are organized under ionic_model.
+    # Traces sit directly in the case's postProcessing/, so the search root is output_folder; only outputs go under ionic_model.
     input_dir = base_dir / output_folder
     output_dir = input_dir / ionic_model
     print(f"DEBUG: base_dir={base_dir}, output_folder={output_folder}, input_dir={input_dir}")
@@ -446,7 +422,6 @@ def postprocess_one_ionic_model(
     all_restitution_data = []
 
     for tissue in tissues:
-        # Find all files for this ionic model + tissue
         file_pattern = f"*{ionic_model}*{tissue}*.txt"
         files = list(input_dir.rglob(file_pattern))
 
@@ -460,7 +435,6 @@ def postprocess_one_ionic_model(
                 continue
 
             beats = detect_beats(time, vm)
-            # Attach filename to beats once
             for b in beats:
                 b["file"] = str(f)
 
@@ -493,13 +467,11 @@ def postprocess_one_ionic_model(
 
     df = pd.DataFrame(all_restitution_data)
 
-    # Save single CSV for the ionic model
     csv_path = output_dir / f"{ionic_model}_restitution.csv"
     if csv_path.exists():
         csv_path.unlink()
     df.to_csv(csv_path, index=False)
 
-    # Plot combined restitution curves
     plt.figure(figsize=(10, 6))
 
     for tissue in tissues:
@@ -535,7 +507,6 @@ def postprocess_one_ionic_model(
         plt.show()
     plt.close()
 
-    # Plot APD90 only restitution curves
     plt.figure(figsize=(10, 6))
 
     for tissue in tissues:
@@ -589,14 +560,9 @@ def run_postprocessing(
     setup_root: str | None = None,
     **kwargs,
 ) -> list:
-    """run_postprocessing entry point matching omnidriver.postprocessing's
-    PostprocessingProtocol shape (output_dir, setup_root, **kwargs) -> list[dict].
+    """Entry point with the PostprocessingProtocol shape (output_dir, setup_root, **kwargs) -> list[dict].
 
-    Not currently invoked automatically -- nothing in omnidriver's runtime
-    calls tutorial postprocessing scripts on its own behalf (Core declines to
-    inspect solver output trees; see run_postprocess_phase). Run manually
-    against a completed sweep's output_dir until a replacement hand-off
-    exists.
+    Not invoked automatically; run it against a completed sweep's output_dir.
     Expected kwargs:
         ionic_models  (list[str])        - Models to post-process.
         tissue_map    (dict[str, list])  - Tissue types per ionic model.

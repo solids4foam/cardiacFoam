@@ -130,13 +130,7 @@ def _filter_rows(rows, **criteria):
 
 
 def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = None):
-    """Read every swept case's own error .dat file.
-
-    Each case writes its own verifier .dat directly into its own
-    postProcessing/ (case_dir/postProcessing/<dimension>_<N>_cells.dat);
-    this reads every case in the sweep rather than one shared flat folder
-    (the old sweep wrapper's convention).
-    """
+    """Read every swept case's own `<dim>_<N>_cells.dat` from its postProcessing/."""
     folder = Path(folder_name)
     if not folder.exists():
         print("Folder does not exist:", folder)
