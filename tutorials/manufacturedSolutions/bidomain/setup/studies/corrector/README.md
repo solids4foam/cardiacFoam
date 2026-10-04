@@ -9,7 +9,7 @@ This study validates the predictor-corrector inner loop convergence and stabilit
 Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Sweeps `N = 10, 20, 40` across the four reported variants (`baseline`,

@@ -29,7 +29,7 @@ Then run the same manifest:
 After a successful sweep, run the in-repository bulk/boundary aggregation over
 the archived outputs:
 
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
+    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py <sweep output dir>
 
 For a selected completed case, the retained coordinate-based localisation
 analysis can then read the driver-generated `activationTimeError`, `Cx`, `Cy`,
@@ -37,7 +37,7 @@ and `Cz` fields:
 
     python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/analyse_error_localisation.py
 
-This writes `setup/results/eikonal_bulk_boundary_tet.csv`.
+This writes `eikonal_bulk_boundary_tet.csv` into the sweep output directory.
 
 ## Tracking & Outputs
 

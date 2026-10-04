@@ -17,10 +17,10 @@ Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconst
 
 ```bash
 [omnidriver command to run]
-python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
+python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py <sweep output dir>
 ```
 
-This writes the canonical `setup/results/eikonal_gradient_tet.csv`.
+This writes `eikonal_gradient_tet.csv` into the sweep output directory.
 
 ## Tracking & Outputs
 

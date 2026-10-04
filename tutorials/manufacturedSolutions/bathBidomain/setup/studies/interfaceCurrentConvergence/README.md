@@ -11,8 +11,7 @@ Mesh generation and `checkMesh` are the record's tet route.
 Specs: `setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json`, `setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json --output-dir <scratch output dir>
-omnidriver --plugin cardiacfoam sweep-run --spec setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Each method is its own spec. `sweep_tet_unweightedHarmonic.json` sets `bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation` in its `base`; `distanceWeightedHarmonic` is the case's own value, so its spec states nothing.

@@ -99,31 +99,29 @@ blockMesh -dict system/blockMeshDict.1D
 Cartesian (1D/2D/3D) spatial convergence:
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir <scratch output dir>
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bath_bidomain_cartesian
 ```
 
 Tetrahedral predictor-corrector coupling study:
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json --output-dir <scratch output dir>
-python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/results/sweepCases
+[omnidriver command to run]
+python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py <sweep output dir>
 ```
 
 Tetrahedral interface-current convergence. Specs: `setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json`, `setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_unweightedHarmonic.json --output-dir <scratch output dir>
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/interfaceCurrentConvergence/sweep_tet_distanceWeightedHarmonic.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Bath temporal convergence and tet time-step control. Specs: `setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json`, `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
 
 ```bash
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/temporalConvergence/sweep_hex_temporal_godunov.json --output-dir <scratch output dir>
-omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json --output-dir <scratch output dir>
+[omnidriver command to run]
 ```
 
 Gradient-scheme screen: see [`setup/studies/gradientScheme/README.md`](setup/studies/gradientScheme/README.md) for all four variant specs.
 
-All of the above are JSON sweep specs driven through omnidriver. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs have only been partly run against OpenFOAM (see each study's README "Status" section); dry-run them with omnidriver's plan command before relying on them.
+All of the above are JSON sweep specs driven through omnidriver. The `interfaceCurrentConvergence`, `coupling`, and `gradientScheme` specs have only been partly run against OpenFOAM (see each study's README "Status" section); dry-run each with omnidriver before relying on them.
