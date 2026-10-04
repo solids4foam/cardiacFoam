@@ -25,12 +25,74 @@ License
 #include "electroVerificationModel.H"
 #include "error.H"
 #include "fvMeshSubset.H"
+#include "emptyPolyPatch.H"
 #include "volFields.H"
 #include "prePacingIO.H"
 #include "myocardiumPrePacing.H"
 
 namespace Foam
 {
+
+label myocardiumExposedFacesPatch
+(
+    const fvMesh& supportMesh,
+    const dictionary& electroProperties
+)
+{
+    const polyBoundaryMesh& patches = supportMesh.boundaryMesh();
+    label patchI = -1;
+
+    if (electroProperties.found("exposedFacesPatch"))
+    {
+        const word patchName(electroProperties.get<word>("exposedFacesPatch"));
+        patchI = patches.findPatchID(patchName);
+
+        if (patchI < 0)
+        {
+            FatalIOErrorInFunction(electroProperties)
+                << "exposedFacesPatch '" << patchName << "' is not a patch of "
+                << "mesh '" << supportMesh.name() << "'."
+                << exit(FatalIOError);
+        }
+    }
+    else
+    {
+        forAll(patches, candidateI)
+        {
+            const polyPatch& pp = patches[candidateI];
+            if (!isA<emptyPolyPatch>(pp) && !pp.coupled())
+            {
+                patchI = candidateI;
+                break;
+            }
+        }
+
+        if (patchI < 0)
+        {
+            FatalIOErrorInFunction(electroProperties)
+                << "Mesh '" << supportMesh.name() << "' has no patch that is "
+                << "neither empty nor coupled to receive the faces exposed by "
+                << "the myocardium cellZone. Name one with exposedFacesPatch."
+                << exit(FatalIOError);
+        }
+    }
+
+    const polyPatch& pp = patches[patchI];
+    if (isA<emptyPolyPatch>(pp) || pp.coupled())
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "exposedFacesPatch '" << pp.name() << "' is " << pp.type()
+            << "; the exposed myocardium faces need a patch that is neither "
+            << "empty nor coupled."
+            << exit(FatalIOError);
+    }
+
+    Info<< "Myocardium cellZone: exposed faces go into patch '" << pp.name()
+        << "' (" << pp.type() << ")." << endl;
+
+    return patchI;
+}
+
 
 namespace
 {

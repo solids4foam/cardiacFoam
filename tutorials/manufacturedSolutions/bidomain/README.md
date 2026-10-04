@@ -2,6 +2,8 @@
 
 Manufactured-solution verification for the one-mesh bidomain stack.
 
+Origin: the bidomain problem of the FDA regulatory science tool (Pathmanathan & Gray 2014).
+
 ## Overview
 
 ### Stack
@@ -35,6 +37,10 @@ Typical outputs include:
 
 ## Variants & Extensions
 
+### Insulated-Wall Case
+
+[`insulatedWall/`](insulatedWall/README.md) is a separate case with unequal anisotropy and walls that are insulated in the conormal sense, `n.G_i.grad(phi_i) = 0` and `n.G_e.grad(phi_e) = 0`, on a domain periodic in `y` and `z`. The diagonal conductivities here make `n.grad(u) = 0` and `n.G.grad(u) = 0` coincide on the walls; in `insulatedWall/` they differ. It has its own regression and tetrahedral study.
+
 ### Tetrahedral (unstructured) Mesh Variant
 
 `setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh overlay, co-located with the study that drives it: a unit-cube Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length set by a `DefineConstant`, overridden with `gmsh -setnumber lc <value>`).
@@ -64,33 +70,27 @@ blockMesh -dict system/blockMeshDict.1D
 ./regressionTest.sh
 ```
 
-### Driver-Managed Sweeps (Suggested)
+### Omnidriver-Managed Sweeps (Suggested)
 
-Cartesian spatial convergence:
+Cartesian spatial convergence. Spec: `setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bidomain_cartesian
 ```
 
-Temporal convergence:
+Temporal convergence. Spec: `setup/studies/temporalConvergence/sweep_temporal_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/temporalConvergence/sweep_temporal_convergence.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bidomain_temporal
 ```
 
-Tetrahedral gradient-scheme and corrector studies:
+Tetrahedral gradient-scheme and corrector studies. Specs: `setup/studies/tetConvergence/sweep_tet_generic.json`, `setup/studies/corrector/sweep_corrector_study.json`, `setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json`, `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`, `setup/studies/correctorN80/sweep_corrector_n80.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetConvergence/sweep_tet_generic.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
-
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
-
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep_corrector_n80.json
 ```
 
 The complete rerun matrix contains 54 cases: Cartesian spatial (12), primary

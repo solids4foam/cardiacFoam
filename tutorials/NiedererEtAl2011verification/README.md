@@ -81,9 +81,9 @@ Driver-managed (from the repository root; a record stages into a scratch
 directory you supply, never into this tree):
 
 ```bash
-driverFoam run --strict --entry niederer2011 --cases-root tutorials --scratch-dir <dir>
-driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir <dir>
-driverFoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/tetConvergence/sweep_tet_generic.json --output-dir <dir>
+omnidriver --plugin cardiacfoam run --strict --entry niederer2011 --cases-root tutorials --scratch-dir <dir>
+omnidriver --plugin cardiacfoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir <dir>
+omnidriver --plugin cardiacfoam sweep-run --spec tutorials/NiedererEtAl2011verification/setup/studies/tetConvergence/sweep_tet_generic.json --output-dir <dir>
 ```
 
 The driver reads this case as it is: `niederer2011` is a pointer at this

@@ -1,0 +1,15 @@
+SetFactory("OpenCASCADE");
+
+lc = __LC__;
+
+Box(1) = {0, 0, 0, 1, 1, 1};
+
+Physical Volume("internal") = {1};
+Physical Surface("walls") = {1, 2};
+Physical Surface("sides") = {3, 4, 5, 6};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.Algorithm3D = 1;
+Mesh.Optimize = 1;
+Mesh.MshFileVersion = 2.2;

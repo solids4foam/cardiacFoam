@@ -2,6 +2,8 @@
 
 Manufactured-solution verification for the monodomain stack with pseudo-ECG verification.
 
+Origin: the monodomain field problem (`manufacturedFDAMonodomainVerifier`) is the monodomain problem of the FDA regulatory science tool (Pathmanathan & Gray 2014). The rotated-anisotropy extension (`manufacturedAnisotropicMonodomainVerifier`) and the pseudo-ECG problem (`manufacturedPseudoECGVerifier`) are this work.
+
 ## Overview
 
 ### Stack
@@ -44,6 +46,10 @@ filenames, not assumed.
 
 ## Variants & Extensions
 
+### Insulated-Wall Case
+
+[`insulatedWall/`](insulatedWall/README.md) is a separate case with walls that are insulated in the conormal sense, `n.G.grad(Vm) = 0` with `n.grad(Vm) != 0`, on a domain periodic in `y` and `z`. The exact solution here satisfies both `n.grad(Vm) = 0` and `n.G.grad(Vm) = 0` on every wall, so it cannot tell the two apart; `insulatedWall/` can. It has its own regression and tetrahedral study.
+
 ### Tetrahedral (unstructured) Mesh Variant
 
 `setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSchemes` (with `ddtSchemes.default none`/`ddt(Vm) backward` spelled out explicitly) is swapped in for the duration of a tet run and restored on exit.
@@ -80,10 +86,10 @@ longer exists in this study directory; nothing here recomputes it.
 
 #### Tetrahedral Convergence Sweep
 
-Tetrahedral mesh convergence study via driverFOAM:
+Tetrahedral mesh convergence study via omnidriver. Spec: `setup/studies/tetConvergence/sweep_tet_generic.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py tet
 ```
 
@@ -98,20 +104,20 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across multi
 ./regressionTest.sh
 ```
 
-### Driver-Managed Sweeps (Suggested)
+### Omnidriver-Managed Sweeps (Suggested)
 
-Spatial convergence (hex mesh):
+Spatial convergence (hex mesh). Spec: `setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-cartesian
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py mono_spatial
 python3 applications/scripts/paperI_results/aggregate.py pseudo_ecg_spatial
 ```
 
-Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D studies use `N = 640`; 3D sweeps did not reach clean asymptotic regime:
+Temporal discretization (fixed fine mesh, `dt` refinement). The finest 1D and 2D studies use `N = 640`; 3D sweeps did not reach clean asymptotic regime. Spec: `setup/studies/temporalConvergence/sweep_temporal_convergence.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/temporalConvergence/sweep_temporal_convergence.json --output-dir .tmp/driverfoam/monodomainPseudoECG-temporal
+[omnidriver command to run]
 ```
 
 The temporal spec holds a fixed fine mesh (`N = 640` in 1D/2D and `N = 160`
@@ -126,15 +132,15 @@ unless the control change is smaller than the accepted field-error separation.
 
 The checked-in sweep JSON files are the source of truth for these studies.
 
-Tetrahedral mesh variant (example of running a study):
+Tetrahedral mesh variant (example of running a study). Spec: `setup/studies/tetConvergence/sweep_tet_generic.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetConvergence/sweep_tet_generic.json
+[omnidriver command to run]
 python3 applications/scripts/paperI_results/aggregate.py tet
 ```
 
-Tetrahedral mesh-fixed timestep controls:
+Tetrahedral mesh-fixed timestep controls. Spec: `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
 
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json --output-dir .tmp/driverfoam/monodomainPseudoECG-tet-dt-half
+[omnidriver command to run]
 ```

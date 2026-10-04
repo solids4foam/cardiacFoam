@@ -20,6 +20,7 @@ License
 #include "myocardiumDomain.H"
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
+#include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
 {
@@ -50,7 +51,11 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
     }
 
     autoPtr<fvMeshSubset> subsetPtr(new fvMeshSubset(supportMesh));
-    subsetPtr->setCellSubset(supportMesh.cellZones()[zoneId]);
+    subsetPtr->setCellSubset
+    (
+        supportMesh.cellZones()[zoneId],
+        myocardiumExposedFacesPatch(supportMesh, electroProperties)
+    );
     return subsetPtr;
 }
 
@@ -208,7 +213,11 @@ myocardiumDomain::myocardiumDomain
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -0.084),
-        "zeroGradient"
+        conormalWallPatchTypes
+        (
+            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
+            electroProperties.get<word>("sealedWallTrace")
+        )
     ),
     gradVm_
     (
@@ -369,6 +378,15 @@ myocardiumDomain::myocardiumDomain
     ),
     setDeltaT_(true)
 {
+    setConormalWallConductivity
+    (
+        Vm_,
+        diffusionSolverPtr_->intracellularConductivityPtr()->name(),
+        diffusionSolverPtr_->phiEPtr()
+      ? diffusionSolverPtr_->phiEPtr()->name()
+      : word::null
+    );
+
     if (timeCouplingScheme_ != "godunov" && timeCouplingScheme_ != "sbdf2")
     {
         FatalErrorInFunction

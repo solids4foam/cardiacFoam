@@ -19,6 +19,8 @@ myocardiumSolver bidomainSolver;
 
 bidomainSolverCoeffs
 {
+    sealedHeartBoundary false;
+    sealedWallTrace     zeroGradient;
     conductivitySource uniform;
     conductivityIntracellular [ -1 -3 3 0 0 2 0 ] ( 0.111453 0 0 0.121585 0 0.0303964 );
     conductivityExtracellular [ -1 -3 3 0 0 2 0 ] ( 0.0461655 0 0 0.0503623 0 0.0125906 );

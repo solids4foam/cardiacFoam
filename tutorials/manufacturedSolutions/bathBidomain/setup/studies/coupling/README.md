@@ -15,14 +15,14 @@ the top-level README) rather than hand-rolled bash.
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json`.
+
 ```bash
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json \
-    --output-dir .tmp/driverfoam/bathBidomain-coupling
+omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/sweep_coupling_study.json --output-dir <scratch output dir>
 python3 tutorials/manufacturedSolutions/bathBidomain/setup/studies/coupling/summarize_coupling_study.py tutorials/manufacturedSolutions/bathBidomain
 ```
 
-`driverFoam` is the external orchestration add-on (not part of this repo;
+`omnidriver` is the external orchestration add-on (not part of this repo;
 see the root `CLAUDE.md`). Run the summarizer from the repository root.
 `--output-dir` holds run-tracking state (`sweep_manifest.json`, per-case
 `run_document.json`) while the actual OpenFOAM data lands in the case root

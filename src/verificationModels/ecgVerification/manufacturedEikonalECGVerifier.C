@@ -220,6 +220,7 @@ bool manufacturedEikonalECGVerifier::read(const dictionary& dict)
         }
     }
 
+    k_ = cfg.getOrDefault<vector>("k", manufacturedEikonalK(dimension_));
     referenceQuadratureOrder_ =
         cfg.lookupOrDefault<label>("referenceQuadratureOrder", 96);
 
@@ -370,8 +371,6 @@ void manufacturedEikonalECGVerifier::record
 
     const tensor conductivity =
         manufacturedEikonalConstantConductivity(requireConductivity());
-
-    k_ = manufacturedEikonalK(dimension_);
 
     List<scalar> referenceNodes, referenceWeights;
     pseudoECGManufacturedQuadratureRule

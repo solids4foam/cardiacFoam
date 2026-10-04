@@ -20,14 +20,16 @@ the case's own `system/fvSchemes`, which is `current`, so
 
 ## Execution
 
+Specs: `setup/studies/gradientScheme/sweep_current.json`, `setup/studies/gradientScheme/sweep_gaussLinear.json`, `setup/studies/gradientScheme/sweep_limitedCorrection.json`, `setup/studies/gradientScheme/sweep_orthogonalControl.json`.
+
 ```bash
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_current.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_gaussLinear.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_limitedCorrection.json
-driverFoam sweep-run --spec setup/studies/gradientScheme/sweep_orthogonalControl.json
+omnidriver --plugin cardiacfoam sweep-run --spec setup/studies/gradientScheme/sweep_current.json --output-dir <scratch output dir>
+omnidriver --plugin cardiacfoam sweep-run --spec setup/studies/gradientScheme/sweep_gaussLinear.json --output-dir <scratch output dir>
+omnidriver --plugin cardiacfoam sweep-run --spec setup/studies/gradientScheme/sweep_limitedCorrection.json --output-dir <scratch output dir>
+omnidriver --plugin cardiacfoam sweep-run --spec setup/studies/gradientScheme/sweep_orthogonalControl.json --output-dir <scratch output dir>
 ```
 
-`driverFoam` is the external orchestration add-on (not part of this repo;
+`omnidriver` is the external orchestration add-on (not part of this repo;
 see the root `CLAUDE.md`).
 
 ## Status

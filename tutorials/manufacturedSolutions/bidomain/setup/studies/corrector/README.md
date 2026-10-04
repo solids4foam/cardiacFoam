@@ -6,8 +6,10 @@ This study validates the predictor-corrector inner loop convergence and stabilit
 
 ## Execution
 
+Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json`.
+
 ```bash
-driverFoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json
+omnidriver --plugin cardiacfoam sweep-run --spec tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_corrector_study.json --output-dir <scratch output dir>
 ```
 
 Sweeps `N = 10, 20, 40` across the four reported variants (`baseline`,
@@ -27,7 +29,7 @@ describe `archive_dir_name`-based output archiving into each case's own
 `archive_dir_name` from its study before resolving study names (unlike a
 factory-tutorial sweep, which does), so naming it here is refused as an
 unknown key -- proven with a real `describe` preview, not assumed. This
-study's own `driverFoam sweep-run` output is not archived per case today;
+study's own omnidriver sweep-run output is not archived per case today;
 each case's raw output lives under the sweep's own `output_dir`.
 
 **Also corrected 2026-09-26, then resolved the same day (controller

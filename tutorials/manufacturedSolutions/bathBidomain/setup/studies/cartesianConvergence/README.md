@@ -6,15 +6,10 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-From the repository root, use the current wrapper:
+From the repository root, use the current wrapper. Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
-driverFoam sweep-plan \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
-    --output-dir .tmp/driverfoam/bathBidomain-cartesian
-driverFoam sweep-run \
-    --spec tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
-    --output-dir .tmp/driverfoam/bathBidomain-cartesian
+[omnidriver command to run]
 ```
 
 Resolve the runtime preflight before expecting OpenFOAM execution.

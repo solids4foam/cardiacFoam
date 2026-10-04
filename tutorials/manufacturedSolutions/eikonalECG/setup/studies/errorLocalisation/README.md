@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This is the canonical driverFOAM path for eikonalECG's solved-field
+This is the canonical omnidriver path for eikonalECG's solved-field
 bulk/boundary error decomposition across the tet `N` ladder
 (`N = 10, 20, 40, 80`) on both gradient schemes (`GaussLinear`,
 `leastSquares`). It sweeps the `manufacturedEikonalECG` entry with
@@ -18,15 +18,13 @@ are required inputs to the retained spatial-localisation analysis.
 
 ## Execution
 
-First materialize and inspect the eight driverFOAM cases:
+First materialize and inspect the eight omnidriver cases. Spec: `tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json`.
 
-    driverFoam sweep-plan \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+    [omnidriver command to run]
 
 Then run the same manifest:
 
-    driverFoam sweep-run \
-        --spec tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/sweep_tet_error_localisation.json
+    [omnidriver command to run]
 
 After a successful sweep, run the in-repository bulk/boundary aggregation over
 the archived outputs:
