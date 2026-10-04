@@ -103,7 +103,7 @@ monodomainSolverCoeffs
         {
             electroDomainCoupler reactionDiffusionPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
-            
+
             verificationModel
             {
                 type coupled1D3DMonodomainVerifier;
