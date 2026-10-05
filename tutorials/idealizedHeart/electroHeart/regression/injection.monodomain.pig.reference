@@ -1,3 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # Monodomain variant on the pig Purkinje tree (Allrun monodomain pig).
 #
 # The probe reads -1 through t=0.03 and activates at 31.9 ms, versus 28.9 ms
@@ -5,8 +7,7 @@
 # different, mostly intramural junctions. With pvjRadius 1.65e-3 every pig
 # junction captures the tissue. Sampled at endTime.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0319412     1e-4
-pseudoECG.dat                           0.025  5    0.0008818167  2e-4
-pseudoECG.dat                           0.04   3    0.002457606   2e-4
-pseudoECG.dat                           0.04   7    0.004256238   2e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.04   2  0.0319412     1e-4
+probe  postProcessing/pseudoECG.dat                    0.025  5  0.0008818167  2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   3  0.002457606   2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   7  0.004256238   2e-4

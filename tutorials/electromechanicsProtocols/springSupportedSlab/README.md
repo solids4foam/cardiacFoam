@@ -154,34 +154,38 @@ written every 10 ms.
 
 ## Results
 
-The sweep of `setup/sweep_springStiffness.json`, OpenFOAM v2412, 250 ms:
+The sweep of `setup/sweep_springStiffness.json`, OpenFOAM v2412, 250 ms, with
+a solids4foam that includes `solidRobin` and the `electroMechanicalLaw`
+deformation-gradient fix (#393):
 
 | caseId | Peak shortening | Peak end force | Spring-law error* |
 |---|---|---|---|
-| `k1e10` | 0.03 % (isometric) | 574 mN | 1.0e-6 |
-| `k1e8` | 2.25 % | 472 mN | 7.4e-6 |
-| `k1e7` | 8.59 % | 180 mN | 1.5e-5 |
-| `k1e7_dt1e-6` | 8.58 % | 175 mN | 3.9e-6 |
-| `k1e6` | 11.93 % | 25 mN | 2.9e-5 |
-| `k1e5` | 12.41 % (≈ free) | 2.5 mN | 3.1e-5 |
+| `k1e10` | 0.03 % (isometric) | 575 mN | 9.9e-7 |
+| `k1e8` | 2.19 % | 459 mN | 5.5e-6 |
+| `k1e7` | 7.86 % | 165 mN | 1.2e-5 |
+| `k1e7_dt1e-6` | 7.85 % | 160 mN | 3.1e-6 |
+| `k1e6` | 10.76 % | 22 mN | 2.2e-5 |
+| `k1e5` | 11.18 % (≈ free) | 2.3 mN | 2.3e-5 |
 
 \* max \|F_stress − (−kEnds · A0 · ⟨Dx⟩)\| over the run, divided by
 Ta_max · A0.
 
 - **Spring law:** the end force from the stress field and the spring law
   agree to within 3e-5 of the active force scale for every stiffness.
-- **Limits:** `k1e10` is isometric; its peak end force, 574 mN, is 98 % of
-  Ta_max · A0 = 27.8 kPa × 21 mm² = 584 mN (Ta_max is the largest probe
+- **Limits:** `k1e10` is isometric; its peak end force, 575 mN, is 98 % of
+  Ta_max · A0 = 28.0 kPa × 21 mm² = 587 mN (Ta_max is the largest probe
   value; the end force integrates the whole cross-section). `k1e5` gives the
   free shortening.
-- **Transition:** peak shortening drops from 12.4 % to 0 between 1e6 and
-  1e10 Pa/m, with `k1e7` (kEnds = 2E/L) at 8.6 %.
+- **Transition:** peak shortening drops from 11.2 % to 0 between 1e6 and
+  1e10 Pa/m, with `k1e7` (kEnds = 2E/L) at 7.9 %.
 - **Time step:** `deltaT = 1e-6` changes the peak shortening of `k1e7` by
-  0.07 % and its peak end force (at 148 ms) by 3 %. The shortening curves
-  differ mainly in the first few milliseconds, where the step load from the
-  resting Ta makes the `deltaT = 1e-5` run ring briefly.
+  0.04 % and its peak end force (at 148 ms) by 3 %.
 - **Activation:** the plane wave reaches the far end (x = 19.25 mm) at about
   45 ms, a conduction velocity of about 0.42 m/s along the fibres.
+- **solids4foam version:** without #393 the active stress is added in the
+  undeformed fibre direction (`Ta f0f0`) instead of pushed forward with the
+  deformation gradient (`F (Ta f0f0) F^T / J`). The isometric case is then
+  unchanged, but shortening is up to 10 % larger (12.4 % for `k1e5`).
 
 `setup/postprocess_springStiffness.py` writes this table
 (`springStiffness_summary.csv`) and a four-panel figure

@@ -1,8 +1,8 @@
-# 2026-09-24: cutoff moved from t=0.02 to t=0.035. With the Purkinje
-# network at ~3.3 m/s (purkinjeConductivity 0.4) the healthy tree activates
-# this point at 28.8 ms, so t=0.02 no longer separated block from health; the
-# blocked point activates by myocardial spread at 43.2 ms.
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
+# At t=0.035 the disconnected LV is not yet active and the intact RV is.
+# The healthy tree activates the LV point at 28.8 ms and myocardial spread
+# reaches it at 43.2 ms, so 0.035 separates block from health.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.035  2    -1            1e-4
-injectionProbe/0/activationTime         0.035  3    0.0130968     1e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.035  2  -1         1e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.035  3  0.0130968  1e-4

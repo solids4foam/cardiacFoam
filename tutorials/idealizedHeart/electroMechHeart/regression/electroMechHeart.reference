@@ -1,12 +1,15 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
+# Values from solids4foam ed7f957f, whose electroMechanicalLaw pushes the active
+# stress forward with the deformation gradient (#393).
 # Probe values at t = 0.02 s. Column indices count the whitespace-separated
 # fields of the probe file after stripping the parentheses that vector probes
 # write, so time is column 1, probe 0 is columns 2..4 for a vector and column 2
 # for a scalar.
 #
-# file                                time   col  expected       tolerance
-CaiProbes/electro/0/activationTime    0.02   2    0.00323067     1e-5
-CaiProbes/electro/0/activationTime    0.02   3    -1             1e-9
-Taprobes/solid/0/D                    0.02   2    4.15657e-05    1e-6
-Taprobes/solid/0/D                    0.02   4    -5.35745e-05   1e-6
-Taprobes/solid/0/D                    0.02   6    -1.94046e-04   2e-6
-Taprobes/solid/0/Ta                   0.02   2    5773.36        60.0
+probe  postProcessing/CaiProbes/electro/0/activationTime  0.02  2  0.00323067    1e-5
+probe  postProcessing/CaiProbes/electro/0/activationTime  0.02  3  -1            1e-9
+probe  postProcessing/Taprobes/solid/0/D                  0.02  2  3.74716e-05   1e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.02  4  -5.08826e-05  1e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.02  6  -0.000194546  2e-6
+probe  postProcessing/Taprobes/solid/0/Ta                 0.02  2  5730.09       60.0

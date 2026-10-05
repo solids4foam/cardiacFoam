@@ -27,10 +27,11 @@ structural conduction problem.
 
 ## Regression coverage
 
-`conductionBlock`'s `lbbb` variant is regression-covered (see
-`conductionBlock/regression/`) — it checks the structural technique
-actually blocks propagation: an activation-time probe at an LV
-Purkinje-myocardial junction site must still be un-activated at t = 35 ms. `ionicPathology`
+`conductionBlock`'s `lbbb` and `rbbb` variants are regression-covered (see
+`conductionBlock/regression/`) — they check the structural technique
+actually blocks propagation: the activation-time probe on the severed
+ventricle's Purkinje-myocardial junction site must still be un-activated at
+t = 35 ms while the intact ventricle's probe has activated. `ionicPathology`
 has no automated regression yet — its pathology signatures only show up
 over timescales (its own case runs 700ms) a short automated check
 wouldn't meaningfully capture.

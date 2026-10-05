@@ -1,17 +1,19 @@
-# kind       key        metric      expected          tolerance
-summary     cells      value       20                0
-summary     finalTime  value       0.200028          1e-9
-error       Vm         L1          0.000293945       1e-7
-error       Vm         L2          0.0003914         1e-7
-error       Vm         Linf        0.00148244        1e-7
-error       u1         L1          4.09866e-05       1e-7
-error       u1         L2          5.70471e-05       1e-7
-error       u1         Linf        0.000252586       1e-7
-error       u2         L1          1.69077e-05       1e-8
-error       u2         L2          2.27228e-05       1e-8
-error       u2         Linf        8.81125e-05       1e-7
-pseudoECG   E1         final       0.0074106238      1e-8
-pseudoECG   E2         final       0.0074106271      1e-8
-pseudoECG   E3         final       0.017480815       1e-7
-pseudoECG   E4         final       0.012227997       1e-7
-pseudoECG   E5         final       0.00069783531     1e-7
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# final <file> <column> <expected> <tolerance>
+summary  cells                         20        0
+summary  finalTime                     0.200028  1e-9
+error    Vm                            L1        0.000293945    1e-7
+error    Vm                            L2        0.0003914      1e-7
+error    Vm                            Linf      0.00148244     1e-7
+error    u1                            L1        4.09866e-05    1e-7
+error    u1                            L2        5.70471e-05    1e-7
+error    u1                            Linf      0.000252586    1e-7
+error    u2                            L1        1.69077e-05    1e-8
+error    u2                            L2        2.27228e-05    1e-8
+error    u2                            Linf      8.81125e-05    1e-7
+final    postProcessing/pseudoECG.dat  E1        0.0074106238   1e-8
+final    postProcessing/pseudoECG.dat  E2        0.0074106271   1e-8
+final    postProcessing/pseudoECG.dat  E3        0.017480815    1e-7
+final    postProcessing/pseudoECG.dat  E4        0.012227997    1e-7
+final    postProcessing/pseudoECG.dat  E5        0.00069783531  1e-7

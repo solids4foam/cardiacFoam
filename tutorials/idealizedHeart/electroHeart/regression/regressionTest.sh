@@ -1,177 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
-# ============================================================
-# Idealized heart injection regression test
-# ============================================================
+# Shared regression library (tutorials/regression/lib.sh), found by walking up
+# from this case; CARDIAC_REGRESSION_LIB overrides the lookup.
+regressionLib="${CARDIAC_REGRESSION_LIB:-}"
+if [[ -z "${regressionLib}" ]]; then
+    dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    while [[ "${dir}" != / && ! -f "${dir}/regression/lib.sh" ]]; do
+        dir="$(dirname "${dir}")"
+    done
+    regressionLib="${dir}/regression/lib.sh"
+fi
+. "${regressionLib}"
+
+# Probes activationTime at a Purkinje-myocardial-junction site on the LV free
+# wall (node 211 of the shared purkinjeGraph) and samples the pseudo-ECG. The
+# same point is the one conductionBlock's lbbb check requires to stay
+# un-activated; here it must have activated.
 #
-# Confirms the stimulus/Purkinje-to-myocardium injection is correct across
-# all three solver variants: probes activationTime at a
-# Purkinje-myocardial-junction site on the LV free wall (node 211 in the
-# shared purkinjeGraph). This is the same point conductionBlock's lbbb
-# regression checks stays un-activated (severed LV subtree) - here it must
-# have activated, in every variant.
-#
-# Each variant has its own reference because each reaches the probe
-# differently: monodomain activates it at 28.9ms, hybrid's eikonal-1D
-# Purkinje to 3D monodomain coupling at 30.1ms, and eikonal solves a single
-# steady problem that writes only time 1. The sample time in each reference
-# reflects that; the expected values were measured, not chosen. ECG rows
-# also sample three lead/time combinations from each variant's trace.
-#
-# Every variant runs on both Purkinje trees (Allrun's human/pig argument):
-# the human tree keeps all terminals on the endocardium, the pig tree inserts
-# them transmurally. The pig tree reaches the same probe point through
-# different junctions, so it has its own references,
-# injection.<variant>.pig.reference.
+# CARDIAC_REGRESSION_SCOPE=standard (default): the monodomain variant on the
+# human Purkinje tree, regression/injection.monodomain.reference.
+# CARDIAC_REGRESSION_SCOPE=full: every solver variant (monodomain, eikonal,
+# hybrid) on both trees (human, pig). Each combination has its own reference,
+# injection.<variant>.reference for human and injection.<variant>.pig.reference
+# for pig: monodomain activates the probe at 28.9 ms, hybrid at 30.1 ms, and
+# eikonal solves one steady problem that writes only time 1.
 
-VARIANTS=(monodomain eikonal hybrid)
-TREES=(human pig)
-ALLRUN_LOGFILE="log.Allrun"
+regression_init "Idealized heart injection regression test" \
+    regression/injection.monodomain.reference "$@"
+regression_scope
 
-echo "============================================================"
-echo "Idealized heart injection regression test"
-echo "============================================================"
-echo
-
-dumpLogTail()
-{
-    local label="$1"
-    local logFile="$2"
-    local maxLines="${3:-80}"
-
-    if [[ -s "${logFile}" ]]; then
-        echo "----- last ${maxLines} lines of ${label} (${logFile}) -----"
-        tail -n "${maxLines}" "${logFile}"
-        echo "----- end of ${label} -----"
-    else
-        echo "(no log file at ${logFile})"
-    fi
-}
-
-# Compare one reference file's probe and ECG rows against this variant's output.
-# Echoes PASS/FAIL per row; returns the number of failures.
-checkReference()
-{
-    local refFile="$1"
-    local variantFailures=0
-
-    while IFS=' ' read -r fileName time column expected tolerance; do
-        if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
-            continue
-        fi
-
-        local dataFile="postProcessing/${fileName}"
-        if [[ ! -f "${dataFile}" ]]; then
-            echo "FAIL: missing output file ${dataFile}"
-            variantFailures=$((variantFailures + 1))
-            continue
-        fi
-
-        local actual
-        actual="$(
-            awk -v target="${time}" -v col="${column}" '
-                BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-                $1 !~ /^#/ && NF >= col {
-                    d = $1 - target;
-                    if (d < 0) d = -d;
-                    if (d < bestDiff) {
-                        bestDiff = d;
-                        actual = $col;
-                        found = 1;
-                    }
-                }
-                END {
-                    if (found && bestDiff <= 2.5e-3) {
-                        print actual;
-                        exit 0;
-                    }
-                    exit 1;
-                }
-            ' "${dataFile}"
-        )" || true
-
-        if [[ -z "${actual}" ]]; then
-            echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
-            variantFailures=$((variantFailures + 1))
-            continue
-        fi
-
-        local diffAbs
-        diffAbs="$(
-            awk -v a="${actual}" -v e="${expected}" \
-                'BEGIN { d = a - e; if (d < 0) d = -d; print d; }'
-        )"
-
-        if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d < t)}'; then
-            printf "PASS: %s col=%s t=%s value=%.7g (difference = %.3g)\n" \
-                "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
-        else
-            printf "FAIL: %s col=%s t=%s value=%.7g (difference = %.3g)\n" \
-                "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
-            variantFailures=$((variantFailures + 1))
-        fi
-    done < "${refFile}"
-
-    return "${variantFailures}"
-}
-
-failures=0
-failedVariants=()
+VARIANTS=(monodomain)
+TREES=(human)
+if [[ "${REGRESSION_SCOPE}" == full ]]; then
+    VARIANTS=(monodomain eikonal hybrid)
+    TREES=(human pig)
+fi
 
 for tree in "${TREES[@]}"; do
 for variant in "${VARIANTS[@]}"; do
-    if [[ "${tree}" == "human" ]]; then
-        refFile="regression/injection.${variant}.reference"
-    else
-        refFile="regression/injection.${variant}.${tree}.reference"
+    refFile="regression/injection.${variant}.reference"
+    if [[ "${tree}" == pig ]]; then
+        refFile="regression/injection.${variant}.pig.reference"
     fi
-    label="${variant}/${tree}"
 
     echo "------------------------------------------------------------"
     echo "Variant: ${variant}  Purkinje tree: ${tree}"
     echo "------------------------------------------------------------"
 
-    if [[ ! -f "${refFile}" ]]; then
-        echo "FAIL: reference file not found: ${refFile}"
-        failures=$((failures + 1))
-        failedVariants+=("${label}")
-        echo
+    if ! regression_run "${variant}" "${tree}" parallel; then
+        regression_fail "Allrun ${variant} ${tree} parallel did not complete"
         continue
     fi
-
-    ./Allclean > /dev/null 2>&1 || true
-
-    if ! ./Allrun "${variant}" "${tree}" parallel > "${ALLRUN_LOGFILE}" 2>&1; then
-        echo "FAIL: Allrun ${variant} ${tree} parallel exited non-zero. Surfacing logs:"
-        dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
-        dumpLogTail "cardiacFoam" "log.cardiacFoam"
-        failures=$((failures + 1))
-        failedVariants+=("${label}")
-        echo
-        continue
-    fi
-
-    variantFailures=0
-    checkReference "${refFile}" || variantFailures=$?
-
-    if (( variantFailures > 0 )); then
-        failures=$((failures + variantFailures))
-        failedVariants+=("${label}")
-    fi
+    regression_compare "${refFile}" || true
     echo
 done
 done
 
-if (( failures == 0 )); then
-    echo "============================================================"
-    echo "Regression test PASSED (${#VARIANTS[@]} variants x ${#TREES[@]} Purkinje trees)"
-    echo "============================================================"
-    exit 0
-else
-    echo "============================================================"
-    echo "Regression test FAILED (${failures} check(s) in: ${failedVariants[*]})"
-    echo "============================================================"
-    exit 1
-fi
+regression_finish

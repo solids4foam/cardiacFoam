@@ -41,7 +41,6 @@ The case ships A+B.
 ## Usage
 
 ```bash
-blockMesh -dict system/blockMeshDict.3D
 ./Allrun parallel
 ./regression/regressionTest.sh
 ```

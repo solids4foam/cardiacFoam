@@ -1,3 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # Hybrid variant: monodomainSolver + restitutionEikonalSolver1D.
 #
 # This probe reads -1 through t=0.03 and activates at 30.1 ms, then holds
@@ -11,8 +13,7 @@
 # it - and a 1.2% slower Purkinje velocity delays this junction by 0.34 ms,
 # 3.4x the tolerance below.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0301140     1e-4
-pseudoECG.dat                           0.025  5    0.001716928   2e-4
-pseudoECG.dat                           0.04   3    0.002170185   2e-4
-pseudoECG.dat                           0.04   7    0.004720678   2e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.04   2  0.0301140    1e-4
+probe  postProcessing/pseudoECG.dat                    0.025  5  0.001716928  2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   3  0.002170185  2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   7  0.004720678  2e-4
