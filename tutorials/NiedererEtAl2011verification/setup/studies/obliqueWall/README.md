@@ -54,17 +54,17 @@ within one variant only in the two time-scheme keys.
 
 Niederer's grid, as in `cartesianConvergence`: Δx = 0.5, 0.2, 0.1 mm × Δt =
 0.05, 0.01, 0.005 ms, nine cases per file, the Δt values of each Δx in
-order. `endTime` is 0.2 s at Δx 0.5 mm, 0.08 s at Δx 0.2 mm and 0.065 s at
+order. `endTime` is 0.2 s at Δx 0.5 mm, 0.08 s at Δx 0.2 mm and 0.075 s at
 Δx 0.1 mm.
 
-The last two differ from what the aligned slab needs. At Δx 0.1 mm the
-aligned far corner (P8) activates at about 45.5 ms, so the 0.055 s of
-`cartesianConvergence` leaves about 9.5 ms. The rotated tensor delays the
-last activation, and the wall treatment moves it again: at Δx 0.5 mm the
-last cell activates 8.3 ms later with `AB` than with `0`. That would leave
-almost no margin, and a cell not activated by `endTime` cannot be compared.
-0.065 s keeps about 19.5 ms. The run's summary must still confirm that every
-cell activated.
+The last differs from what the aligned slab needs. At Δx 0.1 mm the aligned
+far corner (P8) activates at about 45.5 ms, so the 0.055 s of
+`cartesianConvergence` leaves about 9.5 ms. The rotated tensor and the wall
+treatment delay the last activation: at Δx 0.2 mm the last `AB` cell
+activates at about 70 ms, 15.6 ms after the aligned P8 (54.4 ms). The same
+delay at Δx 0.1 mm puts the last cell near 61 ms, and a cell not activated
+by `endTime` cannot be compared. 0.075 s keeps about 14 ms. The run's summary
+must still confirm that every cell activated.
 
 Hex only. A tet version of the study is a later step.
 
