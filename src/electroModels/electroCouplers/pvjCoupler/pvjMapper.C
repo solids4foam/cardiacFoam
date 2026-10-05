@@ -240,90 +240,24 @@ void pvjMapper::volumetricSource
 }
 
 
-scalar pvjMapper::sphereAverageDecayRate
-(
-    const scalarField& conductance,
-    label& peakTerminal
-) const
+scalarField pvjMapper::sphereAverageDecayRates() const
 {
-    // The term on cell c is sum_k a_k[c] b_k.V with a_k = w_k G_k/V_s,k and
-    // b_k = w_k V/V_s,k; its non-zero eigenvalues are those of the
-    // terminal-sized N_lk = b_l.a_k, similar to the symmetric
-    // sqrt(G) S sqrt(G), S_lk = sum_c w_l w_k V/(V_s,l V_s,k), whose largest
-    // eigenvalue the power iteration below finds without forming S.
-    const label nTerminals = terminalCellSets_.size();
     const scalarField& cellVolumes = mesh_.V();
-    const scalarField scale(sqrt(conductance)/sphereVolumes_);
+    scalarField rates(terminalCellSets_.size(), 0.0);
 
-    scalarField cellSum(mesh_.nCells(), 0.0);
-    scalarField x(nTerminals, 1.0/Foam::sqrt(scalar(max(nTerminals, 1))));
-    scalarField y(nTerminals, 0.0);
-    scalar lambda = 0.0;
-
-    for (label iter = 0; iter < 1000; ++iter)
+    forAll(terminalCellSets_, i)
     {
-        forAll(terminalCellSets_, k)
+        forAll(terminalCellSets_[i], localI)
         {
-            forAll(terminalCellSets_[k], localI)
-            {
-                cellSum[terminalCellSets_[k][localI]] +=
-                    terminalCellWeights_[k][localI]*scale[k]*x[k];
-            }
+            const scalar w = terminalCellWeights_[i][localI];
+            rates[i] += w*w*cellVolumes[terminalCellSets_[i][localI]];
         }
 
-        y = 0.0;
-        forAll(terminalCellSets_, l)
-        {
-            forAll(terminalCellSets_[l], localI)
-            {
-                const label cellI = terminalCellSets_[l][localI];
-                y[l] +=
-                    terminalCellWeights_[l][localI]*cellVolumes[cellI]
-                   *cellSum[cellI];
-            }
-            y[l] *= scale[l];
-        }
-
-        forAll(terminalCellSets_, k)
-        {
-            forAll(terminalCellSets_[k], localI)
-            {
-                cellSum[terminalCellSets_[k][localI]] = 0.0;
-            }
-        }
-
-        reduce
-        (
-            y.begin(),
-            y.size(),
-            sumOp<scalar>(),
-            UPstream::msgType(),
-            UPstream::worldComm
-        );
-
-        const scalar lambdaNew = sum(x*y);
-        const scalar norm = Foam::sqrt(sum(sqr(y)));
-
-        if (norm <= VSMALL)
-        {
-            break;
-        }
-
-        x = y/norm;
-
-        const bool converged =
-            mag(lambdaNew - lambda) <= 1e-10*mag(lambdaNew);
-        lambda = lambdaNew;
-
-        if (converged)
-        {
-            break;
-        }
+        reduce(rates[i], sumOp<scalar>());
+        rates[i] /= sqr(sphereVolumes_[i]);
     }
 
-    peakTerminal = nTerminals ? findMax(x) : -1;
-
-    return lambda;
+    return rates;
 }
 
 

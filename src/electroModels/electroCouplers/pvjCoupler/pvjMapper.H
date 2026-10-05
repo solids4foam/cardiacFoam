@@ -100,14 +100,9 @@ public:
         return sphereVolumes_;
     }
 
-    //- Largest decay rate times chi*Cm [S/m^3] of the sphere-averaged
-    //  junction term over all terminals, whose spheres may share cells.
-    //  peakTerminal is the terminal that dominates the decaying mode.
-    scalar sphereAverageDecayRate
-    (
-        const scalarField& conductance,
-        label& peakTerminal
-    ) const;
+    //- Per terminal, sum_c w_c^2 V_c/V_s^2 [1/m^3]: the tissue decay rate
+    //  per unit conductance and capacitance of the sphere-averaged term.
+    scalarField sphereAverageDecayRates() const;
 };
 
 } // End namespace Foam
