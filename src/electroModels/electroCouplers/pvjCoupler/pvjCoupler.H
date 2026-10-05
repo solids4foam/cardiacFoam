@@ -76,6 +76,10 @@ protected:
     //- pvjCouplingScheme, 'explicit' (default) or 'implicit'.
     static word readCouplingScheme(const dictionary& dict);
 
+    //- Junction resistances [Ohm]: the graph's pvjResistances when given,
+    //  otherwise rPvj at every terminal.
+    scalarField readResistances(const dictionary& dict) const;
+
     pvjCoupler
     (
         tissueCouplingEndpoint& primaryDomain,

@@ -91,6 +91,31 @@ word pvjCoupler::readCouplingScheme(const dictionary& dict)
 }
 
 
+scalarField pvjCoupler::readResistances(const dictionary& dict) const
+{
+    if (const scalarField* graphResistances =
+            networkTerminalDomain_.terminalResistances())
+    {
+        return *graphResistances;
+    }
+
+    const scalar resistance(dict.get<scalar>("rPvj"));
+
+    if (resistance <= 0)
+    {
+        FatalIOErrorInFunction(dict)
+            << "rPvj must be positive [Ohm]; got " << resistance << "."
+            << exit(FatalIOError);
+    }
+
+    return scalarField
+    (
+        networkTerminalDomain_.terminalNodes().size(),
+        resistance
+    );
+}
+
+
 pvjCoupler::pvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,

@@ -203,6 +203,30 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
         }
     }
 
+    if (!graph_.pvjResistances.empty())
+    {
+        if (graph_.pvjResistances.size() != terminalNodes_.size())
+        {
+            FatalErrorInFunction
+                << "pvjResistances from graph file '" << graphFile
+                << "' must have one entry per PVJ. pvjResistances.size()="
+                << graph_.pvjResistances.size()
+                << " pvjNodes.size()=" << terminalNodes_.size()
+                << exit(FatalError);
+        }
+
+        forAll(graph_.pvjResistances, i)
+        {
+            if (graph_.pvjResistances[i] <= 0)
+            {
+                FatalErrorInFunction
+                    << "pvjResistances[" << i << "]="
+                    << graph_.pvjResistances[i] << " in graph file '"
+                    << graphFile << "' must be positive [Ohm]."
+                    << exit(FatalError);
+            }
+        }
+    }
 }
 
 
@@ -235,6 +259,15 @@ void conductionSystemDomain::readRootStimulus(const dictionary& dict)
     if (rsDict.found("node"))
     {
         rootNode_ = rsDict.get<label>("node");
+
+        if (rootNode_ < 0 || rootNode_ >= graph_.nNodes)
+        {
+            FatalIOErrorInFunction(rsDict)
+                << "rootStimulus node " << rootNode_
+                << " is outside graph node range [0,"
+                << graph_.nNodes - 1 << "]."
+                << exit(FatalIOError);
+        }
     }
 
     Info<< "Purkinje root stimulus: node=" << rootNode_

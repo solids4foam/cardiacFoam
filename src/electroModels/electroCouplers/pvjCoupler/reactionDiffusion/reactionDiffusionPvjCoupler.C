@@ -109,22 +109,12 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
 )
 :
     pvjCoupler(primaryDomain, secondaryDomain, dict),
-    R_pvj_(),
+    R_pvj_(readResistances(dict)),
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
     couplingScheme_(readCouplingScheme(dict)),
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
-    const scalarField* pRes = networkTerminalDomain_.terminalResistances();
-    if (pRes)
-    {
-        R_pvj_ = *pRes;
-    }
-    else
-    {
-        R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
-    }
-
     if (couplingMode_ == bidirectional)
     {
         networkTerminalDomain_.setTerminalConductances(1.0/R_pvj_);
