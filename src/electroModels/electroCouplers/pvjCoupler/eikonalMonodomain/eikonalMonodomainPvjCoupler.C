@@ -43,10 +43,21 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
 :
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     terminalActivationBuffer_(),
-    R_pvj_(readResistances(dict)),
+    R_pvj_(),
     couplingScheme_(readCouplingScheme(dict)),
     vmTemplateOffset_(0.0)
 {
+    if (dict.found("rPvj"))
+    {
+        R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "Missing rPvj in domainCouplings dictionary for "
+            << "eikonalMonodomainPvjCoupler" << exit(FatalError);
+    }
+
     const ionicModel* tissueModel = primaryDomain.ionicModelPtr();
     if (!tissueModel)
     {
@@ -124,6 +135,12 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 
     scalarField tissueVoltage;
     mapper_.gatherVm3DPvjs(primaryDomain_.Vm(), tissueVoltage);
+
+    const scalarField* specificR_pvj = networkTerminalDomain_.terminalResistances();
+    if (specificR_pvj)
+    {
+        R_pvj_ = *specificR_pvj;
+    }
 
     for (label i = 0; i < nTerminalNodes; ++i)
     {
