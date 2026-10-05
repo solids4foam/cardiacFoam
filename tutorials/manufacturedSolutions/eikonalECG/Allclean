@@ -13,3 +13,9 @@ rm -rf processor*
 rm -f log.*
 rm -rf constant/polyMesh
 rm -rf postProcessing
+
+# Mesh-quality fields written into 0/ by checkMesh -writeAllFields; generated,
+# and sized for whichever mesh was checked last.
+rm -f 0/aspectRatio 0/cellAspectRatio 0/cellDeterminant 0/cellRegion 0/cellShapes \
+      0/cellVolume 0/cellVolumeRatio 0/cellZone 0/faceWeight 0/faceZone \
+      0/minPyrVolume 0/minTetVolume 0/nonOrthoAngle 0/skewness

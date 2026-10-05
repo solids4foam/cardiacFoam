@@ -1,4 +1,6 @@
 #!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
 
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
@@ -20,4 +22,3 @@ if $parallelRun; then
 else
     runApplication cardiacFoam
 fi
-

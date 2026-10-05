@@ -1,4 +1,6 @@
 #!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
 
 # Source OpenFOAM run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
@@ -135,10 +137,4 @@ if $parallelRun; then
     runApplication reconstructPar
 else
     runApplication cardiacFoam
-fi
-
-if [ "${CF_SKIP_PLOTS:-1}" = "1" ]; then
-    echo "Skipping pseudoECG plot generation (CF_SKIP_PLOTS=1)."
-else
-    python3 plot_pseudo_ecg.py --case-dir .
 fi
