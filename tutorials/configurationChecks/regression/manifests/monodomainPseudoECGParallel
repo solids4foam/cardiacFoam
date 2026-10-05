@@ -1,0 +1,16 @@
+0.0025/Vm
+0.0025/Vm_0
+0.0025/activationTime
+0.0025/externalStimulusCurrent
+0.0025/ionicCurrent
+0.0025/uniform/functionObjects/functionObjectProperties
+0.0025/uniform/time
+0.005/Vm
+0.005/Vm_0
+0.005/activationTime
+0.005/externalStimulusCurrent
+0.005/ionicCurrent
+0.005/uniform/functionObjects/functionObjectProperties
+0.005/uniform/time
+constant/electroProperties.withDefaultValues
+postProcessing/pseudoECG.dat

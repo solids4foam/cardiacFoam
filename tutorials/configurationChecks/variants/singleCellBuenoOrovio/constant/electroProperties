@@ -1,0 +1,51 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver singleCellSolver;
+
+singleCellSolverCoeffs
+{
+    ionicModel    BuenoOrovio;
+    tissue        epicardialCells;
+
+    solver        RKF45;
+    maxSteps      1000000000;
+
+    // One beat at 20 ms (singleCellStimulus times are in ms)
+    singleCellStimulus
+    {
+        stim_start      20;
+        stim_duration   1;
+        stim_amplitude  60;
+        stim_period_S1  1000;
+        nstim1          1;
+        stim_period_S2  0;
+        nstim2          0;
+    }
+
+    writeAfterTime  0;
+    writeFrequency  0.001;
+
+    outputVariables
+    {
+        ionic
+        {
+            export (Vm);
+            debug ();
+        }
+    }
+}
+
+// ************************************************************************* //
