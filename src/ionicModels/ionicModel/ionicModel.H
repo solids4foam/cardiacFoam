@@ -104,6 +104,9 @@ class ionicModel
         //- dVm/dt of the active integration point, in model state/time units
         scalar activeVmRate_;
 
+        //- Restart state file name; empty means type() + "State"
+        word restartStateName_;
+
 
     // Private Member Functions
 
@@ -167,6 +170,24 @@ class ionicModel
         virtual bool supportsRestartState() const
         {
             return false;
+        }
+
+        //- Restart state file under each time directory
+        word restartStateName() const
+        {
+            if (restartStateName_.empty())
+            {
+                return type() + "State";
+            }
+            return restartStateName_;
+        }
+
+        //- Give this instance its own restart file, so two models of one
+        //  type on one mesh (a conduction network beside the tissue) do
+        //  not share one
+        void setRestartStateName(const word& name)
+        {
+            restartStateName_ = name;
         }
 
         virtual bool readRestartState(const fvMesh&)

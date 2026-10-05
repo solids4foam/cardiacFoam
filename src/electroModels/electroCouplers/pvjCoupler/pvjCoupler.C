@@ -20,6 +20,7 @@ License
 #include "pvjCoupler.H"
 #include "electroDomainInterface.H"
 #include "electroVolumeFieldDomain.H"
+#include "purkinjeModelIO.H"
 
 namespace Foam
 {
@@ -120,11 +121,46 @@ pvjCoupler::pvjCoupler
     ),
     lastObservedTissueActivation_
     (
-        networkTerminalDomain_.terminalNodes().size(),
-        -1.0
+        IOobject
+        (
+            IOobject::groupName
+            (
+                "lastObservedTissueActivation",
+                dict.dictName()
+            ),
+            primaryDomain.mesh().time().timeName(),
+            primaryDomain.mesh(),
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        0
     ),
     stabilityCheckedDeltaT_(-1.0)
-{}
+{
+    const label nTerminals = networkTerminalDomain_.terminalNodes().size();
+
+    if (lastObservedTissueActivation_.filePath().empty())
+    {
+        lastObservedTissueActivation_.setSize(nTerminals, -1.0);
+    }
+    else if (lastObservedTissueActivation_.size() != nTerminals)
+    {
+        FatalErrorInFunction
+            << lastObservedTissueActivation_.name() << " has "
+            << lastObservedTissueActivation_.size() << " entries for "
+            << nTerminals << " PVJs."
+            << exit(FatalError);
+    }
+}
+
+
+void pvjCoupler::write()
+{
+    if (couplingMode_ == bidirectional && mesh_.time().outputTime())
+    {
+        purkinjeModelIO::writeGlobalField(lastObservedTissueActivation_);
+    }
+}
 
 
 void pvjCoupler::clearTerminalCouplingBuffers() const

@@ -113,7 +113,7 @@ const char* const* Foam::TNNP::ioAlgebraicNames() const
 
 bool Foam::TNNP::readRestartState(const fvMesh& mesh)
 {
-    const fileName statePath = restartStateIO::path(mesh, "TNNPState");
+    const fileName statePath = restartStateIO::path(mesh, restartStateName());
 
     if (!isFile(statePath))
     {
@@ -177,7 +177,7 @@ bool Foam::TNNP::readRestartState(const fvMesh& mesh)
 
 void Foam::TNNP::writeRestartState(const fvMesh& mesh) const
 {
-    const fileName statePath = restartStateIO::path(mesh, "TNNPState");
+    const fileName statePath = restartStateIO::path(mesh, restartStateName());
     std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
     if (!os)
     {

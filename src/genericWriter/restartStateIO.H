@@ -216,11 +216,12 @@ inline bool readStates
 (
     const fvMesh& mesh,
     const word& model,
+    const word& stateName,
     const label stride,
     PtrList<scalarField>& states
 )
 {
-    const fileName statePath = path(mesh, model + "State");
+    const fileName statePath = path(mesh, stateName);
     if (!isFile(statePath))
     {
         return false;
@@ -248,11 +249,12 @@ inline void writeStates
 (
     const fvMesh& mesh,
     const word& model,
+    const word& stateName,
     const label stride,
     const PtrList<scalarField>& states
 )
 {
-    const fileName statePath = path(mesh, model + "State");
+    const fileName statePath = path(mesh, stateName);
     std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
     if (!os)
     {
@@ -269,6 +271,30 @@ inline void writeStates
             writeScalar(os, states[integrationPtI][stateI], statePath);
         }
     }
+}
+
+
+inline bool readStates
+(
+    const fvMesh& mesh,
+    const word& model,
+    const label stride,
+    PtrList<scalarField>& states
+)
+{
+    return readStates(mesh, model, model + "State", stride, states);
+}
+
+
+inline void writeStates
+(
+    const fvMesh& mesh,
+    const word& model,
+    const label stride,
+    const PtrList<scalarField>& states
+)
+{
+    writeStates(mesh, model, model + "State", stride, states);
 }
 
 }

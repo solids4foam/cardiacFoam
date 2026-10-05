@@ -31,6 +31,7 @@ Author
 #include "electroDomainCoupler.H"
 #include "pvjMapper.H"
 #include "Switch.H"
+#include "globalIOFields.H"
 
 namespace Foam
 {
@@ -56,8 +57,9 @@ protected:
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
 
-    //- Latest tissue activation seen at each terminal at the previous observation.
-    scalarField lastObservedTissueActivation_;
+    //- Latest tissue activation seen at each terminal at the previous
+    //  observation; written with the time directories for a restart.
+    scalarGlobalIOField lastObservedTissueActivation_;
 
     //- Time step at which the explicit junction term was last checked.
     mutable scalar stabilityCheckedDeltaT_;
@@ -92,6 +94,11 @@ protected:
         const scalarField& resistance,
         scalar dt
     ) const;
+
+public:
+
+    //- Write the observation state at output times (bidirectional mode).
+    virtual void write() override;
 };
 
 } // End namespace Foam

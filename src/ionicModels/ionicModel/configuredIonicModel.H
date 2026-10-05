@@ -72,7 +72,7 @@ public:
             return false;
         }
 
-        const fileName statePath = restartStateIO::path(mesh, type() + "State");
+        const fileName statePath = restartStateIO::path(mesh, restartStateName());
         if (!isFile(statePath))
         {
             return false;
@@ -112,7 +112,7 @@ public:
             return;
         }
 
-        const fileName statePath = restartStateIO::path(mesh, type() + "State");
+        const fileName statePath = restartStateIO::path(mesh, restartStateName());
         std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
         if (!os)
         {

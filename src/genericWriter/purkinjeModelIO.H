@@ -41,6 +41,7 @@ SourceFiles
 #include "labelList.H"
 #include "scalarField.H"
 #include "PtrList.H"
+#include "globalIOFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -80,14 +81,29 @@ public:
         );
 
         //- Open/create a time-series output file and write the column header.
-        //  Creates outDir if it does not exist.
-        //  Returns an autoPtr<OFstream> to the open file.
+        //  Creates outDir if it does not exist. A run starting after time 0
+        //  keeps the rows up to startTime that an earlier run wrote under the
+        //  same header, so a restart continues the series.
         static autoPtr<OFstream> openTimeSeries
         (
             const fileName& outDir,
             const word& filename,
-            const wordList& columnNames
+            const wordList& columnNames,
+            scalar startTime
         );
+
+        //- Entries up to startTime of an existing .vtk.series file
+        static void readVTKSeries
+        (
+            const fileName& seriesPath,
+            scalar startTime,
+            scalarList& times,
+            wordList& filenames
+        );
+
+        //- Write a graph field held whole on every rank into the current
+        //  time directory of the undecomposed case, from the master.
+        static void writeGlobalField(scalarGlobalIOField& field);
 
         //- Append one data row: time followed by all values
         static void writeRow

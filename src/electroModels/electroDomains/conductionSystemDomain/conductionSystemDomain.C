@@ -71,50 +71,6 @@ void initialiseGraphStateField
     }
 }
 
-
-void writeGraphStateField(scalarGlobalIOField& field)
-{
-    bool writeGood = true;
-    const Time& runTime = field.time();
-
-    field.instance() = runTime.timeName();
-
-    if (Pstream::master())
-    {
-        const fileName outputPath
-        (
-            runTime.globalPath()/field.instance()/field.name()
-        );
-
-        mkDir(outputPath.path());
-        OFstream os
-        (
-            outputPath,
-            IOstreamOption
-            (
-                runTime.writeFormat(),
-                runTime.writeCompression()
-            )
-        );
-
-        writeGood = os.good() && field.writeHeader(os) && field.writeData(os);
-
-        if (writeGood)
-        {
-            IOobject::writeEndDivider(os);
-        }
-    }
-
-    reduce(writeGood, andOp<bool>());
-
-    if (!writeGood)
-    {
-        FatalErrorInFunction
-            << "Failed writing " << field.name()
-            << exit(FatalError);
-    }
-}
-
 } // End anonymous namespace
 
 
@@ -305,6 +261,16 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
             initialDeltaT,
             false
         );
+
+        ionicModelPtr_->setRestartStateName
+        (
+            IOobject::groupName
+            (
+                ionicModelPtr_->restartStateName(),
+                Vm1D_.group()
+            )
+        );
+        ionicModelPtr_->readRestartState(supportMesh_);
     }
 
     const scalar vmRest =
@@ -488,8 +454,20 @@ void conductionSystemDomain::openOutputFile()
     (
         outDir,
         "purkinjeNetwork.dat",
-        colNames
+        colNames,
+        time().value()
     );
+
+    if (time().value() > 0)
+    {
+        purkinjeModelIO::readVTKSeries
+        (
+            outDir/"purkinjeNetworkVTK"/"purkinjeNetwork.vtk.series",
+            time().value(),
+            pvdTimes_,
+            pvdFiles_
+        );
+    }
 
     ionicOutputPtrs_.setSize(ionicExport_.size());
     forAll(ionicExport_, i)
@@ -508,7 +486,8 @@ void conductionSystemDomain::openOutputFile()
             (
                 outDir,
                 "purkinjeNetwork_" + var + ".dat",
-                ionicColNames
+                ionicColNames,
+                time().value()
             ).ptr()
         );
     }
@@ -832,10 +811,16 @@ void conductionSystemDomain::write()
 
     if (ionicModelPtr_.valid())
     {
-        writeGraphStateField(Vm1D_);
-        writeGraphStateField(Iion1D_);
+        purkinjeModelIO::writeGlobalField(Vm1D_);
+        purkinjeModelIO::writeGlobalField(Iion1D_);
+
+        if (ionicModelPtr_->supportsRestartState())
+        {
+            mkDir(time().path()/time().timeName());
+            ionicModelPtr_->writeRestartState(supportMesh_);
+        }
     }
-    writeGraphStateField(activationTime_);
+    purkinjeModelIO::writeGlobalField(activationTime_);
 
     DynamicList<scalar> values;
     for (const word& var : exportVars_)
