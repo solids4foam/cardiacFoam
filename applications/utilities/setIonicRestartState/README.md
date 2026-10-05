@@ -48,7 +48,9 @@ mpirun -np 8 setIonicRestartState -parallel   # after decomposePar
 ```
 
 In parallel each processor writes the file for its own cells, so run it after
-`decomposePar`.
+`decomposePar`. A serial state file is moved into the processor directories
+with `redistributeRestartState -decompose`, and gathered back after
+`reconstructPar` with `redistributeRestartState`.
 
 ## Errors
 

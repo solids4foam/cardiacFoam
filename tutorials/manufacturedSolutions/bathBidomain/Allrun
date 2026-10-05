@@ -35,6 +35,7 @@ then
     runApplication decomposePar
     runParallel cardiacFoam
     runApplication reconstructPar
+    runApplication redistributeRestartState
 else
     runApplication cardiacFoam
 fi

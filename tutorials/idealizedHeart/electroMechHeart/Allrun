@@ -104,6 +104,8 @@ if $parallelRun; then
     runParallel cardiacFoam
     runApplication -s electro reconstructPar -region electro
     runApplication -s solid reconstructPar -region solid
+    runApplication -s electro redistributeRestartState -region electro
+    runApplication -s solid redistributeRestartState -region solid
 else
     runApplication cardiacFoam
 fi
