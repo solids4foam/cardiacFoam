@@ -92,6 +92,8 @@ def run_postprocessing(
 
 
 if __name__ == "__main__":
-    folder = Path(__file__).resolve().parents[1]
-    print(f"[table_summary] Default folder = {folder}")
+    import sys
+
+    folder = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]
+    print(f"[table_summary] folder = {folder}")
     run_postprocessing(output_dir=str(folder))
