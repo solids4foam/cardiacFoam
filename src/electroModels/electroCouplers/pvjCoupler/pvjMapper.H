@@ -94,6 +94,12 @@ public:
         scalarField& source
     ) const;
 
+    //- Kernel-weighted tissue volume V_s = sum_c w_c V_c per terminal [m^3].
+    const scalarField& sphereVolumes() const
+    {
+        return sphereVolumes_;
+    }
+
     //- Per terminal, sum_c w_c^2 V_c/V_s^2 [1/m^3]: the tissue decay rate
     //  per unit conductance and capacitance of the sphere-averaged term.
     scalarField sphereAverageDecayRates() const;

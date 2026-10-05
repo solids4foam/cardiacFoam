@@ -63,6 +63,8 @@ class reactionDiffusionPvjCoupler
 
     void depositPrimaryCoupling(scalar dt) const;
 
+    void warnImplicitChargeLag() const;
+
 public:
 
     OverrideTypeName("reactionDiffusionPvjCoupler");

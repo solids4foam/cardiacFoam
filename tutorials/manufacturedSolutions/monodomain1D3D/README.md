@@ -56,13 +56,15 @@ Writes, per case: `postProcessing/graph_1D_<n>_nodes.dat` (the graph verifier's 
 
 ### Coupled 1D-3D Convergence Sweeps (Suggested)
 
-Active coupling (bidirectional PVJ). Spec: `setup/studies/coupledConvergence/sweep_active.json`.
+Active coupling (the case's unidirectional PVJ). Spec: `setup/studies/coupledConvergence/sweep_active.json`.
 
 ```bash
 [omnidriver command to run]
 ```
 
 Bidirectional coupling. Spec: `setup/studies/coupledConvergence/sweep_bidirectional.json`.
+The network then loses each junction current from the volume `π ρ² L` of its terminal node,
+so the spec sets `purkinjeFibreRadius` to `1/√π` m, giving a unit cross-section.
 
 ```bash
 [omnidriver command to run]

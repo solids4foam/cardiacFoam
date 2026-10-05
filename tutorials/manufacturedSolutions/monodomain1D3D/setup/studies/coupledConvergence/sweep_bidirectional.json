@@ -2,7 +2,8 @@
   "base": {
     "entry": "manufacturedMonodomain1D3D",
     "cases_root": "tutorials",
-    "constant/electroProperties:monodomainSolverCoeffs.domainCouplings.couplingA.couplingMode": "bidirectional"
+    "constant/electroProperties:monodomainSolverCoeffs.domainCouplings.couplingA.couplingMode": "bidirectional",
+    "constant/electroProperties:monodomainSolverCoeffs.conductionNetworkDomains.purkinjeNetwork.purkinjeGraphModelCoeffs.purkinjeFibreRadius": 0.5641895835477563
   },
   "sweep": {
     "mode": "zip",

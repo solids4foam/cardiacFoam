@@ -19,6 +19,7 @@ License
 
 #include "reactionDiffusionPvjCoupler.H"
 
+#include "electroVolumeFieldDomain.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -123,6 +124,46 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     {
         R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
     }
+
+    if (couplingMode_ == bidirectional)
+    {
+        networkTerminalDomain_.setTerminalConductances(1.0/R_pvj_);
+
+        if (couplingScheme_ == "implicit")
+        {
+            warnImplicitChargeLag();
+        }
+    }
+}
+
+
+void reactionDiffusionPvjCoupler::warnImplicitChargeLag() const
+{
+    // The network loses G*(Vn' - <V>) against the tissue average before the
+    // tissue solve, the tissue gains G*(Vn' - <V>') after it, so each step
+    // misplaces G*dt*(<V>' - <V>): a spurious capacitance dt/R per junction.
+    const electroVolumeFieldDomain* tissue =
+        dynamic_cast<const electroVolumeFieldDomain*>(&primaryDomain_);
+
+    if (!tissue)
+    {
+        return;
+    }
+
+    const scalar dt = mesh_.time().deltaTValue();
+    const scalar chiCm = (tissue->chi()*tissue->Cm()).value();
+    const scalarField ratio
+    (
+        dt/(R_pvj_*chiCm*mapper_.sphereVolumes())
+    );
+
+    WarningInFunction
+        << "pvjCouplingScheme implicit with couplingMode bidirectional "
+        << "does not conserve charge per step: the staggered solve acts as "
+        << "an extra capacitance deltaT/R at each junction, up to "
+        << gMax(ratio) << " times the tissue's chi*Cm*V_s at deltaT = "
+        << dt << " s. pvjCouplingScheme explicit conserves it exactly."
+        << endl;
 }
 
 
@@ -132,6 +173,8 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 
     evaluateCoupling(t0, t0, "secondary");
 
+    // The network solves its junction term at t0 + dt against the tissue
+    // at t0; the manufactured source matches those levels.
     if (verificationModelPtr_)
     {
         verificationModelPtr_->updateManufacturedSource
@@ -139,23 +182,17 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
             primaryDomain_,
             secondaryDomain_,
             t0,
-            t0,
+            t0 + dt,
             couplingScheme_ == "implicit",
             couplingMode_ == bidirectional,
             "secondary"
         );
     }
 
-    if (couplingMode_ == unidirectional)
+    if (couplingMode_ == bidirectional)
     {
-        clearTerminalCouplingBuffers();
+        networkTerminalDomain_.setTerminalTissueVm(tissueVmBuffer_);
     }
-
-    networkTerminalDomain_.setTerminalCoupling
-    (
-        terminalCurrentBuffer_,
-        terminalSourceBuffer_
-    );
 }
 
 

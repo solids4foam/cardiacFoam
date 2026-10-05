@@ -106,6 +106,20 @@ struct conductionGraph
         buildTreeTopology();
     }
 
+    //- Per node, half the length of every incident edge [m].
+    scalarField nodeControlLengths() const
+    {
+        scalarField controlLength(nNodes, Zero);
+
+        forAll(edgeNodeA, eI)
+        {
+            controlLength[edgeNodeA[eI]] += 0.5*edgeLengths[eI];
+            controlLength[edgeNodeB[eI]] += 0.5*edgeLengths[eI];
+        }
+
+        return controlLength;
+    }
+
 private:
 
     void buildAdjacency()

@@ -23,6 +23,7 @@ License
 #include "IOdictionary.H"
 #include "PstreamReduceOps.H"
 #include "ionicVariableCompatibility.H"
+#include "mathematicalConstants.H"
 
 namespace Foam
 {
@@ -146,6 +147,26 @@ autoPtr<conductionSystemDomain> conductionSystemDomain::New
     (
         new conductionSystemDomain(mesh, domainName, dict, initialDeltaT)
     );
+}
+
+
+scalar conductionSystemDomain::readFibreRadius() const
+{
+    if (!coeffsDict_.found("purkinjeFibreRadius"))
+    {
+        return 0.0;
+    }
+
+    const scalar radius(coeffsDict_.get<scalar>("purkinjeFibreRadius"));
+
+    if (radius <= 0)
+    {
+        FatalIOErrorInFunction(coeffsDict_)
+            << "purkinjeFibreRadius must be positive; got " << radius << "."
+            << exit(FatalIOError);
+    }
+
+    return radius;
 }
 
 
@@ -324,6 +345,8 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 
     terminalCurrent_.setSize(terminalNodes_.size(), 0.0);
     terminalSource_.setSize(terminalNodes_.size(), 0.0);
+    terminalJunctionCoeffs_.setSize(terminalNodes_.size(), 0.0);
+    terminalTissueVm_.setSize(terminalNodes_.size(), 0.0);
     terminalActivationObservations_.setSize(terminalNodes_.size(), -1.0);
 
     if (ionicModelPtr_.valid())
@@ -513,6 +536,7 @@ conductionSystemDomain::conductionSystemDomain
     rootIntensity_(0.0),
     chi_(coeffsDict_.get<scalar>("chi")),
     Cm_(coeffsDict_.get<scalar>("cm")),
+    fibreRadius_(readFibreRadius()),
     Vm1D_
     (
         IOobject
@@ -555,6 +579,8 @@ conductionSystemDomain::conductionSystemDomain
     nLocalNodes_(0),
     terminalCurrent_(),
     terminalSource_(),
+    terminalJunctionCoeffs_(),
+    terminalTissueVm_(),
     outputPtr_(),
     exportVars_(),
     debugVars_(),
@@ -622,11 +648,6 @@ void conductionSystemDomain::assembleAppliedCurrent
         }
 
         appliedCurrent[rootNode_] += rootIntensity_;
-    }
-
-    forAll(terminalNodes_, i)
-    {
-        appliedCurrent[terminalNodes_[i]] -= terminalCurrent_[i];
     }
 }
 
@@ -728,6 +749,61 @@ void conductionSystemDomain::setTerminalCoupling
 
     terminalCurrent_ = terminalCurrent;
     terminalSource_ = terminalSource;
+}
+
+
+void conductionSystemDomain::setTerminalConductances
+(
+    const scalarField& conductance
+)
+{
+    if (conductance.size() != terminalNodes_.size())
+    {
+        FatalErrorInFunction
+            << "Expected " << terminalNodes_.size()
+            << " terminal conductances but received " << conductance.size()
+            << exit(FatalError);
+    }
+
+    terminalJunctionCoeffs_ = conductance/terminalVolumes();
+}
+
+
+void conductionSystemDomain::setTerminalTissueVm(const scalarField& tissueVm)
+{
+    if (tissueVm.size() != terminalNodes_.size())
+    {
+        FatalErrorInFunction
+            << "Expected " << terminalNodes_.size()
+            << " terminal tissue voltages but received " << tissueVm.size()
+            << exit(FatalError);
+    }
+
+    terminalTissueVm_ = tissueVm;
+}
+
+
+scalarField conductionSystemDomain::terminalVolumes() const
+{
+    if (fibreRadius_ <= 0)
+    {
+        FatalIOErrorInFunction(coeffsDict_)
+            << "A resistive PVJ (couplingMode bidirectional) charges the "
+            << "network node behind it, whose volume is pi*r^2 times the "
+            << "node's control length. Set purkinjeFibreRadius [m]."
+            << exit(FatalIOError);
+    }
+
+    const scalar area = constant::mathematical::pi*sqr(fibreRadius_);
+    const scalarField controlLength(graph_.nodeControlLengths());
+
+    scalarField volumes(terminalNodes_.size());
+    forAll(terminalNodes_, i)
+    {
+        volumes[i] = area*controlLength[terminalNodes_[i]];
+    }
+
+    return volumes;
 }
 
 

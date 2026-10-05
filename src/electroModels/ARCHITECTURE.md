@@ -251,15 +251,25 @@ Transfers state between domains at each timestep. Runs between domain advances i
 
 Bath/extracellular-potential coupling is **not** a coupler class. `extracellularPotentialDomain` (an `electroStateDomain` under `electroDomains/extracellularPotentialDomain/`) owns the global `phiE` solve and binds a restricted view of it directly into the bidomain myocardium solver.
 
-**PVJ coupling equation** (`reactionDiffusionPvjCoupler`):
+**PVJ coupling equation** (`reactionDiffusionPvjCoupler`), junction `i` at network node `k`:
 
 ```
 
-I_pvj = (Vm_1D − Vm_3D) / R_pvj          [A/m²]
-tissue source += I_pvj  (volumetric, scattered over cells within pvjRadius)
-network source -= I_pvj  (bidirectional mode only)
+<Vm_3D>_i = sum_c w_c V_c Vm_c / V_s,i     V_s,i = sum_c w_c V_c over cells within pvjRadius [m³]
+I_pvj,i   = (Vm_1D,k − <Vm_3D>_i) / R_i    [A], R_i = rPvj or pvjResistances [Ω]
+tissue source_c  += w_c I_pvj,i / V_s,i    [A/m³]
+network source_k -= I_pvj,i / (π ρ² L_k)   [A/m³], bidirectional mode only
 
 ```
+
+`w_c` is the `pvjKernel` weight, `ρ` is `purkinjeFibreRadius` and `L_k` is half the length of
+the edges meeting at node `k`, so the network node loses exactly the charge the tissue gains.
+The network takes `Vm_1D,k` at the new time level on its tree-solver diagonal against the
+tissue average before the tissue solve. With `pvjCouplingScheme explicit` the tissue receives
+that same current, and charge is conserved every step. With `implicit`, cell `c` sees
+`w_c (Vm_1D,k − Vm_c) / (R_i V_s,i)` with its own new `Vm_c`. That is stable for any `R_i`, but in
+bidirectional mode each step misplaces `dt (<Vm_3D>' − <Vm_3D>) / R_i`, which acts as an extra
+capacitance `dt / R_i` at the junction.
 
 `pvjMapper` spatial algorithm: for each PVJ location, find all 3D cells within `pvjRadius`, gather tissue `Vm` as a volume-weighted average, then scatter coupling current back to those cells.
 
@@ -325,7 +335,7 @@ monodomainSolverCoeffs
 | Domain | Fields owned |
 |---|---|
 | `myocardiumDomain` | `Vm_`, `Iion_`, `activationTime_`, `sourceField_`; its bidomain kernel owns local `phiE` and can synchronize it from the bath domain |
-| `conductionSystemDomain` | `Vm1D_`, `Iion1D_`, `activationTime_` (per node), `terminalCurrent_`, `terminalSource_` |
+| `conductionSystemDomain` | `Vm1D_`, `Iion1D_`, `activationTime_` (per node), `terminalCurrent_`, `terminalSource_`, the junction conductances and tissue voltages it solves against |
 | `eikonalMyocardiumDomain` | `activationTime_` only — no ionic state |
 | `ecgDomain` | electrode config, ECG output — reads Vm from myocardium via `electroStateProvider` |
 | `extracellularPotentialDomain` | global `phiE`, `sigmaTotal`, and scattered `VmGlobal` |

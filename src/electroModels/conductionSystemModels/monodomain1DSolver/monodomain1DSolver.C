@@ -85,6 +85,10 @@ void monodomain1DSolver::advance
     // where controlLength_i is the 1-D control volume measure assembled from
     // half of each incident edge length. For uniform spacing this reduces to
     // the usual sigma*(V_{i-1}-2V_i+V_{i+1})/dx^2 term.
+    //
+    // A resistive PVJ at terminal node k adds -g*(V_k - Vt) to Iapp_k, with
+    // g = G/(pi*r^2*controlLength_k) and V_k at the new level, so the charge
+    // the node loses is the junction current the tissue receives.
     const scalar chiCm = domain.chi() * domain.Cm();
 
     // Arrays for the tree solver
@@ -92,7 +96,7 @@ void monodomain1DSolver::advance
     scalarField rhs(N, Zero);       // Right-hand side
     scalarField parentCoeff(N, Zero); // Matrix row child -> column parent
     scalarField childCoeff(N, Zero);  // Matrix row parent -> column child
-    scalarField controlLength(N, Zero);
+    const scalarField controlLength(domain.graph().nodeControlLengths());
 
     const labelList& edgeA = domain.edgeStartNodes();
     const labelList& edgeB = domain.edgeEndNodes();
@@ -103,15 +107,6 @@ void monodomain1DSolver::advance
     const labelList& parent = domain.graph().parentList;
     const labelList& reverseOrder = domain.graph().reverseOrder;
     const labelList& forwardOrder = domain.graph().orderList;
-
-    forAll(edgeA, edgeI)
-    {
-        label nodeA = edgeA[edgeI];
-        label nodeB = edgeB[edgeI];
-
-        controlLength[nodeA] += 0.5*edgeLength[edgeI];
-        controlLength[nodeB] += 0.5*edgeLength[edgeI];
-    }
 
     forAll(controlLength, nodeI)
     {
@@ -173,6 +168,19 @@ void monodomain1DSolver::advance
             Vm[i]
           - dt*Iion[i]
           + dt*appliedCurrentBuffer_[i]/chiCm;
+    }
+
+    const labelList& terminals = domain.terminalNodes();
+    const scalarField& junctionCoeffs = domain.terminalJunctionCoeffs();
+    const scalarField& junctionTissueVm = domain.terminalTissueVm();
+    forAll(terminals, i)
+    {
+        if (junctionCoeffs[i] > 0)
+        {
+            const scalar coeff = dt*junctionCoeffs[i]/chiCm;
+            diag[terminals[i]] += coeff;
+            rhs[terminals[i]] += coeff*junctionTissueVm[i];
+        }
     }
 
     // 3c. Forward Sweep (Bottom-up: Leaves to Root)

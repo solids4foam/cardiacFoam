@@ -353,9 +353,11 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
             );
 
             const labelList& terminalNodes = graphDomain->terminalNodes();
+            const scalarField terminalVolumes(graphDomain->terminalVolumes());
             forAll(terminalNodes, i)
             {
-                exactSecondaryAppliedCurrent_[terminalNodes[i]] -= exactCurrent[i];
+                exactSecondaryAppliedCurrent_[terminalNodes[i]] -=
+                    exactCurrent[i]/terminalVolumes[i];
             }
         }
 
