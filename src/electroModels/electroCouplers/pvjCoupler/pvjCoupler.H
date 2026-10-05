@@ -52,6 +52,7 @@ protected:
 
     networkCouplingEndpoint& networkTerminalDomain_;
     pvjMapper mapper_;
+    scalar pvjRadius_;
     CouplingMode couplingMode_;
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
@@ -59,9 +60,6 @@ protected:
     //- Latest tissue activation seen at each terminal at the previous
     //  observation; written with the time directories for a restart.
     scalarGlobalIOField lastObservedTissueActivation_;
-
-    //- Time step at which the explicit junction term was last checked.
-    mutable scalar stabilityCheckedDeltaT_;
 
     static networkCouplingEndpoint& requireTerminalNetworkDomain
     (
@@ -71,9 +69,6 @@ protected:
     static CouplingMode parseCouplingMode(const word& modeName);
 
     static word couplingModeName(CouplingMode mode);
-
-    //- pvjCouplingScheme, 'explicit' (default) or 'implicit'.
-    static word readCouplingScheme(const dictionary& dict);
 
     pvjCoupler
     (
@@ -86,13 +81,6 @@ protected:
 
     //- Deposit tissue activations at the terminals that are newer than the previous observation.
     void observeTerminalActivations();
-
-    //- Refuse an explicit junction current the tissue time step cannot hold.
-    void checkExplicitCouplingStability
-    (
-        const scalarField& resistance,
-        scalar dt
-    ) const;
 
 public:
 

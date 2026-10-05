@@ -78,9 +78,6 @@ class conductionSystemDomain
     scalar chi_;
     scalar Cm_;
 
-    //- purkinjeFibreRadius [m]; zero when the case does not give one.
-    scalar fibreRadius_;
-
     scalarGlobalIOField Vm1D_;
     scalarGlobalIOField Iion1D_;
     scalarGlobalIOField activationTime_;
@@ -114,7 +111,6 @@ class conductionSystemDomain
     scalarList pvdTimes_;
     wordList   pvdFiles_;
 
-    scalar readFibreRadius() const;
     void readGraphFile(const dictionary& dict);
     void readRootStimulus(const dictionary& dict);
     void initialiseState(scalar initialDeltaT);
@@ -210,7 +206,7 @@ public:
     virtual void setTerminalTissueVm(const scalarField& tissueVm) override;
 
     //- Network volume behind each terminal [m^3]: pi*purkinjeFibreRadius^2
-    //  times the node's control length. Fatal without purkinjeFibreRadius.
+    //  times the node's control length.
     scalarField terminalVolumes() const;
 
     const scalarField& terminalJunctionCoeffs() const

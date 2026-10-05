@@ -19,7 +19,6 @@ License
 
 #include "reactionDiffusionPvjCoupler.H"
 
-#include "electroVolumeFieldDomain.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -111,10 +110,21 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     R_pvj_(),
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
-    couplingScheme_(readCouplingScheme(dict)),
+    couplingScheme_
+    (
+        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
+    ),
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
+    if (couplingScheme_ != "explicit" && couplingScheme_ != "implicit")
+    {
+        FatalErrorInFunction
+            << "Unknown pvjCouplingScheme '" << couplingScheme_
+            << "'. Valid options are 'explicit' and 'implicit'."
+            << exit(FatalError);
+    }
+
     const scalarField* pRes = networkTerminalDomain_.terminalResistances();
     if (pRes)
     {
@@ -128,42 +138,7 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     if (couplingMode_ == bidirectional)
     {
         networkTerminalDomain_.setTerminalConductances(1.0/R_pvj_);
-
-        if (couplingScheme_ == "implicit")
-        {
-            warnImplicitChargeLag();
-        }
     }
-}
-
-
-void reactionDiffusionPvjCoupler::warnImplicitChargeLag() const
-{
-    // The network loses G*(Vn' - <V>) against the tissue average before the
-    // tissue solve, the tissue gains G*(Vn' - <V>') after it, so each step
-    // misplaces G*dt*(<V>' - <V>): a spurious capacitance dt/R per junction.
-    const electroVolumeFieldDomain* tissue =
-        dynamic_cast<const electroVolumeFieldDomain*>(&primaryDomain_);
-
-    if (!tissue)
-    {
-        return;
-    }
-
-    const scalar dt = mesh_.time().deltaTValue();
-    const scalar chiCm = (tissue->chi()*tissue->Cm()).value();
-    const scalarField ratio
-    (
-        dt/(R_pvj_*chiCm*mapper_.sphereVolumes())
-    );
-
-    WarningInFunction
-        << "pvjCouplingScheme implicit with couplingMode bidirectional "
-        << "does not conserve charge per step: the staggered solve acts as "
-        << "an extra capacitance deltaT/R at each junction, up to "
-        << gMax(ratio) << " times the tissue's chi*Cm*V_s at deltaT = "
-        << dt << " s. pvjCouplingScheme explicit conserves it exactly."
-        << endl;
 }
 
 
@@ -196,12 +171,10 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 }
 
 
-void reactionDiffusionPvjCoupler::depositPrimaryCoupling(const scalar dt) const
+void reactionDiffusionPvjCoupler::depositPrimaryCoupling() const
 {
     if (couplingScheme_ == "explicit")
     {
-        checkExplicitCouplingStability(R_pvj_, dt);
-
         mapper_.depositCoupling
         (
             terminalCurrentBuffer_,
@@ -249,7 +222,7 @@ void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
         );
     }
 
-    depositPrimaryCoupling(dt);
+    depositPrimaryCoupling();
 
     networkTerminalDomain_.setTerminalCoupling
     (

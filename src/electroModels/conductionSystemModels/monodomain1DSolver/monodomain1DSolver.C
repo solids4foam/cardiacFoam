@@ -96,7 +96,7 @@ void monodomain1DSolver::advance
     scalarField rhs(N, Zero);       // Right-hand side
     scalarField parentCoeff(N, Zero); // Matrix row child -> column parent
     scalarField childCoeff(N, Zero);  // Matrix row parent -> column child
-    const scalarField controlLength(domain.graph().nodeControlLengths());
+    scalarField controlLength(N, Zero);
 
     const labelList& edgeA = domain.edgeStartNodes();
     const labelList& edgeB = domain.edgeEndNodes();
@@ -107,6 +107,15 @@ void monodomain1DSolver::advance
     const labelList& parent = domain.graph().parentList;
     const labelList& reverseOrder = domain.graph().reverseOrder;
     const labelList& forwardOrder = domain.graph().orderList;
+
+    forAll(edgeA, edgeI)
+    {
+        label nodeA = edgeA[edgeI];
+        label nodeB = edgeB[edgeI];
+
+        controlLength[nodeA] += 0.5*edgeLength[edgeI];
+        controlLength[nodeB] += 0.5*edgeLength[edgeI];
+    }
 
     forAll(controlLength, nodeI)
     {

@@ -34,7 +34,6 @@ Author
 
 #include "couplingVerificationModel.H"
 #include "overrideTypeName.H"
-#include "pvjMapper.H"
 #include "scalarField.H"
 
 namespace Foam
@@ -45,14 +44,6 @@ class coupled1D3DMonodomainVerifier : public couplingVerificationModel
     mutable bool diagnosticsWritten_;
     mutable scalarField exactPrimarySource_;
     mutable scalarField exactSecondaryAppliedCurrent_;
-    mutable autoPtr<pvjMapper> exactMapperPtr_;
-
-    //- The coupler's junction map, built on first use.
-    const pvjMapper& exactMapper
-    (
-        const fvMesh& mesh,
-        const pointField& terminalLocations
-    ) const;
 
 public:
 

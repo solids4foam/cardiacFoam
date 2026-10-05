@@ -61,9 +61,7 @@ class reactionDiffusionPvjCoupler
 
     void reportCouplingDiagnostics(const char* phaseName) const;
 
-    void depositPrimaryCoupling(scalar dt) const;
-
-    void warnImplicitChargeLag() const;
+    void depositPrimaryCoupling() const;
 
 public:
 

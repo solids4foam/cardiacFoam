@@ -106,26 +106,6 @@ autoPtr<conductionSystemDomain> conductionSystemDomain::New
 }
 
 
-scalar conductionSystemDomain::readFibreRadius() const
-{
-    if (!coeffsDict_.found("purkinjeFibreRadius"))
-    {
-        return 0.0;
-    }
-
-    const scalar radius(coeffsDict_.get<scalar>("purkinjeFibreRadius"));
-
-    if (radius <= 0)
-    {
-        FatalIOErrorInFunction(coeffsDict_)
-            << "purkinjeFibreRadius must be positive; got " << radius << "."
-            << exit(FatalIOError);
-    }
-
-    return radius;
-}
-
-
 void conductionSystemDomain::readGraphFile(const dictionary& dict)
 {
     if (!dict.found("graphFile"))
@@ -515,7 +495,6 @@ conductionSystemDomain::conductionSystemDomain
     rootIntensity_(0.0),
     chi_(coeffsDict_.get<scalar>("chi")),
     Cm_(coeffsDict_.get<scalar>("cm")),
-    fibreRadius_(readFibreRadius()),
     Vm1D_
     (
         IOobject
@@ -736,45 +715,28 @@ void conductionSystemDomain::setTerminalConductances
     const scalarField& conductance
 )
 {
-    if (conductance.size() != terminalNodes_.size())
-    {
-        FatalErrorInFunction
-            << "Expected " << terminalNodes_.size()
-            << " terminal conductances but received " << conductance.size()
-            << exit(FatalError);
-    }
-
     terminalJunctionCoeffs_ = conductance/terminalVolumes();
 }
 
 
 void conductionSystemDomain::setTerminalTissueVm(const scalarField& tissueVm)
 {
-    if (tissueVm.size() != terminalNodes_.size())
-    {
-        FatalErrorInFunction
-            << "Expected " << terminalNodes_.size()
-            << " terminal tissue voltages but received " << tissueVm.size()
-            << exit(FatalError);
-    }
-
     terminalTissueVm_ = tissueVm;
 }
 
 
 scalarField conductionSystemDomain::terminalVolumes() const
 {
-    if (fibreRadius_ <= 0)
-    {
-        FatalIOErrorInFunction(coeffsDict_)
-            << "A resistive PVJ (couplingMode bidirectional) charges the "
-            << "network node behind it, whose volume is pi*r^2 times the "
-            << "node's control length. Set purkinjeFibreRadius [m]."
-            << exit(FatalIOError);
-    }
+    const scalar radius(coeffsDict_.get<scalar>("purkinjeFibreRadius"));
+    const scalar area = constant::mathematical::pi*sqr(radius);
 
-    const scalar area = constant::mathematical::pi*sqr(fibreRadius_);
-    const scalarField controlLength(graph_.nodeControlLengths());
+    // The control length of monodomain1DSolver: half of each incident edge.
+    scalarField controlLength(graph_.nNodes, Zero);
+    forAll(graph_.edgeNodeA, edgeI)
+    {
+        controlLength[graph_.edgeNodeA[edgeI]] += 0.5*graph_.edgeLengths[edgeI];
+        controlLength[graph_.edgeNodeB[edgeI]] += 0.5*graph_.edgeLengths[edgeI];
+    }
 
     scalarField volumes(terminalNodes_.size());
     forAll(terminalNodes_, i)

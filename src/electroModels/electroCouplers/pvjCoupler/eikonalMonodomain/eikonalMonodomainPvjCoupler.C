@@ -44,7 +44,11 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     terminalActivationBuffer_(),
     R_pvj_(),
-    couplingScheme_(readCouplingScheme(dict)),
+    implicitCoupling_
+    (
+        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
+     == "implicit"
+    ),
     vmTemplateOffset_(0.0)
 {
     if (dict.found("rPvj"))
@@ -104,6 +108,7 @@ void eikonalMonodomainPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 {
     (void)t0;
+    (void)dt;
 
     networkTerminalDomain_.terminalActivationTime(terminalActivationBuffer_);
 
@@ -147,35 +152,24 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
         terminalCurrentBuffer_[i] = (terminalVoltage[i] - tissueVoltage[i]) / R_pvj_[i];
     }
 
-    if (couplingScheme_ == "explicit")
+    // The template voltage is prescribed, so the implicit form is the same
+    // cell-local diagonal term reactionDiffusionPvjCoupler uses.
+    if (implicitCoupling_)
     {
-        checkExplicitCouplingStability(R_pvj_, dt);
-
-        mapper_.depositCoupling
-        (
-            terminalCurrentBuffer_,
-            primaryDomain_.sourceField()
-        );
-    }
-    else
-    {
-        volScalarField* implicitSourceCoeff =
-            primaryDomain_.implicitSourceCoeffPtr();
-
-        if (!implicitSourceCoeff)
-        {
-            FatalErrorInFunction
-                << "pvjCouplingScheme implicit requires the primary tissue "
-                << "domain to expose an implicit source coefficient field."
-                << exit(FatalError);
-        }
-
         mapper_.depositImplicitCoupling
         (
             terminalVoltage,
             R_pvj_,
             primaryDomain_.sourceField(),
-            *implicitSourceCoeff
+            *primaryDomain_.implicitSourceCoeffPtr()
+        );
+    }
+    else
+    {
+        mapper_.depositCoupling
+        (
+            terminalCurrentBuffer_,
+            primaryDomain_.sourceField()
         );
     }
 
