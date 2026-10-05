@@ -51,6 +51,15 @@ def asciiField(values, version="v2512"):
     ).encode()
 
 
+def restartState(model, rows):
+    """A cardiacFoam <Model>State file: header, model name, rows x stride doubles."""
+    stride = len(rows[0]) if rows else 0
+    name = model.encode()
+    head = struct.pack("<IIIIQQ", 0x43524653, 1, 8, len(name), stride, len(rows))
+    flat = [v for row in rows for v in row]
+    return head + name + struct.pack(f"<{len(flat)}d", *flat)
+
+
 def binaryField(values, vectors=()):
     head = HEADER.format(
         version="v2512", fmt="binary",
@@ -227,10 +236,28 @@ class TestCompareCases(unittest.TestCase):
 
     def test_other_binary_files_compared_bytewise(self):
         rc, out = CaseDirs(
-            {"0.1/TNNPState": b"\0\1\2"}, {"0.1/TNNPState": b"\0\1\3"}
+            {"0.1/points.bin": b"\0\1\2"}, {"0.1/points.bin": b"\0\1\3"}
         ).run("--rtol", "1")
         self.assertEqual(rc, 1, out)
         self.assertIn("binary contents differ", out)
+
+    def test_restart_state_values_compared(self):
+        a = restartState("TNNP", [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        b = restartState("TNNP", [[1.0, 2.0], [3.0 + 1e-10, 4.0], [5.0, 6.0]])
+        rc, out = CaseDirs({"0.1/TNNPState": a}, {"0.1/TNNPState": a}).run()
+        self.assertEqual(rc, 0, out)
+        rc, out = CaseDirs({"0.1/TNNPState": a}, {"0.1/TNNPState": b}).run()
+        self.assertEqual(rc, 1, out)
+        self.assertIn("cell 1, state 0", out)
+        rc, out = CaseDirs({"0.1/TNNPState": a}, {"0.1/TNNPState": b}).run("--rtol", "1e-9")
+        self.assertEqual(rc, 0, out)
+
+    def test_restart_state_layout_difference_is_structural(self):
+        a = restartState("TNNP", [[1.0, 2.0], [3.0, 4.0]])
+        b = restartState("TNNP", [[1.0, 2.0, 3.0, 4.0]])
+        rc, out = CaseDirs({"0.1/TNNPState": a}, {"0.1/TNNPState": b}).run("--rtol", "1")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("restart state stride", out)
 
 
 if __name__ == "__main__":

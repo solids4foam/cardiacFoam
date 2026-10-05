@@ -15,6 +15,7 @@ Compared:
   - text files (OpenFOAM dictionaries and fields, .dat, .csv, .txt, ...)
     token by token: numbers within the tolerance, all other tokens exactly;
   - binary OpenFOAM fields (writeFormat binary) value by value, like text;
+  - cardiacFoam restart state files (<Model>State) value by value;
   - any other binary file byte for byte.
 
 A number pair a, b matches when |a - b| <= atol + rtol*max(|a|, |b|). The
@@ -63,9 +64,15 @@ TOKEN_RE = re.compile(rb"[()\[\]{};]|[^\s()\[\]{};,]+")
 BLOCK_COMMENT_RE = re.compile(rb"/\*.*?\*/", re.DOTALL)
 LINE_COMMENT_RE = re.compile(rb"//[^\n]*")
 BINARY_LIST_RE = re.compile(rb"List<(\w+)>\s+(\d+)\s*\(")
-# Binary files of these classes are decoded; other binary files (meshes,
-# restart state, ...) are compared byte for byte
+# Binary files of these classes are decoded; other binary files (meshes, ...)
+# are compared byte for byte
 GEOMETRIC_FIELD_RE = re.compile(rb"^(vol|surface|point)\w*Field(::Internal)?$")
+
+# cardiacFoam restart state (<Model>State, src/genericWriter/restartStateIO.H):
+# magic, version, scalar size, model name length (uint32 each), stride and
+# rows (uint64 each), the model name, then rows x stride scalars
+RESTART_STATE_MAGIC = b"SFRC"
+RESTART_STATE_HEADER = struct.Struct("<IIIIQQ")
 
 # Number of scalar components of each binary list element type
 COMPONENTS = {
@@ -198,12 +205,46 @@ def binaryFieldItems(data, header):
     return items
 
 
+def restartStateItems(data):
+    """
+    Return the items of a cardiacFoam restart state file: the model name,
+    stride and rows as tokens, then every state value. Returns None when the
+    file is shorter than its header says.
+    """
+    size = RESTART_STATE_HEADER.size
+    if len(data) < size:
+        return None
+    magic, version, scalarSize, modelSize, stride, rows = \
+        RESTART_STATE_HEADER.unpack(data[:size])
+    model = data[size:size + modelSize]
+    if len(model) != modelSize or scalarSize not in (4, 8):
+        return None
+    fmt = "f" if scalarSize == 4 else "d"
+    count = rows * stride
+    body = data[size + modelSize:]
+    if len(body) != count * scalarSize:
+        return None
+    values = struct.unpack(f"<{count}{fmt}", body)
+    items = [
+        ("tok", "restart state model", model),
+        ("tok", "restart state version", str(version).encode()),
+        ("tok", "restart state stride", str(stride).encode()),
+        ("tok", "restart state rows", str(rows).encode()),
+    ]
+    for i, v in enumerate(values):
+        items.append(("val", f"cell {i // stride}, state {i % stride}", float(v)))
+    return items
+
+
 def items(data, ignoreRes):
     """
     Return the comparable items of a file as a list of
     (kind, where, value) with kind "tok" (bytes) or "val" (float), or None
     to request an exact byte comparison.
     """
+    if data[:4] == RESTART_STATE_MAGIC:
+        return restartStateItems(data)
+
     header = foamHeader(data)
 
     if isBinary(data):

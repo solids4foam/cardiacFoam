@@ -170,11 +170,13 @@ DICT
             runApplication decomposePar > /dev/null || exit 1
             runParallel cardiacFoam > /dev/null || exit 2
             runApplication reconstructPar > /dev/null || exit 3
+            runApplication redistributeRestartState > /dev/null || exit 4
         ) || rc=$?
-        if (( rc == 1 || rc == 3 )); then
-            echo "FAIL: ${name}: decomposePar or reconstructPar failed"
+        if (( rc == 1 || rc == 3 || rc == 4 )); then
+            echo "FAIL: ${name}: decomposePar, reconstructPar or redistributeRestartState failed"
             regressionDumpLog "${runDir}/log.decomposePar"
             regressionDumpLog "${runDir}/log.reconstructPar"
+            regressionDumpLog "${runDir}/log.redistributeRestartState"
             return 1
         fi
     else
@@ -188,7 +190,7 @@ DICT
             return 1
         fi
         local logs=(log.cardiacFoam)
-        (( nProcs > 1 )) && logs+=(log.decomposePar log.reconstructPar)
+        (( nProcs > 1 )) && logs+=(log.decomposePar log.reconstructPar log.redistributeRestartState)
 
         # Post-processing utility run on the result, from post/<script>
         if [[ -n "${post}" ]]; then
@@ -296,13 +298,12 @@ while IFS=$' \t' read -r relation nameA nameB file; do
         IFS=: read -r _ rtol atol <<< "${relation}"
         compareLog="${runRoot}/compare.${nameA}.${nameB}.log"
         # A parallel run records "../constant" as the location of its
-        # *.withDefaultValues, so leave those out. The ionic restart state
-        # (<model>State) is written per processor and not reconstructed by
-        # reconstructPar, so a serial run has it where a parallel run does
-        # not; it is left out of the comparison as well.
+        # *.withDefaultValues, so leave those out. The <model>State restart
+        # files are compared: redistributeRestartState gathers them after
+        # reconstructPar, so serial and parallel runs both have them.
         if "${compareTool}" --rtol "${rtol}" --atol "${atol:-0}" \
             --exclude system --exclude '*.withDefaultValues' \
-            --exclude '*State' --exclude manifest.diff "${fileA}" "${fileB}" \
+            --exclude manifest.diff "${fileA}" "${fileB}" \
             > "${compareLog}" 2>&1
         then
             echo "PASS: ${nameA} and ${nameB} match within rtol ${rtol}," \

@@ -1,3 +1,4 @@
+0.0025/BuenoOrovioState
 0.0025/Vm
 0.0025/Vm_0
 0.0025/activationTime
@@ -6,6 +7,7 @@
 0.0025/ionicCurrent
 0.0025/uniform/functionObjects/functionObjectProperties
 0.0025/uniform/time
+0.005/BuenoOrovioState
 0.005/Vm
 0.005/Vm_0
 0.005/activationTime
