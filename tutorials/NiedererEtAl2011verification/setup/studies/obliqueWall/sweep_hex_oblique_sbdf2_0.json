@@ -1,0 +1,20 @@
+{
+  "base": {
+    "entry": "niederer2011",
+    "cases_root": "tutorials",
+    "mesh": "hex",
+    "constant/electroProperties:monodomainSolverCoeffs.conductivity": {"dimensions": [-1, -3, 3, 0, 0, 2, 0], "value": [0.07551194956, 0.05790577195, 0, 0.07551194956, 0, 0.01760617761]},
+    "constant/electroProperties:monodomainSolverCoeffs.sealedHeartBoundary": false,
+    "constant/electroProperties:monodomainSolverCoeffs.sealedWallTrace": "zeroGradient",
+    "constant/electroProperties:monodomainSolverCoeffs.timeCouplingScheme": "sbdf2",
+    "system/fvSchemes:ddtSchemes.default": "backward"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "dx": [0.0005, 0.0005, 0.0005, 0.0002, 0.0002, 0.0002, 0.0001, 0.0001, 0.0001],
+      "system/controlDict:deltaT": [5e-05, 1e-05, 5e-06, 5e-05, 1e-05, 5e-06, 5e-05, 1e-05, 5e-06],
+      "system/controlDict:endTime": [0.2, 0.2, 0.2, 0.08, 0.08, 0.08, 0.065, 0.065, 0.065]
+    }
+  }
+}
