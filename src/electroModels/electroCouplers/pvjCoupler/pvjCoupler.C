@@ -235,8 +235,10 @@ void pvjCoupler::checkExplicitCouplingStability
             << exit(FatalError);
     }
 
-    // The explicit term relaxes the sphere average towards the network
-    // voltage at rate a/dt, a = dt*sum(w^2 V)/(R chi Cm V_s^2). With the
+    // The explicit term relaxes the sphere averages towards the network
+    // voltages at rates a/dt, a = dt*lambda/(chi Cm), lambda the largest
+    // eigenvalue of the junction operator: one junction's sum(w^2 V)/(R
+    // V_s^2) when no spheres overlap, more where they share cells. With the
     // term on the old level, Euler is stable for a < 2 and BDF2 (backward)
     // for a < 4; above 2, BDF2 rings with a decaying step-to-step sign flip.
     const word VmName(tissue->Vm().name());
@@ -247,46 +249,38 @@ void pvjCoupler::checkExplicitCouplingStability
     const bool bdf2 = (ddtSchemeName == "backward");
     const scalar aMax = bdf2 ? 4.0 : 2.0;
     const scalar chiCm = (tissue->chi()*tissue->Cm()).value();
-    const scalarField rates(mapper_.sphereAverageDecayRates());
 
-    label nRinging = 0;
-    scalar aRinging = 0.0;
+    label peak = -1;
+    const scalar rate =
+        mapper_.sphereAverageDecayRate(1.0/resistance, peak)/chiCm;
+    const scalar a = dt*rate;
 
-    forAll(rates, i)
+    if (a >= aMax)
     {
-        const scalar a = dt*rates[i]/(resistance[i]*chiCm);
-
-        if (a >= aMax)
-        {
-            FatalErrorInFunction
-                << "pvjCouplingScheme explicit is unstable at PVJ " << i
-                << ": dt*sum(w^2 V)/(R chi Cm V_s^2) = " << a
-                << ", bound " << aMax << " for ddt scheme '"
-                << ddtSchemeName << "'." << nl
-                << "  R      = " << resistance[i] << " Ohm (stable above "
-                << dt*rates[i]/(aMax*chiCm) << " Ohm)" << nl
-                << "  deltaT = " << dt << " s (stable below "
-                << aMax*resistance[i]*chiCm/rates[i] << " s)" << nl
-                << "Use pvjCouplingScheme implicit, a larger resistance or "
-                << "a smaller deltaT."
-                << exit(FatalError);
-        }
-
-        if (bdf2 && a > 2.0)
-        {
-            ++nRinging;
-            aRinging = max(aRinging, a);
-        }
+        FatalErrorInFunction
+            << "pvjCouplingScheme explicit is unstable: dt*lambda/(chi Cm) = "
+            << a << ", bound " << aMax << " for ddt scheme '"
+            << ddtSchemeName << "', with lambda the largest eigenvalue of "
+            << "the junction term (overlapping spheres included); the "
+            << "unstable mode is centred on PVJ " << peak << "." << nl
+            << "  stable with every resistance scaled by more than "
+            << a/aMax << " (R at PVJ " << peak << " = " << resistance[peak]
+            << " Ohm)" << nl
+            << "  or deltaT below " << aMax/rate << " s (now " << dt << ")"
+            << nl
+            << "Use pvjCouplingScheme implicit, larger resistances or "
+            << "a smaller deltaT."
+            << exit(FatalError);
     }
 
-    if (nRinging)
+    if (bdf2 && a > 2.0)
     {
         WarningInFunction
-            << "pvjCouplingScheme explicit: " << nRinging << " PVJ(s) have "
-            << "dt*sum(w^2 V)/(R chi Cm V_s^2) in (2, 4) (largest "
-            << aRinging << "), where backward is stable but the junction "
-            << "voltage oscillates from step to step. pvjCouplingScheme "
-            << "implicit does not." << endl;
+            << "pvjCouplingScheme explicit: dt*lambda/(chi Cm) = " << a
+            << " lies in (2, 4) (mode centred on PVJ " << peak << "), "
+            << "where backward is stable but junction voltages oscillate "
+            << "from step to step. pvjCouplingScheme implicit does not."
+            << endl;
     }
 }
 
