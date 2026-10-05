@@ -83,4 +83,3 @@ case's `regression/regressionTest.sh` is a short declaration on top of
 `tutorials/regression/lib.sh`, which runs the case, fails when a solver log
 is incomplete or reports a fatal error, and compares the outputs against the
 case's `regression/*.reference`.
-
