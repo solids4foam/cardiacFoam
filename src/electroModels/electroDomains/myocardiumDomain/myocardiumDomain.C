@@ -109,6 +109,25 @@ void writeMappedCellField
 }
 
 
+bool readExplicitAlgorithm(const dictionary& electroProperties)
+{
+    const word algorithm
+    (
+        electroProperties.lookupOrDefault<word>("solutionAlgorithm", "implicit")
+    );
+
+    if (algorithm != "explicit" && algorithm != "implicit")
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "solutionAlgorithm must be 'explicit' or 'implicit'; got '"
+            << algorithm << "'."
+            << exit(FatalIOError);
+    }
+
+    return algorithm == "explicit";
+}
+
+
 } // End anonymous namespace
 
 
@@ -361,13 +380,7 @@ myocardiumDomain::myocardiumDomain
     (
         electroProperties_
     )),
-    useExplicitAlgorithm_
-    (
-        electroProperties_.lookupOrDefault<word>
-        (
-            "solutionAlgorithm", "implicit"
-        ) == "explicit"
-    ),
+    useExplicitAlgorithm_(readExplicitAlgorithm(electroProperties_)),
     timeCouplingScheme_
     (
         electroProperties_.lookupOrDefault<word>("timeCouplingScheme", "godunov")

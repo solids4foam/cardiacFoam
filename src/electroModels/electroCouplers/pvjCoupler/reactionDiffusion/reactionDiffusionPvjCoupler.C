@@ -110,21 +110,10 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     R_pvj_(),
     debugCoupling_(dict.lookupOrDefault<Switch>("debugCoupling", false)),
-    couplingScheme_
-    (
-        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
-    ),
+    couplingScheme_(readCouplingScheme(dict)),
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
-    if (couplingScheme_ != "explicit" && couplingScheme_ != "implicit")
-    {
-        FatalErrorInFunction
-            << "Unknown pvjCouplingScheme '" << couplingScheme_
-            << "'. Valid options are 'explicit' and 'implicit'."
-            << exit(FatalError);
-    }
-
     const scalarField* pRes = networkTerminalDomain_.terminalResistances();
     if (pRes)
     {
@@ -170,10 +159,12 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 }
 
 
-void reactionDiffusionPvjCoupler::depositPrimaryCoupling() const
+void reactionDiffusionPvjCoupler::depositPrimaryCoupling(const scalar dt) const
 {
     if (couplingScheme_ == "explicit")
     {
+        checkExplicitCouplingStability(R_pvj_, dt);
+
         mapper_.depositCoupling
         (
             terminalCurrentBuffer_,
@@ -221,7 +212,7 @@ void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
         );
     }
 
-    depositPrimaryCoupling();
+    depositPrimaryCoupling(dt);
 
     networkTerminalDomain_.setTerminalCoupling
     (

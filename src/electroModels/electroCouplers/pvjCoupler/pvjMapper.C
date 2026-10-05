@@ -240,6 +240,27 @@ void pvjMapper::volumetricSource
 }
 
 
+scalarField pvjMapper::sphereAverageDecayRates() const
+{
+    const scalarField& cellVolumes = mesh_.V();
+    scalarField rates(terminalCellSets_.size(), 0.0);
+
+    forAll(terminalCellSets_, i)
+    {
+        forAll(terminalCellSets_[i], localI)
+        {
+            const scalar w = terminalCellWeights_[i][localI];
+            rates[i] += w*w*cellVolumes[terminalCellSets_[i][localI]];
+        }
+
+        reduce(rates[i], sumOp<scalar>());
+        rates[i] /= sqr(sphereVolumes_[i]);
+    }
+
+    return rates;
+}
+
+
 void pvjMapper::depositCoupling
 (
     const scalarField& couplingCurrent,

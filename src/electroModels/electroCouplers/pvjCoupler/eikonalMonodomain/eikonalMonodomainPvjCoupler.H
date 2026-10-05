@@ -41,6 +41,7 @@ class eikonalMonodomainPvjCoupler
 {
     mutable scalarField terminalActivationBuffer_;
     scalarField R_pvj_;
+    word couplingScheme_;
 
     //- Tissue resting potential minus the template resting potential [V].
     scalar vmTemplateOffset_;

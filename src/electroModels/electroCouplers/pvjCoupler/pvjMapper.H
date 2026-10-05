@@ -93,6 +93,10 @@ public:
         const scalarField& couplingCurrent,
         scalarField& source
     ) const;
+
+    //- Per terminal, sum_c w_c^2 V_c/V_s^2 [1/m^3]: the tissue decay rate
+    //  per unit conductance and capacitance of the sphere-averaged term.
+    scalarField sphereAverageDecayRates() const;
 };
 
 } // End namespace Foam
