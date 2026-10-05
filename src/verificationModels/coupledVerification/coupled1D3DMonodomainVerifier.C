@@ -27,7 +27,6 @@ License
 #include "electroVolumeFieldDomain.H"
 #include "ionicModel.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
-#include "pvjMapper.H"
 #include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -278,8 +277,33 @@ coupled1D3DMonodomainVerifier::coupled1D3DMonodomainVerifier
     couplingVerificationModel(dict),
     diagnosticsWritten_(false),
     exactPrimarySource_(),
-    exactSecondaryAppliedCurrent_()
+    exactSecondaryAppliedCurrent_(),
+    exactMapperPtr_()
 {}
+
+
+const pvjMapper& coupled1D3DMonodomainVerifier::exactMapper
+(
+    const fvMesh& mesh,
+    const pointField& terminalLocations
+) const
+{
+    if (!exactMapperPtr_.valid())
+    {
+        exactMapperPtr_.reset
+        (
+            new pvjMapper
+            (
+                mesh,
+                terminalLocations,
+                dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
+                dict().parent().lookupOrDefault<word>("pvjKernel", "uniform")
+            )
+        );
+    }
+
+    return exactMapperPtr_();
+}
 
 
 void coupled1D3DMonodomainVerifier::preProcess
@@ -312,13 +336,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
 
     const fvMesh& mesh = primaryDomain.mesh();
     const pointField& terminalLocations = networkDomain.terminalLocations();
-    pvjMapper exactMapper
-    (
-        mesh,
-        terminalLocations,
-        dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform")
-    );
+    const pvjMapper& mapper = exactMapper(mesh, terminalLocations);
 
     const scalarField R_pvj =
         terminalResistances(networkDomain, dict().parent());
@@ -344,7 +362,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
             computeExactTerminalCurrent
             (
                 mesh,
-                exactMapper,
+                mapper,
                 terminalLocations,
                 R_pvj,
                 primaryTime,
@@ -439,7 +457,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
         scalarField VmExact1D;
         computeExactTerminalVm(terminalLocations, secondaryTime, VmExact1D);
 
-        exactMapper.depositImplicitCoupling
+        mapper.depositImplicitCoupling
         (
             VmExact1D,
             R_pvj,
@@ -465,7 +483,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
         computeExactTerminalCurrent
         (
             mesh,
-            exactMapper,
+            mapper,
             terminalLocations,
             R_pvj,
             primaryTime,
@@ -473,7 +491,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
             exactCurrent
         );
 
-        exactMapper.depositCoupling(exactCurrent, exactSourceField);
+        mapper.depositCoupling(exactCurrent, exactSourceField);
     }
 
     exactPrimarySource_ = exactSourceField.primitiveField();
@@ -527,13 +545,7 @@ void coupled1D3DMonodomainVerifier::postProcess
     );
 
     const pointField& terminalLocations = networkDomain.terminalLocations();
-    pvjMapper exactMapper
-    (
-        mesh,
-        terminalLocations,
-        dict().parent().lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-        dict().parent().lookupOrDefault<word>("pvjKernel", "uniform")
-    );
+    const pvjMapper& mapper = exactMapper(mesh, terminalLocations);
 
     scalarField VmExact3D;
     computeExactVmField(mesh, mesh.time().value(), VmExact3D);
@@ -596,7 +608,7 @@ void coupled1D3DMonodomainVerifier::postProcess
             )
         );
 
-        exactMapper.depositImplicitCoupling
+        mapper.depositImplicitCoupling
         (
             VmExact1D,
             R_pvj,
@@ -616,7 +628,7 @@ void coupled1D3DMonodomainVerifier::postProcess
     else
     {
         scalarField VmExact3DAtTerminals;
-        exactMapper.gatherVm3DPvjs(VmExactField, VmExact3DAtTerminals);
+        mapper.gatherVm3DPvjs(VmExactField, VmExact3DAtTerminals);
 
         scalarField exactCurrent(VmExact1D.size(), 0.0);
         forAll(exactCurrent, i)
@@ -625,7 +637,7 @@ void coupled1D3DMonodomainVerifier::postProcess
                 (VmExact1D[i] - VmExact3DAtTerminals[i])/R_pvj[i];
         }
 
-        exactMapper.depositCoupling(exactCurrent, exactSourceField);
+        mapper.depositCoupling(exactCurrent, exactSourceField);
     }
 
     exactSourceValues = exactSourceField.primitiveField();

@@ -132,7 +132,6 @@ pvjCoupler::pvjCoupler
         dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
         dict.lookupOrDefault<word>("pvjKernel", "uniform")
     ),
-    pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),
     couplingMode_(parseCouplingMode(dict.get<word>("couplingMode"))),
     terminalCurrentBuffer_
     (

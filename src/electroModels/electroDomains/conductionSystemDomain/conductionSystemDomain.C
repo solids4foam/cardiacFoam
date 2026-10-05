@@ -155,8 +155,8 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
 
     graph_.edgeConductances *= purkinjeConductivity;
 
-    Info<< "Purkinje edge conductance multiplier: "
-        << purkinjeConductivity << nl << endl;
+    Info<< "Purkinje conductivity: " << purkinjeConductivity
+        << " S/m, times each edge's graph conductance" << nl << endl;
 
     rootNode_ = graphDict.get<label>("rootNode");
     terminalNodes_ = labelList(graphDict.lookup("pvjNodes"));

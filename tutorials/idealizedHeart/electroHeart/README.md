@@ -106,7 +106,7 @@ reads it via `graphFile purkinjeGraph;`, root node 0.
 All three variants conduct along the tree at ~3.3 m/s: `hybrid`'s
 `restitutionEikonalSolver1D` at its calibrated restitution maximum (3.33
 m/s), `eikonal`'s `eikonalSolver1D` via `purkinjeCV 3.33`, and
-`monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` (measured
+`monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` S/m (measured
 3.16 m/s at 0.35, 5.8 m/s at 1.5 and ~8.7 m/s at 10.0).
 
 Two trees are available, chosen by `Allrun`'s `human`/`pig` argument and

@@ -52,7 +52,6 @@ protected:
 
     networkCouplingEndpoint& networkTerminalDomain_;
     pvjMapper mapper_;
-    scalar pvjRadius_;
     CouplingMode couplingMode_;
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
