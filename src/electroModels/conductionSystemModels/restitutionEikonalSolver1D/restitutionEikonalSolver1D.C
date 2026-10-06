@@ -20,6 +20,7 @@ License
 #include "restitutionEikonalSolver1D.H"
 #include "conductionSystemDomain.H"
 #include "restitutionTemplates.H"
+#include "purkinjeModelIO.H"
 #include "addToRunTimeSelectionTable.H"
 #include <queue>
 #include <utility>
@@ -43,11 +44,43 @@ addToRunTimeSelectionTable
 
 Foam::restitutionEikonalSolver1D::restitutionEikonalSolver1D
 (
-    const fvMesh&,
+    const fvMesh& mesh,
     const dictionary& solverCoeffs
 )
 :
     restitutionPtr_(new restitutionModel()),
+    nextTact_
+    (
+        IOobject
+        (
+            IOobject::groupName
+            (
+                "nextActivationTime",
+                solverCoeffs.parent().dictName()
+            ),
+            mesh.time().timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        0
+    ),
+    nextTactSource_
+    (
+        IOobject
+        (
+            IOobject::groupName
+            (
+                "nextActivationSource",
+                solverCoeffs.parent().dictName()
+            ),
+            mesh.time().timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        0
+    ),
     apdNominal_
     (
         solverCoeffs.lookupOrDefault<scalar>
@@ -106,13 +139,21 @@ void Foam::restitutionEikonalSolver1D::initialiseState
     const label N = domain.graph().nNodes;
     const scalarField& Tact = domain.activationTime();
 
+    // A restart reads the pending events; every activation time on the
+    // graph is then in the past.
+    const bool restarted = nextTact_.size() == N;
+
     lastActTime_.setSize(N, -GREAT);
     DI_.setSize(N, GREAT);
-    nextTact_.setSize(N, GREAT);
     minDI_.setSize(N, GREAT);
 
     activatedFrom_.setSize(N, -1);
-    nextTactSource_.setSize(N, -1);
+
+    if (!restarted)
+    {
+        nextTact_.setSize(N, GREAT);
+        nextTactSource_.setSize(N, -1);
+    }
 
     blockCount_.setSize(N, 0);
     wavebreakCount_.setSize(N, 0);
@@ -120,8 +161,7 @@ void Foam::restitutionEikonalSolver1D::initialiseState
     tStart_ = t0;
 
     // Seed the event queue from any activation times already present on the
-    // graph (for example the rootNode activation configured at t=0, or a
-    // restart that carries past/future graph activations).
+    // graph (for example the rootNode activation configured at t=0).
     forAll(Tact, i)
     {
         if (Tact[i] < 0.0)
@@ -129,7 +169,7 @@ void Foam::restitutionEikonalSolver1D::initialiseState
             continue;
         }
 
-        if (Tact[i] >= t0 - SMALL)
+        if (!restarted && Tact[i] >= t0 - SMALL)
         {
             nextTact_[i] = Tact[i];
             nextTactSource_[i] = -1;
@@ -300,7 +340,7 @@ void Foam::restitutionEikonalSolver1D::advance
         DI_[i] = DIact;
         lastActTime_[i] = te;
 
-        activatedFrom_[i] = nextTactSource_[i];
+        activatedFrom_[i] = label(nextTactSource_[i]);
         nextTact_[i] = GREAT;
         nextTactSource_[i] = -1;
 
@@ -375,6 +415,13 @@ void Foam::restitutionEikonalSolver1D::advance
             Vm[i] = restitutionTemplates::evaluatePurkinjeVmTemplate(localTime) * 1e-3;
         }
     }
+}
+
+
+void Foam::restitutionEikonalSolver1D::write()
+{
+    purkinjeModelIO::writeGlobalField(nextTact_);
+    purkinjeModelIO::writeGlobalField(nextTactSource_);
 }
 
 

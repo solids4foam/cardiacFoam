@@ -783,6 +783,7 @@ void conductionSystemDomain::write()
         }
     }
     purkinjeModelIO::writeGlobalField(activationTime_);
+    solverPtr_->write();
 
     DynamicList<scalar> values;
     for (const word& var : exportVars_)
