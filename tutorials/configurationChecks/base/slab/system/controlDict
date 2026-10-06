@@ -31,4 +31,6 @@ timeFormat      general;
 timePrecision   6;
 runTimeModifiable false;
 
+libs            ( "libverificationModels.so" );
+
 // ************************************************************************* //
