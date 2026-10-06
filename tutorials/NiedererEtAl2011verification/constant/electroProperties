@@ -26,7 +26,9 @@ monodomainSolverCoeffs
     chi   [0 -1 0 0 0 0 0] 140000;
     cm    [-1 -4 4 0 0 2 0] 0.01;
 
-    ionicModel    TNNP;
+    // Batched TNNP with Rush–Larsen gating: same wavefront as TNNP, much faster.
+    ionicModel    TNNPcompactBatched;
+    batchedIntegrator rushLarsen;
     tissue    epicardialCells;
 
     outputVariables
@@ -39,8 +41,7 @@ monodomainSolverCoeffs
     }
 
     solutionAlgorithm    implicit;
-    solver RKF45;
-    maxSteps 1000000000;
+    // No `solver`/`maxSteps`: the batched models do not use the ODESolver.
 
     externalStimulus
     {
