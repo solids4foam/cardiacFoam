@@ -95,8 +95,9 @@ Today only `idealizedHeart/electroHeart` reads it: `standard` runs the
 `monodomain` variant on the human Purkinje tree, `full` runs all three
 solver variants on both trees, six whole-heart runs. In `with-solids4foam`
 mode no skip is expected, so a missing solids4foam build fails these cases
-instead of skipping them. CI runs lightweight mode only, so these cases are
-exercised only by a `with-solids4foam` run.
+instead of skipping them. In CI only the `with-solids4foam` job that builds
+solids4foam from the submodule runs them; every other job runs the
+regressions in lightweight mode.
 
 ### What a regression runs
 
