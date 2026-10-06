@@ -97,3 +97,23 @@ solver variants on both trees, six whole-heart runs. In `with-solids4foam`
 mode no skip is expected, so a missing solids4foam build fails these cases
 instead of skipping them. CI runs lightweight mode only, so these cases are
 exercised only by a `with-solids4foam` run.
+
+### What a regression runs
+
+A regression checks that a case still runs, through every feature it exists
+to exercise, and that its results have not changed. It is not the tutorial:
+**every regression finishes in a few minutes on a 4-vCPU CI runner**, about
+five on the slowest. When the tutorial takes longer, the case's
+`regression/regressionTest.sh` runs a smaller configuration of it:
+
+- a shorter `endTime`, ending soon after the last event the reference checks;
+- a coarser mesh;
+- only the electrodes or variants the reference checks.
+
+The script sets it with `regression_set` or `regression_edit` from
+`regression/lib.sh`, for its own run only: the case's `Allrun` and
+dictionaries keep the tutorial's settings, so `./Allrun` still runs the full
+tutorial. The reference is generated from the regression configuration, and
+every reference checks values that move when the result changes; a probe
+that reads `-1` (not yet activated) is checked only alongside probes that
+have activated.
