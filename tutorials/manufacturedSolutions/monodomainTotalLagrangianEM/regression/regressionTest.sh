@@ -19,38 +19,16 @@ fi
 # Compares the final-time error norms that manufacturedElectromechanicsVerifier
 # writes for Vm, D, lambda and Ta against the reference.
 #
-# The tracked case runs 40^3 cells at the N=80 time step, too slow for a
-# regression. This script runs 20^3 cells at the matching N=20 time step from
-# setup/driver_config.json: blockMeshDict and controlDict are rewritten for
-# this invocation only and restored on exit.
-
-REGRESSION_CELLS="20 20 20"
-REGRESSION_DELTA_T="0.00224215"
-BLOCKMESH_DICT="system/blockMeshDict"
-CONTROL_DICT="system/controlDict"
-BACKUP_SUFFIX=".regressionTest.bak"
+# The tracked case runs 40^3 cells at the N=80 time step. The regression runs
+# 20^3 cells at the matching N=20 time step from setup/driver_config.json.
 
 regression_init "Electromechanics manufactured-solution regression test" \
     regression/monodomainTotalLagrangianEM.reference "$@"
 regression_require_solids4foam
 
-if (( ! REGRESSION_CHECK_ONLY )); then
-    cp "${BLOCKMESH_DICT}" "${BLOCKMESH_DICT}${BACKUP_SUFFIX}"
-    cp "${CONTROL_DICT}" "${CONTROL_DICT}${BACKUP_SUFFIX}"
-    regression_add_exit_hook \
-        'mv -f "${BLOCKMESH_DICT}${BACKUP_SUFFIX}" "${BLOCKMESH_DICT}"; mv -f "${CONTROL_DICT}${BACKUP_SUFFIX}" "${CONTROL_DICT}"'
-
-    sed -E "s/^([[:space:]]*hex[[:space:]]*\([^)]*\)[[:space:]]*)\([^)]*\)/\1(${REGRESSION_CELLS})/" \
-        "${BLOCKMESH_DICT}${BACKUP_SUFFIX}" > "${BLOCKMESH_DICT}"
-    sed -E "s/^deltaT[[:space:]]+[^;]+;/deltaT          ${REGRESSION_DELTA_T};/" \
-        "${CONTROL_DICT}${BACKUP_SUFFIX}" > "${CONTROL_DICT}"
-
-    if ! grep -q "(${REGRESSION_CELLS})" "${BLOCKMESH_DICT}" \
-        || ! grep -qE "^deltaT[[:space:]]+${REGRESSION_DELTA_T};" "${CONTROL_DICT}"; then
-        regression_fail "could not set the regression mesh size or time step"
-        regression_finish
-    fi
-fi
+regression_edit system/blockMeshDict \
+    's/^([[:space:]]*hex[[:space:]]*\([^)]*\)[[:space:]]*)\([^)]*\)/\1(20 20 20)/'
+regression_set system/controlDict deltaT 0.00224215
 
 regression_run_or_fail
 
