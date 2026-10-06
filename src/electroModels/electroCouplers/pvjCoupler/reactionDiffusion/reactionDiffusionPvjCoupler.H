@@ -77,6 +77,8 @@ public:
     virtual void prepareSecondaryCoupling(scalar t0, scalar dt) override;
 
     virtual void preparePrimaryCoupling(scalar t0, scalar dt) override;
+
+    virtual void write() override;
 };
 
 } // End namespace Foam

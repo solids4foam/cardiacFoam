@@ -237,6 +237,33 @@ void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     );
 }
 
+
+void reactionDiffusionPvjCoupler::write()
+{
+    pvjCoupler::write();
+
+    // Under the implicit scheme each cell takes G*(Vn' - V_c') with its own
+    // solved voltage, which sums to G*(Vn' - <V'>): the current the tissue
+    // received, written in place of the pre-solve estimate.
+    if (couplingScheme_ == "implicit" && mesh_.time().outputTime())
+    {
+        mapper_.gatherVm3DPvjs(primaryDomain_.Vm(), tissueVmBuffer_);
+        couplingCurrentAtPvjs
+        (
+            networkVmBuffer_,
+            tissueVmBuffer_,
+            terminalCurrentBuffer_
+        );
+        mapper_.volumetricSource(terminalCurrentBuffer_, terminalSourceBuffer_);
+
+        networkTerminalDomain_.setTerminalCoupling
+        (
+            terminalCurrentBuffer_,
+            terminalSourceBuffer_
+        );
+    }
+}
+
 } // End namespace Foam
 
 // ************************************************************************* //
