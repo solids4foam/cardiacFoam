@@ -117,3 +117,8 @@ tutorial. The reference is generated from the regression configuration, and
 every reference checks values that move when the result changes; a probe
 that reads `-1` (not yet activated) is checked only alongside probes that
 have activated.
+
+One case does not meet the time bound: `idealizedHeart/electroMechHeart`.
+Its ionic model is integrated over the 123k-cell heart and its solid solved
+every step, and its stimulus starts at 2 ms, so even the 10 ms the regression
+runs (the tutorial runs 20 ms) take 9 to 15 minutes on a 14-core workstation.
