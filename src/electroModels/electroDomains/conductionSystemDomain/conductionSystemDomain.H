@@ -291,6 +291,12 @@ public:
         return chi_;
     }
 
+    //- purkinjeGraphModelCoeffs as the case gives them.
+    const dictionary& coeffsDict() const
+    {
+        return coeffsDict_;
+    }
+
     scalar Cm() const
     {
         return Cm_;
