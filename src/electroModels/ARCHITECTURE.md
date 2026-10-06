@@ -245,7 +245,7 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | `electroDomainCoupler.H/C` | Base class for all couplers. Named pair of domain references with `prepareSecondaryCoupling()`, `preparePrimaryCoupling()`, `preparePostPrimaryCoupling()` hooks. |
 | `pvjCoupler/pvjMapper.H/C` | Purkinje–Ventricular Junction topology mapper. Builds the spatial map between conduction-system terminal nodes and the nearest myocardium cells. |
 | `pvjCoupler/pvjCoupler.H/C` | PVJ coupling-family base. Owns the shared PVJ mapper, coupling-mode parsing, and network endpoint binding. |
-| `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it explicitly into `myocardiumDomain::sourceField_` or, with `pvjCouplingScheme implicit`, puts each cell's own tissue-voltage term on the myocardium Vm matrix diagonal, with either tissue `solutionAlgorithm`. |
+| `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it explicitly into `myocardiumDomain::sourceField_` or, with `pvjCouplingScheme implicit`, puts each cell's own tissue-voltage term on the myocardium Vm matrix diagonal, with either tissue `solutionAlgorithm`. In `couplingMode bidirectional` the tissue receives the current the network solved, so the scheme is explicit there. |
 | `pvjCoupler/eikonal/eikonalPvjCoupler.H/C` | PVJ coupling for activation-time models. Transfers Purkinje terminal activation times into the myocardium eikonal domain. |
 | `pvjCoupler/eikonalMonodomain/eikonalMonodomainPvjCoupler.H/C` | Eikonal-network to monodomain-tissue PVJ coupling. Anterograde transfer drives the junction current from a voltage template, with the same `pvjCouplingScheme` choice as `reactionDiffusionPvjCoupler`; under `couplingMode bidirectional` it additionally gathers myocardial activation times back onto the network terminals (retrograde 3D-to-1D). `eikonalPvjCoupler` implements the same retrograde gather; the difference here is the anterograde side, which uses a voltage template into a monodomain tissue solver. |
 
@@ -263,13 +263,12 @@ network source_k -= I_pvj,i / (π ρ² L_k)   [A/m³], bidirectional mode only
 ```
 
 `w_c` is the `pvjKernel` weight, `ρ` is `purkinjeFibreRadius` and `L_k` is half the length of
-the edges meeting at node `k`, so the network node loses exactly the charge the tissue gains.
-The network takes `Vm_1D,k` at the new time level on its tree-solver diagonal against the
-tissue average before the tissue solve. With `pvjCouplingScheme explicit` the tissue receives
-that same current, and charge is conserved every step. With `implicit`, cell `c` sees
-`w_c (Vm_1D,k − Vm_c) / (R_i V_s,i)` with its own new `Vm_c`. That is stable for any `R_i`, but in
-bidirectional mode each step misplaces `dt (<Vm_3D>' − <Vm_3D>) / R_i`, which acts as an extra
-capacitance `dt / R_i` at the junction.
+the edges meeting at node `k`. In bidirectional mode the network takes `Vm_1D,k` at the new time
+level on its tree-solver diagonal against the tissue average before the tissue solve, and the
+tissue receives that same current whatever `pvjCouplingScheme` says, so the network node loses
+exactly the charge the tissue gains every step by construction. In unidirectional mode the network does not respond, and `pvjCouplingScheme
+implicit` gives cell `c` the term `w_c (Vm_1D,k − Vm_c) / (R_i V_s,i)` with its own new `Vm_c` on the
+myocardium Vm matrix diagonal.
 
 `pvjMapper` spatial algorithm: for each PVJ location, find all 3D cells within `pvjRadius`, gather tissue `Vm` as a volume-weighted average, then scatter coupling current back to those cells.
 

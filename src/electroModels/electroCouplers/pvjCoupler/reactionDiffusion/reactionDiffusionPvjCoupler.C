@@ -138,6 +138,12 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     if (couplingMode_ == bidirectional)
     {
         networkTerminalDomain_.setTerminalConductances(1.0/R_pvj_);
+
+        // The tissue receives exactly the current the network solved, so
+        // charge balances every step. A cell-wise implicit term would see
+        // the network a step late and, at strong coupling, freeze the
+        // junction.
+        couplingScheme_ = "explicit";
     }
 }
 
