@@ -51,6 +51,11 @@ regression_init "Spring-supported electromechanics slab regression test" \
     regression/springSupportedSlab.reference "$@"
 regression_require_solids4foam
 
+# The tutorial runs the twitch to 0.25 s. The regression stops at 0.05 s, once
+# activation has crossed the slab, Ta has risen in its middle and both
+# spring-supported ends have moved well beyond their resting preload.
+regression_set system/caseParameters endTime 0.05
+
 regression_run_or_fail parallel
 
 kEnds="$(awk '$1 == "kEnds" { sub(/;/, "", $2); print $2 }' system/caseParameters)"

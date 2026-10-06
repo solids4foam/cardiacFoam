@@ -208,14 +208,16 @@ shortening against `kEnds`.
 
 The regression is a single run: `regression/regressionTest.sh` runs
 `./Allrun parallel` once with the default `system/caseParameters`
-(`kEnds = 1e7`, `deltaT = 1e-5`, `endTime = 0.25`; about 12 min on 6
-cores). The stiffness sweep and the `deltaT = 1e-6` reference are not part
+(`kEnds = 1e7`, `deltaT = 1e-5`) but stops at `endTime = 0.05` instead of
+the tutorial's 0.25: by then activation has crossed the slab, `Ta` has risen
+in its middle and both ends have moved about 30% beyond their resting
+preload. The stiffness sweep and the `deltaT = 1e-6` reference are not part
 of it. The run is compared against `regression/springSupportedSlab.reference`:
 
-- `Vm` at the far end (activation has crossed the slab)
-- `Ta` at the slab centre
-- `Dx` on `xMin` and `xMax` (the slab shortening)
-- the spring law, `F_xMin = -kEnds · A0 · <Dx>`, at the same times
+- `Vm` at the far end, resting at 0.02 s and activated at 0.05 s
+- `Ta` near the stimulus and at the slab centre at 0.05 s
+- `Dx` on `xMin` at 0.02 and 0.05 s and on `xMax` at 0.05 s (the shortening)
+- the spring law, `F_xMin = -kEnds · A0 · <Dx>`, at 0.02 and 0.05 s
 
 It exits 77 (expected skip) in `lightweight` build mode, and is wired into
 `tutorials/Alltest-regression`.
