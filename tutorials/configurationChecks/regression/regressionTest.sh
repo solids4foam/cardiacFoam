@@ -99,8 +99,11 @@ applyEdits()
             foamDictionary constant/electroProperties \
                 -entry "${edit%!}" -remove > /dev/null
         else
+            # A value cannot hold a space in the checks file, so it is
+            # written as ~, as in fail:<text>
+            local value="${edit#*=}"
             foamDictionary constant/electroProperties \
-                -entry "${edit%%=*}" -set "${edit#*=}" > /dev/null
+                -entry "${edit%%=*}" -set "${value//\~/ }" > /dev/null
         fi
     done
 }

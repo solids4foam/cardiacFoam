@@ -10,7 +10,8 @@
 #            fail:<text>: must stop with a FOAM FATAL error mentioning <text>
 #                  (write spaces in <text> as ~)
 #   edit     applied to constant/electroProperties with foamDictionary:
-#            path=value sets an entry, path! removes it (no spaces in values);
+#            path=value sets an entry, path! removes it (write spaces in
+#            values as ~; a value can be a whole {...} sub-dictionary);
 #            np=N runs on N processors (simple decomposition) and
 #            reconstructs; post=<script> then runs post/<script> in the
 #            run directory (a post-processing utility);
@@ -36,7 +37,9 @@ monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion
 monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
 monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
 eikonalPurkinje                        slab  eikonalPurkinje                        pass
-monodomainPurkinjeIonicExport          slab  monodomainPurkinjeIonicExport          pass
+# An ionic state of the graph model exported next to the coupling outputs;
+# in parallel each processor holds only its share of the graph nodes (#48)
+monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion    pass  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(IcouplingSource~Vm~v);}
 
 # ---- ECG ------------------------------------------------------------------
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
@@ -59,7 +62,7 @@ bidomainParallel                       slab  bidomain                           
 eikonalParallel                        slab  eikonal                                pass  np=2
 monodomainPurkinjeReactionDiffusionParallel slab monodomainPurkinjeReactionDiffusion pass np=2
 monodomainPurkinjeRestitutionEikonalParallel slab monodomainPurkinjeRestitutionEikonal pass np=2
-monodomainPurkinjeIonicExportParallel  slab  monodomainPurkinjeIonicExport          pass  np=2
+monodomainPurkinjeIonicExportParallel  slab  monodomainPurkinjeReactionDiffusion    pass  np=2  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(IcouplingSource~Vm~v);}
 eikonalPurkinjeParallel                slab  eikonalPurkinje                        pass  np=2
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
