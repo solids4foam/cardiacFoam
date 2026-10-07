@@ -25,6 +25,7 @@ differ  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusion
 # Options that must not change the myocardium solution
 same    monodomainExplicit                   monodomainFieldConductivity                      0.005/Vm
 same    monodomainExplicit                   monodomainVerificationNone                       0.005/Vm
+same    monodomainPurkinjeReactionDiffusion  monodomainPurkinjeIonicExport                    0.005/Vm
 same    monodomainExplicit                   monodomainPseudoECG                              0.005/Vm
 same    bidomain                             bidomainPseudoECG                                0.005/Vm
 same    eikonal                              eikonalECG                                       1/activationTime
@@ -39,6 +40,7 @@ close:1e-6:1e-12  bidomain                             bidomainParallel         
 close:1e-6:1e-12  eikonal                              eikonalParallel                              .
 close:1e-6:1e-12  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusionParallel  .
 close:1e-6:1e-12  monodomainPurkinjeRestitutionEikonal monodomainPurkinjeRestitutionEikonalParallel .
+close:1e-6:1e-12  monodomainPurkinjeIonicExport        monodomainPurkinjeIonicExportParallel        .
 close:1e-6:1e-12  eikonalPurkinje                      eikonalPurkinjeParallel                      .
 close:1e-6:1e-12  monodomainPseudoECG                  monodomainPseudoECGParallel                  .
 close:1e-6:1e-12  eikonalECG                           eikonalECGParallel                           .

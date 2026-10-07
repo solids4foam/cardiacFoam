@@ -36,6 +36,7 @@ monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion
 monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
 monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
 eikonalPurkinje                        slab  eikonalPurkinje                        pass
+monodomainPurkinjeIonicExport          slab  monodomainPurkinjeIonicExport          pass
 
 # ---- ECG ------------------------------------------------------------------
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
@@ -58,6 +59,7 @@ bidomainParallel                       slab  bidomain                           
 eikonalParallel                        slab  eikonal                                pass  np=2
 monodomainPurkinjeReactionDiffusionParallel slab monodomainPurkinjeReactionDiffusion pass np=2
 monodomainPurkinjeRestitutionEikonalParallel slab monodomainPurkinjeRestitutionEikonal pass np=2
+monodomainPurkinjeIonicExportParallel  slab  monodomainPurkinjeIonicExport          pass  np=2
 eikonalPurkinjeParallel                slab  eikonalPurkinje                        pass  np=2
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
