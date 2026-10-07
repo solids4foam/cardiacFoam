@@ -1,4 +1,4 @@
 [submodule "modules/solids4foam"]
 	path = modules/solids4foam
 	url = https://github.com/svcHeidi/solids4foam.git
-	branch = cardiacfoam-em
+	branch = claude/laughing-cori-t01yea

@@ -1,7 +1,7 @@
 # springSupportedSlab tutorial
 
 The Niederer et al. (2011) slab in electromechanics, with both fibre-wise
-ends resting on spring supports (`solidRobin`). The spring stiffness decides
+ends resting on spring supports (`solidSpringDashpot`). The spring stiffness decides
 how much the slab can shorten when it contracts:
 
 | End springs | What the slab does |
@@ -19,14 +19,14 @@ spring support in the coupled electromechanics solver on a geometry where
 the answer is easy to read: one number (the slab shortening) against one
 parameter (`kEnds`). The condition itself (formulation,
 implementation, literature values) is documented in
-`modules/solids4foam/src/solids4FoamModels/solidModels/fvPatchFields/solidRobin/README.md`.
+`modules/solids4foam/src/solids4FoamModels/solidModels/fvPatchFields/solidSpringDashpot/README.md`.
 
 ## Folder structure
 
 ```text
 tutorials/electromechanicsProtocols/springSupportedSlab/
 ├── 0/solid/
-│   ├── D                       solidRobin ends (xMin, xMax), free lateral faces
+│   ├── D                       solidSpringDashpot ends (xMin, xMax), free lateral faces
 │   ├── f0, f0f                 fibres along x
 ├── constant/
 │   ├── physicsProperties       electroMechanicalModel
@@ -66,7 +66,7 @@ tutorials/electromechanicsProtocols/springSupportedSlab/
   per-step residual, which shrinks with `deltaT`, so that the relative
   criteria decide convergence at any time step.
 - **Boundaries** (`0/solid/D`):
-  - `xMin`, `xMax`: `solidRobin` with `kNormal = kTangential = $kEnds`,
+  - `xMin`, `xMax`: `solidSpringDashpot` with `kNormal = kTangential = $kEnds`,
     no damping
   - `lateral`: traction-free `solidTraction`
 
@@ -155,7 +155,7 @@ written every 10 ms.
 ## Results
 
 The sweep of `setup/sweep_springStiffness.json`, OpenFOAM v2412, 250 ms, with
-a solids4foam that includes `solidRobin` and the `electroMechanicalLaw`
+a solids4foam that includes `solidSpringDashpot` and the `electroMechanicalLaw`
 deformation-gradient fix (#393):
 
 | caseId | Peak shortening | Peak end force | Spring-law error* |
@@ -194,7 +194,7 @@ shortening against `kEnds`.
 
 ## Notes
 
-- Use a very stiff `solidRobin` (1e10 Pa/m) for the isometric limit, not
+- Use a very stiff `solidSpringDashpot` (1e10 Pa/m) for the isometric limit, not
   `fixedDisplacement` on both ends. With both ends fixed and a plane-wave
   stimulus, the displacement is exactly zero at the start, and the solid
   solver's relative-residual check cannot be met.
