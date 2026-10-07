@@ -14,6 +14,7 @@
 #     set -euo pipefail
 #     . "$(dirname "${BASH_SOURCE[0]}")/../../../regression/lib.sh"
 #     regression_init "Case title" regression/case.reference "$@"
+#     regression_set system/controlDict endTime 0.05    # regression-only
 #     regression_run parallel
 #     regression_compare
 #     regression_finish
@@ -261,6 +262,64 @@ regression_require_solids4foam()
         echo "      Rebuild cardiacFoam in full mode before running this regression."
         exit 1
     fi
+}
+
+# ------------------------------------------------------------
+# Regression configuration
+# ------------------------------------------------------------
+
+# Regression-only settings. A regression checks that the case still runs and
+# that its outputs have not changed, so it may run a smaller configuration
+# than the tutorial: a shorter endTime, a coarser mesh, fewer electrodes.
+# These helpers edit a case file for the script's invocation only: the file
+# is restored when the script exits, so the tutorial keeps its own settings.
+# They do nothing under --check-only, and an edit that changes nothing fails
+# the script, so a setting cannot silently go missing.
+
+regression_backup_file()
+{
+    local file="$1" backup="$1.regressionTest.bak"
+    if [[ ! -e "${backup}" ]]; then
+        cp -p "${file}" "${backup}"
+        regression_add_exit_hook "mv -f $(printf '%q' "${backup}") $(printf '%q' "${file}")"
+    fi
+}
+
+# regression_edit <file> <sed -E expression>...
+regression_edit()
+{
+    local file="$1" expr
+    shift
+
+    (( REGRESSION_CHECK_ONLY )) && return 0
+    regression_backup_file "${file}"
+
+    for expr in "$@"; do
+        sed -E -e "${expr}" "${file}" > "${file}.regressionTest.tmp"
+        if cmp -s "${file}" "${file}.regressionTest.tmp"; then
+            rm -f "${file}.regressionTest.tmp"
+            regression_fail "regression setting '${expr}' changes nothing in ${file}"
+            regression_finish
+        fi
+        mv -f "${file}.regressionTest.tmp" "${file}"
+        echo "Regression setting: ${file}: ${expr}"
+    done
+}
+
+# regression_set <file> <keyword> <value>: sets the one entry of the file
+# whose line starts with <keyword> (at any indentation) to <value>.
+regression_set()
+{
+    local file="$1" keyword="$2" value="$3" count
+
+    (( REGRESSION_CHECK_ONLY )) && return 0
+
+    count="$(grep -cE "^[[:space:]]*${keyword}[[:space:]]+[^;]*;" "${file}" || true)"
+    if (( count != 1 )); then
+        regression_fail "regression setting ${keyword} ${value}: ${file} has ${count} '${keyword}' entries, expected one"
+        regression_finish
+    fi
+    regression_edit "${file}" "s/^([[:space:]]*${keyword}[[:space:]]+)[^;]*;/\\1${value};/"
 }
 
 # ------------------------------------------------------------

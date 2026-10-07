@@ -21,29 +21,24 @@ fi
 # reaches the blocked LV point at 43.2 ms, so the cutoff separates block from
 # health with margin on both sides.
 #
-# The case's own controlDict runs to 0.7 s. endTime is set to 0.035 s for
-# this script's invocation only and restored on exit.
+# The case's own controlDict runs to 0.7 s; the regression stops at 0.035 s
+# and runs in parallel, as the other whole-heart regressions do.
 
 VARIANTS=(lbbb rbbb)
-CONTROL_DICT="system/controlDict"
-CONTROL_DICT_BACKUP="system/controlDict.regressionTest.bak"
 
 regression_init "Idealized heart conduction-block regression test" \
     "regression/${VARIANTS[0]}.reference" "$@"
 regression_require_run_mode
 
-cp "${CONTROL_DICT}" "${CONTROL_DICT_BACKUP}"
-regression_add_exit_hook 'mv -f "${CONTROL_DICT_BACKUP}" "${CONTROL_DICT}"'
-sed -E 's/^endTime[[:space:]]+[^;]+;/endTime    0.035;/' \
-    "${CONTROL_DICT_BACKUP}" > "${CONTROL_DICT}"
+regression_set system/controlDict endTime 0.035
 
 for variant in "${VARIANTS[@]}"; do
     echo "------------------------------------------------------------"
     echo "Variant: ${variant}"
     echo "------------------------------------------------------------"
 
-    if ! regression_run "${variant}"; then
-        regression_fail "Allrun ${variant} did not complete"
+    if ! regression_run "${variant}" parallel; then
+        regression_fail "Allrun ${variant} parallel did not complete"
         continue
     fi
     regression_compare "regression/${variant}.reference" || true

@@ -17,13 +17,22 @@ fi
 # against regression/<variant>.reference. The monodomain variant also runs
 # the graph-only runPurkinjeGraph utility and checks it against
 # regression/monodomain.graphUtility.reference.
+#
+# Regression configuration (tutorials/README.md): retrograde stops at 0.6 s,
+# once its second beat has crossed the network, instead of 0.9 s. antegrade,
+# 2.45 s of which the tissue is idle until the 1.2 s escape beat, runs last,
+# on a 75 x 75 slab instead of 150 x 150: what it checks are network
+# activation times, which do not change with the slab resolution. The
+# retrograde and monodomain variants need the fine slab, since the junctions
+# exchange current with the tissue.
 
-VARIANTS=(antegrade retrograde monodomain)
+VARIANTS=(retrograde monodomain antegrade)
 
 regression_init "purkinjeRestitution2D regression test" \
     "regression/${VARIANTS[0]}.reference" "$@"
 regression_require_run_mode
 REGRESSION_TIME_WINDOW=1e-6
+regression_set system/controlDict.retrograde endTime 0.6
 
 # macOS strips DYLD_LIBRARY_PATH from child processes; runPurkinjeGraph is
 # called directly rather than through RunFunctions.
@@ -38,6 +47,11 @@ for variant in "${VARIANTS[@]}"; do
     echo "------------------------------------------------------------"
     echo "Variant: ${variant}"
     echo "------------------------------------------------------------"
+
+    if [[ "${variant}" == antegrade ]]; then
+        regression_edit system/blockMeshDict \
+            's/^([[:space:]]*hex[[:space:]]*\([^)]*\)[[:space:]]*)\([^)]*\)/\1(75 75 1)/'
+    fi
 
     if ! regression_run "${variant}" parallel; then
         regression_fail "Allrun ${variant} parallel did not complete"

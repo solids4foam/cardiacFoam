@@ -70,6 +70,12 @@ regression_init "Eikonal ECG insulated-wall manufactured-solution regression tes
 REGRESSION_TIME_WINDOW=1e-6
 checkElectrodeConfiguration || regression_finish
 
+# The tutorial samples 161 electrodes, and the ECG verifier integrates a
+# reference ECG for each by Gauss quadrature at every sample, which is most of
+# the case's cost. The regression keeps E1-E5, the electrodes it checks; each
+# electrode's trace is computed on its own, so theirs do not change.
+regression_edit constant/electroProperties '/^[[:space:]]*R[0-9]+[[:space:]]*\(/d'
+
 regression_run_or_fail parallel
 
 REGRESSION_SUMMARY_FILE="$(findErrorSummary)" || REGRESSION_SUMMARY_FILE=""

@@ -19,6 +19,12 @@ fi
 regression_init "Rotor instability activation regression test" \
     regression/rotorInstability.reference "$@"
 
+# The tutorial runs 4 s. The S2 stimulus at 0.45 s starts the rotor, and by
+# 1 s every probe has been activated again by the rotor alone (twice for
+# some), so the regression stops there; the third stimulus, at 2 s, is not
+# reached.
+regression_set system/controlDict endTime 1
+
 regression_run_or_fail parallel
 regression_compare || true
 regression_finish

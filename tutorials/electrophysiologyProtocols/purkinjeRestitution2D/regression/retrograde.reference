@@ -11,7 +11,7 @@ probe  postProcessing/purkinjeNetwork.dat  0.50  2  0.0648939915  1e-6
 probe  postProcessing/purkinjeNetwork.dat  0.50  4  0.0681992800  1e-6
 # Tissue beat at 0.55 s, 0.5 s after the first: captured, and slower up the
 # tree at the shorter diastolic interval (9.6 ms to node 1, against 9.0 ms).
-probe  postProcessing/purkinjeNetwork.dat  0.90  6  0.5519084180  1e-6
-probe  postProcessing/purkinjeNetwork.dat  0.90  3  0.5614944410  1e-6
-probe  postProcessing/purkinjeNetwork.dat  0.90  2  0.5659640110  1e-6
-probe  postProcessing/purkinjeNetwork.dat  0.90  4  0.5694740960  1e-6
+probe  postProcessing/purkinjeNetwork.dat  0.60  6  0.5519084180  1e-6
+probe  postProcessing/purkinjeNetwork.dat  0.60  3  0.5614944410  1e-6
+probe  postProcessing/purkinjeNetwork.dat  0.60  2  0.5659640110  1e-6
+probe  postProcessing/purkinjeNetwork.dat  0.60  4  0.5694740960  1e-6

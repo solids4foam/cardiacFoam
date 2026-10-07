@@ -1,0 +1,30 @@
+# Unit tests for the helper scripts in applications/scripts
+
+name: Scripts tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "applications/scripts/cardiacCompareCases"
+      - "applications/scripts/tests/**"
+      - ".github/workflows/scriptsTests.yml"
+
+jobs:
+  scripts-tests:
+    name: Helper script unit tests
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout cardiacFoam
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run unit tests
+        run: python -m unittest discover -v applications/scripts/tests

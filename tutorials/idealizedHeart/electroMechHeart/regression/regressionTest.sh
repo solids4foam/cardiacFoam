@@ -16,14 +16,17 @@ fi
 # Idealized-heart electromechanics. Needs the full solids4foam build: exits 77
 # under CARDIAC_REGRESSION_BUILD_MODE=lightweight.
 #
-# The case runs to its own endTime of 0.02 s and probes two cells: one inside
-# the apical stimulus region, which activates early, and one mid-wall, which
-# does not activate within 20 ms. The reference pins the activation times,
-# the displacement D at both, and the apical active tension.
+# The tutorial runs to 0.02 s. The regression stops at 0.01 s: the apical
+# stimulus (2-4 ms) has activated the apex probe and the apical active
+# tension has started to rise, while the mid-wall probe has not activated.
+# The reference pins the activation times, the displacement D at both probes
+# at 5 and 10 ms, and the apical active tension.
 
 regression_init "Idealized-heart electromechanics regression test" \
     regression/electroMechHeart.reference "$@"
 regression_require_solids4foam
+
+regression_set system/controlDict endTime 0.01
 
 regression_run_or_fail parallel
 regression_compare || true

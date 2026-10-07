@@ -1,0 +1,60 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// 10 mm x 10 mm x 0.1 mm slab, 20 x 20 x 1 cells (0.5 mm)
+scale   0.001;
+
+vertices
+(
+    (0 0 0)
+    (10 0 0)
+    (10 10 0)
+    (0 10 0)
+    (0 0 0.1)
+    (10 0 0.1)
+    (10 10 0.1)
+    (0 10 0.1)
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (20 20 1) simpleGrading (1 1 1)
+);
+
+boundary
+(
+    walls
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)
+            (0 4 7 3)
+            (2 6 5 1)
+            (1 5 4 0)
+        );
+    }
+    frontAndBack
+    {
+        type empty;
+        faces
+        (
+            (0 3 2 1)
+            (4 5 6 7)
+        );
+    }
+);
+
+// ************************************************************************* //
