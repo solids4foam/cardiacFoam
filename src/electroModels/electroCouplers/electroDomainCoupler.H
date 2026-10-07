@@ -124,19 +124,6 @@ public:
         (void)dt;
     }
 
-    //- Prepare coupling terms consumed by a post-primary domain.
-    //  This hook runs after the myocardium solve and before a one-way
-    //  post-primary auxiliary domain is advanced.
-    virtual void preparePostPrimaryCoupling
-    (
-        scalar t0,
-        scalar dt
-    )
-    {
-        (void)t0;
-        (void)dt;
-    }
-
     //- Optional write hook.
     virtual void write() {}
 

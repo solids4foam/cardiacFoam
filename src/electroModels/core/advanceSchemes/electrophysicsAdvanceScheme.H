@@ -44,8 +44,6 @@ struct electrophysicsAdvanceTimings
     scalar conductionDomainTime;
     //- Time spent advancing the primary myocardium domain
     scalar primaryDomainTime;
-    //- Time spent preparing ECG/bath couplings after myocardium
-    scalar ecgCouplingTime;
     //- Time spent advancing ECG/bath domains after myocardium
     scalar ecgDomainTime;
 
@@ -54,7 +52,6 @@ struct electrophysicsAdvanceTimings
         couplingTime(0.0),
         conductionDomainTime(0.0),
         primaryDomainTime(0.0),
-        ecgCouplingTime(0.0),
         ecgDomainTime(0.0)
     {}
 };

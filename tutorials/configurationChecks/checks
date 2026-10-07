@@ -45,6 +45,7 @@ monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
 bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
 eikonalECG                             slab  eikonalECG                             pass
+twoEcgDomains                          slab  monodomainPseudoECG                    pass  monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
 bathBidomain                           bath  bathBidomain                           pass  skip=v2312
@@ -86,6 +87,8 @@ missingGraphFile                       slab  monodomainPurkinjeReactionDiffusion
 unknownElectroDomainCoupler            slab  monodomainPurkinjeReactionDiffusion fail:bogusCoupler monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/electroDomainCoupler=bogusCoupler
 couplingToUnknownNetwork               slab  monodomainPurkinjeReactionDiffusion fail:bogusNetwork monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/conductionNetworkDomain=bogusNetwork
 missingCouplingMode                    slab  monodomainPurkinjeReactionDiffusion fail:couplingMode monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/couplingMode!
+twoConductionNetworkDomains            slab  monodomainPurkinjeReactionDiffusion fail:only~one~conduction~network~domain monodomainSolverCoeffs/conductionNetworkDomains/secondNetwork={conductionSystemDomain~purkinjeGraphModel;}
+ecgDomainCoupling                      slab  monodomainPseudoECG         fail:ECG~domains~take~no~coupling monodomainSolverCoeffs/ecgDomains/ECG/coupling={electroDomainCoupler~reactionDiffusionPvjCoupler;}
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=bogusECG
 eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=eikonalECG
 eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!
