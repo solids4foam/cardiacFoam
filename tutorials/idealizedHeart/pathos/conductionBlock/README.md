@@ -17,7 +17,7 @@ same case, selected at run time; no default — see Execution below.
 `constant/electroProperties` itself never changes between variants — it
 always reads `graphFile purkinjeGraph;`. Only the graph file differs.
 
-Purkinje conduction and junction coupling: `purkinjeConductivity 0.4`
+Purkinje conduction and junction coupling: `purkinjeConductivity 0.4` S/m
 (~3.3 m/s along the tree) and `pvjRadius 1.65e-3`, the smallest junction
 radius valid on this mesh.
 

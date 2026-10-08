@@ -134,6 +134,17 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     {
         R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
     }
+
+    if (couplingMode_ == bidirectional)
+    {
+        networkTerminalDomain_.setTerminalConductances(1.0/R_pvj_);
+
+        // The tissue receives exactly the current the network solved, so
+        // charge balances every step. A cell-wise implicit term would see
+        // the network a step late and, at strong coupling, freeze the
+        // junction.
+        couplingScheme_ = "explicit";
+    }
 }
 
 
@@ -143,6 +154,8 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
 
     evaluateCoupling(t0, t0, "secondary");
 
+    // The network solves its junction term at t0 + dt against the tissue
+    // at t0; the manufactured source matches those levels.
     if (verificationModelPtr_)
     {
         verificationModelPtr_->updateManufacturedSource
@@ -150,23 +163,17 @@ void reactionDiffusionPvjCoupler::prepareSecondaryCoupling(scalar t0, scalar dt)
             primaryDomain_,
             secondaryDomain_,
             t0,
-            t0,
+            t0 + dt,
             couplingScheme_ == "implicit",
             couplingMode_ == bidirectional,
             "secondary"
         );
     }
 
-    if (couplingMode_ == unidirectional)
+    if (couplingMode_ == bidirectional)
     {
-        clearTerminalCouplingBuffers();
+        networkTerminalDomain_.setTerminalTissueVm(tissueVmBuffer_);
     }
-
-    networkTerminalDomain_.setTerminalCoupling
-    (
-        terminalCurrentBuffer_,
-        terminalSourceBuffer_
-    );
 }
 
 
@@ -228,6 +235,33 @@ void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
         terminalCurrentBuffer_,
         terminalSourceBuffer_
     );
+}
+
+
+void reactionDiffusionPvjCoupler::write()
+{
+    pvjCoupler::write();
+
+    // Under the implicit scheme each cell takes G*(Vn' - V_c') with its own
+    // solved voltage, which sums to G*(Vn' - <V'>): the current the tissue
+    // received, written in place of the pre-solve estimate.
+    if (couplingScheme_ == "implicit" && mesh_.time().outputTime())
+    {
+        mapper_.gatherVm3DPvjs(primaryDomain_.Vm(), tissueVmBuffer_);
+        couplingCurrentAtPvjs
+        (
+            networkVmBuffer_,
+            tissueVmBuffer_,
+            terminalCurrentBuffer_
+        );
+        mapper_.volumetricSource(terminalCurrentBuffer_, terminalSourceBuffer_);
+
+        networkTerminalDomain_.setTerminalCoupling
+        (
+            terminalCurrentBuffer_,
+            terminalSourceBuffer_
+        );
+    }
 }
 
 } // End namespace Foam

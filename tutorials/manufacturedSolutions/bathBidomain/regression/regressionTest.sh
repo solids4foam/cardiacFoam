@@ -15,7 +15,7 @@ fi
 
 # The 1D mesh (system/blockMeshDict.1D, 80 cells per block) matches the
 # dimension "1D" entry in constant/electroProperties. The verifier writes
-# postProcessing/bathBidomain_<DIM>_<N>_cells.dat; its summary values and
+# postProcessing/<DIM>_<N>_cells.dat; its summary values and
 # error norms are compared against the reference.
 regression_init "Bath-bidomain manufactured-solution regression test" \
     regression/bathBidomainManufactured.reference "$@"

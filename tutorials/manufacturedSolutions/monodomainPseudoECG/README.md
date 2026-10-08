@@ -34,10 +34,10 @@ For this workflow, the ionic model exposes manufactured verification metadata.
 
 Typical outputs include:
 
-- manufactured field summaries in `postProcessing/`
+- manufactured field summaries in `postProcessing/` (`<dim>_<N>_cells.dat`)
 - `postProcessing/pseudoECG.dat`
-- `postProcessing/manufacturedPseudoECG.dat`
-- `postProcessing/manufacturedPseudoECGSummary.dat`
+- `postProcessing/manufacturedPseudoECG_ECG.dat`
+- `postProcessing/manufacturedPseudoECGSummary_ECG.dat`
 
 ## Variants & Extensions
 
@@ -47,7 +47,9 @@ Typical outputs include:
 
 ### Tetrahedral (unstructured) Mesh Variant
 
-`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, fvSchemes, controlDict, decomposeParDict), except the mesh generator changes and `setup/studies/tetConvergence/fvSolution` (a tighter `nOuterCorrectors`/`nNonOrthogonalCorrectors` pair) is swapped in for the duration of a tet run and restored on exit.
+`setup/studies/tetConvergence/` is an activatable overlay of this same case on a genuinely unstructured mesh: identical `constant/` and `system/` dicts (electroProperties, physicsProperties, controlDict, decomposeParDict), except the mesh generator changes.
+
+`setup/studies/tetConvergence/fvSchemes` sets every entry to `system/fvSchemes`'s own value and is not installed by the record's tet route; the tet route uses the case's own `system/fvSolution` and `system/fvSchemes`.
 
 #### Tetrahedral Variant Purpose
 
@@ -58,11 +60,11 @@ Verifies that OpenFOAM's non-orthogonal `Gauss linear corrected` Laplacian schem
 
 #### Grid Generation
 
-`setup/studies/tetConvergence/box.geo.template` is a gmsh (OpenCASCADE) unit cube with a characteristic length placeholder `__LC__`. `setup/studies/tetConvergence/run_mono_tet.sh` substitutes `lc = 1/N` per resolution, meshes with gmsh (legacy msh2 format), and imports via `gmshToFoam`. All six boundary faces lie on axis-aligned planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal derivative, so the solver's default zeroGradient boundary stays compatible with the exact solution.
+`setup/studies/tetConvergence/box.geo.template` is a gmsh (OpenCASCADE) unit cube. Resolution is set with `gmsh -3 box.geo.template -setnumber lc <value>` (`lc = 1/N`), meshes with gmsh (legacy msh2 format), and imports via `gmshToFoam`. All six boundary faces lie on axis-aligned planes `x,y,z in {0,1}`, where the manufactured cosine field has zero normal derivative, so the solver's default zeroGradient boundary stays compatible with the exact solution.
 
 #### Effective Mesh Spacing and Observed Order
 
-The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count. For an unstructured tet mesh this is the mean cell size and the correct convergence abscissa. `setup/studies/tetConvergence/summarize_tet.py` computes the observed order from consecutive `dx` values, `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming factor-of-two refinement, and reports it next to `checkMesh` max non-orthogonality and max skewness.
+The manufactured verifier back-computes an *effective* spacing `dx = 1/round(cbrt(nCells))` from the total cell count. For an unstructured tet mesh this is the mean cell size and the correct convergence abscissa, `p = log(e_coarse/e_fine) / log(dx_coarse/dx_fine)`, rather than assuming factor-of-two refinement.
 
 #### Tetrahedral Convergence Sweep
 

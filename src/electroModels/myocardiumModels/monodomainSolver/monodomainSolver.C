@@ -103,13 +103,15 @@ void monodomainSolver::solveDiffusionExplicit
 
     if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
     {
+        // The junction coefficient is cell-local, so the matrix stays
+        // diagonal and the explicit solve keeps its cost.
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+          + fvm::Sp(*coeff, domain.VmRef())
           == fvc::laplacian(tGf(), domain.Vm())
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
-           - (*coeff)*domain.Vm()
         );
     }
     else

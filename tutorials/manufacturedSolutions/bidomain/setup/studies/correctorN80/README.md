@@ -14,3 +14,6 @@ Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/correctorN80/sweep
 ```bash
 [omnidriver command to run]
 ```
+
+`system/fvSolution` states `nNonOrthogonalCorrectors 0;` explicitly, as
+`corrector/`'s README explains.

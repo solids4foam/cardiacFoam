@@ -1,22 +1,17 @@
-import glob
-import os
-import sys
-import pandas as pd
-import plotly.graph_objects as go
+import json
+import math
+import re
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
+import pandas as pd
+import plotly.graph_objects as go
 
-from openfoam_driver.postprocessing.plotting_common import (
-    build_visibility_mask,
-    extract_dx_dt,
-    lighten_hex_color,
-)
-from openfoam_driver.postprocessing.style import apply_plotly_layout, write_plotly_html
+from omnidriver.postprocessing.plotting_common import build_visibility_mask, lighten_hex_color
+from omnidriver.postprocessing.style import apply_plotly_layout, write_plotly_html
+
+_PROBE_LINE = re.compile(r"^# Probe (\d+) \(([^)]+)\)")
 
 
 def rename_cardiacfoam_trace(name: str) -> str:
@@ -30,39 +25,73 @@ def rename_cardiacfoam_trace(name: str) -> str:
 # --- Helper Functions -------------------------------------
 # ----------------------------------------------------------
 
-# Base colors per DX group
 DX_COLORS = {
-    0.1: "#eb1616",   # red
-    0.2: "#1f77b4",   # blue
-    0.5: "#2ca02c",   # green
+    0.1: "#eb1616",
+    0.2: "#1f77b4",
+    0.5: "#2ca02c",
 }
 
 
-def load_csv_files(folder):
-    """Load line*.csv files into a dict {filename: dataframe}."""
-    csv_files = glob.glob(os.path.join(folder, '*line*.csv'))
-    line_data = {os.path.basename(fp): pd.read_csv(fp) for fp in csv_files}
+def _read_latest_probe_row(function_object_dir: Path, field: str) -> tuple[list[tuple[float, float, float]], list[float]] | None:
+    """Return (probe_xyz, values) from a `probes` functionObject's last row, checking every instance directory."""
+    if not function_object_dir.is_dir():
+        return None
+    for instance_dir in sorted(p for p in function_object_dir.iterdir() if p.is_dir()):
+        sample_path = instance_dir / field
+        if not sample_path.is_file():
+            continue
+        probes: list[tuple[float, float, float]] = []
+        last_row: list[float] | None = None
+        for line in sample_path.read_text().splitlines():
+            match = _PROBE_LINE.match(line)
+            if match:
+                _, coords = match.groups()
+                x, y, z = (float(v) for v in coords.split())
+                probes.append((x, y, z))
+                continue
+            if not line.strip() or line.startswith("#"):
+                continue
+            last_row = [float(token) for token in line.split()]
+        if last_row is not None:
+            return probes, last_row[1:]
+    return None
 
-    print(f"Found {len(line_data)} CSVs for diagonal Activation time:")
-    for name in line_data:
-        print(f"  - {name}")
 
-    return line_data
+def load_swept_cases(output_dir) -> list[tuple[float, float, pd.DataFrame]]:
+    """Build [(DX_mm, DT_ms, DataFrame(arc_length_m, activationTime_s)), ...] from `cases/case_NNNN/postProcessing/Niedererlines/`; dx/dt come from sweep_manifest.json."""
+    output_dir = Path(output_dir)
+    manifest_path = output_dir / "sweep_manifest.json"
+    if not manifest_path.is_file():
+        print(f"No sweep_manifest.json found in: {output_dir}")
+        return []
+    manifest = json.loads(manifest_path.read_text())
 
+    cases: list[tuple[float, float, pd.DataFrame]] = []
+    for case in manifest.get("cases", []):
+        case_dir = output_dir / "cases" / case["case_id"]
+        axes = case.get("resolved_axis_values", {})
+        dx_m = axes.get("dx", axes.get("tetDx"))
+        dt_s = axes.get("system/controlDict:deltaT")
+        if dx_m is None or dt_s is None:
+            continue
+        sample = _read_latest_probe_row(case_dir / "postProcessing" / "Niedererlines", "activationTime")
+        if sample is None:
+            continue
+        probes, values = sample
+        origin = probes[0] if probes else (0.0, 0.0, 0.0)
+        rows = [
+            {"activationTime": value, "arc_length": math.dist(origin, xyz)}
+            for xyz, value in zip(probes, values)
+            if value != -1.0  # never-activated sentinel
+        ]
+        if not rows:
+            continue
+        cases.append((float(dx_m) * 1000.0, float(dt_s) * 1000.0, pd.DataFrame(rows)))
 
-def clean_csv_data(line_data):
-    """Drop non-relevant columns from all CSV dataframes."""
-    columns_to_drop = [
-        'Point ID', 'Points_Magnitude', 'Vm', 'vtkValidPointMask',
-        'ionicCurrent', 'Points_0', 'Points_1', 'Points_2'
-    ]
-
-    cleaned = {}
-    for filename, df in line_data.items():
-        to_drop = [c for c in columns_to_drop if c in df.columns]
-        cleaned[filename] = df.drop(columns=to_drop)
-
-    return cleaned
+    print(f"Found {len(cases)} swept cases with diagonal Activation time:")
+    for dx, dt, _df in cases:
+        print(f"  - DX={dx:.3f} mm, DT={dt:.4f} ms")
+    return cases
 
 
 def load_excel_data(excel_path):
@@ -110,43 +139,32 @@ def add_excel_traces(fig, df_excel, num_cols):
 
 
 # ----------------------------------------------------------
-# --- UPDATED FUNCTION: dynamic DT shading per DX ----------
+# --- dynamic DT shading per DX ----------
 # ----------------------------------------------------------
 
-def add_csv_traces(fig, sorted_items, dt_target=None):
-    """Add CardiacFoam CSV traces, return indices of traces matching dt_target."""
+def add_case_traces(fig, sorted_items, dt_target=None):
+    """Add CardiacFoam case traces, return indices of traces matching dt_target."""
     matching_indices = []
 
-    # --- STEP 1: discover DT values for each DX dynamically ---
-    dx_dt_map = {}
-    for filename, _ in sorted_items:
-        dx, dt = extract_dx_dt(filename)
+    dx_dt_map: dict[float, set[float]] = {}
+    for dx, dt, _df in sorted_items:
         dx_dt_map.setdefault(dx, set()).add(dt)
 
-    # Sort DT list for each DX
     for dx in dx_dt_map:
         dx_dt_map[dx] = sorted(dx_dt_map[dx])
 
-    # --- STEP 2: add traces with shading ---
-    for filename, df in sorted_items:
-        dx, dt = extract_dx_dt(filename)
+    for dx, dt, df in sorted_items:
         full_label = f"ΔX={dx:.1f} mm, ΔT={dt:.3f} ms"
 
-        cols = df.columns.tolist()
-        if len(cols) < 2:
-            print(f"Warning: Skipping {filename} due to missing columns.")
-            continue
+        # SI units (s, m)
+        y_col, x_col = "activationTime", "arc_length"
 
-        y_col, x_col = cols[0], cols[1]
-
-        # Base color for this DX
         base_color = DX_COLORS.get(dx, "#808080")
 
-        # Determine shade for this DT
         dt_list = dx_dt_map[dx]
         dt_index = dt_list.index(dt)
         count = len(dt_list)
-        shade_amount = dt_index / max(count - 1, 1)* 0.4  # 0 → darkest, 1 → lightest
+        shade_amount = dt_index / max(count - 1, 1) * 0.4
 
         color = lighten_hex_color(base_color, shade_amount)
         dash_style = 'dashdot'
@@ -166,9 +184,7 @@ def add_csv_traces(fig, sorted_items, dt_target=None):
     return matching_indices
 
 
-# ----------------------------------------------------------
-# --- Toggling system unchanged ----------------------------
-# ----------------------------------------------------------
+# --- Toggle button ---
 
 def add_toggle_button(fig, excel_indices, csv_indices, dt_target):
     """Add the Niederer-vs-CSV toggle button with reversible behavior."""
@@ -218,13 +234,10 @@ def add_toggle_button(fig, excel_indices, csv_indices, dt_target):
 # ----------------------------------------------------------
 
 def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
-    """Main plotting function (logic unchanged, just organized)."""
+    """Build and save the activation-time line plots."""
 
     output_folder = Path(folder)
-    line_data = load_csv_files(str(output_folder))
-    cleaned_data = clean_csv_data(line_data)
-
-    sorted_items = sorted(cleaned_data.items(), key=lambda item: extract_dx_dt(item[0]))
+    sorted_items = sorted(load_swept_cases(output_folder), key=lambda item: (item[0], item[1]))
 
     fig = go.Figure()
     has_excel = excel_path is not None
@@ -234,20 +247,17 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
         excel_indices = add_excel_traces(fig, df_excel, num_cols)
 
         dt_target = 0.005
-        filtered = [name for name, _ in sorted_items
-                   if abs(extract_dx_dt(name)[1] - dt_target) < 1e-6]
+        filtered = [dx for dx, dt, _df in sorted_items if abs(dt - dt_target) < 1e-6]
 
         if filtered:
-            print(f"Found {len(filtered)} CSV files with ΔT={dt_target} ms:")
-            for f in filtered:
-                print(f"  - {f}")
+            print(f"Found {len(filtered)} cases with ΔT={dt_target} ms:")
         else:
-            print(f"No CSVs found for ΔT={dt_target} ms.")
+            print(f"No cases found for ΔT={dt_target} ms.")
     else:
         excel_indices = []
         dt_target = None
 
-    csv_indices = add_csv_traces(fig, sorted_items, dt_target=dt_target)
+    csv_indices = add_case_traces(fig, sorted_items, dt_target=dt_target)
 
     if has_excel:
         add_toggle_button(fig, excel_indices, csv_indices, dt_target)
@@ -272,12 +282,10 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
         )
     )
 
-
-    # --- SAVE INITIAL PLOT (CSV only) ---
     fig_initial = deepcopy(fig)
 
     for i in range(len(fig_initial.data)):
-        if i in excel_indices:   # hide all Niederer
+        if i in excel_indices:
             fig_initial.data[i].visible = False
         else:
             fig_initial.data[i].visible = True
@@ -286,11 +294,6 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
     with open(output_folder / "cardiacFoam_allSimulations.json", "w") as f:
         f.write(fig_initial.to_json())
 
-
-
-
-
-    # --- SAVE COMPARISON PLOT (Niederer + matching CSV only) ---
     fig_compare = deepcopy(fig)
 
     toggle_set = set(excel_indices + csv_indices)
@@ -298,14 +301,12 @@ def plot_line_csvs(folder='.', excel_path=None, show: bool = True):
     for i in range(len(fig_compare.data)):
         fig_compare.data[i].visible = (i in toggle_set)
 
-    # Remove DT and add "cardiacFoam" in label for CSV traces
     for tr in fig_compare.data:
         tr.name = rename_cardiacfoam_trace(tr.name)
 
     write_plotly_html(fig_compare, output_folder / "Niederer_vs_cardiacFoam.html")
     with open(output_folder / "Niederer_vs_cardiacFoam.json", "w") as f:
         f.write(fig_compare.to_json())
-
 
     if show:
         fig.show()
@@ -321,11 +322,8 @@ def run_postprocessing(
 ):
     """Plot activation time along the benchmark's diagonal probe line.
 
-    Reads every `*line*.csv` in output_dir (one per swept case), shades
-    traces by dx/dt, and -- when excel_path points at the digitized
-    Niederer et al. 2012 reference curves -- overlays them for comparison.
-    Writes cardiacFoam_allSimulations.html (every case) and
-    Niederer_vs_cardiacFoam.html (cases matching the reference's dt only).
+    excel_path: digitized Niederer et al. reference curves, overlaid when given.
+    Writes cardiacFoam_allSimulations.html and Niederer_vs_cardiacFoam.html.
     """
     del setup_root
     plot_line_csvs(folder=output_dir, excel_path=excel_path, show=False)

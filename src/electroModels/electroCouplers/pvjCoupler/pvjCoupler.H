@@ -31,6 +31,7 @@ Author
 #include "electroDomainCoupler.H"
 #include "pvjMapper.H"
 #include "Switch.H"
+#include "globalIOFields.H"
 
 namespace Foam
 {
@@ -56,8 +57,9 @@ protected:
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;
 
-    //- Latest tissue activation seen at each terminal at the previous observation.
-    scalarField lastObservedTissueActivation_;
+    //- Latest tissue activation seen at each terminal at the previous
+    //  observation; written with the time directories for a restart.
+    scalarGlobalIOField lastObservedTissueActivation_;
 
     static networkCouplingEndpoint& requireTerminalNetworkDomain
     (
@@ -79,6 +81,11 @@ protected:
 
     //- Deposit tissue activations at the terminals that are newer than the previous observation.
     void observeTerminalActivations();
+
+public:
+
+    //- Write the observation state at output times (bidirectional mode).
+    virtual void write() override;
 };
 
 } // End namespace Foam

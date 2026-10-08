@@ -98,49 +98,45 @@ The decomposition is defined in `system/decomposeParDict`.
 To extract CV from a manual run, call `python3 setup/extract_cv.py` separately.
 The driver workflow runs its own CV post-processing.
 
-## Driver convergence entry
+## omniD convergence entry
 
-This case is also exposed as a registered driver sweep:
+This case is also exposed as the `cable1DCVConvergence` tutorial record
+(`omnidriver-cardiacfoam`'s `records/cable_1d_cv_convergence.py`), a thin
+pointer at this case plus the axes it allows:
 
 ```bash
-[omnidriver command to run]
-```
-
-The default sweep config is stored in:
-
-```text
-setup/driver_config.json
+omnidriver --plugin cardiacfoam plan --strict --entry cable1DCVConvergence \
+    --cases-root <tutorials root> --scratch-dir <scratch>
 ```
 
 That workflow mutates `blockMeshDict`, `controlDict`, and `electroProperties`
-per sweep case, runs in parallel by default, exports one CV summary per case,
-and then writes per-ionic-model convergence CSVs plus convergence plots under
-model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
-`outputsCVConvergence/TWorld/`.
+per case (a `dx` axis, in metres, resolves the block-mesh rewrite) and
+writes the CV summary each case's own `setup/extract_cv.py`/manual sweep
+still drives (see "Outputs" below). Its own committed sweep grid is
+`setup/studies/cvConvergence/sweep_cv_convergence.json`.
 
-## Driver restitution entry
+## omniD restitution entry
 
-This case is also exposed as a newly normalized S1-S2 restitution sweep:
-
-```bash
-[omnidriver command to run]
-```
-
-Or you can sweep custom restitution intervals using a JSON config.
-Spec: `tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/sweep.json`.
+This case is also exposed as the `cable1DRestitution` tutorial record
+(`records/cable_1d_restitution.py`):
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam plan --strict --entry cable1DRestitution \
+    --config <config.json> --cases-root <tutorials root> --scratch-dir <scratch>
 ```
 
-The sweep logic and default S2 pacing intervals are fully centralized in
-omnidriver's `cable_1d_restitution` cardiacFoam plugin defaults.
+The S1-S2 schedule (drive train plus an optional premature beat, in either a
+coupling-interval or a requested-DI90 form) is the record's own
+`s1s2SpatialProtocol` axis; the sweep grid lives under this case's own
+`setup/studies/s2CouplingRestitution/`, `setup/studies/stewartAutomaticity/`,
+`setup/studies/stewartDI90Boundaries/` and `setup/studies/stewartTrueDI90/`,
+each naming that axis by value rather than a Python keyword.
 
-*Note:* Because multiple wavefronts are generated, the normalized post-processing step (`setup/postProcessing_cableRestitution.py`) parses the raw voltage traces to isolate the CV of the second (S2) wavefront.
+*Note:* Because multiple wavefronts are generated, the normalized post-processing step (`setup/postProcessing_cableRestitution.py`, run as the record's own `postprocess` step, `Allrun.post`) parses the raw voltage traces to isolate the CV of the second (S2) wavefront.
 
 ### Frozen Stewart true-DI90 reference
 
-`sweep_stewart_true_di90_dt1e-6.json` is runnable as the frozen
+`setup/studies/stewartTrueDI90/sweep_stewart_true_di90_dt1e-6.json` is runnable as the frozen
 Stewart/myocyte reference protocol: five S1 stimuli at a 1 s BCL, one S2, a
 0.1 mm cable resolution, `deltaT = 1e-6 s`, and the configured conductivity.
 Its `reference_repolarization90_s = 4.304086260869566` was measured at the
@@ -156,10 +152,12 @@ reference measurement rather than this Stewart value.
 
 ### Restitution postprocessing contract
 
-`setup/postProcessing_cableRestitution.py` reads the applied schedule from the
-`.cardiacfoam_protocol.json` sidecar the driver writes, associates each
-detected activation with a labelled stimulus, and classifies the branch into
-exactly one `protocol_outcome`:
+`setup/postProcessing_cableRestitution.py` reads the applied schedule from
+this case's own `constant/electroProperties:monodomainSolverCoeffs
+.externalStimulus.stimulusStartTimeList`, split into S1/S2 by the `--n-s1`/
+`--n-s2` (and, for a DI90 run, `--reference-repolarization90-s`) arguments
+the record's own `s1s2SpatialProtocol` axis passes it. It associates each detected activation with a labelled stimulus,
+and classifies the branch into exactly one `protocol_outcome`:
 
 | Outcome | Meaning |
 | --- | --- |
@@ -184,10 +182,8 @@ CV. `measured_di90_s` is a per-probe quantity: repolarization90 varies by about
 choices are recorded in `measurement_settings`.
 
 Stimulus-to-activation association uses a per-probe window,
-`latency allowance + probe distance / CV floor`, rather than a flat one. A flat
-50 ms window bound the measured automaticity beat at 5.203520 s to an S2
-stimulus 49.4 ms earlier and reported a fabricated capture; the derived window
-is bounded above by that collision.
+`latency allowance + probe distance / CV floor`, rather than a flat one, so an
+unforced beat shortly after S2 is not bound to it.
 
 ## Main calibration knob
 
@@ -210,7 +206,10 @@ so keep those fixed while calibrating conductivity.
 - field writes in time directories (`Vm`, `activationTime`, ...)
 - probe traces in `postProcessing/cableProbes/`
 - CV summary in `postProcessing/cv_summary.txt`
-- sweep artifacts grouped by ionic model inside `outputsCVConvergence/<ionicModel>/`
+- `setup/table_summary.py` walks a sweep's own `<output_dir>/cases/case_NNNN/
+  postProcessing/*_cv_summary.json` (one per case) and writes
+  `cable1DCVConvergence_summary.csv`/`.html` plus dx/dt convergence plots at
+  the sweep's own output_dir
 
 ## Restitution calibration for restitutionEikonalSolver1D
 
@@ -220,10 +219,7 @@ the CV and APD90 tables, the capture boundary, and the mesh and time-step
 convergence behind them -- is in
 [Purkinje_S1_S2_Calibration.md](Purkinje_S1_S2_Calibration.md).
 
-It is deliberately not repeated here. An earlier version of this README carried
-a second copy of those numbers, and the two drifted: both asserted a conditioned
-APD near 450 ms and a capture boundary at DI 0.330 s, neither of which
-reproduces.
+It is deliberately not repeated here, so the numbers cannot drift apart.
 
 In brief, measured on this cable with Stewart/myocyte at 2.3 S/m:
 
@@ -235,9 +231,10 @@ In brief, measured on this cable with Stewart/myocyte at 2.3 S/m:
 - APD90 varies only 7.7% across the whole capturable range, which is why the
   solver carries a constant `apdNominal` and no APD restitution curve.
 
-The sweep specifications in this directory drive the protocol through the
-external orchestration add-on. `requestedDI90` is an input and `measuredDI90`
-is a result; the calibration table is indexed on the measured value.
+The sweep specifications under this case's own `setup/studies/` (`sweep_stewart_*.json`) drive
+the protocol through `cable1DRestitution`'s own `s1s2SpatialProtocol` axis.
+`requestedDI90` is an input and `measuredDI90` is a result; the calibration
+table is indexed on the measured value.
 
 ## Typical use
 

@@ -6,13 +6,17 @@ This study validates spatial convergence on structured hexahedral (cartesian) me
 
 ## Execution
 
-From the repository root, use the current wrapper. Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
+From the repository root. Spec: `tutorials/manufacturedSolutions/bathBidomain/setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
 
 ```bash
 [omnidriver command to run]
 ```
 
 Resolve the runtime preflight before expecting OpenFOAM execution.
+
+`sweep_hex_convergence.json` and `sweep_hex_groundElectrode.json` run the
+`groundElectrode` variant; `sweep_hex_electrodePair.json` runs the case's own
+`electrodePair`. The first two are the same study.
 
 ## Tracking & Outputs
 

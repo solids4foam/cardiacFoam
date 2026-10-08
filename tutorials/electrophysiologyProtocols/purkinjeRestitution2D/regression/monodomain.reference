@@ -9,7 +9,7 @@ probe  postProcessing/purkinjeNetwork.dat  0.305  5  -0.0626353566  1e-6
 probe  postProcessing/purkinjeNetwork.dat  0.305  7  -0.0758957031  1e-6
 probe  postProcessing/purkinjeNetwork.dat  0.305  9  -0.0709806861  1e-6
 # Junction current into the tissue.
-probe  postProcessing/purkinjeNetwork.dat  0.305  2  -6061.66840    5
-probe  postProcessing/purkinjeNetwork.dat  0.305  4  -6218.71886    5
-probe  postProcessing/purkinjeNetwork.dat  0.320  2  -1030.32570    5
-probe  postProcessing/purkinjeNetwork.dat  0.320  4  -1506.76841    5
+probe  postProcessing/purkinjeNetwork.dat  0.305  2  -6041.88396    5
+probe  postProcessing/purkinjeNetwork.dat  0.305  4  -6191.65009    5
+probe  postProcessing/purkinjeNetwork.dat  0.320  2  -1028.87739    5
+probe  postProcessing/purkinjeNetwork.dat  0.320  4  -1507.08188    5

@@ -14,19 +14,19 @@ Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/corrector/sweep_co
 
 Sweeps `N = 10, 20, 40` across the four reported variants (`baseline`,
 `outer2`, `nonorth1`, `combined`), each a `(nOuterCorrectors,
-nNonOrthogonalCorrectors)` pair applied via omnidriver's own
-`n_outer_correctors`/`n_nonorthogonal_correctors` overrides
-(`manufactured_monodomain_pseudo_ecg._apply_case`); the short, fixed
-step-count screening window (2/9/36 steps) is set via `control_dict_overrides`
-on `writeControl`/`writeInterval`/`writeFormat`. Each of the 12 cases gets
-its own output directory (named from its `(N, nOuterCorrectors,
-nNonOrthogonalCorrectors)` values), and its raw `postProcessing/` output is
-archived into that same directory's own `sweepCases/` subfolder via
-`archive_dir_name`, the same mechanism used by every other sweep in this
-tutorial.
+nNonOrthogonalCorrectors)` pair applied as direct
+`system/fvSolution:PIMPLE.nOuterCorrectors`/`PIMPLE.nNonOrthogonalCorrectors`
+study keys against the `manufacturedBidomain` tutorial record; the short,
+fixed step-count screening window (2/9/36 steps) is set via the direct keys
+`system/controlDict:writeControl`/`writeInterval`/`writeFormat`.
 
 Comparing the 12 results across variants/resolutions is handled by the
 postprocessing module.
+
+theirs
+`system/fvSolution` states `nNonOrthogonalCorrectors 0;` explicitly: a
+study's direct keys change keys that exist and never invent one, so the
+`nonorth1`/`combined` variants need it present.
 
 ## Tracking & Outputs
 

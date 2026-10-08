@@ -25,6 +25,7 @@ License
 #include "PtrList.H"
 #include "scalarField.H"
 #include "error.H"
+#include "Pstream.H"
 
 #include <cmath>
 #include <cstdint>
@@ -43,6 +44,25 @@ inline fileName path(const fvMesh& mesh, const word& name)
 {
     return
         mesh.time().path()/mesh.time().timeName()/mesh.dbDir()/name;
+}
+
+
+//- Where a model's rows sit in its state file. By default each processor
+//  writes and reads its own file. A global block shares one file, written
+//  by the master in the case root: this processor holds rows
+//  [start, start + n) of nGlobal.
+struct Block
+{
+    bool global = false;
+    label start = 0;
+    label nGlobal = 0;
+};
+
+
+inline fileName globalPath(const fvMesh& mesh, const word& name)
+{
+    return
+        mesh.time().globalPath()/mesh.time().timeName()/mesh.dbDir()/name;
 }
 
 template<class T>
@@ -216,11 +236,14 @@ inline bool readStates
 (
     const fvMesh& mesh,
     const word& model,
+    const word& stateName,
     const label stride,
-    PtrList<scalarField>& states
+    PtrList<scalarField>& states,
+    const Block& block = Block()
 )
 {
-    const fileName statePath = path(mesh, model + "State");
+    const fileName statePath =
+        block.global ? globalPath(mesh, stateName) : path(mesh, stateName);
     if (!isFile(statePath))
     {
         return false;
@@ -232,7 +255,27 @@ inline bool readStates
             << "Cannot read restart state file " << statePath
             << exit(FatalError);
     }
-    validateHeader(model, stride, states.size(), is, statePath);
+    if (block.global)
+    {
+        validateHeader(model, stride, block.nGlobal, is, statePath);
+        if (block.start < 0 || block.start + states.size() > block.nGlobal)
+        {
+            FatalErrorInFunction
+                << "Rows [" << block.start << ", "
+                << block.start + states.size() << ") lie outside the "
+                << block.nGlobal << " rows of " << statePath
+                << exit(FatalError);
+        }
+        is.seekg
+        (
+            std::streamoff(block.start)*stride*sizeof(scalar),
+            std::ios::cur
+        );
+    }
+    else
+    {
+        validateHeader(model, stride, states.size(), is, statePath);
+    }
     forAll(states, integrationPtI)
     {
         forAll(states[integrationPtI], stateI)
@@ -248,11 +291,69 @@ inline void writeStates
 (
     const fvMesh& mesh,
     const word& model,
+    const word& stateName,
     const label stride,
-    const PtrList<scalarField>& states
+    const PtrList<scalarField>& states,
+    const Block& block = Block()
 )
 {
-    const fileName statePath = path(mesh, model + "State");
+    if (block.global)
+    {
+        // Every processor's rows, in processor order, to the master
+        scalarField localRows(states.size()*stride);
+        label rowI = 0;
+        forAll(states, integrationPtI)
+        {
+            forAll(states[integrationPtI], stateI)
+            {
+                localRows[rowI++] = states[integrationPtI][stateI];
+            }
+        }
+        List<scalarField> allRows(Pstream::nProcs());
+        allRows[Pstream::myProcNo()] = localRows;
+        Pstream::gatherList(allRows);
+
+        if (!Pstream::master())
+        {
+            return;
+        }
+
+        const fileName statePath = globalPath(mesh, stateName);
+        mkDir(statePath.path());
+        std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
+        if (!os)
+        {
+            FatalErrorInFunction
+                << "Cannot write restart state file " << statePath
+                << exit(FatalError);
+        }
+
+        label nRows = 0;
+        forAll(allRows, proci)
+        {
+            nRows += allRows[proci].size()/stride;
+        }
+        if (nRows != block.nGlobal)
+        {
+            FatalErrorInFunction
+                << "Gathered " << nRows << " rows for " << statePath
+                << ", expected " << block.nGlobal
+                << exit(FatalError);
+        }
+
+        writeHeader(model, stride, nRows, os);
+        forAll(allRows, proci)
+        {
+            forAll(allRows[proci], valueI)
+            {
+                checkValue(allRows[proci][valueI], statePath);
+                writeScalar(os, allRows[proci][valueI], statePath);
+            }
+        }
+        return;
+    }
+
+    const fileName statePath = path(mesh, stateName);
     std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
     if (!os)
     {
@@ -269,6 +370,30 @@ inline void writeStates
             writeScalar(os, states[integrationPtI][stateI], statePath);
         }
     }
+}
+
+
+inline bool readStates
+(
+    const fvMesh& mesh,
+    const word& model,
+    const label stride,
+    PtrList<scalarField>& states
+)
+{
+    return readStates(mesh, model, model + "State", stride, states);
+}
+
+
+inline void writeStates
+(
+    const fvMesh& mesh,
+    const word& model,
+    const label stride,
+    const PtrList<scalarField>& states
+)
+{
+    writeStates(mesh, model, model + "State", stride, states);
 }
 
 }

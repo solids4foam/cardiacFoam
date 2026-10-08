@@ -1,9 +1,11 @@
 // Conformal tetrahedral bath--myocardium--bath mesh.
-// __LC__ is replaced by setup/run_mesh_gate.sh.
+// lc is a DefineConstant, overridden per resolution with
+// `gmsh -setnumber lc <value>` (lc = 1/N) to build a refinement ladder; the
+// default below (coarsest study level) applies when no value is given.
 
 SetFactory("OpenCASCADE");
 
-lc = __LC__;
+DefineConstant[ lc = { 0.1, Name "lc" } ];
 eps = 1e-7;
 
 Box(1) = {-1, 0, 0, 1, 1, 1};

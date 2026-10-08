@@ -1,43 +1,12 @@
-"""
-singleCell_Electrophysiology: singleCellinteractivePlots.py
+"""Interactive Plotly plots of single-cell outputs, one trace per variable per file.
 
-This script plots simulation outputs from multiple model-cell combinations using Plotly.
-The input is read from a folder provided to the post-processing entrypoint.
-
-Each input entry in `file_dfs_vars` is a tuple:
-    (file_name, dataframe, selected_variables)
-where:
-    - file_name: The name of the simulation output file (e.g. 'BuenoOrovio_mcells_output.txt')
-    - dataframe: A pandas DataFrame containing columns for 'time' and all variable values
-    - selected_variables: A dict with keys "States", "Algebraic", "Rates"
-                          and values as lists of selected variable names.
-
-The script:
-1. Extracts model and cell type from file names:
-       - Models are shortened using MODEL_MAP (e.g. 'BuenoOrovio' → 'BO')
-       - Cells are shortened using CELL_TYPE_MAP (e.g. 'mcells' → 'Myo')
-2. Allows user to optionally rename variable legends before plotting.
-3. Creates one Plotly trace per variable per file, with legend name:
-       "<Model>-<Cell>: <Variable>"
-4. Provides interactive buttons to toggle groups of traces:
-       - By category (States, Algebraic, Rates)
-       - By model (BO, CO, TNNP, Gaur, etc.)
-       - By cell type (Myo, Epi, Endo)
-       - A "Show All" button to display everything
-
-Main functions:
-    - rename_legends()             → Optional renaming of variable labels
-    - collect_variables_for_legend → Collects all variables across files
-    - add_traces()                  → Creates and adds traces to the Plotly figure
-    - build_buttons()               → Creates button controls for categories/models/cells
-    - plot_multiple_files()         → Entry point, builds the full interactive plot
-
-Output:
-    - An interactive Plotly figure in the browser with toggleable groups of variables.
+Each entry of `file_dfs_vars` is (file_name, dataframe, selected_variables), where
+selected_variables maps "States", "Algebraic" and "Rates" to lists of variable names.
+Traces are named "<Model>-<Cell>: <Variable>", with model and cell abbreviated by
+MODEL_MAP and CELL_TYPE_MAP, and buttons toggle them by category, model and cell type.
 """
 
 import os
-import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -46,17 +15,13 @@ from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import checkboxlist_dialog
 import plotly.graph_objs as go
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.plotting_common import (
+from omnidriver.postprocessing.plotting_common import (
     build_visibility_mask,
     ordered_unique,
     parse_two_part_stem,
 )
-from openfoam_driver.postprocessing.style import apply_plotly_layout
-from openfoam_driver.postprocessing.style import write_plotly_html
+from omnidriver.postprocessing.style import apply_plotly_layout
+from omnidriver.postprocessing.style import write_plotly_html
 
 
 STATE_COUNTS = {
@@ -65,7 +30,6 @@ STATE_COUNTS = {
     "Courtemanche": 21,
     "BuenoOrovio": 4
 }
-# Model abbreviation mapping
 MODEL_MAP = {
     "BuenoOrovio": "BO",
     "Courtemanche": "CO",
@@ -73,7 +37,6 @@ MODEL_MAP = {
     "Gaur": "Gaur"
 }
 
-# Cell type mapping
 CELL_TYPE_MAP = {
     "mCells": "Myo",
     "epicardialCells": "Epi",
@@ -207,10 +170,8 @@ def collect_variables_for_legend(file_dfs_vars, *, interactive: bool = True):
     for _, _, selected_variables in file_dfs_vars:
         for category, var_list in selected_variables.items():
             all_vars[category].extend(var_list)
-    # Remove duplicates
     for cat in all_vars:
         all_vars[cat] = ordered_unique(all_vars[cat])
-    # Ask for legend renaming
     legend_map = {}
     for category, var_list in all_vars.items():
         if var_list:
@@ -350,7 +311,6 @@ def post_processing_single_cell(
         model_name, n_states = detect_model_and_states(file, interactive=interactive)
         print(f"Detected model: {model_name}, Number of states: {n_states}")
 
-        # Construct full file path
         df, header = load_simulation_data(file, base_folder=output_folder)
         states, rates, algebraic = categorize_columns(header, n_states)
 

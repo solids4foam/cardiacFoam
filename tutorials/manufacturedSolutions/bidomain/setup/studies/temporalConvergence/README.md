@@ -13,8 +13,10 @@ From the repository root. Spec: `tutorials/manufacturedSolutions/bidomain/setup/
 ```
 
 The eight cases are fixed-mesh timestep ladders: four levels at `N=640` in
-both 1D and 2D. The configured `sbdf2` coupling and adaptive RKF45 baseline
-controls (`absTol=1e-10`, `relTol=1e-8`) are archived for every case.
+both 1D and 2D. The configured `sbdf2` coupling is archived for every case.
+
+The case's own `constant/electroProperties` sets `solver RKF45` with no
+tolerance overrides.
 
 ## Tracking & Outputs
 

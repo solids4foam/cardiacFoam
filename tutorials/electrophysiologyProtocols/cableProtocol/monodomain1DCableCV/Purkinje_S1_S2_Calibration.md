@@ -157,8 +157,8 @@ reconciled.
 
 ## Reproducing this
 
-The sweep specifications in this directory are runnable through the external
-orchestration add-on; each writes a protocol sidecar recording the applied
+The sweep specifications in this directory are runnable through
+omnidriver; each writes a protocol sidecar recording the applied
 schedule, and each case emits an event summary, a long-form restitution row and
 a per-beat event CSV whether or not it captures. Blocked, censored and
 decremental branches are outcome data and are retained in the output.

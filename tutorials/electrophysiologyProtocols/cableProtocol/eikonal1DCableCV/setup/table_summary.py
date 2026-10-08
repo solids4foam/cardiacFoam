@@ -1,18 +1,13 @@
-"""table_summary.py — CV convergence tables and plots for monodomain1DCableCV."""
+"""table_summary.py — CV convergence tables and plots for eikonal1DCableCV."""
 from __future__ import annotations
 
 import csv
 import io
 import json
 import re
-import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
-
-TUTORIALS_ROOT = Path(__file__).resolve().parents[5]
-DRIVER_ROOT = TUTORIALS_ROOT / "applications" / "scripts" / "driverFoam"
-if str(DRIVER_ROOT) not in sys.path:
-    sys.path.insert(0, str(DRIVER_ROOT))
 
 try:
     import matplotlib
@@ -22,47 +17,68 @@ try:
 except ModuleNotFoundError:
     plt = None
 
-from openfoam_driver.postprocessing.style import (
+from omnidriver.postprocessing.style import (
     configure_matplotlib_defaults,
     finalize_matplotlib_figure,
     style_matplotlib_axes,
 )
-from openfoam_driver.postprocessing.table_writer import TableMetadata
+
+#: One convergence group per sweep: every study fixes solver/ionicModel/tissue/conductivity and varies only dx/dt.
+_CONDUCTIVITY_ID = 1
 
 
-def _parse_filename(stem: str) -> dict[str, object]:
-    match = re.match(
-        r"(?P<solver>[^_]+)_(?P<model>[^_]+)_(?P<tissue>.+)_DT(?P<dt>[0-9.]+)_DX(?P<dx>[0-9.]+)_COND(?P<cond>\d+)_cv_summary",
-        stem,
-    )
-    if not match:
-        raise ValueError(f"Unexpected CV summary filename: {stem}")
-    return {
-        "solver": match.group("solver"),
-        "ionic_model": match.group("model"),
-        "tissue": match.group("tissue"),
-        "DT_ms": float(match.group("dt")),
-        "DX_mm": float(match.group("dx")),
-        "conductivity_id": int(match.group("cond")),
-    }
+def _dict_scalar(text: str, keyword: str) -> str | None:
+    match = re.search(rf"^\s*{re.escape(keyword)}\s+([^;]+);", text, re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
+def _case_labels(case_dir: Path) -> tuple[str, str, str]:
+    """Read (solver, ionic_model, tissue) from the case's own electroProperties."""
+    text = (case_dir / "constant" / "electroProperties").read_text()
+    solver = (_dict_scalar(text, "myocardiumSolver") or "unknown").removesuffix("Solver")
+    ionic_model = _dict_scalar(text, "ionicModel") or "unknown"
+    tissue = _dict_scalar(text, "tissue") or "unknown"
+    return solver, ionic_model, tissue
+
+
+def _iter_cv_summaries(output_dir: Path):
+    """Yield (case_dir, resolved_axis_values, payload) per case from `cases/case_NNNN/postProcessing/case_NNNN_cv_summary.json`; axis values come from sweep_manifest.json."""
+    axis_values_by_case: dict[str, dict] = {}
+    manifest_path = output_dir / "sweep_manifest.json"
+    if manifest_path.is_file():
+        manifest = json.loads(manifest_path.read_text())
+        axis_values_by_case = {
+            case["case_id"]: case.get("resolved_axis_values", {})
+            for case in manifest.get("cases", [])
+        }
+    for summary_path in sorted(output_dir.glob("cases/*/postProcessing/*_cv_summary.json")):
+        case_dir = summary_path.parent.parent
+        payload = json.loads(summary_path.read_text())
+        yield case_dir, axis_values_by_case.get(case_dir.name, {}), payload
 
 
 def build_summary_rows(output_dir: Path) -> list[dict]:
-    files = sorted(output_dir.glob("*_cv_summary.json"))
-    if not files:
+    cases = list(_iter_cv_summaries(output_dir))
+    if not cases:
         print(f"[cable1DCVConvergence/table_summary] No *_cv_summary.json files in {output_dir}")
         return []
 
     rows: list[dict] = []
     grouped: dict[tuple[str, str, str, int], list[dict]] = defaultdict(list)
 
-    for fpath in files:
-        payload = json.loads(fpath.read_text())
-        name_info = _parse_filename(fpath.stem)
+    for case_dir, axis_values, payload in cases:
+        solver, ionic_model, tissue = _case_labels(case_dir)
         central = payload["central_cv"]
+        dx_m = axis_values.get("dx", axis_values.get("tetDx", central["dx_m"]))
+        dt_s = axis_values.get("system/controlDict:deltaT", central["dt_s"])
         row = {
             "case_id": payload["case_id"],
-            **name_info,
+            "solver": solver,
+            "ionic_model": ionic_model,
+            "tissue": tissue,
+            "DT_ms": round(float(dt_s) * 1e3, 6),
+            "DX_mm": round(float(dx_m) * 1e3, 6),
+            "conductivity_id": _CONDUCTIVITY_ID,
             "central_dx_mm": round(1e3 * float(central["dx_m"]), 6),
             "central_dt_ms": round(1e3 * float(central["dt_s"]), 6),
             "central_cv_m_per_s": round(float(central["cv_m_per_s"]), 8),
@@ -112,26 +128,13 @@ def build_summary_rows(output_dir: Path) -> list[dict]:
     return rows
 
 
-def _discover_summary_dirs(output_root: Path) -> list[tuple[Path, Path]]:
-    if not output_root.exists():
-        print(f"[cable1DCVConvergence/table_summary] Output directory does not exist: {output_root}")
-        return []
-
-    files = sorted(output_root.rglob("*_cv_summary.json"))
-    if not files:
-        print(f"[cable1DCVConvergence/table_summary] No *_cv_summary.json files in {output_root}")
-        return []
-
-    parents = sorted({file_path.parent for file_path in files})
-    return [(parent, parent.relative_to(output_root)) for parent in parents]
-
-
 def _write_summary_csv(
     rows: list[dict],
     *,
     output_dir: Path,
     filename_stem: str,
-    metadata: TableMetadata,
+    entry: str,
+    units: dict[str, str],
     label: str,
 ) -> dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -140,9 +143,9 @@ def _write_summary_csv(
 
     fieldnames = list(rows[0].keys()) if rows else []
     lines = [
-        f"# entry: {metadata.entry}",
-        f"# generated_at: {metadata.generated_at}",
-        f"# units: {json.dumps(metadata.units)}",
+        f"# entry: {entry}",
+        f"# generated_at: {datetime.now(timezone.utc).isoformat()}",
+        f"# units: {json.dumps(units)}",
     ]
     if fieldnames:
         buffer = io.StringIO()
@@ -161,22 +164,6 @@ def _write_summary_csv(
         "kind": "table",
         "format": "csv",
     }
-
-
-def _rebase_artifacts(
-    artifacts: list[dict[str, object]],
-    *,
-    relative_dir: Path,
-) -> list[dict[str, object]]:
-    if relative_dir == Path("."):
-        return artifacts
-
-    rebased: list[dict[str, object]] = []
-    for artifact in artifacts:
-        updated = dict(artifact)
-        updated["path"] = str(relative_dir / str(artifact["path"]))
-        rebased.append(updated)
-    return rebased
 
 
 def _group_key(row: dict[str, object]) -> tuple[str, str, str, int]:
@@ -331,50 +318,43 @@ def _plot_group_convergence(
 def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: object) -> list[dict]:
     del setup_root
     output_path = Path(output_dir)
-    meta = TableMetadata(
-        tutorial="cable1DCVConvergence",
-        units={
-            "DX_mm": "mm",
-            "DT_ms": "ms",
-            "central_dx_mm": "mm",
-            "central_dt_ms": "ms",
-            "central_cv_m_per_s": "m/s",
-            "reference_cv_m_per_s": "m/s",
-            "abs_error_m_per_s": "m/s",
-            "rel_error_percent": "%",
-        },
-    )
-    artifacts: list[dict[str, object]] = []
+    units = {
+        "DX_mm": "mm",
+        "DT_ms": "ms",
+        "central_dx_mm": "mm",
+        "central_dt_ms": "ms",
+        "central_cv_m_per_s": "m/s",
+        "reference_cv_m_per_s": "m/s",
+        "abs_error_m_per_s": "m/s",
+        "rel_error_percent": "%",
+    }
+    rows = build_summary_rows(output_path)
+    if not rows:
+        return []
 
-    for summary_dir, relative_dir in _discover_summary_dirs(output_path):
-        rows = build_summary_rows(summary_dir)
-        if not rows:
-            continue
+    artifacts: list[dict[str, object]] = [
+        _write_summary_csv(
+            rows,
+            output_dir=output_path,
+            filename_stem="cable1DCVConvergence_summary",
+            label="1D cable CV convergence summary",
+            entry="cable1DCVConvergence",
+            units=units,
+        )
+    ]
 
-        dir_artifacts: list[dict[str, object]] = [
-            _write_summary_csv(
-                rows,
-                output_dir=summary_dir,
-                filename_stem="cable1DCVConvergence_summary",
-                label="1D cable CV convergence summary",
-                metadata=meta,
+    grouped_rows: dict[tuple[str, str, str, int], list[dict]] = defaultdict(list)
+    for row in rows:
+        grouped_rows[_group_key(row)].append(row)
+
+    for group, rows_for_group in sorted(grouped_rows.items()):
+        artifacts.extend(
+            _plot_group_convergence(
+                group,
+                rows_for_group,
+                output_dir=output_path,
             )
-        ]
-
-        grouped_rows: dict[tuple[str, str, str, int], list[dict]] = defaultdict(list)
-        for row in rows:
-            grouped_rows[_group_key(row)].append(row)
-
-        for group, rows_for_group in sorted(grouped_rows.items()):
-            dir_artifacts.extend(
-                _plot_group_convergence(
-                    group,
-                    rows_for_group,
-                    output_dir=summary_dir,
-                )
-            )
-
-        artifacts.extend(_rebase_artifacts(dir_artifacts, relative_dir=relative_dir))
+        )
 
     return artifacts
 

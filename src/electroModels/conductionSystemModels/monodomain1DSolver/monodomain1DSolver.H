@@ -31,6 +31,7 @@ SourceFiles
 #ifndef monodomain1DSolver_H
 #define monodomain1DSolver_H
 
+#include "boolList.H"
 #include "conductionSystemSolver.H"
 #include "fvMesh.H"
 #include "overrideTypeName.H"
@@ -49,6 +50,25 @@ class monodomain1DSolver
     // Vm threshold above which a node is considered activated.
     // Defaults to 0.0 (physical-unit models: rest≈-0.084 V, peak≈+0.05 V).
     scalar activationVmThreshold_;
+
+    // Graph-only quantities, built on the first advance.
+
+    //- 1-D control length per node (half of each incident edge)
+    scalarField controlLength_;
+
+    //- Edge conductance/length
+    scalarField edgeCoeff_;
+
+    //- Per edge: true when edgeStartNodes()[e] is the child of the edge
+    boolList edgeStartIsChild_;
+
+    // Work arrays for the tree solve, sized once.
+    scalarField diag_;
+    scalarField rhs_;
+    scalarField parentCoeff_;
+    scalarField childCoeff_;
+
+    void buildGraphCoefficients(const conductionSystemDomain& domain);
 
 public:
 

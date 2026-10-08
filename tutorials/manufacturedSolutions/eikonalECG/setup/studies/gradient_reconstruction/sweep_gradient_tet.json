@@ -1,25 +1,18 @@
 {
   "base": {
     "entry": "manufacturedEikonalECG",
-    "case_dir_name": "manufacturedSolutions/eikonalECG",
-    "setup_dir_name": "setup",
     "cases_root": "tutorials",
-    "dimensions": ["3D"],
-    "solver_types": ["eikonal"],
-    "mesh_family": "tet",
-    "grad_scheme": "least_squares",
-    "gradient_reconstruction": true,
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/gradient_reconstruction/results/sweepCases"
+    "mesh": "tet-gradientReconstruction",
+    "system/fvSchemes:gradSchemes.default": "leastSquares"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "number_cells": [
-        [10],
-        [20],
-        [40],
-        [80]
+      "tetNumberCells": [
+        10,
+        20,
+        40,
+        80
       ],
       "output_dir_name": [
         "leastSquares_10",

@@ -1,22 +1,12 @@
-"""table_summary.py — Voltage and APD summary table for singleCell tutorial.
-
-Reads .txt simulation output files from output_dir.  Each file contains a
-space-separated time series with columns: time, Vm, [additional state vars...].
-Extracts resting voltage, peak voltage, and APD at 90% repolarisation.
-"""
+"""table_summary.py — Voltage and APD90 summary table for the singleCell tutorial, from the .txt outputs in output_dir (time, Vm, ...)."""
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[4]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableWriter
 
 
 def _parse_model_and_cell(stem: str) -> tuple[str, str]:
@@ -40,7 +30,6 @@ def _compute_apd90(time: np.ndarray, vm: np.ndarray) -> float | None:
     threshold = resting + _APD_REPOL_FRACTION * (peak - resting)
     for i in range(peak_idx + 1, len(vm)):
         if vm[i] <= threshold:
-            # Linear interpolation for sub-sample accuracy
             frac = (threshold - float(vm[i - 1])) / (float(vm[i]) - float(vm[i - 1]))
             t_repol = float(time[i - 1]) + frac * (float(time[i]) - float(time[i - 1]))
             return (t_repol - float(time[peak_idx])) * 1000.0  # s → ms
@@ -84,16 +73,13 @@ def run_postprocessing(
     if not rows:
         return []
 
-    meta = TableMetadata(
-        tutorial="singleCell",
-        units={"APD_ms": "ms", "peak_voltage_mV": "mV", "resting_voltage_mV": "mV"},
-    )
     return TableWriter.write(
         rows,
         output_path,
         "singleCell_summary",
         "Single cell voltage and APD summary",
-        meta,
+        "singleCell",
+        units={"APD_ms": "ms", "peak_voltage_mV": "mV", "resting_voltage_mV": "mV"},
     )
 
 

@@ -20,6 +20,11 @@ A state file holds one row per cell. A file whose row count is not the cell
 count is reported and skipped. Every file written here reads back with the
 same `restartStateIO` header the models use.
 
+A Purkinje network's ionic state, `<time>/<Model>State.<network>`, holds one
+row per graph node and is written once in the case root, where every
+processor reads its own block on restart. It needs no redistribution, and a
+network restarts on any number of processors.
+
 ## Usage
 
 ```bash

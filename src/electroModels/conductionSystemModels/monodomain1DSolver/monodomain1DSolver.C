@@ -33,6 +33,77 @@ addToRunTimeSelectionTable
     dictionary
 );
 
+void monodomain1DSolver::buildGraphCoefficients
+(
+    const conductionSystemDomain& domain
+)
+{
+    const conductionGraph& G = domain.graph();
+    const label N = G.nNodes;
+    const labelList& edgeA = G.edgeNodeA;
+    const labelList& edgeB = G.edgeNodeB;
+    const scalarField& edgeLength = G.edgeLengths;
+    const scalarField& edgeConductance = G.edgeConductances;
+    const labelList& parent = G.parentList;
+
+    controlLength_.setSize(N);
+    controlLength_ = Zero;
+
+    forAll(edgeA, edgeI)
+    {
+        controlLength_[edgeA[edgeI]] += 0.5*edgeLength[edgeI];
+        controlLength_[edgeB[edgeI]] += 0.5*edgeLength[edgeI];
+    }
+
+    forAll(controlLength_, nodeI)
+    {
+        if (controlLength_[nodeI] <= SMALL)
+        {
+            FatalErrorInFunction
+                << "Node " << nodeI
+                << " has zero 1D control length. The cable discretisation "
+                << "requires every node to be connected to at least one edge."
+                << exit(FatalError);
+        }
+    }
+
+    edgeCoeff_.setSize(edgeA.size());
+    edgeStartIsChild_.setSize(edgeA.size());
+
+    forAll(edgeA, edgeI)
+    {
+        const label nodeA = edgeA[edgeI];
+        const label nodeB = edgeB[edgeI];
+
+        edgeCoeff_[edgeI] = edgeConductance[edgeI]/edgeLength[edgeI];
+
+        if (parent[nodeA] == nodeB)
+        {
+            edgeStartIsChild_[edgeI] = true;
+        }
+        else if (parent[nodeB] == nodeA)
+        {
+            edgeStartIsChild_[edgeI] = false;
+        }
+        else
+        {
+            FatalErrorInFunction
+                << "Edge " << edgeI << " connecting nodes " << nodeA
+                << " and " << nodeB
+                << " is inconsistent with the rooted tree topology."
+                << exit(FatalError);
+        }
+    }
+
+    diag_.setSize(N);
+    rhs_.setSize(N);
+    parentCoeff_.setSize(N);
+    childCoeff_.setSize(N);
+    parentCoeff_ = Zero;
+    childCoeff_ = Zero;
+}
+
+
 void monodomain1DSolver::advance
 (
     conductionSystemDomain& domain,
@@ -85,45 +156,32 @@ void monodomain1DSolver::advance
     // where controlLength_i is the 1-D control volume measure assembled from
     // half of each incident edge length. For uniform spacing this reduces to
     // the usual sigma*(V_{i-1}-2V_i+V_{i+1})/dx^2 term.
+    //
+    // A resistive PVJ at terminal node k adds -g*(V_k - Vt) to Iapp_k, with
+    // g = G/(pi*r^2*controlLength_k) and V_k at the new level, so the charge
+    // the node loses is the junction current the tissue receives.
     const scalar chiCm = domain.chi() * domain.Cm();
 
-    // Arrays for the tree solver
-    scalarField diag(N, 1.0);       // Main diagonal
-    scalarField rhs(N, Zero);       // Right-hand side
-    scalarField parentCoeff(N, Zero); // Matrix row child -> column parent
-    scalarField childCoeff(N, Zero);  // Matrix row parent -> column child
-    scalarField controlLength(N, Zero);
+    if (controlLength_.size() != N)
+    {
+        buildGraphCoefficients(domain);
+    }
 
     const labelList& edgeA = domain.edgeStartNodes();
     const labelList& edgeB = domain.edgeEndNodes();
-    const scalarField& edgeLength = domain.edgeLengths();
-    const scalarField& edgeConductance = domain.edgeConductances();
 
     // Access the topology we built in conductionGraph
     const labelList& parent = domain.graph().parentList;
     const labelList& reverseOrder = domain.graph().reverseOrder;
     const labelList& forwardOrder = domain.graph().orderList;
 
-    forAll(edgeA, edgeI)
-    {
-        label nodeA = edgeA[edgeI];
-        label nodeB = edgeB[edgeI];
+    scalarField& diag = diag_;               // Main diagonal
+    scalarField& rhs = rhs_;                 // Right-hand side
+    scalarField& parentCoeff = parentCoeff_; // Matrix row child -> column parent
+    scalarField& childCoeff = childCoeff_;   // Matrix row parent -> column child
+    const scalarField& controlLength = controlLength_;
 
-        controlLength[nodeA] += 0.5*edgeLength[edgeI];
-        controlLength[nodeB] += 0.5*edgeLength[edgeI];
-    }
-
-    forAll(controlLength, nodeI)
-    {
-        if (controlLength[nodeI] <= SMALL)
-        {
-            FatalErrorInFunction
-                << "Node " << nodeI
-                << " has zero 1D control length. The cable discretisation "
-                << "requires every node to be connected to at least one edge."
-                << exit(FatalError);
-        }
-    }
+    diag = 1.0;
 
     // 3a. Assemble finite-volume matrix coefficients
     forAll(edgeA, edgeI)
@@ -131,8 +189,7 @@ void monodomain1DSolver::advance
         label nodeA = edgeA[edgeI];
         label nodeB = edgeB[edgeI];
 
-        const scalar edgeCoeff =
-            edgeConductance[edgeI]/edgeLength[edgeI];
+        const scalar edgeCoeff = edgeCoeff_[edgeI];
 
         const scalar coeffA =
             dt*edgeCoeff/(chiCm*controlLength[nodeA]);
@@ -143,24 +200,16 @@ void monodomain1DSolver::advance
         diag[nodeA] += coeffA;
         diag[nodeB] += coeffB;
 
-        // Determine which node is the child to store the off-diagonal parent link
-        if (parent[nodeA] == nodeB)
+        // The child node stores the off-diagonal parent link
+        if (edgeStartIsChild_[edgeI])
         {
             parentCoeff[nodeA] = -coeffA;
             childCoeff[nodeA] = -coeffB;
         }
-        else if (parent[nodeB] == nodeA)
+        else
         {
             parentCoeff[nodeB] = -coeffB;
             childCoeff[nodeB] = -coeffA;
-        }
-        else
-        {
-            FatalErrorInFunction
-                << "Edge " << edgeI << " connecting nodes " << nodeA
-                << " and " << nodeB
-                << " is inconsistent with the rooted tree topology."
-                << exit(FatalError);
         }
     }
 
@@ -173,6 +222,19 @@ void monodomain1DSolver::advance
             Vm[i]
           - dt*Iion[i]
           + dt*appliedCurrentBuffer_[i]/chiCm;
+    }
+
+    const labelList& terminals = domain.terminalNodes();
+    const scalarField& junctionCoeffs = domain.terminalJunctionCoeffs();
+    const scalarField& junctionTissueVm = domain.terminalTissueVm();
+    forAll(terminals, i)
+    {
+        if (junctionCoeffs[i] > 0)
+        {
+            const scalar coeff = dt*junctionCoeffs[i]/chiCm;
+            diag[terminals[i]] += coeff;
+            rhs[terminals[i]] += coeff*junctionTissueVm[i];
+        }
     }
 
     // 3c. Forward Sweep (Bottom-up: Leaves to Root)

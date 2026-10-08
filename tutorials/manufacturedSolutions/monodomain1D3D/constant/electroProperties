@@ -69,6 +69,9 @@ monodomainSolverCoeffs
                 conductionSystemSolver monodomain1DSolver;
                 graphFile purkinjeGraph;
                 purkinjeConductivity 0.111453302;
+                // Unit cross-section (1/sqrt(pi) m), which the manufactured
+                // junction current assumes; used in bidirectional mode.
+                purkinjeFibreRadius 0.5641895835477563;
 
                 ionicModel monodomainFDAManufactured;
                 dimension "1D";
@@ -103,7 +106,7 @@ monodomainSolverCoeffs
         {
             electroDomainCoupler reactionDiffusionPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
-            
+
             verificationModel
             {
                 type coupled1D3DMonodomainVerifier;

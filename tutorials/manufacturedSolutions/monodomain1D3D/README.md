@@ -4,7 +4,7 @@ Manufactured 1D-3D monodomain coupling test case. Couples a 3D monodomain myocar
 
 ## Overview
 
-Default graph lies on `y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. Terminal faces satisfy homogeneous Neumann boundary condition for 3D manufactured solution because terminals are on `x=0` and `x=1` where `d cos(π x)/dx = 0`. Terminal values do not cancel: `F_3D = -0.5 F_1D` at PVJs (unlike older `y=0.5, z=1/3` placement).
+Default graph lies on `y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. Terminal faces satisfy homogeneous Neumann boundary condition for 3D manufactured solution because terminals are on `x=0` and `x=1` where `d cos(π x)/dx = 0`. Terminal values do not cancel: `F_3D = -0.5 F_1D` at PVJs.
 
 ## Graph Configuration
 
@@ -46,26 +46,26 @@ runPurkinjeGraph -case .
 
 ### Graph-Only Convergence Rates
 
-Example of running a graph convergence study via omnidriver (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`). Spec: `tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json`.
+Running a graph convergence study via omnidriver (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`, the `graphOnly` route of the `manufacturedMonodomain1D3D` tutorial record):
 
 ```bash
 [omnidriver command to run]
 ```
 
-Writes:
-
-- `outputs/1dGraphConvergence/graph_convergence_summary.csv`
-- `outputs/1dGraphConvergence/graph_convergence_rates.csv`
+Writes, per case: `postProcessing/graph_1D_<n>_nodes.dat` (the graph verifier's error summary), `postProcessing/purkinjeNetwork.dat` and `postProcessing/purkinjeNetworkVTK/`.
 
 ### Coupled 1D-3D Convergence Sweeps (Suggested)
 
-Active coupling (bidirectional PVJ). Spec: `setup/studies/coupledConvergence/sweep_active.json`.
+Active coupling (the case's unidirectional PVJ). Spec: `setup/studies/coupledConvergence/sweep_active.json`.
 
 ```bash
 [omnidriver command to run]
 ```
 
 Bidirectional coupling. Spec: `setup/studies/coupledConvergence/sweep_bidirectional.json`.
+The network then loses each junction current from the volume `π ρ² L` of its terminal node,
+so the case sets `purkinjeFibreRadius` to `1/√π` m, giving a unit cross-section, instead of the
+20 µm default.
 
 ```bash
 [omnidriver command to run]
@@ -113,7 +113,4 @@ order.
   diagnostics.
 - The default graph uses the non-cancelling `y=1/6, z=1/3` terminal placement.
   Boundary fluxes remain zero when terminals lie on x-boundary faces, but the
-  PVJ terms are no longer hidden by a cancelling placement.
-
-A first-step bug (V_1D uninitialised at `t=0`, fixed via `preInitialize()`) found
-during this work is documented in the notes file.
+  PVJ terms are not hidden by a cancelling placement.

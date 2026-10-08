@@ -9,7 +9,7 @@ This tutorial runs single-cell S1-S2 pacing sweeps to generate restitution curve
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/restitutionCurves_s1s2Protocol/
+tutorials/electrophysiologyProtocols/restitutionCurves_s1s2Protocol/
 ├── constant/
 │   ├── electroProperties
 │   ├── physicsProperties
@@ -20,11 +20,11 @@ tutorials/coreProtocols/restitutionCurves_s1s2Protocol/
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setup/
-│   ├── run_cases.sh
-│   ├── setup_multiple_simulations_s1s2.py
 │   ├── postProcessing_restCurves.py
+│   ├── table_summary.py
 │   ├── animate_trace.py
-│   └── mainRestitutionCurves_s1s2Protocol.py
+│   └── studies/
+│       └── tworldS1S2Restitution/
 ├── plotVoltage
 ├── Allrun
 ├── Allclean
@@ -61,14 +61,23 @@ Manual:
 ./Allrun
 ```
 
-Driver-managed sweeps:
+omniD-managed sweeps (this case IS the default -- omniD's `restitutionCurves`
+tutorial record points at this directory and stages a clone of it for every
+case; nothing here is ever written in place):
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam describe --entry restitutionCurves --cases-root <path to tutorials>
+omnidriver --plugin cardiacfoam sweep-plan --spec setup/studies/tworldS1S2Restitution/sweep.json --output-dir <scratch output dir>
+omnidriver --plugin cardiacfoam sweep-run  --spec setup/studies/tworldS1S2Restitution/sweep.json --output-dir <scratch output dir>
 ```
 
-Driver defaults live in omnidriver's `restitution_curves`
-cardiacFoam plugin defaults.
-
-The driver mutates ionic model/tissue/stimulus values per case, updates end time,
-collects `.txt` outputs, and can generate per-case animations before post-processing.
+`setup/studies/tworldS1S2Restitution/sweep.json` is this tutorial's own
+study, in omniD's tutorial-record vocabulary: a
+study name is either a literal `document:dotted.path` dictionary key
+(`constant/electroProperties:singleCellSolverCoeffs.tissue`, set directly)
+or one of this record's two allowed axes -- `ionicModel` (a bare model
+name; derives `singleCellSolverCoeffs.ionicModel` and this model's catalogued
+single-cell `stim_amplitude`) and `s1s2Protocol` (a mapping of
+`s1_interval_ms`/`n_s1`/`s2_interval_ms`/`n_s2`; derives the
+`singleCellStimulus` S1/S2 keys plus the case's `endTime`/`writeAfterTime`).
+This study sweeps TWorld at S1=1000ms/10 beats with S2 from 1500ms down to 250ms.

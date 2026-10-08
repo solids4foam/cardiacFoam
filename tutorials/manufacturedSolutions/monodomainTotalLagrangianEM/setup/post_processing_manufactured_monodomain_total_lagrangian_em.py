@@ -28,7 +28,6 @@ import json
 import math
 from pathlib import Path
 import re
-import sys
 
 try:
     import matplotlib
@@ -38,11 +37,7 @@ try:
 except ModuleNotFoundError:
     plt = None
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[2]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.style import (
+from omnidriver.postprocessing.style import (
     configure_matplotlib_defaults,
     finalize_matplotlib_figure,
     style_matplotlib_axes,
@@ -135,12 +130,13 @@ def _filter_rows(rows, **criteria):
 
 
 def read_error_dat_files(folder_name, *, expected_filenames: set[str] | None = None):
+    """Read every swept case's own `<dim>_<N>_cells.dat` from its postProcessing/."""
     folder = Path(folder_name)
     if not folder.exists():
         print("Folder does not exist:", folder)
         return []
 
-    files = [f for f in folder.iterdir() if f.suffix == ".dat"]
+    files = [f for f in folder.glob("cases/*/postProcessing/*.dat")]
     if expected_filenames is not None:
         files = [f for f in files if f.name in expected_filenames]
 
@@ -326,7 +322,7 @@ def run_postprocessing(*, output_dir: str, setup_root: str | None = None, **_: o
     if expected_filenames is not None:
         available_filenames = {
             path.name
-            for path in output_path.glob("*.dat")
+            for path in output_path.glob("cases/*/postProcessing/*.dat")
             if FILENAME_PATTERN.match(path.name)
         }
         unexpected = sorted(available_filenames - expected_filenames)

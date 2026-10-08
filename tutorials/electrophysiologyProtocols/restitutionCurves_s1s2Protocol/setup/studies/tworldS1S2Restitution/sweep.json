@@ -1,0 +1,129 @@
+{
+  "base": {
+    "entry": "restitutionCurves",
+    "cases_root": "tutorials",
+    "ionicModel": "TWorld",
+    "constant/electroProperties:singleCellSolverCoeffs.tissue": "epicardialCells"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "s1s2Protocol": [
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 1500
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 1000
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 800
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 600
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 500
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 490
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 480
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 470
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 460
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 450
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 420
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 400
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 380
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 360
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 340
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 320
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 300
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 280
+        },
+        {
+          "s1_interval_ms": 1000,
+          "n_s1": 10,
+          "n_s2": 2,
+          "s2_interval_ms": 250
+        }
+      ]
+    }
+  }
+}
