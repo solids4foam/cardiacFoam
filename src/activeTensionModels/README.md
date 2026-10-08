@@ -9,7 +9,7 @@ Cell-level models of the mechanical response: the same kind of model as the ioni
 | `NashPanfilov` / `NashPanfilovBatched` | phenomenological tension, driven by `Vm` | Nash and Panfilov (2004), Progress in Biophysics and Molecular Biology, [doi:10.1016/j.pbiomolbio.2004.01.016](https://doi.org/10.1016/j.pbiomolbio.2004.01.016) |
 | `LandNiederer` / `LandNiedererBatched` | the seven-state intact-human model, driven by `Cai` | Land et al. (2017), Journal of Molecular and Cellular Cardiology, [doi:10.1016/j.yjmcc.2017.03.008](https://doi.org/10.1016/j.yjmcc.2017.03.008) |
 | `LandNiedererTWorld` / `LandNiedererTWorldBatched` | the six-state contraction subsystem of T-World, driven by `Cai` | Tomek et al. (2025), bioRxiv, [doi:10.1101/2025.03.24.645031](https://doi.org/10.1101/2025.03.24.645031) |
-| `LewalleNiederer` | the nine-state Land model with two myosin OFF states and force feedback, driven by `Cai` | Lewalle et al. (2024), Biophysical Journal, [doi:10.1016/j.bpj.2024.05.025](https://doi.org/10.1016/j.bpj.2024.05.025) |
+| `LewalleNiederer` | the nine-state Land model with two myosin OFF states and force feedback, driven by `Cai`; default constants are a skinned-myocardium calibration | Lewalle et al. (2024), Biophysical Journal, [doi:10.1016/j.bpj.2024.05.025](https://doi.org/10.1016/j.bpj.2024.05.025) |
 | `ManufacturedElectromechanics` | manufactured-solution model for verification, driven by `Vm` | — |
 
 Each model reads its one signal through `ElectromechanicalSignalProvider` in [couplingModels](../couplingModels/README.md). The batched versions run on the CPU, with an optional CUDA path.
@@ -31,6 +31,6 @@ src/activeTensionModels/
 
 ## What this does not own
 
-- The passive mechanical response: the solid owns it. `LandNiederer`'s passive branch is diagnostic output only.
+- The passive mechanical response: the solid owns it. `LandNiederer`'s passive branch is diagnostic output only. `LewalleNiederer`'s passive branch enters only its own force feedback, never the solid.
 - The signals it reads: [couplingModels](../couplingModels/README.md).
 - When tension is computed: [electroMechanicalModels](../electroMechanicalModels/README.md).

@@ -22,6 +22,8 @@ Description
     Nine-state Lewalle et al. (2024) active-tension model: the Land et al.
     (2017) contraction model with two myosin OFF states and force feedback on
     the OFF->ON rate. Runs in seconds with Cai in uM and tension in kPa.
+    The default constants are a skinned human myocardium calibration, not an
+    intact-tissue set; see LewalleNiederer_2024.H.
 
 SourceFiles
     LewalleNiederer.C
