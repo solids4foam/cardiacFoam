@@ -24,8 +24,8 @@ signals such as `Vm` (canonical mV) and `Cai` (canonical mM).
 `driveSignalScaleFactor()` is applied in the common scalar and batched
 signal-read paths. It defaults to `1.0`; a model overrides it when its
 published equations need a different input unit without changing the
-provider contract. The original `LandNiederer` variants use `1000.0` to
-consume `Cai` in µM; the `LandNiedererTWorld` variants leave it at `1.0` and
+provider contract. The original `LandNiederer` variants and `LewalleNiederer`
+use `1000.0` to consume `Cai` in µM; the `LandNiedererTWorld` variants leave it at `1.0` and
 convert mM→µM inside their maths header instead. Both are correct — check the
 input-convention block at the top of a model's maths header before adding or
 removing a scale factor.
@@ -43,6 +43,7 @@ about it", so every model states its own scale even when that scale is `1.0`.
 | `NashPanfilov`, `NashPanfilovBatched` | `1000/12.9` (Aliev-Panfilov dimensionless time) |
 | `LandNiederer`, `LandNiedererBatched` | `1000` (ms) |
 | `LandNiedererTWorld`, `LandNiedererTWorldBatched` | `1000` (ms) |
+| `LewalleNiederer` | `1.0` (s) |
 | `ManufacturedElectromechanics` | `1.0` |
 
 ## Concrete models
@@ -67,5 +68,14 @@ about it", so every model states its own scale even when that scale is `1.0`.
 - runtime name: `LandNiedererTWorld`
 - six-state contraction subsystem extracted from TWorld
 - GPU-batched runtime name: `LandNiedererTWorldBatched`
+
+### `LewalleNiederer`
+
+- runtime name: `LewalleNiederer`
+- nine-state Land model with two myosin OFF states; total tension feeds back on the OFF->ON rate
+- runs in seconds, consumes `Cai` in µM (`driveSignalScaleFactor() = 1000`), tension in kPa
+- default constants are the skinned human myocardium calibration of Lewalle et al. (2024), Fig. 6, not an intact-tissue set; stiff at diastolic `Cai`
+- reports active (`AV_Ta`), passive (`AV_Tp`), and total (`AV_T`) tension;
+  only active tension is supplied to the active-stress interface
 
 For the folder-level overview, see [README.md](./README.md).
