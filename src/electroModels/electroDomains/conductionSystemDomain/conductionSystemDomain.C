@@ -250,6 +250,15 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
                 Vm1D_.group()
             )
         );
+
+        // The network's nodes are not mesh cells: its ionic state is one
+        // file in the case root, of which this processor holds its block
+        restartStateIO::Block block;
+        block.global = true;
+        block.start = localStartNode_;
+        block.nGlobal = N;
+        ionicModelPtr_->setRestartStateBlock(block);
+
         ionicModelPtr_->readRestartState(supportMesh_);
     }
 
@@ -783,7 +792,6 @@ void conductionSystemDomain::write()
 
         if (ionicModelPtr_->supportsRestartState())
         {
-            mkDir(time().path()/time().timeName());
             ionicModelPtr_->writeRestartState(supportMesh_);
         }
     }

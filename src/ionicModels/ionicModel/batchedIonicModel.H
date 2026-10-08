@@ -1173,7 +1173,8 @@ public:
 
             const bool loaded = restartStateIO::readStates
             (
-                mesh, type(), restartStateName(), nStates_, ioStates_
+                mesh, type(), restartStateName(), nStates_, ioStates_,
+                restartStateBlock()
             );
 
             if (!loaded)
@@ -1194,7 +1195,8 @@ public:
             ensureIOSynchronized();
             restartStateIO::writeStates
             (
-                mesh, type(), restartStateName(), nStates_, ioStates_
+                mesh, type(), restartStateName(), nStates_, ioStates_,
+                restartStateBlock()
             );
         }
 

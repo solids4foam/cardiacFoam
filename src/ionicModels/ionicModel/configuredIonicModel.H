@@ -72,72 +72,41 @@ public:
             return false;
         }
 
-        const fileName statePath = restartStateIO::path(mesh, restartStateName());
-        if (!isFile(statePath))
-        {
-            return false;
-        }
-
-        std::ifstream is(statePath.c_str(), std::ios::binary);
-        if (!is)
-        {
-            FatalErrorInFunction
-                << "Cannot read restart state file " << statePath
-                << exit(FatalError);
-        }
-        restartStateIO::validateHeader
+        return restartStateIO::readStates
         (
-            type(), ioNumStates(), states->size(), is, statePath
+            mesh,
+            type(),
+            restartStateName(),
+            ioNumStates(),
+            *states,
+            restartStateBlock()
         );
-        forAll(*states, integrationPtI)
-        {
-            forAll((*states)[integrationPtI], stateI)
-            {
-                (*states)[integrationPtI][stateI] =
-                    restartStateIO::readScalar(is, statePath);
-                restartStateIO::checkValue
-                (
-                    (*states)[integrationPtI][stateI], statePath
-                );
-            }
-        }
-        return true;
     }
 
     virtual void writeRestartState(const fvMesh& mesh) const override
     {
         const PtrList<scalarField>* states = ioStatesPtr();
-        if (states == nullptr || states->empty())
+        const PtrList<scalarField> noStates;
+
+        // A processor without rows still takes part in a global write
+        if
+        (
+            (states == nullptr || states->empty())
+         && !restartStateBlock().global
+        )
         {
             return;
         }
 
-        const fileName statePath = restartStateIO::path(mesh, restartStateName());
-        std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
-        if (!os)
-        {
-            FatalErrorInFunction
-                << "Cannot write restart state file " << statePath
-                << exit(FatalError);
-        }
-        restartStateIO::writeHeader
+        restartStateIO::writeStates
         (
-            type(), ioNumStates(), states->size(), os
+            mesh,
+            type(),
+            restartStateName(),
+            ioNumStates(),
+            states ? *states : noStates,
+            restartStateBlock()
         );
-        forAll(*states, integrationPtI)
-        {
-            forAll((*states)[integrationPtI], stateI)
-            {
-                restartStateIO::checkValue
-                (
-                    (*states)[integrationPtI][stateI], statePath
-                );
-                restartStateIO::writeScalar
-                (
-                    os, (*states)[integrationPtI][stateI], statePath
-                );
-            }
-        }
     }
 
     virtual void refreshRestartState(const fvMesh& mesh) override

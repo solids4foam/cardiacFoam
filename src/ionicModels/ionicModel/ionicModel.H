@@ -41,6 +41,7 @@ Authors
 #include "volFields.H"
 #include "fvMesh.H"
 #include "ionicModelIO.H"
+#include "restartStateIO.H"
 #include "stimulusIO.H"
 
 #include "electromechanicalSignalProvider.H"
@@ -106,6 +107,9 @@ class ionicModel
 
         //- Restart state file name; empty means type() + "State"
         word restartStateName_;
+
+        //- This instance's rows in its restart state file
+        restartStateIO::Block restartStateBlock_;
 
 
     // Private Member Functions
@@ -188,6 +192,19 @@ class ionicModel
         void setRestartStateName(const word& name)
         {
             restartStateName_ = name;
+        }
+
+        //- Rows of this instance in its restart state file: by default one
+        //  file per processor; a global block shares one file in the case
+        //  root (a conduction network, whose nodes are not mesh cells)
+        const restartStateIO::Block& restartStateBlock() const
+        {
+            return restartStateBlock_;
+        }
+
+        void setRestartStateBlock(const restartStateIO::Block& block)
+        {
+            restartStateBlock_ = block;
         }
 
         virtual bool readRestartState(const fvMesh&)
