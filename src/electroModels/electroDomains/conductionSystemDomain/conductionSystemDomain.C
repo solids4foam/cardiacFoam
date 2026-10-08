@@ -725,10 +725,15 @@ void conductionSystemDomain::setTerminalTissueVm(const scalarField& tissueVm)
 }
 
 
+scalar conductionSystemDomain::purkinjeFibreRadius() const
+{
+    return coeffsDict_.lookupOrDefault<scalar>("purkinjeFibreRadius", 2e-5);
+}
+
+
 scalarField conductionSystemDomain::terminalVolumes() const
 {
-    const scalar radius(coeffsDict_.get<scalar>("purkinjeFibreRadius"));
-    const scalar area = constant::mathematical::pi*sqr(radius);
+    const scalar area = constant::mathematical::pi*sqr(purkinjeFibreRadius());
 
     // The control length of monodomain1DSolver: half of each incident edge.
     scalarField controlLength(graph_.nNodes, Zero);

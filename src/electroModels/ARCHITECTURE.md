@@ -262,7 +262,7 @@ network source_k -= I_pvj,i / (π ρ² L_k)   [A/m³], bidirectional mode only
 
 ```
 
-`w_c` is the `pvjKernel` weight, `ρ` is `purkinjeFibreRadius` and `L_k` is half the length of
+`w_c` is the `pvjKernel` weight, `ρ` is `purkinjeFibreRadius` (default 20 µm, the order of a Purkinje cell's radius) and `L_k` is half the length of
 the edges meeting at node `k`. In bidirectional mode the network takes `Vm_1D,k` at the new time
 level on its tree-solver diagonal against the tissue average before the tissue solve, and the
 tissue receives that same current whatever `pvjCouplingScheme` says, so the network node loses

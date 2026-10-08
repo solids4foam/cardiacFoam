@@ -205,6 +205,10 @@ public:
 
     virtual void setTerminalTissueVm(const scalarField& tissueVm) override;
 
+    //- Purkinje fibre radius [m] from purkinjeFibreRadius; 20 um, the
+    //  order of a Purkinje cell's radius, when absent.
+    scalar purkinjeFibreRadius() const;
+
     //- Network volume behind each terminal [m^3]: pi*purkinjeFibreRadius^2
     //  times the node's control length.
     scalarField terminalVolumes() const;

@@ -64,7 +64,8 @@ Active coupling (the case's unidirectional PVJ). Spec: `setup/studies/coupledCon
 
 Bidirectional coupling. Spec: `setup/studies/coupledConvergence/sweep_bidirectional.json`.
 The network then loses each junction current from the volume `π ρ² L` of its terminal node,
-so the spec sets `purkinjeFibreRadius` to `1/√π` m, giving a unit cross-section.
+so the case sets `purkinjeFibreRadius` to `1/√π` m, giving a unit cross-section, instead of the
+20 µm default.
 
 ```bash
 [omnidriver command to run]

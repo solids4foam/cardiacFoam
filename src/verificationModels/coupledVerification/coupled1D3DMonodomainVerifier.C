@@ -355,10 +355,7 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
 
             // The node volume pi*rho^2*L from the inputs, not from the
             // network under test, so a wrong volume there fails the MMS.
-            const scalar radius
-            (
-                graphDomain->coeffsDict().get<scalar>("purkinjeFibreRadius")
-            );
+            const scalar radius(graphDomain->purkinjeFibreRadius());
             const scalarField& edgeLengths = graphDomain->edgeLengths();
             scalarField nodeVolume(exactSecondaryAppliedCurrent_.size(), 0.0);
             forAll(edgeLengths, edgeI)
