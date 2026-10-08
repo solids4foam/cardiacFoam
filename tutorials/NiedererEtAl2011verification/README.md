@@ -4,7 +4,7 @@ This tutorial implements the Niederer slab verification workflow for tissue-scal
 monodomain simulations.
 
 - Electro model: `monodomainSolver`
-- Typical ionic model: `TNNP`
+- Ionic model: `TNNPcompactBatched` with `batchedIntegrator rushLarsen`
 - Main metric: activation-time behavior and smoke-check fields
 
 ## Folder structure
@@ -47,7 +47,8 @@ myocardiumSolver monodomainSolver;
 
 monodomainSolverCoeffs
 {
-    ionicModel TNNP;
+    ionicModel TNNPcompactBatched;
+    batchedIntegrator rushLarsen;
     tissue epicardialCells;
     solutionAlgorithm implicit;   // or explicit via sweeps
 

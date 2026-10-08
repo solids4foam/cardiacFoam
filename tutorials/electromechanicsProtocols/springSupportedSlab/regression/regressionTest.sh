@@ -1,240 +1,68 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
-# ============================================================
-# Spring-supported electromechanics slab regression test
-# ============================================================
+# Shared regression library (tutorials/regression/lib.sh), found by walking up
+# from this case; CARDIAC_REGRESSION_LIB overrides the lookup.
+regressionLib="${CARDIAC_REGRESSION_LIB:-}"
+if [[ -z "${regressionLib}" ]]; then
+    dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    while [[ "${dir}" != / && ! -f "${dir}/regression/lib.sh" ]]; do
+        dir="$(dirname "${dir}")"
+    done
+    regressionLib="${dir}/regression/lib.sh"
+fi
+. "${regressionLib}"
 
-REF_FILE="regression/springSupportedSlab.reference"
-ALLRUN_LOGFILE="log.Allrun"
+# Spring-supported electromechanics slab. Needs the full solids4foam build:
+# exits 77 under CARDIAC_REGRESSION_BUILD_MODE=lightweight.
+#
+# Besides the probe rows, the reference carries the case-local kind
+#     springLaw <time> <tolerance [N]>
+# which checks that the xMin force from the stress field equals
+# -kEnds * A0 * <Dx> at that time, with kEnds read from system/caseParameters.
+
 FORCE_FILE="postProcessing/0/solidForcesxMin.dat"
 DISP_FILE="postProcessing/solid/D_xMin/0/surfaceFieldValue.dat"
-# Reference area of each end face: 3 mm x 7 mm (system/blockMeshDict)
-END_AREA=2.1e-5
-SKIP_CODE=77
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+END_AREA=2.1e-5    # end face, 3 mm x 7 mm (system/blockMeshDict)
 
-fullSolids4FoamAvailable()
+regression_case_check()
 {
-    local solidsDir="${SOLIDS4FOAM_INST_DIR:-}"
-    local candidate
-    local builtMarker="src/solids4FoamModels/lnInclude/solidModel.H"
+    local kind="$1"
+    local time="${2:-}" tolerance="${3:-}" force disp springForce
 
-    if [[ -n "${solidsDir}" ]] \
-        && [[ -f "${solidsDir}/src/solids4FoamModels/solidModels/solidModel/solidModel.H" ]]; then
-        return 0
+    if [[ "${kind}" != springLaw ]]; then
+        regression_fail "unknown reference kind '${kind}'"
+        return 1
     fi
 
-    for candidate in \
-        "${HOME}/solids4foam" \
-        "${WM_PROJECT_USER_DIR:-}/solids4foam" \
-        "${REPO_ROOT}/modules/solids4foam"
-    do
-        if [[ -n "${candidate}" ]] && [[ -f "${candidate}/${builtMarker}" ]]; then
-            export SOLIDS4FOAM_INST_DIR="${candidate}"
-            return 0
-        fi
-    done
-
-    return 1
-}
-
-electroMechanicalLibCompiled()
-{
-    local libDir="${FOAM_USER_LIBBIN:-}"
-    local lib
-
-    [[ -n "${libDir}" ]] || return 1
-
-    for lib in "${libDir}"/libelectroMechanicalModels.*; do
-        if [[ -e "${lib}" ]]; then
-            return 0
-        fi
-    done
-
-    return 1
-}
-
-dumpLogTail()
-{
-    local label="$1"
-    local logFile="$2"
-    local maxLines="${3:-80}"
-
-    if [[ -s "${logFile}" ]]; then
-        echo "----- last ${maxLines} lines of ${label} (${logFile}) -----"
-        tail -n "${maxLines}" "${logFile}"
-        echo "----- end of ${label} -----"
-    else
-        echo "(no log file at ${logFile})"
-    fi
-}
-
-absDiff()
-{
-    awk -v a="$1" -v e="$2" '
-        BEGIN {
-            d = a - e;
-            if (d < 0) d = -d;
-            print d;
-        }
-    '
-}
-
-checkWithinTolerance()
-{
-    local label="$1"
-    local actual="$2"
-    local expected="$3"
-    local tolerance="$4"
-    local diffAbs
-
-    diffAbs="$(absDiff "${actual}" "${expected}")"
-
-    if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d <= t)}'; then
-        printf "PASS: %s actual=%.8g expected=%.8g difference=%.3g tolerance=%.3g\n" \
-            "${label}" "${actual}" "${expected}" "${diffAbs}" "${tolerance}"
-        return 0
+    force="$(regression_probe_value "${FORCE_FILE}" "${time}" 2)" || force=""
+    disp="$(regression_probe_value "${DISP_FILE}" "${time}" 2)" || disp=""
+    if [[ -z "${force}" || -z "${disp}" ]]; then
+        regression_fail "springLaw t=${time}: force or displacement not found"
+        return 1
     fi
 
-    printf "FAIL: %s actual=%.8g expected=%.8g difference=%.3g tolerance=%.3g\n" \
-        "${label}" "${actual}" "${expected}" "${diffAbs}" "${tolerance}"
-    return 1
+    springForce="$(awk -v k="${kEnds}" -v a="${END_AREA}" -v d="${disp}" 'BEGIN { print -k*a*d }')"
+    regression_check "springLaw F_xMin vs -kEnds*A0*<Dx> t=${time}" \
+        "${force}" "${springForce}" "${tolerance}" springLaw "${FORCE_FILE}" "${time}" 2
 }
 
-extractProbeValue()
-{
-    local dataFile="$1"
-    local time="$2"
-    local column="$3"
+regression_init "Spring-supported electromechanics slab regression test" \
+    regression/springSupportedSlab.reference "$@"
+regression_require_solids4foam
 
-    awk -v target="${time}" -v col="${column}" '
-        BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-        { gsub(/[()]/, " "); $0 = $0; }
-        $1 !~ /^#/ && NF >= col {
-            d = $1 - target;
-            if (d < 0) d = -d;
-            if (d < bestDiff) {
-                bestDiff = d;
-                actual = $col;
-                found = 1;
-            }
-        }
-        END {
-            if (found && bestDiff <= 2.5e-3) {
-                print actual;
-                exit 0;
-            }
-            exit 1;
-        }
-    ' "${dataFile}"
-}
+# The tutorial runs the twitch to 0.25 s. The regression stops at 0.05 s, once
+# activation has crossed the slab, Ta has risen in its middle and both
+# spring-supported ends have moved well beyond their resting preload.
+regression_set system/caseParameters endTime 0.05
 
-echo "============================================================"
-echo "Spring-supported electromechanics slab regression test"
-echo "============================================================"
-echo
-
-if [[ "${CARDIAC_REGRESSION_BUILD_MODE:-}" == "lightweight" ]]; then
-    echo "SKIP: electromechanical regression requires a full solids4foam build, but lightweight mode was specified."
-    exit "${SKIP_CODE}"
-fi
-
-if ! fullSolids4FoamAvailable; then
-    echo "SKIP: electromechanical regression requires a full solids4foam build."
-    echo "      SOLIDS4FOAM_INST_DIR does not point to a compiled full solids4foam tree."
-    exit "${SKIP_CODE}"
-fi
-
-if ! electroMechanicalLibCompiled; then
-    echo "FAIL: full solids4foam is available, but libelectroMechanicalModels is not compiled."
-    echo "      Rebuild cardiacFoam in full mode before running this regression."
-    exit 1
-fi
-
-./Allclean > /dev/null 2>&1 || true
-
-if ! ./Allrun parallel > "${ALLRUN_LOGFILE}" 2>&1; then
-    echo "FAIL: Allrun exited non-zero. Surfacing logs:"
-    dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
-    for stage in blockMesh setExprFields decomposePar cardiacFoam; do
-        dumpLogTail "${stage}" "log.${stage}"
-    done
-    exit 1
-fi
-
-if [[ ! -f "${REF_FILE}" ]]; then
-    echo "FAIL: reference file not found: ${REF_FILE}"
-    exit 1
-fi
+regression_run_or_fail parallel
 
 kEnds="$(awk '$1 == "kEnds" { sub(/;/, "", $2); print $2 }' system/caseParameters)"
 if [[ -z "${kEnds}" ]]; then
-    echo "FAIL: kEnds not found in system/caseParameters"
-    exit 1
+    regression_fail "kEnds not found in system/caseParameters"
+    regression_finish
 fi
 
-failures=0
-checks=0
-
-# Rows: <postProcessing file> <time> <column> <expected> <tolerance>
-#   or: springLaw <time> <tolerance [N]>
-while IFS=' ' read -r fileName time column expected tolerance; do
-    if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
-        continue
-    fi
-
-    checks=$((checks + 1))
-
-    if [[ "${fileName}" == "springLaw" ]]; then
-        # Force on xMin from the stress field must equal -k A0 <Dx>
-        tolerance="${column}"
-        force="$(extractProbeValue "${FORCE_FILE}" "${time}" 2)" || true
-        disp="$(extractProbeValue "${DISP_FILE}" "${time}" 2)" || true
-        if [[ -z "${force}" || -z "${disp}" ]]; then
-            echo "FAIL: spring law at t=${time}: force or displacement not found"
-            failures=$((failures + 1))
-            continue
-        fi
-        springForce="$(awk -v k="${kEnds}" -v a="${END_AREA}" -v d="${disp}" \
-            'BEGIN { print -k*a*d }')"
-        checkWithinTolerance "spring law F_xMin vs -k A0 <Dx> t=${time}" \
-            "${force}" "${springForce}" "${tolerance}" \
-            || failures=$((failures + 1))
-        continue
-    fi
-
-    dataFile="postProcessing/${fileName}"
-    if [[ ! -f "${dataFile}" ]]; then
-        echo "FAIL: missing output file ${dataFile}"
-        failures=$((failures + 1))
-        continue
-    fi
-
-    actual="$(extractProbeValue "${dataFile}" "${time}" "${column}")" || true
-
-    if [[ -z "${actual}" ]]; then
-        echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
-        failures=$((failures + 1))
-        continue
-    fi
-
-    checkWithinTolerance "${dataFile} col=${column} t=${time}" \
-        "${actual}" "${expected}" "${tolerance}" \
-        || failures=$((failures + 1))
-done < "${REF_FILE}"
-
-echo
-if (( failures == 0 )); then
-    echo "============================================================"
-    echo "Regression test PASSED"
-    echo "============================================================"
-    exit 0
-fi
-
-echo "============================================================"
-echo "Regression test FAILED (${failures}/${checks} checks)"
-echo "============================================================"
-exit 1
+regression_compare || true
+regression_finish

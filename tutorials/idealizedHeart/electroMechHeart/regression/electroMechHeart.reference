@@ -1,12 +1,23 @@
-# Probe values at t = 0.02 s. Column indices count the whitespace-separated
-# fields of the probe file after stripping the parentheses that vector probes
-# write, so time is column 1, probe 0 is columns 2..4 for a vector and column 2
-# for a scalar.
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
+# Values from solids4foam ed7f957f, whose electroMechanicalLaw pushes the active
+# stress forward with the deformation gradient (#393).
+# Column indices count the whitespace-separated fields of the probe file after
+# stripping the parentheses that vector probes write, so time is column 1,
+# probe 0 is columns 2..4 for a vector and column 2 for a scalar. Probe 0 is
+# at the apex, inside the stimulus region; probe 1 is mid-wall.
 #
-# file                                time   col  expected       tolerance
-CaiProbes/electro/0/activationTime    0.02   2    0.00323067     1e-5
-CaiProbes/electro/0/activationTime    0.02   3    -1             1e-9
-Taprobes/solid/0/D                    0.02   2    4.15657e-05    1e-6
-Taprobes/solid/0/D                    0.02   4    -5.35745e-05   1e-6
-Taprobes/solid/0/D                    0.02   6    -1.94046e-04   2e-6
-Taprobes/solid/0/Ta                   0.02   2    5773.36        60.0
+# The apex activates at 3.2 ms; the mid-wall probe has not activated by 10 ms.
+probe  postProcessing/CaiProbes/electro/0/activationTime  0.01   2  0.00323067    1e-5
+probe  postProcessing/CaiProbes/electro/0/activationTime  0.01   3  -1            1e-9
+# D: apex x and z, mid-wall y, at 5 and 10 ms.
+probe  postProcessing/Taprobes/solid/0/D                  0.005  2  2.92255e-05   1e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.005  4  -3.44283e-05  1e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.005  6  -9.71048e-05  2e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.01   2  3.69729e-05   1e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.01   4  -4.66866e-05  1e-6
+probe  postProcessing/Taprobes/solid/0/D                  0.01   6  -0.000181704  2e-6
+# Apical active tension, rising after activation (by 91 Pa from 5 to 10 ms;
+# the old 20 ms reference reproduced to all six digits on this build).
+probe  postProcessing/Taprobes/solid/0/Ta                 0.005  2  4934.58       10.0
+probe  postProcessing/Taprobes/solid/0/Ta                 0.01   2  5025.31       10.0

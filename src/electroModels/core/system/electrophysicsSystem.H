@@ -48,7 +48,6 @@ class electrophysicsSystem
     PtrList<electroDomainInterface> conductionDomains_;
     PtrList<electroDomainCoupler> conductionCouplingModels_;
     PtrList<electroDomainInterface> ecgDomains_;
-    PtrList<electroDomainCoupler> ecgCouplingModels_;
 
 public:
 
@@ -129,23 +128,6 @@ public:
         ecgDomains_.clear();
     }
 
-    void appendECGCoupling(electroDomainCoupler* couplingModel)
-    {
-        if (!couplingModel)
-        {
-            return;
-        }
-
-        const label i = ecgCouplingModels_.size();
-        ecgCouplingModels_.setSize(i + 1);
-        ecgCouplingModels_.set(i, couplingModel);
-    }
-
-    void clearECGCouplings()
-    {
-        ecgCouplingModels_.clear();
-    }
-
     bool hasConductionDomains() const
     {
         return !conductionDomains_.empty();
@@ -159,11 +141,6 @@ public:
     bool hasECGDomains() const
     {
         return !ecgDomains_.empty();
-    }
-
-    bool hasECGCouplings() const
-    {
-        return !ecgCouplingModels_.empty();
     }
 
     myocardiumDomainInterface& myocardium()
@@ -206,11 +183,6 @@ public:
         return ecgDomains_;
     }
 
-    const PtrList<electroDomainCoupler>& ecgCouplings() const
-    {
-        return ecgCouplingModels_;
-    }
-
     bool advance
     (
         scalar t0,
@@ -235,8 +207,6 @@ public:
 
     void prepareMyocardiumCouplings(scalar t0, scalar dt);
 
-    void prepareECGCouplings(scalar t0, scalar dt);
-
     void preparePotentialDomain(scalar t0, scalar dt);
 
     void advancePotentialDomain(scalar t0, scalar dt);
@@ -256,8 +226,6 @@ public:
     void endConductionCouplings();
 
     void endECGDomains();
-
-    void endECGCouplings();
 };
 
 } // End namespace Foam

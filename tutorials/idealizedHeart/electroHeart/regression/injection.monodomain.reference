@@ -1,3 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # Monodomain variant: monodomainSolver + monodomain1DSolver.
 #
 # The probe reads -1 through t=0.025 and activates at 28.9 ms; sampled at
@@ -5,8 +7,7 @@
 # calibrated Purkinje velocity, so the monodomain and hybrid probes activate
 # about 1.3 ms apart.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0288518     1e-4
-pseudoECG.dat                           0.025  5    0.002293723   2e-4
-pseudoECG.dat                           0.04   3    0.003059055   2e-4
-pseudoECG.dat                           0.04   7    0.004465653   2e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.04   2  0.0288518    1e-4
+probe  postProcessing/pseudoECG.dat                    0.025  5  0.002293723  2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   3  0.003059055  2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   7  0.004465653  2e-4

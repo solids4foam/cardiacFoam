@@ -1,4 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # At t=0.035, the intact LV is active and the disconnected RV is not.
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.035  2    0.0287588     1e-4
-injectionProbe/0/activationTime         0.035  3    -1            1e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.035  2  0.0287588  1e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.035  3  -1         1e-4

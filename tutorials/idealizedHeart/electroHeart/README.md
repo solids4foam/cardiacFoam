@@ -181,8 +181,13 @@ nonlinear scheme, only marginally stable — it needs both of:
 ./Allrun hybrid pig   # any variant on the pig Purkinje tree
 ```
 
-The regression runs every variant on both trees (`regression/injection.<variant>.reference`
-for human, `injection.<variant>.pig.reference` for pig).
+`python3 plot_pseudo_ecg.py --case-dir . --monodomain` (`--eikonal` for the
+`eikonal` variant) plots the pseudo-ECG of a finished run.
+
+The regression runs `monodomain` on the human tree by default; with
+`CARDIAC_REGRESSION_SCOPE=full` it runs every variant on both trees
+(`regression/injection.<variant>.reference` for human,
+`injection.<variant>.pig.reference` for pig).
 
 `constant/electroProperties` and `system/controlDict` are symlinks to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.

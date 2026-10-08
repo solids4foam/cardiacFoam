@@ -1,160 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
-# ============================================================
-# Idealized heart conduction-block regression test
-# ============================================================
+# Shared regression library (tutorials/regression/lib.sh), found by walking up
+# from this case; CARDIAC_REGRESSION_LIB overrides the lookup.
+regressionLib="${CARDIAC_REGRESSION_LIB:-}"
+if [[ -z "${regressionLib}" ]]; then
+    dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    while [[ "${dir}" != / && ! -f "${dir}/regression/lib.sh" ]]; do
+        dir="$(dirname "${dir}")"
+    done
+    regressionLib="${dir}/regression/lib.sh"
+fi
+. "${regressionLib}"
+
+# Confirms that severing a bundle branch blocks fast conduction. Two
+# activation-time probes: the LV Purkinje-myocardial-junction site (node 211,
+# the point electroHeart's regression requires to be activated by 28.9 ms)
+# and an RV site. In lbbb the LV probe must still read -1 at t = 0.035 s
+# while the RV probe has activated; in rbbb the roles swap. Myocardial spread
+# reaches the blocked LV point at 43.2 ms, so the cutoff separates block from
+# health with margin on both sides.
 #
-# Confirms the LBB bridge severing actually blocks fast conduction: probes
-# activationTime at the same Purkinje-myocardial-junction site (node 211 in
-# the shared purkinjeGraph) that electroHeart's own regression
-# checks IS activated by t=0.035 (28.8 ms on the healthy tree). Here, with
-# the LV subtree disconnected from the root (a tree - no alternate path), it
-# must still be un-activated (activationTime == -1) at t=0.035: the point is
-# reached only by myocardial spread from the intact RV side, at 43.2 ms. The
-# cutoff sits between the two with margin on both sides. The RV probe
-# provides the positive control in LBBB and the blocked control in RBBB.
-#
-# conductionBlock's own controlDict runs to 0.7s (full ECG-scale, for real
-# use of the tutorial), but this check only needs t=0.035. Running the full
-# 0.7s here would only add ~45 minutes with no extra information for this
-# check, so the run's own endTime is temporarily shortened to 0.035s just
-# for this script's invocation, then restored - the tracked controlDict is
-# never left changed. Allrun itself is reused unmodified.
+# The case's own controlDict runs to 0.7 s; the regression stops at 0.035 s
+# and runs in parallel, as the other whole-heart regressions do.
 
 VARIANTS=(lbbb rbbb)
-ALLRUN_LOGFILE="log.Allrun"
 
-echo "============================================================"
-echo "Idealized heart conduction-block regression test"
-echo "============================================================"
-echo
+regression_init "Idealized heart conduction-block regression test" \
+    "regression/${VARIANTS[0]}.reference" "$@"
+regression_require_run_mode
 
-CONTROL_DICT="system/controlDict"
-CONTROL_DICT_BACKUP="system/controlDict.regressionTest.bak"
-
-cp "${CONTROL_DICT}" "${CONTROL_DICT_BACKUP}"
-restoreControlDict()
-{
-    mv -f "${CONTROL_DICT_BACKUP}" "${CONTROL_DICT}"
-}
-trap restoreControlDict EXIT
-
-sed -E 's/^endTime[[:space:]]+[^;]+;/endTime    0.035;/' \
-    "${CONTROL_DICT_BACKUP}" > "${CONTROL_DICT}"
-
-dumpLogTail()
-{
-    local label="$1"
-    local logFile="$2"
-    local maxLines="${3:-80}"
-
-    if [[ -s "${logFile}" ]]; then
-        echo "----- last ${maxLines} lines of ${label} (${logFile}) -----"
-        tail -n "${maxLines}" "${logFile}"
-        echo "----- end of ${label} -----"
-    else
-        echo "(no log file at ${logFile})"
-    fi
-}
-
-failures=0
-checks=0
+regression_set system/controlDict endTime 0.035
 
 for variant in "${VARIANTS[@]}"; do
-REF_FILE="regression/${variant}.reference"
-echo "Checking ${variant}"
+    echo "------------------------------------------------------------"
+    echo "Variant: ${variant}"
+    echo "------------------------------------------------------------"
 
-./Allclean > /dev/null 2>&1 || true
-if ! ./Allrun "${variant}" > "${ALLRUN_LOGFILE}" 2>&1 \
-    || ! grep -q '^End$' log.cardiacFoam; then
-    echo "FAIL: ${variant} did not complete. Surfacing logs:"
-    dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
-    dumpLogTail "cardiacFoam" "log.cardiacFoam"
-    failures=$((failures + 1))
-    continue
-fi
-
-if [[ ! -f "${REF_FILE}" ]]; then
-    echo "FAIL: reference file not found: ${REF_FILE}"
-    failures=$((failures + 1))
-    continue
-fi
-
-while IFS=' ' read -r fileName time column expected tolerance; do
-    if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
+    if ! regression_run "${variant}" parallel; then
+        regression_fail "Allrun ${variant} parallel did not complete"
         continue
     fi
-
-    dataFile="postProcessing/${fileName}"
-    if [[ ! -f "${dataFile}" ]]; then
-        echo "FAIL: missing output file ${dataFile}"
-        failures=$((failures + 1))
-        checks=$((checks + 1))
-        continue
-    fi
-
-    actual="$(
-        awk -v target="${time}" -v col="${column}" '
-            BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-            $1 !~ /^#/ && NF >= col {
-                d = $1 - target;
-                if (d < 0) d = -d;
-                if (d < bestDiff) {
-                    bestDiff = d;
-                    actual = $col;
-                    found = 1;
-                }
-            }
-            END {
-                if (found && bestDiff <= 2.5e-3) {
-                    print actual;
-                    exit 0;
-                }
-                exit 1;
-            }
-        ' "${dataFile}"
-    )" || true
-
-    checks=$((checks + 1))
-
-    if [[ -z "${actual}" ]]; then
-        echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
-        failures=$((failures + 1))
-        continue
-    fi
-
-    diffAbs="$(
-        awk -v a="${actual}" -v e="${expected}" '
-            BEGIN {
-                d = a - e;
-                if (d < 0) d = -d;
-                print d;
-            }
-        '
-    )"
-
-    if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d < t)}'; then
-        printf "PASS: %s col=%s t=%s activationTime=%.7g (difference = %.3g)\n" \
-            "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
-    else
-        printf "FAIL: %s col=%s t=%s activationTime=%.7g (difference = %.3g)\n" \
-            "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
-        failures=$((failures + 1))
-    fi
-done < "${REF_FILE}"
+    regression_compare "regression/${variant}.reference" || true
+    echo
 done
 
-echo
-if (( failures == 0 )); then
-    echo "============================================================"
-    echo "Regression test PASSED"
-    echo "============================================================"
-    exit 0
-else
-    echo "============================================================"
-    echo "Regression test FAILED (${failures}/${checks} checks)"
-    echo "============================================================"
-    exit 1
-fi
+regression_finish

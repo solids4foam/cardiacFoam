@@ -9,6 +9,7 @@ into version control.
 idealizedHeart/
 ├── mesh/            the one canonical mesh + anatomy fields every case below shares
 ├── electroHeart/     healthy EP baseline, 3 solver-combination variants
+├── electroHeartBath/ bidomain heart in an idealized conductive torso, torso ECG
 ├── electroMechHeart/ sequential electromechanical coupling
 └── pathos/          pathology-injection techniques (structural + ionic)
 ```
@@ -32,6 +33,13 @@ Electrophysiology only, three solver combinations (`monodomain` default,
 full stack table and the numerical-stability notes the `eikonal` variant
 needed. `monodomain` is the regression-covered variant.
 
+## `electroHeartBath/`
+
+The electroHeart monodomain case as a bidomain myocardium inside an
+idealized torso box (blood, lungs, chest wall and torso zones), meshed
+conformal to the unchanged heart. The precordial leads are read on the
+torso surface — see its own README.
+
 ## `electroMechHeart/`
 
 Sequential electromechanical coupling (TNNP ionic model, Land-Niederer
@@ -46,7 +54,8 @@ Two techniques for injecting a pathology into the model —
 
 ## Regression
 
-`electroHeart` (default/monodomain variant) and `pathos/conductionBlock`
-(`lbbb` variant) are wired into `tutorials/Alltest-regression`; both
+`electroHeart` (`monodomain` on the human tree by default, every variant
+and tree with `CARDIAC_REGRESSION_SCOPE=full`) and `pathos/conductionBlock`
+(`lbbb` and `rbbb`) are wired into `tutorials/Alltest-regression`; both
 share a `../mesh/`-relative sibling-mesh copy-in step that
 `Alltest-regression` handles once per sweep (see the comment there).

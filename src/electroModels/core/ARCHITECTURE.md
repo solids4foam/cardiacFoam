@@ -184,8 +184,6 @@ Domain container and advance coordinator.
 
 - `PtrList<electroDomainInterface> ecgDomains_`
 
-- `PtrList<electroDomainCoupler> ecgCouplingModels_`
-
 The actual timestep sequence is delegated to `advanceScheme_`; this container
 just holds the assembled pieces.
 
@@ -209,8 +207,8 @@ earlier ones:
 | `configureMyocardiumDomain(...)` | Instantiate myocardium domain via factory |
 | `configureAdvanceScheme(...)` | Select the runtime advance scheme |
 | `configureBathPotentialDomain(...)` | Optionally instantiate a standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`); requires the myocardium domain to already be configured |
-| `configureConductionDomains(...)` | Load Purkinje graph(s), instantiate domains, and build their PVJ couplings in the same pass |
-| `configureECGDomains(...)` | Instantiate ECG domain(s), reading myocardium (and optionally bath) state via `electroStateProvider`, and build any per-domain ECG couplings in the same pass |
+| `configureConductionDomains(...)` | Load the Purkinje graph, instantiate its domain, and build its PVJ couplings in the same pass |
+| `configureECGDomains(...)` | Instantiate the ECG domain(s), reading myocardium (and optionally bath) state via `electroStateProvider` |
 
 No `configure*Couplings(...)` functions exist.
 
@@ -221,24 +219,24 @@ domain to already be configured (`system.hasMyocardium()`). It runs before
 `configureECGDomains(...)`: the potential domain it builds is one of the
 state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
 
-Coupling instantiation for conduction and for ECG is built inline, in two
-different structures:
-
-- conduction (PVJ) couplings: built inside `configureConductionDomains(...)`
-  from a top-level `domainCouplings` block; each entry resolves against the
-  conduction-domain map via `conductionNetworkDomain <name>`
-- ECG couplings: built inside `configureECGDomains(...)` from an optional
-  `coupling` subdict nested under each `ecgDomains.<name>` entry; there is
-  no top-level `domainCouplings`-equivalent container for ECG
+Conduction (PVJ) couplings are built inside `configureConductionDomains(...)`
+from a top-level `domainCouplings` block; each entry resolves against the
+conduction domain via `conductionNetworkDomain <name>`. ECG domains take no
+coupling: an ECG reads the myocardium (or bath) state directly, and a bath
+bidomain already couples the torso.
 
 Current rules:
 
 - `conductionNetworkDomains` and `domainCouplings` are optional
+- At most one conduction network domain: the root stimulus starts a single
+  network, and its outputs (`purkinjeNetwork.dat`, ...) have fixed names
+- Any number of ECG domains. The output file is named after the `ecgSolver`
+  (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`), not the domain, so two
+  domains with the same `ecgSolver` write the same file; that is a warning
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
 - `bathPotentialDomain` is optional; when present it is read from
   `electroProperties.subDict("bathPotentialDomain")`
-- Each `ecgDomains.<name>` entry's `coupling` subdict is optional; when
-  present, `configureECGDomains(...)` requires a myocardium domain to exist
+- A `coupling` entry in an `ecgDomains.<name>` entry is a fatal error
 
 ---
 
@@ -253,27 +251,18 @@ built afterwards may need it.
 
 ### Conduction (two-pass)
 
-1. Build every entry in `conductionNetworkDomains`
+1. Build the entry in `conductionNetworkDomains` (only one is accepted)
 2. Build every coupling in `domainCouplings`, resolving `conductionNetworkDomain <name>`
    against the already-built domain map
 
 The two-pass exists because couplings and conduction domains are stored in
 separate dictionary containers.
 
-### ECG (two-pass)
+### ECG (single pass)
 
-1. Build every entry in `ecgDomains`. Each domain's `ecgSolver` (`pseudoECG`,
-   `eikonalECG`, or `torsoECG`) determines which `electroStateProvider` it
-   reads from — `torsoECG` requires the bath potential domain from the
-   previous step.
-2. For each ECG domain whose dict declares a `coupling` subdict, build a
-   coupler (`electroDomainCoupler::New(myocardium, ecgDomain, couplingDict)`)
-   and append it to `ecgCouplingModels_`. Domains without a `coupling`
-   subdict get none.
-
-ECG couplings are declared per-domain, under each `ecgDomains.<name>`
-entry's `coupling` subdict, rather than in a separate top-level container
-like conduction's `domainCouplings`.
+Build every entry in `ecgDomains`. Each domain's `ecgSolver` (`pseudoECG`,
+`eikonalECG`, or `torsoECG`) determines which `electroStateProvider` it reads
+from; `torsoECG` requires the bath potential domain from the previous step.
 
 ---
 
@@ -292,8 +281,7 @@ like conduction's `domainCouplings`.
    - a potential domain is set (`hasPotentialDomain()`): a split
      reaction/diffusion sequence coupling `myocardium` and
      `potentialDomain_` (see below)
-6. Prepare ECG couplings (`prepareECGCouplings(...)`)
-7. Advance ECG domains (`advanceECGDomains(...)`)
+6. Advance ECG domains (`advanceECGDomains(...)`)
 
 ### `advanceSchemes/staggeredElectrophysicsAdvanceScheme`
 
@@ -306,7 +294,6 @@ system.prepareConductionCouplings(t0, dt);
 system.advanceConductionDomains(t0, dt);
 system.prepareMyocardiumCouplings(t0, dt);
 myocardium.advance(t0, dt, pimplePtr);
-system.prepareECGCouplings(t0, dt);
 system.advanceECGDomains(t0, dt);
 
 ```

@@ -1,19 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
-IFS=$'\n\t'
 
-# ============================================================
-# purkinjeRestitution2D regression test
-# ============================================================
-#
+# Shared regression library (tutorials/regression/lib.sh), found by walking up
+# from this case; CARDIAC_REGRESSION_LIB overrides the lookup.
+regressionLib="${CARDIAC_REGRESSION_LIB:-}"
+if [[ -z "${regressionLib}" ]]; then
+    dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    while [[ "${dir}" != / && ! -f "${dir}/regression/lib.sh" ]]; do
+        dir="$(dirname "${dir}")"
+    done
+    regressionLib="${dir}/regression/lib.sh"
+fi
+. "${regressionLib}"
+
 # Runs each variant in parallel and compares postProcessing/purkinjeNetwork.dat
-# against regression/<variant>.reference (rows: file time column expected
-# tolerance). The monodomain variant also runs the graph-only runPurkinjeGraph
-# utility and checks it against regression/monodomain.graphUtility.reference.
+# against regression/<variant>.reference. The monodomain variant also runs
+# the graph-only runPurkinjeGraph utility and checks it against
+# regression/monodomain.graphUtility.reference.
+#
+# Regression configuration (tutorials/README.md): retrograde stops at 0.6 s,
+# once its second beat has crossed the network, instead of 0.9 s. antegrade,
+# 2.45 s of which the tissue is idle until the 1.2 s escape beat, runs last,
+# on a 75 x 75 slab instead of 150 x 150: what it checks are network
+# activation times, which do not change with the slab resolution. The
+# retrograde and monodomain variants need the fine slab, since the junctions
+# exchange current with the tissue.
 
-VARIANTS=(antegrade retrograde monodomain)
-ALLRUN_LOGFILE="log.Allrun"
-GRAPH_LOGFILE="log.runPurkinjeGraph"
+VARIANTS=(retrograde monodomain antegrade)
+
+regression_init "purkinjeRestitution2D regression test" \
+    "regression/${VARIANTS[0]}.reference" "$@"
+regression_require_run_mode
+REGRESSION_TIME_WINDOW=1e-6
+regression_set system/controlDict.retrograde endTime 0.6
 
 # macOS strips DYLD_LIBRARY_PATH from child processes; runPurkinjeGraph is
 # called directly rather than through RunFunctions.
@@ -24,149 +43,32 @@ if [[ "$(uname -s)" == "Darwin" && -n "${WM_PROJECT_DIR:-}" && -n "${WM_OPTIONS:
     fi
 fi
 
-echo "============================================================"
-echo "purkinjeRestitution2D regression test"
-echo "============================================================"
-echo
-
-dumpLogTail()
-{
-    local label="$1"
-    local logFile="$2"
-    local maxLines="${3:-80}"
-
-    if [[ -s "${logFile}" ]]; then
-        echo "----- last ${maxLines} lines of ${label} (${logFile}) -----"
-        tail -n "${maxLines}" "${logFile}"
-        echo "----- end of ${label} -----"
-    else
-        echo "(no log file at ${logFile})"
-    fi
-}
-
-# Compare one reference file's rows against postProcessing/.
-# Echoes PASS/FAIL per row; returns the number of failures.
-checkReference()
-{
-    local refFile="$1"
-    local failures=0
-
-    while IFS=' ' read -r fileName time column expected tolerance; do
-        if [[ -z "${fileName}" || "${fileName}" == \#* ]]; then
-            continue
-        fi
-
-        local dataFile="postProcessing/${fileName}"
-        if [[ ! -f "${dataFile}" ]]; then
-            echo "FAIL: missing output file ${dataFile}"
-            failures=$((failures + 1))
-            continue
-        fi
-
-        local actual
-        actual="$(
-            awk -v target="${time}" -v col="${column}" '
-                BEGIN { bestDiff = 1e99; found = 0; actual = 0.0; }
-                $1 !~ /^#/ && NF >= col {
-                    d = $1 - target;
-                    if (d < 0) d = -d;
-                    if (d < bestDiff) {
-                        bestDiff = d;
-                        actual = $col;
-                        found = 1;
-                    }
-                }
-                END {
-                    if (found && bestDiff <= 1e-6) {
-                        print actual;
-                        exit 0;
-                    }
-                    exit 1;
-                }
-            ' "${dataFile}"
-        )" || true
-
-        if [[ -z "${actual}" ]]; then
-            echo "FAIL: ${dataFile} col=${column} at t=${time} not found"
-            failures=$((failures + 1))
-            continue
-        fi
-
-        local diffAbs
-        diffAbs="$(
-            awk -v a="${actual}" -v e="${expected}" \
-                'BEGIN { d = a - e; if (d < 0) d = -d; print d; }'
-        )"
-
-        if awk -v d="${diffAbs}" -v t="${tolerance}" 'BEGIN {exit !(d <= t)}'; then
-            printf "PASS: %s col=%s t=%s value=%.9g (difference = %.3g)\n" \
-                "${dataFile}" "${column}" "${time}" "${actual}" "${diffAbs}"
-        else
-            printf "FAIL: %s col=%s t=%s value=%.9g expected=%.9g (difference = %.3g)\n" \
-                "${dataFile}" "${column}" "${time}" "${actual}" "${expected}" "${diffAbs}"
-            failures=$((failures + 1))
-        fi
-    done < "${refFile}"
-
-    return "${failures}"
-}
-
-failures=0
-failedVariants=()
-
 for variant in "${VARIANTS[@]}"; do
-    refFile="regression/${variant}.reference"
-
     echo "------------------------------------------------------------"
     echo "Variant: ${variant}"
     echo "------------------------------------------------------------"
 
-    ./Allclean > /dev/null 2>&1 || true
+    if [[ "${variant}" == antegrade ]]; then
+        regression_edit system/blockMeshDict \
+            's/^([[:space:]]*hex[[:space:]]*\([^)]*\)[[:space:]]*)\([^)]*\)/\1(75 75 1)/'
+    fi
 
-    if ! ./Allrun "${variant}" parallel > "${ALLRUN_LOGFILE}" 2>&1 \
-        || ! grep -q "^End" log.cardiacFoam; then
-        echo "FAIL: Allrun ${variant} parallel did not complete. Surfacing logs:"
-        dumpLogTail "Allrun" "${ALLRUN_LOGFILE}"
-        dumpLogTail "cardiacFoam" "log.cardiacFoam"
-        failures=$((failures + 1))
-        failedVariants+=("${variant}")
-        echo
+    if ! regression_run "${variant}" parallel; then
+        regression_fail "Allrun ${variant} parallel did not complete"
         continue
     fi
+    regression_compare "regression/${variant}.reference" || true
 
-    variantFailures=0
-    checkReference "${refFile}" || variantFailures=$?
-
-    if [[ "${variant}" == "monodomain" ]]; then
+    if [[ "${variant}" == monodomain ]]; then
         rm -rf postProcessing
-        if runPurkinjeGraph -case . -conductionDomain purkinjeNetwork \
-            > "${GRAPH_LOGFILE}" 2>&1; then
-            graphFailures=0
-            checkReference "regression/monodomain.graphUtility.reference" \
-                || graphFailures=$?
-            variantFailures=$((variantFailures + graphFailures))
+        if runPurkinjeGraph -case . -conductionDomain purkinjeNetwork > log.runPurkinjeGraph 2>&1; then
+            regression_compare regression/monodomain.graphUtility.reference || true
         else
-            echo "FAIL: runPurkinjeGraph exited non-zero."
-            dumpLogTail "runPurkinjeGraph" "${GRAPH_LOGFILE}"
-            variantFailures=$((variantFailures + 1))
+            regression_fail "runPurkinjeGraph exited non-zero"
+            regression_log_tail runPurkinjeGraph log.runPurkinjeGraph
         fi
-    fi
-
-    if (( variantFailures > 0 )); then
-        failures=$((failures + variantFailures))
-        failedVariants+=("${variant}")
     fi
     echo
 done
 
-if (( failures == 0 )); then
-    echo "============================================================"
-    echo "Regression test PASSED (${#VARIANTS[@]} variants)"
-    echo "============================================================"
-    exit 0
-else
-    echo "============================================================"
-    echo "Regression test FAILED (${failures} check(s) in: ${failedVariants[*]})"
-    echo "============================================================"
-    exit 1
-fi
+regression_finish

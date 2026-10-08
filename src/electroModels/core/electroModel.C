@@ -374,7 +374,6 @@ Foam::electroModel::couplingField(const word& fieldName) const
 
 void Foam::electroModel::end()
 {
-    domainSystem_.endECGCouplings();
     domainSystem_.endECGDomains();
     domainSystem_.endConductionCouplings();
     domainSystem_.endConductionDomains();

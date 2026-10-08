@@ -1,5 +1,6 @@
 #!/bin/sh
 cd "${0%/*}" || exit 1
+set -e
 . "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
 
 runApplication blockMesh -dict system/blockMeshDict.3D
@@ -9,6 +10,7 @@ then
     runApplication decomposePar
     runParallel cardiacFoam
     runApplication reconstructPar
+    runApplication redistributeRestartState
 else
     runApplication cardiacFoam
 fi

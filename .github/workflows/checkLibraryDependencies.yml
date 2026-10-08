@@ -1,0 +1,27 @@
+# Check that no src/ library includes headers from a higher-level library
+# (layering defined in src/check_dependencies.py)
+
+name: Check library dependencies
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  check-library-dependencies:
+    name: Library include layering
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout cardiacFoam
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run include-layering check
+        run: python src/check_dependencies.py

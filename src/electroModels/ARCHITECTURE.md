@@ -242,7 +242,7 @@ Transfers state between domains at each timestep. Runs between domain advances i
 | Class | Role |
 |---|---|
 | `electroDomainCouplingEndpoints.H` | Mix-in interfaces: `tissueCouplingEndpoint` (implemented by `myocardiumDomain`) and `networkCouplingEndpoint` (implemented by conduction system domains). Provide typed access to injection targets and activation sources. |
-| `electroDomainCoupler.H/C` | Base class for all couplers. Named pair of domain references with `prepareSecondaryCoupling()`, `preparePrimaryCoupling()`, `preparePostPrimaryCoupling()` hooks. |
+| `electroDomainCoupler.H/C` | Base class for all couplers. Named pair of domain references with `prepareSecondaryCoupling()` and `preparePrimaryCoupling()` hooks. |
 | `pvjCoupler/pvjMapper.H/C` | Purkinje–Ventricular Junction topology mapper. Builds the spatial map between conduction-system terminal nodes and the nearest myocardium cells. |
 | `pvjCoupler/pvjCoupler.H/C` | PVJ coupling-family base. Owns the shared PVJ mapper, coupling-mode parsing, and network endpoint binding. |
 | `pvjCoupler/reactionDiffusion/reactionDiffusionPvjCoupler.H/C` | PVJ coupling with 1D-to-3D resistance model. Reads terminal `Vm`, converts it to volumetric current, and injects it explicitly into `myocardiumDomain::sourceField_` or, with `pvjCouplingScheme implicit`, puts each cell's own tissue-voltage term on the myocardium Vm matrix diagonal, with either tissue `solutionAlgorithm`. In `couplingMode bidirectional` the tissue receives the current the network solved, so the scheme is explicit there. |

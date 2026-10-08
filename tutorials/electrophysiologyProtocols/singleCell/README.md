@@ -63,7 +63,7 @@ singleCellSolverCoeffs
 
 - `postProcessing/<ionicModel>_<tissue>_<stimulusSuffix>.txt`
 
-Optional plotting is done by `plotVoltage` (skipped by default when `CF_SKIP_PLOTS=1`).
+`./Allrun --plot` also runs `plotVoltage` after the solve; `./plotVoltage` plots an existing run.
 
 ## TWORLD versus Gaur species comparison
 

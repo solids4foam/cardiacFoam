@@ -1,14 +1,17 @@
-# kind     key        metric      expected       tolerance
-summary   finalTime  value       0.100897       1e-6
-error     Vm         L1          0.000360105    3.60e-06
-error     Vm         L2          0.000490418    4.90e-06
-error     Vm         Linf        0.00138085     1.38e-05
-error     D          L1          1.19115e-05    1.19e-07
-error     D          L2          1.57468e-05    1.57e-07
-error     D          Linf        6.60643e-05    6.61e-07
-error     lambda     L1          7.34108e-05    7.34e-07
-error     lambda     L2          0.000103583    1.04e-06
-error     lambda     Linf        0.000700177    7.00e-06
-error     Ta         L1          0.0432095      4.32e-04
-error     Ta         L2          0.0686072      6.86e-04
-error     Ta         Linf        0.242461       2.42e-03
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# Values from solids4foam ed7f957f, whose electroMechanicalLaw pushes the active
+# stress forward with the deformation gradient (#393).
+summary  finalTime  0.100897  1e-6
+error    Vm         L1        0.000360105  3.6e-06
+error    Vm         L2        0.000490418  4.9e-06
+error    Vm         Linf      0.00138085   1.38e-05
+error    D          L1        1.21638e-05  1.22e-07
+error    D          L2        1.60528e-05  1.61e-07
+error    D          Linf      6.51799e-05  6.52e-07
+error    lambda     L1        7.48531e-05  7.49e-07
+error    lambda     L2        0.000105439  1.05e-06
+error    lambda     Linf      0.000701202  7.01e-06
+error    Ta         L1        0.0433775    0.000434
+error    Ta         L2        0.0689929    0.00069
+error    Ta         Linf      0.241437     0.00241

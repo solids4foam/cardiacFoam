@@ -1,19 +1,16 @@
 #!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
 
-# Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-if [[ $1 == "parallel" ]]
-then
-    # Decompose the mesh
+runApplication blockMesh -dict system/blockMeshDict.3D
+
+if [[ "${1:-}" == "parallel" ]]; then
     runApplication decomposePar
-
-    # Run the solver in parallel
     runParallel cardiacFoam
-
-    # Reconstruct the results
     runApplication reconstructPar
+    runApplication redistributeRestartState
 else
-    # Run the solver in serial
     runApplication cardiacFoam
 fi
