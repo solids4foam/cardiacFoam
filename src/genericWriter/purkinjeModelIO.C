@@ -27,6 +27,7 @@ License
 #include "OSspecific.H"
 #include "Time.H"
 #include "PstreamReduceOps.H"
+#include "IFstream.H"
 #include <fstream>
 #include <sstream>
 #include "ionicVariableCompatibility.H"
@@ -231,6 +232,39 @@ void purkinjeModelIO::writeGlobalField(scalarGlobalIOField& field)
             << "Failed writing " << field.name()
             << exit(FatalError);
     }
+}
+
+
+bool purkinjeModelIO::readGlobalField(scalarGlobalIOField& field)
+{
+    const Time& runTime = field.time();
+    const fileName inputPath
+    (
+        runTime.globalPath()/field.instance()/field.name()
+    );
+
+    bool found = false;
+    scalarField values;
+
+    if (Pstream::master() && isFile(inputPath))
+    {
+        IFstream is(inputPath);
+        found = is.good() && field.readHeader(is);
+        if (found)
+        {
+            is >> values;
+        }
+    }
+
+    Pstream::broadcast(found);
+
+    if (found)
+    {
+        Pstream::broadcast(values);
+        static_cast<scalarField&>(field).transfer(values);
+    }
+
+    return found;
 }
 
 

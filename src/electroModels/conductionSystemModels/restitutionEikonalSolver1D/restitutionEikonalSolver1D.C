@@ -141,6 +141,8 @@ void Foam::restitutionEikonalSolver1D::initialiseState
 
     // A restart reads the pending events; every activation time on the
     // graph is then in the past.
+    purkinjeModelIO::readGlobalField(nextTact_);
+    purkinjeModelIO::readGlobalField(nextTactSource_);
     const bool restarted = nextTact_.size() == N;
 
     lastActTime_.setSize(N, -GREAT);

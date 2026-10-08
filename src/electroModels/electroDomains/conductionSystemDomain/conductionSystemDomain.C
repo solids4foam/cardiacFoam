@@ -56,7 +56,7 @@ void initialiseGraphStateField
     const scalarField& defaultValues
 )
 {
-    if (field.filePath().empty())
+    if (!purkinjeModelIO::readGlobalField(field))
     {
         field = defaultValues;
         return;

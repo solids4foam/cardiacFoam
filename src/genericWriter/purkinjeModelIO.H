@@ -105,6 +105,13 @@ public:
         //  time directory of the undecomposed case, from the master.
         static void writeGlobalField(scalarGlobalIOField& field);
 
+        //- Read a graph field written by writeGlobalField from the field's
+        //  time directory (its instance, the start time for a field
+        //  constructed at start-up) of the undecomposed case: the master
+        //  reads it and every rank receives it. Returns false, leaving the
+        //  field unchanged, when there is no such file.
+        static bool readGlobalField(scalarGlobalIOField& field);
+
         //- Append one data row: time followed by all values
         static void writeRow
         (

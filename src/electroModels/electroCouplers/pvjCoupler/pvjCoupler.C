@@ -116,7 +116,7 @@ pvjCoupler::pvjCoupler
         0
     )
 {
-    if (lastObservedTissueActivation_.filePath().empty())
+    if (!purkinjeModelIO::readGlobalField(lastObservedTissueActivation_))
     {
         lastObservedTissueActivation_.setSize
         (
