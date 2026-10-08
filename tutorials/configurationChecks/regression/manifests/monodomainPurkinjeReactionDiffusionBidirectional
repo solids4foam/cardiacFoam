@@ -1,4 +1,5 @@
 0.0025/BuenoOrovioState
+0.0025/BuenoOrovioState.purkinjeNetwork
 0.0025/Vm
 0.0025/Vm.purkinjeNetwork
 0.0025/Vm_0
@@ -7,9 +8,11 @@
 0.0025/externalStimulusCurrent
 0.0025/ionicCurrent
 0.0025/ionicCurrent.purkinjeNetwork
+0.0025/lastObservedTissueActivation.purkinjeToMyocardium
 0.0025/uniform/functionObjects/functionObjectProperties
 0.0025/uniform/time
 0.005/BuenoOrovioState
+0.005/BuenoOrovioState.purkinjeNetwork
 0.005/Vm
 0.005/Vm.purkinjeNetwork
 0.005/Vm_0
@@ -18,6 +21,7 @@
 0.005/externalStimulusCurrent
 0.005/ionicCurrent
 0.005/ionicCurrent.purkinjeNetwork
+0.005/lastObservedTissueActivation.purkinjeToMyocardium
 0.005/uniform/functionObjects/functionObjectProperties
 0.005/uniform/time
 constant/electroProperties.withDefaultValues
