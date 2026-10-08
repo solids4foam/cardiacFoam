@@ -9,6 +9,7 @@ verificationModels/ManufacturedElectromechanics/ManufacturedElectromechanics.C
 /*NiedererHunterSmith/NiedererHunterSmith.C*/
 LandNiederer/LandNiederer.C
 LandNiedererTWorld/LandNiedererTWorld.C
+LewalleNiederer/LewalleNiederer.C
 activeTensionModel/batchedActiveTensionModel.C
 NashPanfilovBatched/NashPanfilovBatched.C
 LandNiedererBatched/LandNiedererBatched.C

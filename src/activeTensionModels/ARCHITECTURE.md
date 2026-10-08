@@ -43,6 +43,7 @@ about it", so every model states its own scale even when that scale is `1.0`.
 | `NashPanfilov`, `NashPanfilovBatched` | `1000/12.9` (Aliev-Panfilov dimensionless time) |
 | `LandNiederer`, `LandNiedererBatched` | `1000` (ms) |
 | `LandNiedererTWorld`, `LandNiedererTWorldBatched` | `1000` (ms) |
+| `LewalleNiederer` | `1.0` (s) |
 | `ManufacturedElectromechanics` | `1.0` |
 
 ## Concrete models
@@ -67,5 +68,13 @@ about it", so every model states its own scale even when that scale is `1.0`.
 - runtime name: `LandNiedererTWorld`
 - six-state contraction subsystem extracted from TWorld
 - GPU-batched runtime name: `LandNiedererTWorldBatched`
+
+### `LewalleNiederer`
+
+- runtime name: `LewalleNiederer`
+- nine-state Land model with two myosin OFF states; total tension feeds back on the OFF->ON rate
+- runs in seconds, consumes `Cai` in µM (`driveSignalScaleFactor() = 1000`), tension in kPa
+- reports active (`AV_Ta`), passive (`AV_Tp`), and total (`AV_T`) tension;
+  only active tension is supplied to the active-stress interface
 
 For the folder-level overview, see [README.md](./README.md).
