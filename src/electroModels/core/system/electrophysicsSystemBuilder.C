@@ -222,6 +222,21 @@ void configureConductionDomains
         return;
     }
 
+    // One network: its root stimulus is the start of activation, and its
+    // outputs (purkinjeNetwork.dat, ...) have fixed names
+    if (conductionDomainNames.size() > 1)
+    {
+        FatalIOErrorInFunction
+        (
+            electroProperties.subDict("conductionNetworkDomains")
+        )
+            << "conductionNetworkDomains holds "
+            << conductionDomainNames.size() << " domains "
+            << conductionDomainNames
+            << ", but only one conduction network domain is supported."
+            << exit(FatalIOError);
+    }
+
     HashTable<conductionSystemDomain*> conductionDomainsByName
     (
         conductionDomainNames.size()
@@ -313,8 +328,6 @@ void configureECGDomains
     const dictionary&           electroProperties
 )
 {
-    system.endECGCouplings();
-    system.clearECGCouplings();
     system.endECGDomains();
     system.clearECGDomains();
 
@@ -341,12 +354,28 @@ void configureECGDomains
                 continue;
             }
 
+            // An ECG reads the myocardium (and bath) state directly, and a
+            // bath bidomain already couples the torso, so there is nothing
+            // to couple an ECG domain through
+            if (e.dict().found("coupling"))
+            {
+                FatalIOErrorInFunction(e.dict())
+                    << "ECG domain '" << e.keyword()
+                    << "' has a coupling entry, but ECG domains take no "
+                    << "coupling." << exit(FatalIOError);
+            }
+
             ecgDomainNames.append(e.keyword());
             ecgDomainDicts.append(&e.dict());
         }
     }
 
     HashTable<ecgDomain*> ecgDomainsByName(ecgDomainNames.size());
+
+    // The output file (pseudoECG.dat, torsoECG.dat, eikonalECG.dat) is named
+    // after the ecgSolver, not the domain: two domains with the same ecgSolver
+    // write the same file
+    HashTable<word> ecgDomainBySolverType(ecgDomainNames.size());
 
     forAll(ecgDomainNames, i)
     {
@@ -363,6 +392,20 @@ void configureECGDomains
                 << "Duplicate ECG domain name '" << domainName
                 << "' while configuring post-myocardium domains."
                 << exit(FatalError);
+        }
+
+        if (ecgDomainBySolverType.found(ecgSolverType))
+        {
+            WarningInFunction
+                << "ECG domains '" << ecgDomainBySolverType[ecgSolverType]
+                << "' and '" << domainName << "' both select ecgSolver "
+                << ecgSolverType << " and write the same output file in "
+                << "postProcessing/; each write overwrites the other's."
+                << endl;
+        }
+        else
+        {
+            ecgDomainBySolverType.insert(ecgSolverType, domainName);
         }
 
         const electroStateProvider* stateProviderPtr = nullptr;
@@ -446,35 +489,6 @@ void configureECGDomains
 
         ecgDomainsByName.insert(domainName, domainPtr);
         system.appendECGDomain(domainPtr);
-    }
-
-    forAll(ecgDomainNames, i)
-    {
-        const dictionary& domainDict = *ecgDomainDicts[i];
-
-        if (!domainDict.found("coupling"))
-        {
-            continue;
-        }
-
-        if (!system.hasMyocardium())
-        {
-            FatalErrorInFunction
-                << "ECG domain '" << ecgDomainNames[i]
-                << "' configures a coupling block, but no myocardium domain "
-                << "is available as the primary coupling endpoint."
-                << exit(FatalError);
-        }
-
-        system.appendECGCoupling
-        (
-            electroDomainCoupler::New
-            (
-                system.myocardium(),
-                *ecgDomainsByName[ecgDomainNames[i]],
-                domainDict.subDict("coupling")
-            ).ptr()
-        );
     }
 }
 

@@ -74,5 +74,8 @@ Manual:
 
 ## Regression behavior
 
-`regressionTest.sh` is local to this case and validates against the reference
-file `rotorInstability.reference` stored in the case directory.
+`regression/regressionTest.sh` runs the case in parallel to `endTime 1`
+instead of the tutorial's 4 s and compares the last activation time at each
+probe against `regression/rotorInstability.reference`. By 1 s every probe has
+been activated again by the rotor that the S2 stimulus starts at 0.45 s, so
+the check still requires sustained re-entry.

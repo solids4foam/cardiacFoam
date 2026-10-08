@@ -1,0 +1,9 @@
+#!/bin/bash
+# Mesh the 1-D bath-myocardium-bath column, add the "myocardium" and "bath"
+# cellZones, and set the bath conductivity field
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication blockMesh || exit 1
+runApplication topoSet || exit 1
+runApplication setTorsoOrganConductivityField || exit 1

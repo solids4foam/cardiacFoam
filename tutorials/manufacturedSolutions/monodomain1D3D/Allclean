@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "${0%/*}" || exit 1
 
 shopt -s extglob
 
@@ -9,3 +10,4 @@ rm -rf processor*
 rm -f log.*
 rm -rf constant/polyMesh
 rm -rf postProcessing
+rm -rf verification

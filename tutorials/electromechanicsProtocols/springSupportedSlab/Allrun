@@ -1,4 +1,6 @@
 #!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
 #-------------------------------------------------------------------------------
 # Allrun script for the spring-supported electromechanics slab
 #

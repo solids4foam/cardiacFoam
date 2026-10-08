@@ -54,9 +54,9 @@ Then run this tutorial:
 ./Allrun
 ```
 
-The utility may return non-zero if any configured smoothness or AP-shape check
-fails. CSV files are still written, and `Allrun` still attempts to generate the
-plots.
+The utility returns non-zero if any configured smoothness or AP-shape check
+fails; the CSV files are still written and `Allrun` exits with that status.
+The figures are produced by the plotting script described below.
 
 ## Configuration
 
@@ -94,7 +94,7 @@ postProcessing/ionicHeterogeneityProbe/Vm_transmural_surface_3D.png
 postProcessing/ionicHeterogeneityProbe/APD_transmural_metrics.png
 ```
 
-To regenerate only the figures:
+To generate the figures:
 
 ```bash
 python3 ../../../applications/utilities/ionicHeterogeneityProbe/plotIonicHeterogeneityProbe.py \

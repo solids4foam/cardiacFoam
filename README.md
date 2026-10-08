@@ -77,3 +77,9 @@ For a full build, use `CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam`. The mode
 ## Licence and citation
 
 cardiacFoam is active research software, released under the [GNU GPL v3](LICENSE). If you use it in published work, please cite: **cardiacFOAM**.
+`./tutorials/Alltest-regression --list` prints the discovered cases and
+`--only PATTERN` runs a subset, e.g. `--only bidomain --only purkinje`. Every
+case's `regression/regressionTest.sh` is a short declaration on top of
+`tutorials/regression/lib.sh`, which runs the case, fails when a solver log
+is incomplete or reports a fatal error, and compares the outputs against the
+case's `regression/*.reference`.

@@ -1,5 +1,19 @@
-# Build cardiacFoam against prebuilt solids4foam Docker images
-# Uses solids4foam v2.3 images to avoid rebuilding dependencies in CI
+# Build cardiacFoam against solids4foam and run the tutorial regressions.
+#
+# Three kinds of leg:
+#   lightweight            electrophysiology-only build, every OpenFOAM image;
+#                          the three electromechanics regressions skip (77).
+#   with-solids4foam/image full build against the solids4foam shipped in the
+#                          Docker image, i.e. the released solids4foam line.
+#                          That line lacks the fvOptions body force and the
+#                          optional activeTension that the electromechanics
+#                          cases need, so the regressions run in lightweight
+#                          mode there: the build is checked, the
+#                          electromechanics cases are skipped.
+#   with-solids4foam/submodule
+#                          full build against modules/solids4foam, the pinned
+#                          solids4foam cardiacFoam targets, built in the job.
+#                          Every regression runs, electromechanics included.
 
 name: Build and test
 
@@ -9,7 +23,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build on ${{ matrix.container-image.name }} (${{ matrix.mode }})
+    name: Build on ${{ matrix.container-image.name }} (${{ matrix.mode }}, solids4foam from ${{ matrix.solids4foam_source }})
     runs-on: ubuntu-22.04
     env:
       HOME: /root
@@ -42,6 +56,29 @@ jobs:
             buildflags: "-j"
 
         mode: [lightweight]
+        solids4foam_source: [image]
+        regression_mode: [lightweight]
+
+        include:
+          - container-image:
+              name: "solids4foam-v2.4-OpenFOAM-v2412"
+              image: "solids4foam/solids4foam:v2.4-openfoam-v2412-latest"
+              source: "/lib/openfoam/openfoam2412/etc/bashrc"
+              solids4foam_dir: "/lib/solids4foam"
+              buildflags: "-j"
+            mode: with-solids4foam
+            solids4foam_source: image
+            regression_mode: lightweight
+
+          - container-image:
+              name: "solids4foam-v2.4-OpenFOAM-v2412"
+              image: "solids4foam/solids4foam:v2.4-openfoam-v2412-latest"
+              source: "/lib/openfoam/openfoam2412/etc/bashrc"
+              solids4foam_dir: "/lib/solids4foam"
+              buildflags: "-j"
+            mode: with-solids4foam
+            solids4foam_source: submodule
+            regression_mode: with-solids4foam
 
     container:
       image: ${{ matrix.container-image.image }}
@@ -62,7 +99,9 @@ jobs:
       - name: Checkout cardiacFoam
         uses: actions/checkout@v4
         with:
-          submodules: false
+          # The submodule leg needs modules/solids4foam; .gitmodules points at
+          # the fork that carries the pinned commit.
+          submodules: ${{ matrix.solids4foam_source == 'submodule' }}
           # The idealizedHeart tutorials share one Git-LFS-tracked mesh
           # (tutorials/idealizedHeart/mesh/{0,constant/polyMesh}). Without
           # this, those paths check out as ~130-byte LFS pointer files,
@@ -125,21 +164,60 @@ jobs:
           echo
           echo "Shared mesh resolves correctly from both case directories."
 
+      # One environment file per leg, sourced after the OpenFOAM bashrc in
+      # every later step (the bashrc resets FOAM_USER_* each time it is
+      # sourced). The submodule leg installs solids4foam and cardiacFoam into
+      # a user directory of its own, in front of the library path, so the
+      # image's prebuilt solids4foam can never be picked up by mistake: two
+      # solids4foam trees in one process link cleanly and crash at run time.
+      - name: Write the leg environment
+        shell: bash
+        run: |
+          {
+            case "${{ matrix.mode }}/${{ matrix.solids4foam_source }}" in
+              with-solids4foam/image)
+                echo 'export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}'
+                echo 'unset FORCE_LIGHTWEIGHT_PHYSICSMODEL'
+                ;;
+              with-solids4foam/submodule)
+                echo 'export WM_PROJECT_USER_DIR="$GITHUB_WORKSPACE/.ci-foam-user"'
+                echo 'export FOAM_USER_LIBBIN="$WM_PROJECT_USER_DIR/platforms/$WM_OPTIONS/lib"'
+                echo 'export FOAM_USER_APPBIN="$WM_PROJECT_USER_DIR/platforms/$WM_OPTIONS/bin"'
+                echo 'mkdir -p "$FOAM_USER_LIBBIN" "$FOAM_USER_APPBIN"'
+                echo 'export LD_LIBRARY_PATH="$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH"'
+                echo 'export PATH="$FOAM_USER_APPBIN:$PATH"'
+                echo 'export SOLIDS4FOAM_INST_DIR="$GITHUB_WORKSPACE/modules/solids4foam"'
+                echo 'unset FORCE_LIGHTWEIGHT_PHYSICSMODEL'
+                ;;
+              *)
+                echo 'unset SOLIDS4FOAM_INST_DIR'
+                echo 'export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1'
+                ;;
+            esac
+          } > "$GITHUB_WORKSPACE/.ci-leg-env.sh"
+          cat "$GITHUB_WORKSPACE/.ci-leg-env.sh"
+
+      - name: Build solids4foam from the submodule
+        if: matrix.solids4foam_source == 'submodule'
+        shell: bash -l {0}
+        run: |
+          source ${{ matrix.container-image.source }}
+          source "$GITHUB_WORKSPACE/.ci-leg-env.sh"
+          git -C modules/solids4foam log -1 --format='solids4foam %h %ad %s' --date=short
+          (cd modules/solids4foam && ./Allwmake ${{ matrix.container-image.buildflags }})
+          test -f modules/solids4foam/src/solids4FoamModels/lnInclude/solidModel.H
+          ls "$FOAM_USER_LIBBIN"/libsolids4FoamModels.*
+
+      - name: Regression index check
+        shell: bash
+        run: ./tutorials/regression/checkIndex.sh
+
       - name: Build cardiacFoam
         shell: bash -l {0}
         run: |
           echo "Sourcing OpenFOAM environment"
           source ${{ matrix.container-image.source }}
-
-          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
-            echo "Using solids4foam from Docker image"
-            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
-            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
-          else
-            echo "Using lightweight physicsModel"
-            unset SOLIDS4FOAM_INST_DIR
-            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
-          fi
+          source "$GITHUB_WORKSPACE/.ci-leg-env.sh"
 
           ./Allwmake ${{ matrix.container-image.buildflags }}
 
@@ -147,16 +225,9 @@ jobs:
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
+          source "$GITHUB_WORKSPACE/.ci-leg-env.sh"
 
-          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
-            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
-            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
-          else
-            unset SOLIDS4FOAM_INST_DIR
-            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
-          fi
-
-          CARDIAC_REGRESSION_BUILD_MODE="${{ matrix.mode }}" ./tutorials/Alltest-regression
+          CARDIAC_REGRESSION_BUILD_MODE="${{ matrix.regression_mode }}" ./tutorials/Alltest-regression
 
       - name: PETSc sanity check
         shell: bash -l {0}
@@ -169,14 +240,7 @@ jobs:
         shell: bash -l {0}
         run: |
           source ${{ matrix.container-image.source }}
-
-          if [ "${{ matrix.mode }}" = "with-solids4foam" ]; then
-            export SOLIDS4FOAM_INST_DIR=${{ matrix.container-image.solids4foam_dir }}
-            unset FORCE_LIGHTWEIGHT_PHYSICSMODEL
-          else
-            unset SOLIDS4FOAM_INST_DIR
-            export FORCE_LIGHTWEIGHT_PHYSICSMODEL=1
-          fi
+          source "$GITHUB_WORKSPACE/.ci-leg-env.sh"
 
           source etc/resolveSolids4Foam.sh
 

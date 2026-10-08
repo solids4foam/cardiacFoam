@@ -63,5 +63,8 @@ node's `Vm`. `postProcessing/purkinjeNetworkVTK/` holds the network as VTK.
 ## Regression
 
 `regression/regressionTest.sh` runs every variant in parallel and compares
-`purkinjeNetwork.dat` against `regression/<variant>.reference`.
+`purkinjeNetwork.dat` against `regression/<variant>.reference`. It runs
+`retrograde` to 0.6 s instead of 0.9 s, once the second beat has crossed the
+network, and `antegrade` on a 75 x 75 slab: its checks are network activation
+times, which the slab resolution does not change.
 For `monodomain` it also runs the graph-only `runPurkinjeGraph` utility.

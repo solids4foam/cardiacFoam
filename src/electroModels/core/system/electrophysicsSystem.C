@@ -48,19 +48,6 @@ void Foam::electrophysicsSystem::prepareMyocardiumCouplings(scalar t0, scalar dt
 }
 
 
-void Foam::electrophysicsSystem::prepareECGCouplings
-(
-    scalar t0,
-    scalar dt
-)
-{
-    forAll(ecgCouplingModels_, i)
-    {
-        ecgCouplingModels_[i].preparePostPrimaryCoupling(t0, dt);
-    }
-}
-
-
 void Foam::electrophysicsSystem::preparePotentialDomain
 (
     scalar t0,
@@ -159,15 +146,6 @@ void Foam::electrophysicsSystem::endECGDomains()
     forAll(ecgDomains_, i)
     {
         ecgDomains_[i].end();
-    }
-}
-
-
-void Foam::electrophysicsSystem::endECGCouplings()
-{
-    forAll(ecgCouplingModels_, i)
-    {
-        ecgCouplingModels_[i].end();
     }
 }
 

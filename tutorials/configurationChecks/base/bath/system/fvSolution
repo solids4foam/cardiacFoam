@@ -1,0 +1,57 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "Vm|VmFinal|u|uFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-15;
+        relTol          0.0;
+    }
+
+    "phiE|phiEFinal|phiI|phiIFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-15;
+        relTol          0.0;
+        maxIter         5000;
+    }
+}
+
+PIMPLE
+{
+    // The global bath phiE is advanced outside the PIMPLE outer loop.
+    // This shared count applies the same corrected-Laplacian reassembly
+    // policy to phiE and Vm.
+    nOuterCorrectors         1;
+    nNonOrthogonalCorrectors 1;
+
+    // residualControl
+    // {
+    //     Vm
+    //     {
+    //         relTol          0.0;
+    //         tolerance       1e-10;
+    //     }
+    // }
+}
+
+
+// ************************************************************************* //

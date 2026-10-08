@@ -1,13 +1,15 @@
-# kind           key               metric  expected          tolerance
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# final <file> <column> <expected> <tolerance>; probe <file> <time> <column> <expected> <tolerance>
 # (mesh: 20^3 = 8000 cells — set in system/blockMeshDict.3D)
-error            activationTime    L1      0.000573521       1.2e-04
-error            activationTime    L2      0.000781102       1.6e-04
-error            activationTime    Linf    0.00247517        1e-03
-pseudoECG        E1                -       -0.0037016344     5e-05
-pseudoECG        E2                -       0.00018387287     5e-05
-pseudoECG        E3                -       -0.0042235169     5e-05
-pseudoECG        E4                -       0.0013015033      5e-05
-pseudoECG        E5                -       -0.00035653491    5e-05
-trace            E1                0.5     0.0037016344      5e-05
-trace            E3                0.5     0.0042235169      5e-05
-trace            E4                1.5     -0.0013015033     5e-05
+error  activationTime                 L1    0.000646791     1.2e-04
+error  activationTime                 L2    0.000899515     1.6e-04
+error  activationTime                 Linf  0.00321518      1e-03
+final  postProcessing/eikonalECG.dat  E1    -0.00370689608  5e-05
+final  postProcessing/eikonalECG.dat  E2    0.000187342736  5e-05
+final  postProcessing/eikonalECG.dat  E3    -0.00423693123  5e-05
+final  postProcessing/eikonalECG.dat  E4    0.00130822873   5e-05
+final  postProcessing/eikonalECG.dat  E5    -0.000353351363 5e-05
+probe  postProcessing/eikonalECG.dat  0.5   E1              0.00370689608   5e-05
+probe  postProcessing/eikonalECG.dat  0.5   E3              0.00423693123   5e-05
+probe  postProcessing/eikonalECG.dat  1.5   E4              -0.00130822873  5e-05

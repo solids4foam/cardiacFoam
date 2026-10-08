@@ -176,8 +176,21 @@ void manufacturedSolidForce::addSup
 
         #include "B_expr.H"
 
-        eqn.source()[celli] += vector(Bx, By, Bz) * mesh_.V()[celli];
+        // eqn += B, the OpenFOAM convention for an explicit source, which
+        // the solid model then adds to the right-hand side of the momentum
+        // balance
+        eqn.source()[celli] -= vector(Bx, By, Bz) * mesh_.V()[celli];
     }
+}
+
+void manufacturedSolidForce::addSup
+(
+    const volScalarField&,
+    fvMatrix<vector>& eqn,
+    const label fieldi
+)
+{
+    addSup(eqn, fieldi);
 }
 
 }

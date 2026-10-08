@@ -1,3 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # Hybrid variant on the pig Purkinje tree (Allrun hybrid pig).
 #
 # The probe reads -1 through t=0.03 and activates at 34.0 ms, versus 30.1 ms
@@ -5,8 +7,7 @@
 # tissue (intramural capture delay ~11 ms at rPvj 1000, surface ~5 ms).
 # Sampled at endTime.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         0.04   2    0.0339874     1e-4
-pseudoECG.dat                           0.025  5    0.0005947828  2e-4
-pseudoECG.dat                           0.04   3    0.002433152   2e-4
-pseudoECG.dat                           0.04   7    0.004378193   2e-4
+probe  postProcessing/injectionProbe/0/activationTime  0.04   2  0.0339874     1e-4
+probe  postProcessing/pseudoECG.dat                    0.025  5  0.0005947828  2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   3  0.002433152   2e-4
+probe  postProcessing/pseudoECG.dat                    0.04   7  0.004378193   2e-4
