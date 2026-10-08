@@ -23,7 +23,7 @@ boundaryField
 {
     "xMin|xMax"
     {
-        type            solidRobin;
+        type            solidSpringDashpot;
         kNormal         uniform $kEnds;
         kTangential     uniform $kEnds;
         value           uniform (0 0 0);

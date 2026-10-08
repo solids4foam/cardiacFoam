@@ -1,3 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # Eikonal variant on the pig Purkinje tree (Allrun eikonal pig).
 #
 # Single steady solve, writes only time 1 (see injection.eikonal.reference).
@@ -6,8 +8,7 @@
 # mostly inside the wall. The eikonal coupling has no source-sink load, so
 # the delay is geometric only.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         1      2    0.00621733    1e-4
-eikonalECG.dat                          0.025  5    0.003668100   2e-4
-eikonalECG.dat                          0.035  3   -0.004851966   2e-4
-eikonalECG.dat                          0.04   7    0.005573608   2e-4
+probe  postProcessing/injectionProbe/0/activationTime  1      2  0.00621733    1e-4
+probe  postProcessing/eikonalECG.dat                   0.025  5  0.003668100   2e-4
+probe  postProcessing/eikonalECG.dat                   0.035  3  -0.004851966  2e-4
+probe  postProcessing/eikonalECG.dat                   0.04   7  0.005573608   2e-4

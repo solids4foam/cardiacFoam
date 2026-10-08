@@ -81,7 +81,7 @@ Runs both `Gauss linear` and `leastSquares` gradient reconstruction across multi
 
 ```bash
 ./Allrun
-./regressionTest.sh
+./regression/regressionTest.sh
 ```
 
 ### Omnidriver-Managed Sweeps (Suggested)

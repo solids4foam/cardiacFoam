@@ -75,3 +75,5 @@ tissue.
 ./Allrun rbbb
 ./Allrun lbbb parallel
 ```
+
+`python3 plot_pseudo_ecg.py --case-dir .` plots the pseudo-ECG of a finished run.

@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path
 
 hierarchy = [
@@ -68,5 +69,8 @@ for lib_idx, lib in enumerate(hierarchy):
 for v in violations:
     print(f"VIOLATION: {v['file']}:{v['line']} includes '{v['header']}' from higher-level library '{v['to_lib']}'")
 
-if not violations:
-    print("No hierarchical include violations found!")
+if violations:
+    print(f"{len(violations)} hierarchical include violation(s) found.")
+    sys.exit(1)
+
+print("No hierarchical include violations found!")

@@ -1,10 +1,12 @@
-# kind           key               metric  expected          tolerance
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# final <file> <column> <expected> <tolerance>; probe <file> <time> <column> <expected> <tolerance>
 # (mesh: 20^3 = 8000 cells — set in system/blockMeshDict.3D)
-error            activationTime    L1      0.00364949        1e-6
-error            activationTime    L2      0.00513           1e-6
-error            activationTime    Linf    0.0170873         1e-5
-pseudoECG        E1                -       -0.0018699625     1e-6
-pseudoECG        E2                -       0.0055698002      1e-6
-pseudoECG        E3                -       0.0072416414      1e-6
-pseudoECG        E4                -       0.0064616333      1e-6
-pseudoECG        E5                -       0.004152737       1e-6
+error  activationTime                 L1    0.00364949     1e-6
+error  activationTime                 L2    0.00513        1e-6
+error  activationTime                 Linf  0.0170873      1e-5
+final  postProcessing/eikonalECG.dat  E1    -0.0018699625  1e-6
+final  postProcessing/eikonalECG.dat  E2    0.0055698002   1e-6
+final  postProcessing/eikonalECG.dat  E3    0.0072416414   1e-6
+final  postProcessing/eikonalECG.dat  E4    0.0064616333   1e-6
+final  postProcessing/eikonalECG.dat  E5    0.004152737    1e-6

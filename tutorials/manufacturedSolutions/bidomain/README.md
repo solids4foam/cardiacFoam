@@ -63,9 +63,8 @@ The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`) cross 
 ### Manual Execution
 
 ```bash
-blockMesh -dict system/blockMeshDict.1D
 ./Allrun
-./regressionTest.sh
+./regression/regressionTest.sh
 ```
 
 ### Omnidriver-Managed Sweeps (Suggested)

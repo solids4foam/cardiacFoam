@@ -54,7 +54,8 @@ Two techniques for injecting a pathology into the model —
 
 ## Regression
 
-`electroHeart` (default/monodomain variant) and `pathos/conductionBlock`
-(`lbbb` variant) are wired into `tutorials/Alltest-regression`; both
+`electroHeart` (`monodomain` on the human tree by default, every variant
+and tree with `CARDIAC_REGRESSION_SCOPE=full`) and `pathos/conductionBlock`
+(`lbbb` and `rbbb`) are wired into `tutorials/Alltest-regression`; both
 share a `../mesh/`-relative sibling-mesh copy-in step that
 `Alltest-regression` handles once per sweep (see the comment there).

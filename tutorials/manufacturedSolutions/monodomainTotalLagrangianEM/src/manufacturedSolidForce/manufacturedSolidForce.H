@@ -73,6 +73,16 @@ public:
         const label fieldi
     );
 
+    //- The total Lagrangian solid calls the density overload, which
+    //  fv::option leaves empty; B is per unit reference volume, so the
+    //  density is not used
+    virtual void addSup
+    (
+        const volScalarField& rho,
+        fvMatrix<vector>& eqn,
+        const label fieldi
+    );
+
     virtual bool read(const dictionary& dict);
 };
 

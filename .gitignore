@@ -150,6 +150,9 @@ tutorials/**/0/electro/
 # hundreds of MB each) and are regenerated from the mesh, not authored here.
 # Case dictionaries under constant/ and system/ remain tracked.
 tutorials/**/0/*
+# ...and the configuration checks' variant fields: small, uniform,
+# hand-authored inputs (see tutorials/configurationChecks/README.md).
+!tutorials/configurationChecks/variants/*/0/*
 # ...except activationTime, which is small, hand-authored case data:
 # the eikonal solver now reads its boundary conditions from it
 # (MUST_READ), so it must be tracked like any constant/ or system/ dict.
@@ -323,3 +326,6 @@ docs/issues/
 /CLAUDE.md
 /RESTART_STATE_PLAN.md
 /meluxinaScripts_GPU/
+
+# configuration checks: one run directory per check
+tutorials/configurationChecks/runs

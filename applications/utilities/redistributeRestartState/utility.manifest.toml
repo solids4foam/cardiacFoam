@@ -1,0 +1,29 @@
+# applications/utilities/redistributeRestartState/utility.manifest.toml
+
+name = "redistributeRestartState"
+description = "Move the per-cell <Model>State restart files of the ionic and active-tension models across the processor boundary."
+
+purpose = """
+decomposePar and reconstructPar leave the <Model>State files alone. This
+utility gathers processor*/<time>/<Model>State into <time>/<Model>State with
+each processor's cellProcAddressing (default), or scatters <time>/<Model>State
+into the processor directories (-decompose), so a reconstructed case is a
+complete restart point and a serial state can start a parallel run.
+"""
+
+inputs = [
+  "processor*/constant/polyMesh/cellProcAddressing",
+  "processor*/<time>/<Model>State",
+  "<time>/<Model>State",
+]
+
+outputs = [
+  "<time>/<Model>State",
+  "processor*/<time>/<Model>State",
+]
+
+requires_mesh = false
+
+example = "redistributeRestartState -latestTime"
+
+category = "parallel"

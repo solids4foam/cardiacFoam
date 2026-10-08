@@ -131,9 +131,6 @@ bool staggeredElectrophysicsAdvanceScheme::advance
     }
     timings.primaryDomainTime = timer.timeIncrement();
 
-    system.prepareECGCouplings(t0, dt);
-    timings.ecgCouplingTime = timer.timeIncrement();
-
     system.advanceECGDomains(t0, dt);
     timings.ecgDomainTime = timer.timeIncrement();
 

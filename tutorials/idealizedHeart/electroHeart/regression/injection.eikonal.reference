@@ -1,3 +1,5 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
 # Eikonal variant: eikonalSolver + eikonalSolver1D.
 #
 # The eikonal myocardium domain overrides the case time controls
@@ -5,8 +7,7 @@
 # steady boundary-value problem, so the run writes exactly one time
 # directory, 1/, whatever endTime says. Sample that.
 #
-# file                                  time   col  expected      tolerance
-injectionProbe/0/activationTime         1      2    0.0058399     1e-4
-eikonalECG.dat                          0.025  5    0.003966149   2e-4
-eikonalECG.dat                          0.035  3   -0.006853826   2e-4
-eikonalECG.dat                          0.04   7    0.006916027   2e-4
+probe  postProcessing/injectionProbe/0/activationTime  1      2  0.0058399     1e-4
+probe  postProcessing/eikonalECG.dat                   0.025  5  0.003966149   2e-4
+probe  postProcessing/eikonalECG.dat                   0.035  3  -0.006853826  2e-4
+probe  postProcessing/eikonalECG.dat                   0.04   7  0.006916027   2e-4

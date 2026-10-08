@@ -1,152 +1,204 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-IFS=$'\n\t'
 
 # -------------------------------------------------------------------------
 # cardiacFoam regression test driver
 #
-# Copies regression test cases to a separate directory and
-# runs them there to avoid polluting the original tutorials.
+# Discovers every case under tutorials/ that carries
+# regression/regressionTest.sh, copies it to ../tutorialsTest-regression
+# without generated output, and runs its regression script there.
+#
+# Usage:
+#   Alltest-regression [--list] [--only PATTERN]...
+#
+#   --list          print the discovered cases and exit; no build mode needed
+#   --only PATTERN  run only cases whose path matches the extended regular
+#                   expression PATTERN (repeatable)
+#
+# Environment:
+#   CARDIAC_REGRESSION_BUILD_MODE  with-solids4foam | lightweight (required)
+#   CARDIAC_REGRESSION_SCOPE       passed through to the cases, see
+#                                  regression/lib.sh
+#
+# A case that needs cardiacFoam built with solids4foam carries an empty
+# marker file regression/needs-solids4foam: in lightweight mode it exits 77
+# and the skip is expected. A case that cannot run on some OpenFOAM versions
+# lists them, one per line, in regression/skips-on-openfoam (for example
+# v2312): on those versions its exit 77 is expected. Any other exit 77 fails
+# the run.
 # -------------------------------------------------------------------------
-
-echo "============================================================"
-echo "cardiacFoam regression tests"
-echo "============================================================"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REG_ROOT="${ROOT_DIR}/../tutorialsTest-regression"
+MARKER="regression/needs-solids4foam"
+VERSION_SKIPS="regression/skips-on-openfoam"
 
-# Create regression root directory
-rm -rf "${REG_ROOT}"
-mkdir -p "${REG_ROOT}"
+listOnly=0
+onlyPatterns=()
+while (( $# > 0 )); do
+    case "$1" in
+        --list) listOnly=1 ;;
+        --only)
+            (( $# >= 2 )) || { echo "FAIL: --only requires a pattern" >&2; exit 2; }
+            onlyPatterns+=("$2"); shift ;;
+        -h|--help) sed -n '4,27p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        *) echo "FAIL: unknown option: $1" >&2; exit 2 ;;
+    esac
+    shift
+done
 
-# List of regression test directories (relative to tutorials/)
-REGRESSION_TESTS=(
-    "electrophysiologyProtocols/singleCell"
-    "electrophysiologyProtocols/ionicHeterogeneity"
-    "NiedererEtAl2011verification"
-    "electromechanicsProtocols/springSupportedSlab"
-    "manufacturedSolutions/bidomain"
-    "manufacturedSolutions/bidomain/insulatedWall"
-    "manufacturedSolutions/monodomainPseudoECG"
-    "manufacturedSolutions/monodomainPseudoECG/insulatedWall"
-    "manufacturedSolutions/eikonalECG"
-    "manufacturedSolutions/eikonalECG/insulatedWall"
-    "manufacturedSolutions/bathBidomain"
-    "manufacturedSolutions/bathBidomain/insulatedWall"
-    "manufacturedSolutions/monodomainTotalLagrangianEM"
-    "electrophysiologyProtocols/rotorInstability"
-    "electrophysiologyProtocols/purkinjeRestitution2D"
-    "idealizedHeart/electroHeart"
-    "idealizedHeart/electroMechHeart"
-    "idealizedHeart/pathos/conductionBlock"
-)
+# ---- discovery -----------------------------------------------------------
 
-failures=0
-skips=0
-unexpected_skips=0
+discoverCases()
+{
+    find "${ROOT_DIR}" -path '*/regression/regressionTest.sh' \
+        -not -path '*/results/*' -not -path '*/.tmp/*' \
+        | sed -e "s|^${ROOT_DIR}/||" -e 's|/regression/regressionTest.sh$||' \
+        | sort
+}
+
+ALL_CASES=()
+while IFS= read -r c; do ALL_CASES+=("$c"); done < <(discoverCases)
+
+CASES=()
+for c in "${ALL_CASES[@]}"; do
+    if (( ${#onlyPatterns[@]} > 0 )); then
+        keep=0
+        for p in "${onlyPatterns[@]}"; do [[ "$c" =~ $p ]] && keep=1; done
+        (( keep )) || continue
+    fi
+    CASES+=("$c")
+done
+
+needsSolids4Foam()
+{
+    [[ -e "${ROOT_DIR}/$1/${MARKER}" ]]
+}
+
+skipsThisVersion()
+{
+    [[ -f "${ROOT_DIR}/$1/${VERSION_SKIPS}" ]] \
+        && grep -qx -- "${WM_PROJECT_VERSION:-}" "${ROOT_DIR}/$1/${VERSION_SKIPS}"
+}
+
+expectedSkip()
+{
+    { [[ "${build_mode}" == "lightweight" ]] && needsSolids4Foam "$1"; } || skipsThisVersion "$1"
+}
+
+if (( listOnly )); then
+    for c in "${CASES[@]}"; do
+        tag=""
+        needsSolids4Foam "$c" && tag="${tag}  (needs-solids4foam)"
+        [[ -f "${ROOT_DIR}/$c/${VERSION_SKIPS}" ]] && tag="${tag}  (skips on: $(tr '\n' ' ' < "${ROOT_DIR}/$c/${VERSION_SKIPS}" | sed 's/ $//'))"
+        echo "$c${tag}"
+    done
+    exit 0
+fi
+
 build_mode="${CARDIAC_REGRESSION_BUILD_MODE:-}"
-
 case "${build_mode}" in
-    with-solids4foam)
-        ;;
-    lightweight)
-        ;;
+    with-solids4foam|lightweight) ;;
     *)
         echo "FAIL: CARDIAC_REGRESSION_BUILD_MODE must be 'with-solids4foam' or 'lightweight'."
         exit 2
         ;;
 esac
 
-# Regression cases that need cardiacFoam built with solids4foam. In
-# lightweight mode their regressionTest.sh exits 77 and the skip is expected;
-# in with-solids4foam mode any skip is a failure.
-FULL_SOLIDS4FOAM_ONLY_TESTS=(
-    "electromechanicsProtocols/springSupportedSlab"
-    "manufacturedSolutions/monodomainTotalLagrangianEM"
-    "idealizedHeart/electroMechHeart"
-)
+echo "============================================================"
+echo "cardiacFoam regression tests (${build_mode}, ${#CASES[@]} case(s))"
+echo "============================================================"
 
-isExpectedSkip()
+rm -rf "${REG_ROOT}"
+mkdir -p "${REG_ROOT}"
+
+# The case scripts source the shared library by walking up from the case,
+# so it travels with the copies.
+cp -a "${ROOT_DIR}/regression" "${REG_ROOT}/regression"
+
+# ---- copying a case without its generated output ------------------------
+
+# copyCase <case>: copy the tracked inputs of a case, leaving behind solver
+# output, logs, study results, caches, generated meshes, time directories
+# and any nested case that is discovered on its own.
+copyCase()
 {
-    local skipped_case="$1"
-    local fullOnlyCase
-
-    [[ "${build_mode}" == "lightweight" ]] || return 1
-
-    for fullOnlyCase in "${FULL_SOLIDS4FOAM_ONLY_TESTS[@]}"; do
-        if [[ "${skipped_case}" == "${fullOnlyCase}" ]]; then
-            return 0
-        fi
+    local case="$1"
+    local src="${ROOT_DIR}/${case}"
+    local dst="${REG_ROOT}/${case}"
+    local -a ex=(
+        --exclude='./postProcessing*' --exclude='./processor*' --exclude='./log.*'
+        --exclude='results' --exclude='__pycache__' --exclude='.tmp'
+        --exclude='./constant/polyMesh' --exclude='./constant/*/polyMesh'
+        --exclude='*.foam' --exclude='./platforms'
+    )
+    local d other
+    # time directories (anything numeric except 0)
+    while IFS= read -r d; do
+        ex+=(--exclude="./${d#./}")
+    done < <(cd "${src}" && find . -maxdepth 1 -type d \
+        -regex '\./-?[0-9][0-9]*\(\.[0-9]*\)?\([eE]-?[0-9][0-9]*\)?' ! -name 0)
+    # nested cases run on their own
+    for other in "${ALL_CASES[@]}"; do
+        [[ "${other}" == "${case}/"* ]] && ex+=(--exclude="./${other#${case}/}")
     done
 
-    return 1
+    rm -rf "${dst}"
+    mkdir -p "${dst}"
+    tar -C "${src}" "${ex[@]}" -cf - . | tar -C "${dst}" -xf -
 }
 
-for testCase in "${REGRESSION_TESTS[@]}"; do
+failures=0
+skips=0
+unexpected_skips=0
+failed_cases=()
+
+for testCase in "${CASES[@]}"; do
     echo
     echo "------------------------------------------------------------"
     echo "Running regression test: ${testCase}"
     echo "------------------------------------------------------------"
 
-    SRC_CASE="${ROOT_DIR}/${testCase}"
-    DST_CASE="${REG_ROOT}/${testCase}"
-
-    # Copy test case (fresh copy each time)
-    rm -rf "${DST_CASE}"
-    mkdir -p "$(dirname "${DST_CASE}")"
-    cp -a "${SRC_CASE}" "${DST_CASE}"
+    copyCase "${testCase}"
 
     # idealizedHeart/* cases read their shared mesh and anatomy fields from
-    # a mesh/ directory at the idealizedHeart/ root (not tracked per-case,
-    # to avoid committing the same ~10MB mesh twice - see
-    # tutorials/idealizedHeart/README.md). That sibling isn't part of this
-    # single-directory copy, so bring it in once per sweep.
-    if [[ "${testCase}" == idealizedHeart/* && "${testCase}" != "idealizedHeart/mesh" ]]; then
-        MESH_DST="${REG_ROOT}/idealizedHeart/mesh"
-        if [[ ! -d "${MESH_DST}" ]]; then
-            cp -a "${ROOT_DIR}/idealizedHeart/mesh" "${MESH_DST}"
-        fi
+    # a mesh/ directory at the idealizedHeart/ root (see
+    # tutorials/idealizedHeart/README.md), which is not part of the case
+    # copy: bring it in once per sweep.
+    if [[ "${testCase}" == idealizedHeart/* && ! -d "${REG_ROOT}/idealizedHeart/mesh" ]]; then
+        cp -a "${ROOT_DIR}/idealizedHeart/mesh" "${REG_ROOT}/idealizedHeart/mesh"
     fi
 
-    cd "${DST_CASE}"
+    rc=0
+    (cd "${REG_ROOT}/${testCase}" && ./regression/regressionTest.sh) || rc=$?
 
-    if [[ ! -x ./regression/regressionTest.sh ]]; then
-        echo "FAIL: regressionTest.sh not found or not executable in ${testCase}"
-        failures=$((failures + 1))
-        continue
-    fi
-
-    if ./regression/regressionTest.sh; then
+    if (( rc == 0 )); then
         echo "PASS: regression test passed in ${testCase}"
-    else
-        rc=$?
-        if (( rc == 77 )); then
-            skips=$((skips + 1))
-            if isExpectedSkip "${testCase}"; then
-                echo "EXPECTED SKIP: regression test skipped in ${testCase}"
-            else
-                echo "FAIL: unexpected regression-test skip in ${testCase}"
-                unexpected_skips=$((unexpected_skips + 1))
-            fi
-            continue
+    elif (( rc == 77 )); then
+        skips=$((skips + 1))
+        if expectedSkip "${testCase}"; then
+            echo "EXPECTED SKIP: regression test skipped in ${testCase}"
+        else
+            echo "FAIL: unexpected regression-test skip in ${testCase}"
+            unexpected_skips=$((unexpected_skips + 1))
+            failed_cases+=("${testCase}")
         fi
-
-        echo "FAIL: regression test failed in ${testCase}"
+    else
+        echo "FAIL: regression test failed in ${testCase} (exit ${rc})"
         failures=$((failures + 1))
+        failed_cases+=("${testCase}")
     fi
 done
 
 echo
 echo "============================================================"
-
 if (( failures > 0 || unexpected_skips > 0 )); then
     echo "Regression tests FAILED (${failures} failing case(s), ${unexpected_skips} unexpected skip(s), ${skips} total skip(s))"
+    printf '  %s\n' "${failed_cases[@]}"
     exit 1
 elif (( skips > 0 )); then
     echo "Regression tests PASSED WITH EXPECTED SKIPS (${skips} expected skip(s))"
-    exit 0
 else
     echo "All regression tests PASSED (no skips)"
-    exit 0
 fi
+exit 0
