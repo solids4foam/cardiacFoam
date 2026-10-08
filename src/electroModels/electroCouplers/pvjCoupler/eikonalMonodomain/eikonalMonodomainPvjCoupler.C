@@ -20,6 +20,7 @@ License
 #include "eikonalMonodomainPvjCoupler.H"
 #include "restitutionTemplates.H"
 #include "ionicModel.H"
+#include "purkinjeModelIO.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -49,7 +50,18 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
         dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
      == "implicit"
     ),
-    vmTemplateOffset_(0.0)
+    vmTemplateOffset_
+    (
+        IOobject
+        (
+            IOobject::groupName("vmTemplateOffset", dict.dictName()),
+            primaryDomain.mesh().time().timeName(),
+            primaryDomain.mesh(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        0
+    )
 {
     if (dict.found("rPvj"))
     {
@@ -70,6 +82,15 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
             << "ionic model" << exit(FatalError);
     }
 
+    if
+    (
+        purkinjeModelIO::readGlobalField(vmTemplateOffset_)
+     && vmTemplateOffset_.size() == 1
+    )
+    {
+        return;
+    }
+
     // Resting potential from ranks that hold tissue cells.
     const PtrList<scalarField>* tissueStates = tissueModel->ioStatesPtr();
     const bool hasCells =
@@ -79,9 +100,21 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
     reduce(vmRestSum, sumOp<scalar>());
     reduce(nRanksWithCells, sumOp<label>());
 
-    vmTemplateOffset_ =
+    vmTemplateOffset_.setSize(1);
+    vmTemplateOffset_[0] =
         vmRestSum/max(nRanksWithCells, 1)
       - restitutionTemplates::purkinjeVmValues[0]*1e-3;
+}
+
+
+void eikonalMonodomainPvjCoupler::write()
+{
+    pvjCoupler::write();
+
+    if (mesh_.time().outputTime())
+    {
+        purkinjeModelIO::writeGlobalField(vmTemplateOffset_);
+    }
 }
 
 
@@ -120,7 +153,7 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     scalarField terminalVoltage
     (
         nTerminalNodes,
-        restitutionTemplates::purkinjeVmValues[0]*1e-3 + vmTemplateOffset_
+        restitutionTemplates::purkinjeVmValues[0]*1e-3 + vmTemplateOffset_[0]
     );
     const scalar currentTime = mesh_.time().value();
 
@@ -134,7 +167,7 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
             const scalar localTime = currentTime - tact;
             terminalVoltage[i] =
                 restitutionTemplates::evaluatePurkinjeVmTemplate(localTime)*1e-3
-              + vmTemplateOffset_;
+              + vmTemplateOffset_[0];
         }
     }
 

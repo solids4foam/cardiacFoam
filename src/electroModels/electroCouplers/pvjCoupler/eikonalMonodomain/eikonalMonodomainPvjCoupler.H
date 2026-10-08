@@ -43,8 +43,11 @@ class eikonalMonodomainPvjCoupler
     scalarField R_pvj_;
     bool implicitCoupling_;
 
-    //- Tissue resting potential minus the template resting potential [V].
-    scalar vmTemplateOffset_;
+    //- Tissue resting potential minus the template resting potential [V],
+    //  one value. Computed from the tissue state at a cold start and kept
+    //  with the restart files, since the tissue is no longer at rest when
+    //  a run restarts.
+    scalarGlobalIOField vmTemplateOffset_;
 
 public:
 
@@ -58,6 +61,8 @@ public:
     );
 
     virtual void prepareSecondaryCoupling(scalar t0, scalar dt) override;
+
+    virtual void write() override;
 
     virtual void preparePrimaryCoupling(scalar t0, scalar dt) override;
 };
