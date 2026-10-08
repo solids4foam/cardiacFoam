@@ -98,6 +98,7 @@ class extracellularPotentialDomain
     //  PIMPLE/nNonOrthogonalCorrectors and used consistently for phiE and Vm.
     //  Zero means one equation solve.
     label nNonOrthogonalCorrectors_;
+    Switch sealedHeartBoundary_;
 
     // Build the heart-cell -> base-cell map from the heart subset.
     void buildHeartScatterMap();

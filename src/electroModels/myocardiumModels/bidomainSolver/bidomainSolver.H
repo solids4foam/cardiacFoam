@@ -54,6 +54,8 @@ class bidomainSolver
     bool hasPhiEReferencePoint_;
     const volScalarField* externalPhiEBasePtr_;
     const labelUList* externalPhiECellMapPtr_;
+    const fvMeshSubset* meshSubsetPtr_;
+    word bathHeartPhiETrace_;
 
     tmp<volTensorField> initialiseConductivityTensor
     (

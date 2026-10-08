@@ -84,15 +84,37 @@ bool staggeredElectrophysicsAdvanceScheme::advance
                 << exit(FatalError);
         }
 
+        const dictionary pimpleDict
+        (
+            pimplePtr ? pimplePtr->dict() : dictionary::null
+        );
+        if (pimpleDict.found("residualControl"))
+        {
+            bool seesPhiE = false;
+            for (const entry& e : pimpleDict.subDict("residualControl"))
+            {
+                seesPhiE = seesPhiE || e.keyword().match("phiE");
+            }
+            if (!seesPhiE)
+            {
+                FatalErrorInFunction
+                    << "bath PIMPLE residualControl must name phiE"
+                    << exit(FatalError);
+            }
+        }
+
         myocardium.solveReactionStep(t0, dt);
         system.preparePotentialDomain(t0, dt);
 
         if (bathPredictorCorrector_)
         {
-            // Predict Vm, update phiE, then correct Vm.
             myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
-            system.advancePotentialDomain(t0, dt);
-            myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+
+            while (pimplePtr->loop())
+            {
+                system.advancePotentialDomain(t0, dt);
+                myocardium.solveDiffusionStepOnce(t0, dt, pimplePtr);
+            }
         }
         else
         {

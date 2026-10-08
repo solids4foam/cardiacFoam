@@ -1,0 +1,36 @@
+SetFactory("OpenCASCADE");
+
+lc = __LC__;
+T = 0.25;
+eps = 1e-6;
+
+Box(1) = {-1, 0, 0, 1, 1, T};
+Box(2) = { 0, 0, 0, 1, 1, T};
+Box(3) = { 1, 0, 0, 1, 1, T};
+v() = BooleanFragments{ Volume{1, 2, 3}; Delete; }{};
+
+For i In {0:2}
+    x0 = i - 1;
+    sy0 = Surface In BoundingBox{x0 - eps, -eps, -eps, x0 + 1 + eps, eps, T + eps};
+    sy1 = Surface In BoundingBox{x0 - eps, 1 - eps, -eps, x0 + 1 + eps, 1 + eps, T + eps};
+    sz0 = Surface In BoundingBox{x0 - eps, -eps, -eps, x0 + 1 + eps, 1 + eps, eps};
+    sz1 = Surface In BoundingBox{x0 - eps, -eps, T - eps, x0 + 1 + eps, 1 + eps, T + eps};
+    Periodic Surface{sy1} = {sy0} Translate{0, 1, 0};
+    Periodic Surface{sz1} = {sz0} Translate{0, 0, T};
+    y0(i) = sy0; y1(i) = sy1; z0(i) = sz0; z1(i) = sz1;
+EndFor
+
+Physical Volume("bath") = {Volume In BoundingBox{-1 - eps, -eps, -eps, eps, 1 + eps, T + eps}, Volume In BoundingBox{1 - eps, -eps, -eps, 2 + eps, 1 + eps, T + eps}};
+Physical Volume("myocardium") = {Volume In BoundingBox{-eps, -eps, -eps, 1 + eps, 1 + eps, T + eps}};
+Physical Surface("xMin") = {Surface In BoundingBox{-1 - eps, -eps, -eps, -1 + eps, 1 + eps, T + eps}};
+Physical Surface("xMax") = {Surface In BoundingBox{2 - eps, -eps, -eps, 2 + eps, 1 + eps, T + eps}};
+Physical Surface("y0") = {y0()};
+Physical Surface("y1") = {y1()};
+Physical Surface("z0") = {z0()};
+Physical Surface("z1") = {z1()};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.Algorithm3D = 1;
+Mesh.Optimize = 1;
+Mesh.MshFileVersion = 2.2;

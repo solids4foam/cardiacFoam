@@ -23,7 +23,9 @@ License
 #include "PstreamReduceOps.H"
 #include "myocardiumDomain.H"
 #include "insulatedFaceConductivity.H"
+#include "exposedPhiETrace.H"
 #include "conormalZeroFluxFvPatchScalarField.H"
+#include "fvMeshSubset.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
 
@@ -141,8 +143,29 @@ bidomainSolver::bidomainSolver
     ),
     hasPhiEReferencePoint_(electroProperties.found("phiERefPoint")),
     externalPhiEBasePtr_(nullptr),
-    externalPhiECellMapPtr_(nullptr)
+    externalPhiECellMapPtr_(nullptr),
+    meshSubsetPtr_(meshSubsetPtr),
+    bathHeartPhiETrace_
+    (
+        electroProperties.getOrDefault<word>("bathHeartPhiETrace", "zeroGradient")
+    )
 {
+    if
+    (
+        bathHeartPhiETrace_ != "zeroGradient"
+     && bathHeartPhiETrace_ != "global"
+    )
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "bathHeartPhiETrace must be zeroGradient or global"
+            << exit(FatalIOError);
+    }
+    if (bathHeartPhiETrace_ == "global" && !sealedHeartBoundary_)
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "bathHeartPhiETrace global requires sealedHeartBoundary true"
+            << exit(FatalIOError);
+    }
     setConormalWallConductivity(phiE_, Ge_.name(), word::null);
 }
 
@@ -202,19 +225,49 @@ void bidomainSolver::bindExternalPhiE
     externalPhiEBasePtr_ = &phiE;
     externalPhiECellMapPtr_ = &heartCellMap;
 
-    bool conormalPhiE = false;
-    forAll(phiE_.boundaryField(), patchI)
+    if (bathHeartPhiETrace_ != "global")
     {
-        conormalPhiE = conormalPhiE
-         || isA<conormalZeroFluxFvPatchScalarField>(phiE_.boundaryField()[patchI]);
+        forAll(phiE_.boundaryField(), patchI)
+        {
+            if
+            (
+                isA<conormalZeroFluxFvPatchScalarField>
+                (
+                    phiE_.boundaryField()[patchI]
+                )
+            )
+            {
+                FatalErrorInFunction
+                    << "sealedWallTrace conormal with a bath requires "
+                    << "bathHeartPhiETrace global"
+                    << exit(FatalError);
+            }
+        }
+        return;
     }
-    if (sealedHeartBoundary_ || conormalPhiE)
+    if (!meshSubsetPtr_ || !meshSubsetPtr_->hasSubMesh())
     {
         FatalErrorInFunction
-            << "sealedHeartBoundary and sealedWallTrace conormal are not "
-            << "supported with a bath potential domain"
+            << "bathHeartPhiETrace global requires a myocardium cellZone"
             << exit(FatalError);
     }
+    const label nExposed = useExposedPhiETrace
+    (
+        phiE_, meshSubsetPtr_->faceMap(), phiE.mesh()
+    );
+    if (nExposed == 0)
+    {
+        FatalErrorInFunction
+            << "bathHeartPhiETrace global: no exposed heart faces"
+            << exit(FatalError);
+    }
+    Info<< "bathHeartPhiETrace global: " << nExposed
+        << " exposed heart faces" << endl;
+    setExposedPhiETrace
+    (
+        phiE_, phiE, heartCellMap, meshSubsetPtr_->faceMap(), Ge_,
+        phiE.mesh().lookupObject<volTensorField>("sigmaTotal")
+    );
 }
 
 
@@ -247,12 +300,29 @@ void bidomainSolver::restrictExternalPhiE()
             << exit(FatalError);
     }
 
-    forAll(cellMap, cellI)
+    if
+    (
+        bathHeartPhiETrace_ == "global"
+     && meshSubsetPtr_
+     && meshSubsetPtr_->hasSubMesh()
+    )
     {
-        localPhiE[cellI] = globalPhiE[cellMap[cellI]];
+        setExposedPhiETrace
+        (
+            phiE_, *externalPhiEBasePtr_, cellMap, meshSubsetPtr_->faceMap(),
+            Ge_,
+            externalPhiEBasePtr_->mesh().lookupObject<volTensorField>("sigmaTotal")
+        );
     }
-
-    phiE_.correctBoundaryConditions();
+    else
+    {
+        forAll(cellMap, cellI)
+        {
+            localPhiE[cellI] = globalPhiE[cellMap[cellI]];
+        }
+        phiE_.correctBoundaryConditions();
+    }
+    updateGradPhiE();
 }
 
 
@@ -353,12 +423,9 @@ void bidomainSolver::solveDiffusionImplicit
     (void)dt;
 
     // Heart-only bidomain: phiE and Vm are re-solved together on every outer
-    // PIMPLE corrector, so the phiE<->Vm coupling iteration is owned here by
-    // the inherited outer loop (myocardiumSolver::solveDiffusionImplicit).
-    // Bath/global-phiE owns its coupling in the advance scheme instead, via
-    // the explicit predictor/corrector in staggeredElectrophysicsAdvanceScheme
-    // (myocardiumDomain::solveDiffusionStepOnce), which is a different, outer
-    // Vm<->phiE sweep and not the non-orthogonal corrector loop used here.
+    // PIMPLE corrector (myocardiumSolver::solveDiffusionImplicit). The bath
+    // bidomain runs its outer PIMPLE passes in
+    // staggeredElectrophysicsAdvanceScheme through solveDiffusionStepOnce.
     solvePhiEImplicitOnce(domain);
     solveVmImplicitOnce(domain);
     phiI_ = domain.Vm() + phiE_;

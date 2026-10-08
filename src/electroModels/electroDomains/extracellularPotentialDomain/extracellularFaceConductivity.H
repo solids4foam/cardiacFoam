@@ -115,6 +115,40 @@ inline tensor distanceWeightedHarmonic
 }
 
 
+inline tensor conormalHarmonic
+(
+    const tensor& a,
+    const tensor& b,
+    const vector& n,
+    const scalar distanceA,
+    const scalar distanceB
+)
+{
+    const scalar aNN = n & a & n;
+    const scalar bNN = n & b & n;
+    const scalar kA = aNN/max(distanceA, SMALL);
+    const scalar kB = bNN/max(distanceB, SMALL);
+    const scalar kSum = kA + kB;
+
+    if (kSum <= SMALL)
+    {
+        return distanceWeightedHarmonic(a, b, distanceA, distanceB);
+    }
+
+    const vector t
+    (
+        (kB*((a & n) - aNN*n) + kA*((b & n) - bNN*n))/kSum
+    );
+    const tensor P(tensor::I - sqr(n));
+
+    return
+        kA*kB/kSum*(distanceA + distanceB)*sqr(n)
+      + t*n
+      + n*t
+      + (P & (0.5*(a + b)) & P);
+}
+
+
 inline tensor linear
 (
     const tensor& a,

@@ -1,0 +1,4 @@
+bathInterfacePatchTest.C
+exposedPhiETraceUnderTest.C
+
+EXE = $(FOAM_USER_APPBIN)/bathInterfacePatchTest

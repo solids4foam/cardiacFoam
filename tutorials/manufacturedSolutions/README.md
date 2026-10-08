@@ -13,6 +13,7 @@ This folder groups the manufactured-solution verification cases by model scope.
 - [`monodomainPseudoECG/insulatedWall`](monodomainPseudoECG/insulatedWall/README.md) : monodomain with conormally insulated walls
 - [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
 - [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
+- [`bathBidomain/insulatedWall`](bathBidomain/insulatedWall/README.md) : 2D anisotropic heart–bath bidomain with a conormally insulated interface
 
 ## Naming Pattern
 

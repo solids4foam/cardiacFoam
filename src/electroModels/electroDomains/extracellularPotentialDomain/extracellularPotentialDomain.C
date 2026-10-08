@@ -20,6 +20,8 @@ License
 #include "extracellularPotentialDomain.H"
 #include "extracellularFaceConductivity.H"
 #include "myocardiumDomainInterface.H"
+#include "insulatedFaceConductivity.H"
+#include "exposedPhiETrace.H"
 #include "addToRunTimeSelectionTable.H"
 #include "PstreamReduceOps.H"
 #include "dimVoltage.H"
@@ -44,6 +46,265 @@ addToRunTimeSelectionTable
 
 namespace
 {
+
+tmp<volVectorField> interfaceGradient
+(
+    const volScalarField& phi,
+    const volTensorField& sigmaE,
+    const volTensorField& sigmaI,
+    const volVectorField& gradPrev
+)
+{
+    const fvMesh& m = phi.mesh();
+    const vectorField& C = m.C().primitiveField();
+    const surfaceVectorField& Cf = m.Cf();
+    const surfaceVectorField& Sf = m.Sf();
+    const surfaceScalarField& magSf = m.magSf();
+    const labelUList& own = m.owner();
+    const labelUList& nei = m.neighbour();
+    const scalarField& w = m.weights().primitiveField();
+
+    surfaceScalarField phiF(linearInterpolate(phi));
+    scalarField& phiFI = phiF.primitiveFieldRef();
+
+    forAll(own, faceI)
+    {
+        const label o = own[faceI];
+        const label nb = nei[faceI];
+        const bool oHeart = magSqr(sigmaI[o]) > SMALL;
+        if (oHeart == (magSqr(sigmaI[nb]) > SMALL))
+        {
+            continue;
+        }
+        const label h = oHeart ? o : nb;
+        const label b = oHeart ? nb : o;
+        const vector n((oHeart ? 1 : -1)*Sf[faceI]/magSf[faceI]);
+        phiFI[faceI] = interfaceValue
+        (
+            n, Cf[faceI], C[h], C[b],
+            sigmaE[h],
+            sigmaE[b],
+            phi[h],
+            phi[b],
+            w[faceI]*gradPrev[o] + (1 - w[faceI])*gradPrev[nb]
+        );
+    }
+
+    forAll(m.boundary(), patchI)
+    {
+        const fvPatch& p = m.boundary()[patchI];
+        if (!p.coupled())
+        {
+            continue;
+        }
+        const scalarField phiN
+        (
+            phi.boundaryField()[patchI].patchNeighbourField()
+        );
+        const tensorField sigmaEN
+        (
+            sigmaE.boundaryField()[patchI].patchNeighbourField()
+        );
+        const tensorField sigmaIN
+        (
+            sigmaI.boundaryField()[patchI].patchNeighbourField()
+        );
+        const vectorField gradN
+        (
+            gradPrev.boundaryField()[patchI].patchNeighbourField()
+        );
+        const vectorField nf(p.nf());
+        const vectorField delta(p.delta());
+        const scalarField& pw = m.weights().boundaryField()[patchI];
+        const labelUList& fc = p.faceCells();
+        scalarField& phiFp = phiF.boundaryFieldRef()[patchI];
+        forAll(phiFp, faceI)
+        {
+            const label c = fc[faceI];
+            const bool cHeart = magSqr(sigmaI[c]) > SMALL;
+            if (cHeart == (magSqr(sigmaIN[faceI]) > SMALL))
+            {
+                continue;
+            }
+            const point& CfP = Cf.boundaryField()[patchI][faceI];
+            const point CN(C[c] + delta[faceI]);
+            const vector gradF
+            (
+                pw[faceI]*gradPrev[c] + (1 - pw[faceI])*gradN[faceI]
+            );
+            phiFp[faceI] =
+                cHeart
+              ? interfaceValue
+                (
+                    nf[faceI], CfP, C[c], CN, sigmaE[c], sigmaEN[faceI],
+                    phi[c], phiN[faceI], gradF
+                )
+              : interfaceValue
+                (
+                    -nf[faceI], CfP, CN, C[c], sigmaEN[faceI], sigmaE[c],
+                    phiN[faceI], phi[c], gradF
+                );
+        }
+    }
+
+    tmp<volVectorField> tgrad
+    (
+        new volVectorField
+        (
+            IOobject
+            (
+                "interfaceGrad(" + phi.name() + ")", m.time().timeName(), m
+            ),
+            fvc::grad(phi)
+        )
+    );
+    vectorField& g = tgrad.ref().primitiveFieldRef();
+    const scalarField& phiI = phi.primitiveField();
+
+    labelList slot(m.nCells(), -1);
+    label nTouched = 0;
+    forAll(own, faceI)
+    {
+        if
+        (
+            (magSqr(sigmaI[own[faceI]]) > SMALL)
+         != (magSqr(sigmaI[nei[faceI]]) > SMALL)
+        )
+        {
+            for (const label c : {own[faceI], nei[faceI]})
+            {
+                if (slot[c] < 0)
+                {
+                    slot[c] = nTouched++;
+                }
+            }
+        }
+    }
+    forAll(m.boundary(), patchI)
+    {
+        const fvPatch& p = m.boundary()[patchI];
+        if (!p.coupled())
+        {
+            continue;
+        }
+        const tensorField sigmaIN
+        (
+            sigmaI.boundaryField()[patchI].patchNeighbourField()
+        );
+        forAll(p, faceI)
+        {
+            const label c = p.faceCells()[faceI];
+            if
+            (
+                slot[c] < 0
+             && (magSqr(sigmaI[c]) > SMALL)
+             != (magSqr(sigmaIN[faceI]) > SMALL)
+            )
+            {
+                slot[c] = nTouched++;
+            }
+        }
+    }
+
+    symmTensorField dd(nTouched, Zero);
+    vectorField rhs(nTouched, Zero);
+    const auto add = [&]
+    (
+        const label c,
+        const vector& d,
+        const scalar dPhi,
+        const scalar area
+    )
+    {
+        const scalar wt = area/magSqr(d);
+        dd[slot[c]] += wt*sqr(d);
+        rhs[slot[c]] += wt*dPhi*d;
+    };
+
+    forAll(own, faceI)
+    {
+        const label o = own[faceI];
+        const label nb = nei[faceI];
+        const bool jump =
+            (magSqr(sigmaI[o]) > SMALL) != (magSqr(sigmaI[nb]) > SMALL);
+        if (slot[o] >= 0)
+        {
+            jump
+          ? add(o, Cf[faceI] - C[o], phiFI[faceI] - phiI[o], magSf[faceI])
+          : add(o, C[nb] - C[o], phiI[nb] - phiI[o], magSf[faceI]);
+        }
+        if (slot[nb] >= 0)
+        {
+            jump
+          ? add(nb, Cf[faceI] - C[nb], phiFI[faceI] - phiI[nb], magSf[faceI])
+          : add(nb, C[o] - C[nb], phiI[o] - phiI[nb], magSf[faceI]);
+        }
+    }
+    forAll(m.boundary(), patchI)
+    {
+        const fvPatch& p = m.boundary()[patchI];
+        const labelUList& fc = p.faceCells();
+        const vectorField nf(p.nf());
+        const vectorField delta(p.delta());
+        const scalarField& area = magSf.boundaryField()[patchI];
+        const scalarField& phiFp = phiF.boundaryField()[patchI];
+        if (p.coupled())
+        {
+            const scalarField phiN
+            (
+                phi.boundaryField()[patchI].patchNeighbourField()
+            );
+            const tensorField sigmaIN
+            (
+                sigmaI.boundaryField()[patchI].patchNeighbourField()
+            );
+            forAll(p, faceI)
+            {
+                const label c = fc[faceI];
+                if (slot[c] < 0)
+                {
+                    continue;
+                }
+                (magSqr(sigmaI[c]) > SMALL)
+             != (magSqr(sigmaIN[faceI]) > SMALL)
+              ? add
+                (
+                    c, Cf.boundaryField()[patchI][faceI] - C[c],
+                    phiFp[faceI] - phiI[c], area[faceI]
+                )
+              : add(c, delta[faceI], phiN[faceI] - phiI[c], area[faceI]);
+            }
+        }
+        else
+        {
+            const scalarField& phiB = phi.boundaryField()[patchI];
+            forAll(p, faceI)
+            {
+                const label c = fc[faceI];
+                if (slot[c] >= 0)
+                {
+                    add
+                    (
+                        c, nf[faceI]*(nf[faceI] & delta[faceI]),
+                        phiB[faceI] - phiI[c], area[faceI]
+                    );
+                }
+            }
+        }
+    }
+
+    const symmTensorField invDd(inv(dd));
+    forAll(slot, c)
+    {
+        if (slot[c] >= 0)
+        {
+            g[c] = invDd[slot[c]] & rhs[slot[c]];
+        }
+    }
+    tgrad.ref().correctBoundaryConditions();
+    return tgrad;
+}
+
 
 // Resolve the non-orthogonal corrector count from the PIMPLE dictionary.
 label resolveNonOrthogonalCorrectors(const fvMesh& baseMesh)
@@ -205,18 +466,24 @@ extracellularPotentialDomain::extracellularPotentialDomain
     nNonOrthogonalCorrectors_
     (
         resolveNonOrthogonalCorrectors(baseMesh)
+    ),
+    sealedHeartBoundary_
+    (
+        dict.parent().get<Switch>("sealedHeartBoundary")
     )
 {
     if
     (
         interfaceConductivityInterpolation_ != "unweightedHarmonic"
      && interfaceConductivityInterpolation_ != "distanceWeightedHarmonic"
+     && interfaceConductivityInterpolation_ != "conormalHarmonic"
     )
     {
         FatalErrorInFunction
             << "Unknown interfaceConductivityInterpolation '"
             << interfaceConductivityInterpolation_ << "'. Valid values are "
-            << "unweightedHarmonic and distanceWeightedHarmonic."
+            << "unweightedHarmonic, distanceWeightedHarmonic and "
+            << "conormalHarmonic."
             << exit(FatalError);
     }
     if (const dictionary* currentDict = dict.findDict("surfaceCurrentPatches"))
@@ -613,6 +880,17 @@ void extracellularPotentialDomain::buildSigmaExtracellularSurface()
                 ownSigmaE, neiSigmaE
             );
         }
+        else if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+        {
+            SefI[faceI] = extracellularFaceConductivity::conormalHarmonic
+            (
+                ownSigmaE,
+                neiSigmaE,
+                m.Sf()[faceI]/m.magSf()[faceI],
+                1.0 - weights[faceI],
+                weights[faceI]
+            );
+        }
         else
         {
             SefI[faceI] =
@@ -650,6 +928,7 @@ void extracellularPotentialDomain::buildSigmaExtracellularSurface()
             Field<tensor>& Sefp = Sef.boundaryFieldRef()[patchI];
             const scalarField& patchWeights =
                 m.weights().boundaryField()[patchI];
+            const vectorField patchNf(m.boundary()[patchI].nf());
 
             forAll(Sefp, faceI)
             {
@@ -678,6 +957,22 @@ void extracellularPotentialDomain::buildSigmaExtracellularSurface()
                         extracellularFaceConductivity::unweightedHarmonic
                         (
                             pSigmaE, nSigmaE
+                        );
+                }
+                else if
+                (
+                    interfaceConductivityInterpolation_
+                 == "conormalHarmonic"
+                )
+                {
+                    Sefp[faceI] =
+                        extracellularFaceConductivity::conormalHarmonic
+                        (
+                            pSigmaE,
+                            nSigmaE,
+                            patchNf[faceI],
+                            1.0 - patchWeights[faceI],
+                            patchWeights[faceI]
                         );
                 }
                 else
@@ -827,15 +1122,20 @@ void extracellularPotentialDomain::solvePhiEOnce()
             << exit(FatalError);
     }
 
-    scalarField& heartPhiEI = heartPhiEPtr->primitiveFieldRef();
-    const scalarField& globalPhiEI = phiEPtr_().primitiveField();
-    forAll(heartCellToBaseCell_, heartCellI)
-    {
-        heartPhiEI[heartCellI] = globalPhiEI[heartCellToBaseCell_[heartCellI]];
-    }
-    heartPhiEPtr->correctBoundaryConditions();
+    setExposedPhiETrace
+    (
+        *heartPhiEPtr, phiEPtr_(), heartCellToBaseCell_,
+        *heartDomain_.subsetFaceMapPtr(),
+        *heartDomain_.extracellularConductivityPtr(),
+        sigmaTotalPtr_()
+    );
 
-    tmp<volScalarField> tHeartRhs = -fvc::laplacian(*GiPtr, *VmPtr);
+    tmp<volScalarField> tHeartRhs =
+        -fvc::laplacian
+        (
+            insulatedFaceConductivity(*GiPtr, *VmPtr, sealedHeartBoundary_),
+            *VmPtr
+        );
     const volScalarField& heartRhs = tHeartRhs();
 
     volScalarField rhsGlobal
@@ -864,16 +1164,50 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     rhsGlobal.correctBoundaryConditions();
 
-    fvScalarMatrix phiEqn
-    (
-        fvm::laplacian(sigmaExtracellularfPtr_(), phiEPtr_())
-     == rhsGlobal
-    );
+    tmp<fvScalarMatrix> tphiEqn;
+    if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+    {
+        const surfaceTensorField& Sef = sigmaExtracellularfPtr_();
+        const surfaceVectorField& Sf = baseMesh_.Sf();
+        const surfaceScalarField gammaNN
+        (
+            (Sf & Sef & Sf)/sqr(baseMesh_.magSf())
+        );
+        const surfaceVectorField SfGammaCorr((Sf & Sef) - gammaNN*Sf);
+        const volTensorField sigmaE(sigmaTotalPtr_() - sigmaIglobalPtr_());
+        tmp<volVectorField> tgrad(fvc::grad(phiEPtr_()));
+        for (label iter = 0; iter < 2; ++iter)
+        {
+            tgrad = interfaceGradient
+            (
+                phiEPtr_(), sigmaE, sigmaIglobalPtr_(), tgrad()
+            );
+        }
+        tphiEqn =
+        (
+            fvm::laplacian(gammaNN, phiEPtr_())
+          + fvc::div(SfGammaCorr & linearInterpolate(tgrad()))
+         == rhsGlobal
+        );
+    }
+    else
+    {
+        tphiEqn =
+        (
+            fvm::laplacian(sigmaExtracellularfPtr_(), phiEPtr_())
+         == rhsGlobal
+        );
+    }
+    fvScalarMatrix& phiEqn = tphiEqn.ref();
 
     {
         fvScalarMatrix heartPhiEqn
         (
-            fvm::laplacian(*GiPtr, *heartPhiEPtr)
+            fvm::laplacian
+            (
+                insulatedFaceConductivity(*GiPtr, *VmPtr, sealedHeartBoundary_),
+                *heartPhiEPtr
+            )
         );
         const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
         if (!heartFaceMapPtr)
