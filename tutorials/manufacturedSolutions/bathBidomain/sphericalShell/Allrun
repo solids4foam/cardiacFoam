@@ -12,8 +12,10 @@ Usage: ${0##*/} [parallel] [OPTION]...
 
 Options (parameters are written to local/ and included by the dictionaries):
   parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
-  -N n                      cells per unit length: gmsh element size 1/n (default 10)
-  -seed n                   gmsh random seed (default 1)
+  -mesh hex|tet             blockMesh cubed sphere (default) or gmsh tetrahedra (shell.geo.template)
+  -N n                      cells per unit length (default 12); hex: a multiple of 4, radial
+                            heart cells per unit length; tet: element size 1/n
+  -seed n                   gmsh random seed for -mesh tet (default 1)
   -dt x                     time step
   -endTime x                end time (default 0.02)
   -elliptic                 one step of 1e-9 s (overrides -dt and -endTime)
@@ -29,13 +31,14 @@ Options (parameters are written to local/ and included by the dictionaries):
   -np n                     ranks for scotch (default 4)
 
 Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
-Needs gmsh (tested with 4.15.2) and gmshToFoam.
+-mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
 USAGE
     exit 2
 }
 
 parallel=false
-N=10
+mesh=hex
+N=12
 seed=1
 dt=
 endTime=
@@ -69,6 +72,13 @@ do
     case "$1" in
         parallel)
             parallel=true
+            ;;
+        -mesh)
+            needValue "$@"; mesh="$2"; shift
+            case "$mesh" in
+                hex|tet) ;;
+                *) echo "${0##*/}: unknown -mesh $mesh" 1>&2; usage ;;
+            esac
             ;;
         -N)
             needValue "$@"; N="$2"; shift
@@ -149,16 +159,25 @@ do
     shift
 done
 
-if [ -e log.gmsh ]
+if [ -e log.gmsh ] || [ -e log.blockMesh ]
 then
-    echo "${0##*/}: log.gmsh exists; run ./Allclean first" 1>&2
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
     exit 1
 fi
 
-for tool in gmsh gmshToFoam
-do
-    command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
-done
+if [ "$mesh" = hex ] && [ $((N % 4)) -ne 0 ]
+then
+    echo "${0##*/}: -mesh hex takes -N as a multiple of 4, not $N" 1>&2
+    usage
+fi
+
+if [ "$mesh" = tet ]
+then
+    for tool in gmsh gmshToFoam
+    do
+        command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+    done
+fi
 
 rm -rf local
 mkdir local
@@ -268,35 +287,41 @@ then
     exit 1
 fi
 
-# Mesh: gmsh tetrahedra, cellZones from the physical volumes, and the empty
-# patch that receives the exposed heart faces of the myocardium sub-mesh
-lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
-cp shell.geo.template local/shell.geo
-runApplication gmsh -3 local/shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
-if grep -q "Error" log.gmsh
+# Mesh: blockMesh cubed sphere (zones and the empty exposed patch in blockMeshDict),
+# or gmsh tetrahedra with cellZones from the physical volumes and the empty patch
+# that receives the exposed heart faces of the myocardium sub-mesh appended
+echo "N $N;" > local/mesh
+if [ "$mesh" = hex ]
 then
-    echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
-    exit 1
-fi
-runApplication gmshToFoam local/shell.msh
+    runApplication blockMesh
+else
+    lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    cp shell.geo.template local/shell.geo
+    runApplication gmsh -3 local/shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+    if grep -q "Error" log.gmsh
+    then
+        echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+        exit 1
+    fi
+    runApplication gmshToFoam local/shell.msh
 
-boundary=constant/polyMesh/boundary
-nFaces=$(sed -n 's/.*nFaces: *\([0-9]*\).*/\1/p' constant/polyMesh/owner | head -n 1)
-if [ -z "$nFaces" ]
-then
-    echo "${0##*/}: no face count in constant/polyMesh/owner" 1>&2
-    exit 1
+    boundary=constant/polyMesh/boundary
+    nFaces=$(sed -n 's/.*nFaces: *\([0-9]*\).*/\1/p' constant/polyMesh/owner | head -n 1)
+    if [ -z "$nFaces" ]
+    then
+        echo "${0##*/}: no face count in constant/polyMesh/owner" 1>&2
+        exit 1
+    fi
+    awk -v start="$nFaces" '
+        !counted && /^[0-9]+[[:space:]]*$/ { print $1 + 1; counted = 1; next }
+        !done && /^\)[[:space:]]*$/ {
+            printf "    exposed\n    {\n        type            patch;\n        nFaces          0;\n        startFace       %s;\n    }\n", start
+            done = 1
+        }
+        { print }
+    ' "$boundary" > "$boundary.new"
+    mv "$boundary.new" "$boundary"
 fi
-awk -v start="$nFaces" '
-    !counted && /^[0-9]+[[:space:]]*$/ { print $1 + 1; counted = 1; next }
-    !done && /^\)[[:space:]]*$/ {
-        printf "    exposed\n    {\n        type            patch;\n        nFaces          0;\n        startFace       %s;\n    }\n", start
-        done = 1
-    }
-    { print }
-' "$boundary" > "$boundary.new"
-mv "$boundary.new" "$boundary"
-
 runApplication checkMesh
 if grep -q "Failed [0-9]* mesh checks" log.checkMesh
 then
