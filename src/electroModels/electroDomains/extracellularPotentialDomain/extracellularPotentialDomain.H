@@ -107,6 +107,9 @@ class extracellularPotentialDomain
     //- Face flux of the phiE equation on heart-bath faces (A, along Sf, extracellular part)
     autoPtr<surfaceScalarField> interfaceFluxPtr_;
 
+    //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
+    autoPtr<volVectorField> interfaceGradientPtr_;
+
     // Build the heart-cell -> base-cell map from the heart subset.
     void buildHeartScatterMap();
 

@@ -145,8 +145,9 @@ domain. Implements `electroStateDomain`.
 - Applies a bound verification model's `phiE` source, boundary data, and
   compatibility projection to the global equation.
 
-- Stores the heart-bath interface flux as `phiEInterfaceFlux` for a
-  verification model that requests it.
+- Stores the heart-bath interface flux as `phiEInterfaceFlux`, and the cell
+  gradient used by the face corrections of the `phiE` operator as
+  `phiEInterfaceGradient`, for a verification model that requests them.
 
 - Writes `phiE`, `sigmaTotal`, and `VmGlobal` through the normal electro-model
   output path at OpenFOAM output times.

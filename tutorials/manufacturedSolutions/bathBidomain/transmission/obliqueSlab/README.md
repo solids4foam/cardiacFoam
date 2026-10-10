@@ -142,8 +142,10 @@ on either side of an interface face), `phiE_boundaryBand` (cells on
 extracellular flux through the interface, area-weighted), `interfaceCurrent_1`,
 `interfaceCurrent_2` (net current through each interface),
 `gradTangentialError` (tangential part of the base-mesh `grad(phiE)` error on
-interface cells), `gradHeartTraceError` (heart sub-mesh `grad(Vm)` error on
-the cells of `exposed`) and `outerCurrent`.
+interface cells), `gradJumpAwareTangentialError` (the same for the gradient
+used by the face corrections of the `phiE` operator: jump-aware under
+`conormalHarmonic`, `grad(phiE)` otherwise), `gradHeartTraceError` (heart
+sub-mesh `grad(Vm)` error on the cells of `exposed`) and `outerCurrent`.
 
 Regression (G1, `-N 20`, short end time, parallel with the manual
 decomposition):
@@ -156,7 +158,7 @@ decomposition):
 
 ```bash
 ./Allrun -solution affine -elliptic -config ATBI -shear 0 -N 10   # exact
-./Allrun -solution affine -elliptic -config ATBI -N 10            # S3
+./Allrun -solution affine -elliptic -config ATBI -N 10            # exact
 ./Allrun -solution affine -elliptic -config ATBI -N 10 -grad GaussLinear   # exact
 ```
 
@@ -166,14 +168,18 @@ decomposition):
   (Linf at most 1e-8 of the largest exact value) at every `N`, serial and
   parallel. A larger error is a defect in the interface coupling, the flux
   diagnostic or the verifier, not a discretisation error.
-- **Sheared slab (default shears): S3 measurement.** The stock
-  `leastSquares` gradient of a cell next to an interface uses neighbours on
-  both sides of the kink in `phiE`, so it is wrong by an amount that does not
-  vanish with `h`. That gradient enters the non-orthogonal corrections of the
-  `phiE` Laplacian, the heart trace and the jump-aware seed. G0 has no
-  tangential gradient, so it isolates this mechanism (S3): `gradTangentialError`
-  stays constant with `N` while `phiE` and `interfaceFlux` errors are O(h),
-  not roundoff. This is the negative control of the patch test.
+- **Sheared slab (default shears): patch test of the non-orthogonal
+  corrections.** The stock `leastSquares` gradient of a cell next to an
+  interface uses neighbours on both sides of the kink in `phiE`, so it is
+  wrong by an amount that does not vanish with `h` (S3): `gradTangentialError`
+  stays constant with `N`. The `conormalHarmonic` `phiE` operator builds its
+  conormal and non-orthogonal corrections from the jump-aware gradient
+  instead, so `phiE_*`, `phiI`, `interfaceFlux` and
+  `gradJumpAwareTangentialError` are at roundoff (`phiE` about 5e-13,
+  `interfaceFlux` about 2e-12 to 5e-12) at every `N`. The stock gradient
+  still seeds the jump-aware gradient and sets the heart trace's interface
+  value; neither reaches `phiE`. An O(h) error here means S3 has re-entered
+  the `phiE` operator.
 - **Sheared slab with `-grad GaussLinear`: S3 off.** The Gauss gradient of
   a field that depends on `s` alone is purely normal on the planar interface
   cells, so the whole sheared-slab error vanishes: `phiE_*`, `interfaceFlux`
@@ -214,8 +220,8 @@ through the global `phiE` trace (the trace's interface value uses the stock
 `leastSquares` gradient of the global `phiE`), and, for fields with a
 tangential gradient, S4 (the normal-projected boundary delta on skewed heart
 interface cells). On sheared G0, which has no tangential gradient, it is pure
-S3: 3.3e-3 Linf, independent of `N`. With `-shearHeart 0` it is still
-5.3e-4 and flat, so setting the heart shear to zero does not isolate S4.
+S3: 3.0e-3 Linf, independent of `N`. With `-shearHeart 0` it is still
+7.8e-4 and flat, so setting the heart shear to zero does not isolate S4.
 
 The shear controls are not a clean S3/S4 separation:
 
@@ -241,41 +247,47 @@ here.
 | config / study | field / norm | expected | mechanism |
 |---|---|---|---|
 | G0, orthogonal, elliptic, ATBI | `phiE_*`, `phiI`, `interfaceFlux` Linf | at most 1e-8 relative, every `N` | exact patch test |
-| G0, sheared, elliptic, ATBI | `phiE_*`, `interfaceFlux`; `gradTangentialError` | O(h), not roundoff; `gradTangentialError` constant | S3 alone |
+| G0, sheared, elliptic, ATBI | `phiE_*`, `phiI`, `interfaceFlux`, `gradJumpAwareTangentialError` Linf; `gradTangentialError` | roundoff, every `N`; `gradTangentialError` constant | jump-aware gradient in the operator's corrections; S3 confined to the stock gradient |
 | G0, sheared, elliptic, ATBI, `-grad GaussLinear` | `phiE_*`, `phiI`, `interfaceFlux`, both gradient rows Linf | roundoff, every `N` | S3 off: planar-interface Gauss gradient is purely normal |
 | 0 | `Vm`, `phiE` | at most 0.3 | unsealed interface: O(1) current leak |
 | elliptic, orthogonal, 0 | `phiE` | no convergence | unsealed interface: O(1) current leak |
 | A, sheared | `phiE_heart`; `phiE_bath`; `phiE_interfaceBand` Linf | 1.4, then 1.3; 1.1; 1.3, then 1.2 | componentwise interface weights: O(1) flux error in an O(h) layer, on top of S3 |
 | AI | `Vm` | 1.0 +- 0.3 | zeroGradient heart `phiE` trace |
 | ATI | `Vm` | 0.8 +- 0.3 | zeroGradient `Vm` wall trace |
-| ATBI, sheared | `Vm`; `phiE_heart`; `phiE_bath` | 1.7 falling to 1.6; 1.5 falling to 1.45; 1.2 | S3 (possibly with S4), decision rule below |
+| ATBI, sheared | `Vm`; `phiE_heart`; `phiE_bath` | 1.9 rising to 2.0; 1.75 rising to 1.9; 1.7 rising to 1.85 | rising towards 2: pre-asymptotic heart-shear term |
 | ATBI, orthogonal | `Vm`, `phiE` | 1.9 - 2.0 | no S3 or S4 |
-| ATBI, sheared | `interfaceFlux` L2, Linf | 1.4, then 1.35 | non-orthogonal correction terms carry the O(1) interface-cell gradient error |
-| ATBI, sheared | `interfaceCurrent_1`, `interfaceCurrent_2` | 1.0; 1.3 | the interface-cell gradient error has a fixed sign along each interface and does not cancel in the integral |
-| ATBI, sheared, `-grad GaussLinear` | `gradTangentialError`; `phiE_heart`, `phiE_bath`; `Vm` (full-time) | `gradTangentialError` O(h), above `leastSquares` up to N = 80 and below it from N = 160; `phiE_heart` 1.2 then 1.1, `phiE_bath` 1.0; `Vm` 1.3 | S3 off, S4 and Gauss skewness remain: lower order, larger errors than `leastSquares` |
+| ATBI, sheared | `interfaceFlux` L2, Linf | 1.5, then 1.8 | rising towards 2 |
+| ATBI, sheared | `interfaceCurrent_1`, `interfaceCurrent_2` | 1.7, then 1.9; 1.9, then 2.0 | rising towards 2 |
+| ATBI, sheared, `-grad GaussLinear` | `gradTangentialError`; `phiE_heart`, `phiE_bath`; `Vm` (full-time) | `gradTangentialError` O(h); `phiE_heart` 1.7 then 1.9, `phiE_bath` 1.6 (elliptic, 40→80 then 80→160); `Vm` 1.6 then 1.4 (full-time) | S3 off; the Gauss skewness error on the skewed cells keeps `phiE_bath` and `Vm` below the `leastSquares` orders |
 | any | `phiE_boundaryBand` | 2.6 - 3.0, about one order above the volume rows | the error vanishes on the Dirichlet patch; orthogonal boundary cells |
 | elliptic, orthogonal, A | `phiE` | 1.0 | componentwise interface weights |
 | elliptic, orthogonal, ATI | `phiE` | 1.2 | zeroGradient `Vm` wall trace |
 | elliptic, orthogonal, AI | `phiE` | 1.3 - 1.6, falling with `N` | zeroGradient heart `phiE` trace |
 | elliptic, orthogonal, ATBI | `phiE_*`, `interfaceFlux`, `interfaceCurrent_1`, `interfaceCurrent_2` | 2.0 | no S3 or S4 on an orthogonal slab |
-| elliptic, sheared, ATBI | `phiE_heart`; `phiE_bath` | 1.4, then 1.3; 1.2, then 1.1 | S3 |
+| elliptic, sheared, ATBI | `phiE_heart`; `phiE_bath`; `interfaceFlux` | 1.9, then 2.0; 1.85, then 1.95; 1.8, then 1.9 | second order; the heart-shear pre-asymptotic term decays |
+| elliptic, sheared, ATBI | `interfaceCurrent_1`, `interfaceCurrent_2` | 1.85, then 1.95; 1.95, then 2.0 | second order |
+| elliptic, sheared, ATBI | `gradJumpAwareTangentialError`; `gradTangentialError`; `gradHeartTraceError` | O(h) or better (1.8, then 1.9); constant; constant | jump-aware operator gradient; stock gradient (S3); heart trace gradient (S3 through the trace, S4) |
 | temporal (ATBI, fixed N, dt halving) | `Vm`, `phiE` | 1.0 +- 0.15 | Lie splitting with explicit `Iion` |
 | coupling (ATBI, `-nOuter`, `-predictor`) | `phiE(nOuter) - phiE(20)` | decreases geometrically with `nOuter` | outer heart/bath coupling iterations |
 
 Decision rule (elliptic and spatial, ATBI): an observed order of G1 between
-N = 40 and 80 below 1.5 with `gradTangentialError` not decreasing means the
-`leastSquares` interface-cell gradient is order-limiting (S3, possibly with
-S4). `-grad GaussLinear` removes S3 (`gradTangentialError` becomes O(h)), but
-on G1 the order stays near 1 because S4 remains (`gradHeartTraceError` flat),
-so `-grad GaussLinear` alone cannot confirm S3. Attributing the deficit
-between S3 and S4 is left to the interface-operator work: fix one mechanism
-and measure what remains. An order of at least 1.85 with both gradient rows
-O(h) means neither mechanism is active. Anything else is inconclusive: add
-N = 160.
+N = 40 and 80 below 1.5 with `gradJumpAwareTangentialError` not decreasing
+means the gradient in the corrections of the `phiE` operator is
+order-limiting (S3 in the operator). `gradTangentialError` is the stock
+gradient, which the `conormalHarmonic` operator does not use in its
+corrections; it stays constant on the sheared slab. `-grad GaussLinear`
+removes S3 from the stock gradient (`gradTangentialError` becomes O(h)), but
+Gauss linear carries its own skewness error on the skewed cells, so on G1
+`phiE_bath` and `Vm` stay below the `leastSquares` orders and `-grad
+GaussLinear` alone cannot confirm S3. An order of at least 1.85 with
+`gradJumpAwareTangentialError` O(h) means S3 is not active in the operator;
+`gradHeartTraceError` stays constant on the sheared slab without limiting the
+`phiE` order. Anything else is inconclusive: add N = 160.
 
-On the sheared slab the configurations A, AI, ATI and ATBI are not
-distinguishable by their `phiE` orders: all follow the ATBI values. The
-orthogonal rows separate them.
+On the sheared slab the configurations separate by their elliptic `phiE`
+orders between N = 40 and 80: A follows its own row (its operator has no
+jump-aware corrections), AI gives about 1.8 (`phiE_heart`) and 1.6
+(`phiE_bath`), ATI about 1.2 and 0.8, ATBI the values above.
 
 ## Limitation
 

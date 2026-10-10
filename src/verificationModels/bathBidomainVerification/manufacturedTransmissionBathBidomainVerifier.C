@@ -1624,9 +1624,13 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
 
     const tmp<volVectorField> tgradPhiE(fvc::grad(phiE));
     const vectorField& gradPhiEI = tgradPhiE().primitiveField();
+    const vectorField& gradJumpAwareI =
+        mesh.lookupObject<volVectorField>("phiEInterfaceGradient")
+       .primitiveField();
 
     scalarField phiEErr(C.size());
     scalarField gradTangentialErr(C.size(), 0);
+    scalarField gradJumpAwareTangentialErr(C.size(), 0);
     boolList heartCell(C.size(), false);
     boolList bathCell(C.size(), false);
 
@@ -1640,14 +1644,14 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
 
         if (interfaceCell[cellI])
         {
-            gradTangentialErr[cellI] = mag
+            const vector gradExact
             (
-                tangential
-              & (
-                    gradPhiEI[cellI]
-                  - transmissionMMS::gradPhiE(C[cellI], t, z, params_)
-                )
+                transmissionMMS::gradPhiE(C[cellI], t, z, params_)
             );
+            gradTangentialErr[cellI] =
+                mag(tangential & (gradPhiEI[cellI] - gradExact));
+            gradJumpAwareTangentialErr[cellI] =
+                mag(tangential & (gradJumpAwareI[cellI] - gradExact));
         }
     }
 
@@ -1659,6 +1663,8 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         weightedNorms(V, phiEErr, boundaryCell);
     const errorNorms gradTangentialNorms =
         weightedNorms(V, gradTangentialErr, interfaceCell);
+    const errorNorms gradJumpAwareTangentialNorms =
+        weightedNorms(V, gradJumpAwareTangentialErr, interfaceCell);
 
     // Header data
 
@@ -1688,6 +1694,7 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         {"interfaceCurrent_1", current1},
         {"interfaceCurrent_2", current2},
         {"gradTangentialError", gradTangentialNorms},
+        {"gradJumpAwareTangentialError", gradJumpAwareTangentialNorms},
         {"gradHeartTraceError", heartTraceNorms},
         {"outerCurrent", outerCurrent}
     });

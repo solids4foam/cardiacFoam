@@ -702,6 +702,26 @@ extracellularPotentialDomain::extracellularPotentialDomain
                 )
             );
             interfaceFluxPtr_().setOriented();
+
+            interfaceGradientPtr_.reset
+            (
+                new volVectorField
+                (
+                    IOobject
+                    (
+                        "phiEInterfaceGradient",
+                        baseMesh_.time().timeName(),
+                        baseMesh_,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
+                    baseMesh_,
+                    dimensionedVector
+                    (
+                        phiEPtr_().dimensions()/dimLength, Zero
+                    )
+                )
+            );
         }
     }
 
@@ -1438,9 +1458,22 @@ void extracellularPotentialDomain::solvePhiEOnce()
          == rhsGlobal
         );
 
+        // Non-orthogonal correction of fvm::laplacian rebuilt from the jump-aware gradient
+        const surfaceScalarField nonOrthGradCorr
+        (
+            gammaNN*baseMesh_.magSf()
+           *(
+                baseMesh_.nonOrthCorrectionVectors()
+              & linearInterpolate(tgrad() - fvc::grad(phiEPtr_()))
+            )
+        );
+        tphiEqn.ref() += fvc::div(nonOrthGradCorr);
+
         if (storeFlux)
         {
             tCrossFlux = SfGammaCorr & linearInterpolate(tgrad());
+            tCrossFlux.ref() += nonOrthGradCorr;
+            interfaceGradientPtr_() = tgrad();
         }
     }
     else
@@ -1450,6 +1483,11 @@ void extracellularPotentialDomain::solvePhiEOnce()
             fvm::laplacian(sigmaExtracellularfPtr_(), phiEPtr_())
          == rhsGlobal
         );
+
+        if (storeFlux)
+        {
+            interfaceGradientPtr_() = fvc::grad(phiEPtr_());
+        }
     }
     fvScalarMatrix& phiEqn = tphiEqn.ref();
 

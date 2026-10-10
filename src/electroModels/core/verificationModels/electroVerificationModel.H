@@ -141,7 +141,7 @@ public:
         return false;
     }
 
-    //- Store the face flux balanced by the phiE equation on heart-bath faces in phiEInterfaceFlux (A, owner->neighbour, extracellular part)
+    //- Store the face flux balanced by the phiE equation on heart-bath faces in phiEInterfaceFlux (A, owner->neighbour, extracellular part) and the gradient of its face corrections in phiEInterfaceGradient
     virtual bool requiresInterfaceFluxDiagnostic() const
     {
         return false;
