@@ -25,7 +25,8 @@ import sys
 import mpmath as mp
 import numpy as np
 import sympy as sp
-from sympy.printing.c import C99CodePrinter
+
+import mms_codegen as codegen
 
 HEADER_NAME = "manufacturedTransmissionBathBidomainReference.H"
 SAMPLE_DPS = 30
@@ -687,32 +688,9 @@ def run_self_checks():
 # C++ emission
 # ---------------------------------------------------------------------------
 
-class _CxxPrinter(C99CodePrinter):
-    """C++ for OpenFOAM scalars: no integer-exponent pow(), pi from Foam."""
-
-    def _print_Pi(self, expr):
-        return "constant::mathematical::pi"
-
-    def _print_Pow(self, expr):
-        # Every result is a single parenthesised or call operand, so it is
-        # safe after '/' in the Mul printer.
-        b, e = expr.base, expr.exp
-        bs = self._print(b) if b.is_Symbol else "(%s)" % self._print(b)
-        if e.is_Integer and 1 <= abs(int(e)) <= 4:
-            prod = "*".join([bs]*abs(int(e)))
-            return "(%s)" % prod if e > 0 else "(1.0/(%s))" % prod
-        if e == sp.Rational(1, 2):
-            return "sqrt(%s)" % self._print(b)
-        if e == -sp.Rational(1, 2):
-            return "(1.0/sqrt(%s))" % self._print(b)
-        return "pow(%s, %s)" % (self._print(b), self._print(sp.Float(e, 17)))
-
-
-_PRINTER = _CxxPrinter()
-
-
-def _cxx(expr):
-    return _PRINTER.doprint(expr)
+_THIS = sys.modules[__name__]
+SOLUTIONS = ("affine", "levelSet")
+HEART_ZONE = 1
 
 
 # fn index, C++ name, kind, expression name, value kind
@@ -748,50 +726,10 @@ ZONES_OF_KIND = {"heart": (1,), "heartNoTime": (1,), "flux": (1,), "zone": (0, 1
 N_COMPONENTS = {"scalar": 1, "vector": 3, "symmTensor": 6, "flux": 3}
 
 
-def _as_list(e):
-    return list(e) if isinstance(e, (list, tuple, sp.MatrixBase)) else [e]
-
-
-def _check_printed(exprs, repl, red):
-    """Evaluate the printed C++ arithmetic as Python at one point and compare
-    with sympy, so a printer precedence error cannot reach the header."""
+def printed_check_context():
     pv = param_values(alternate_params())
-    env = {"sin": math.sin, "cos": math.cos, "exp": math.exp, "sqrt": math.sqrt,
-           "pow": math.pow}
     ctx = dict(zip([str(a) for a in ARGS], _context(0.83, 0.29, 0.11, pv, "numpy")))
-    ctx = {k: float(v) for k, v in ctx.items()}
-    env.update(ctx)
-
-    def py(code):
-        if re.search(r"(?<![\w.])\d+/\d+(?![\w.])", code):
-            raise RuntimeError("integer division in emitted code: " + code)
-        return eval(code.replace("constant::mathematical::pi", "%r" % math.pi), {}, env)
-
-    for sym, val in repl:
-        env[str(sym)] = py(_cxx(val))
-    ref = sp.lambdify(ARGS, exprs, modules="math")(*[ctx[str(a)] for a in ARGS])
-    for e, r in zip(red, ref):
-        v = py(_cxx(e))
-        if abs(v - r) > 1e-12*max(1.0, abs(r)):
-            raise RuntimeError("printed C++ differs from sympy: %r vs %r" % (v, r))
-
-
-def _branch_code(exprs, vkind, indent):
-    exprs = [sp.sympify(e) for e in exprs]
-    repl, red = sp.cse(exprs, symbols=sp.numbered_symbols("w"), order="canonical")
-    _check_printed(exprs, repl, red)
-    pad = " "*indent
-    lines = ["%sconst scalar %s = %s;" % (pad, _cxx(sym), _cxx(val)) for sym, val in repl]
-    r = [_cxx(e) for e in red]
-    if vkind == "scalar":
-        lines.append("%sreturn %s;" % (pad, r[0]))
-    elif vkind == "vector":
-        lines.append("%sreturn vector(%s, %s, %s);" % (pad, *r))
-    elif vkind == "symmTensor":
-        lines.append("%sreturn symmTensor(%s, %s, %s, %s, %s, %s);" % (pad, *r))
-    else:
-        lines.append("%sreturn n.x()*(%s) + n.y()*(%s) + n.z()*(%s);" % (pad, *r))
-    return lines
+    return {k: float(v) for k, v in ctx.items()}
 
 
 PREAMBLE = (
@@ -806,64 +744,6 @@ PREAMBLE = (
 
 # preamble locals that other preamble locals are computed from
 PREAMBLE_NEEDS = {thC_: (s_,)}
-
-
-def _param_access(name):
-    for arr, _ in ARRAY_PARAMS:
-        if name.startswith(arr) and name[len(arr):].isdigit():
-            return "p.%s[%s]" % (arr, name[len(arr):])
-    return "p." + name
-
-
-def _emit_function(idx, cname, kind, ename, vkind):
-    zones = ZONES_OF_KIND[kind]
-    branches = {}
-    used = set()
-    for sol in ("affine", "levelSet"):
-        for zn in zones:
-            ex = _as_list(_expr(sol, zn, ename))
-            branches[(sol, zn)] = ex
-            for e in ex:
-                used |= sp.sympify(e).free_symbols
-    for sym, needs in PREAMBLE_NEEDS.items():
-        if sym in used:
-            used |= set(needs)
-    pre = [(sym, deps, code) for sym, deps, code in PREAMBLE if sym in used]
-    params = [n for n in PARAM_ORDER
-              if P[n] in used or any(n in deps for _, deps, _ in pre)]
-    out = ["inline %s %s(%s)" % (RETURN_TYPE[vkind], cname, SIGNATURES[kind]), "{"]
-    out += ["    const scalar %s = %s;" % (n, _param_access(n)) for n in params]
-    out += ["    " + code for _, _, code in pre]
-    if kind in ("zone", "bath"):
-        out.append("    checkZone(zone, %s);" % ("true" if kind == "zone" else "false"))
-    out.append("")
-
-    def zone_block(sol, indent):
-        lines = []
-        if len(zones) == 1 or kind == "tensor":
-            return _branch_code(branches[(sol, zones[0])], vkind, indent)
-        pad = " "*indent
-        for zn in zones:
-            if zn == 1:
-                continue
-            lines.append("%sif (zone == %s)" % (pad, ZONE_NAMES[zn]))
-            lines.append(pad + "{")
-            lines += _branch_code(branches[(sol, zn)], vkind, indent + 4)
-            lines.append(pad + "}")
-        if 1 in zones:
-            lines += _branch_code(branches[(sol, 1)], vkind, indent)
-        else:
-            lines.append("%sreturn 0;" % pad)
-        return lines
-
-    out.append("    if (p.solution == 0)")
-    out.append("    {")
-    out += zone_block("affine", 8)
-    out.append("    }")
-    out.append("")
-    out += zone_block("levelSet", 4)
-    out.append("}")
-    return out
 
 
 def _sample_points_st():
@@ -902,26 +782,6 @@ def self_test_samples():
     return rows
 
 
-def _g(v):
-    return "%.17g" % v
-
-
-def _params_function(name, params):
-    v = param_values(params)
-    out = ["inline Params %s()" % name, "{", "    Params p;"]
-    for n in SCALAR_PARAMS + TAIL_PARAMS:
-        if n in ANGLE_PARAMS:
-            out.append("    p.%s = degToRad(%r);" % (n, float(params[n])))
-        else:
-            out.append("    p.%s = %r;" % (n, v[n]))
-    for arr, cnt in ARRAY_PARAMS:
-        for i in range(cnt):
-            out.append("    p.%s[%d] = %r;" % (arr, i, float(params[arr][i])))
-    out.append("    p.solution = 1;")
-    out += ["    return p;", "}"]
-    return out
-
-
 LICENSE = """\
 /*---------------------------------------------------------------------------*\\
 License
@@ -956,9 +816,7 @@ def generate_header():
     guard = "manufacturedTransmissionBathBidomainReference_H"
     L = [LICENSE % (HEADER_NAME, sp.__version__)]
     L += ["#ifndef " + guard, "#define " + guard, ""]
-    L += ['#include "error.H"', '#include "label.H"', '#include "mathematicalConstants.H"',
-          '#include "point.H"', '#include "scalar.H"', '#include "symmTensor.H"',
-          '#include "unitConversion.H"', '#include "vector.H"', ""]
+    L += codegen.INCLUDES
     L += ["namespace Foam", "{", "namespace transmissionMMS", "{", ""]
     L += ["struct Params", "{", "    scalar alpha;", "    scalar s1, s2, period;",
           "    scalar gil, git, gin, gel, get, gen, theta0, theta1;",
@@ -966,52 +824,28 @@ def generate_header():
           "    scalar fA[4], hA[3];", "    scalar cmAmplitude, cmOmega;",
           "    scalar P0, P1, C;", "    label solution;", "};", ""]
     L += ["enum Zone : label { bathLow = 0, myocardium = 1, bathHigh = 2 };", ""]
-    L += _params_function("defaultParams", default_params()) + [""]
-    L += _params_function("alternateParams", alternate_params()) + [""]
+    L += codegen.params_function(_THIS, "defaultParams", default_params(), 1) + [""]
+    L += codegen.params_function(_THIS, "alternateParams", alternate_params(), 1) + [""]
     L += ["inline label zoneOf(const point& pt, const Params& p)", "{",
           "    const scalar s = cos(p.alpha)*pt.x() + sin(p.alpha)*pt.y();",
           "    if (s < p.s1)", "    {", "        return bathLow;", "    }",
           "    if (s > p.s2)", "    {", "        return bathHigh;", "    }",
           "    return myocardium;", "}", ""]
-    L += ["inline void checkZone(const label zone, const bool heartAllowed)", "{",
-          "    if (zone < bathLow || zone > bathHigh || (!heartAllowed && zone == myocardium))",
-          "    {", "        FatalErrorInFunction",
-          "            << \"Zone \" << zone << \" is not valid here\" << exit(FatalError);",
-          "    }", "}", ""]
+    L += codegen.check_zone_function("bathLow", "bathHigh", "myocardium")
     for spec in FUNCTIONS:
-        L += _emit_function(*spec) + [""]
-    rows = _rows_cache()
-    L += ["struct SelfTestSample", "{", "    label fn;", "    label param;",
-          "    label solution;", "    label zone;", "    label component;",
-          "    scalar x, y, z, t, value;", "};", ""]
-    L.append("inline const SelfTestSample selfTestSamples[] =")
-    L.append("{")
-    for r in rows:
-        L.append("    {%d, %d, %d, %d, %d, %s, %s, %s, %s, %s}," % (
-            r[0], r[1], r[2], r[3], r[4], _g(r[5]), _g(r[6]), _g(r[7]), _g(r[8]), _g(r[9])))
-    L.append("};")
-    L += ["", "inline const label nSelfTestSamples = %d;" % len(rows), ""]
+        L += codegen.emit_function(_THIS, *spec) + [""]
+    L += codegen.self_test_table(_rows_cache())
     L += ["} // End namespace transmissionMMS", "} // End namespace Foam", "",
           "#endif", ""]
     return "\n".join(L)
 
 
 def _resolve(path):
-    """Relative paths are taken against this directory, for --write and --check
-    alike, so the result does not depend on the working directory."""
-    if os.path.isabs(path):
-        return path
-    return os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), path))
+    return codegen.resolve(__file__, path)
 
 
 def header_matches(path, text=None):
-    path = _resolve(path)
-    if not os.path.exists(path):
-        return False
-    with open(path) as fh:
-        current = fh.read()
-    return current == (text if text is not None else generate_header())
+    return codegen.header_matches(__file__, generate_header, path, text)
 
 
 def main(argv=None):
