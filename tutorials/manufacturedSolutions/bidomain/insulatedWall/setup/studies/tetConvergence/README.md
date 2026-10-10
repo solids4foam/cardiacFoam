@@ -35,9 +35,12 @@ createPatch -overwrite
 checkMesh
 foamDictionary -precision 17 -entry PIMPLE/nNonOrthogonalCorrectors -add 1 system/fvSolution
 foamDictionary -precision 17 -entry deltaT -set ${DT} system/controlDict
-./Allrun parallel
+decomposePar
+mpirun -np 6 cardiacFoam -parallel
+reconstructPar -latestTime
 ```
 
+- `gmshToFoam` replaces `blockMesh`, so do not run `Allrun`, which runs `blockMesh`.
 - The error summary is `postProcessing/*_cells.dat` (`Vm`, `phiE_gauge`, `phiI_gauge` rows: L1 L2 Linf).
 - Observed order: `p = log2(L2(N)/L2(2N))`.
 
