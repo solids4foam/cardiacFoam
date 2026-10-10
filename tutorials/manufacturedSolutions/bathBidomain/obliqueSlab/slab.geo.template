@@ -1,0 +1,64 @@
+// Oblique slab for -mesh tet: bathLow 0 < s < 0.5, myocardium 0.5 < s < 1.5,
+// bathHigh 1.5 < s < 2, meshed in slab coordinates (s, tau, z) with tau
+// periodic (period P) and z periodic (thickness T); Allrun rotates the mesh by
+// alpha about z. Set lc and seed with gmsh -setnumber.
+SetFactory("OpenCASCADE");
+
+If (!Exists(lc))
+    lc = 0.1;
+EndIf
+If (!Exists(seed))
+    seed = 1;
+EndIf
+
+P = 1;
+T = 0.2;
+s1 = 0.5;
+s2 = 1.5;
+sMax = 2;
+eps = 1e-6;
+
+Box(1) = {0, 0, 0, s1, P, T};
+Box(2) = {s1, 0, 0, s2 - s1, P, T};
+Box(3) = {s2, 0, 0, sMax - s2, P, T};
+BooleanFragments{ Volume{1, 2, 3}; Delete; }{}
+
+tau0() = Surface In BoundingBox{-eps, -eps, -eps, sMax + eps, eps, T + eps};
+tau1() = Surface In BoundingBox{-eps, P - eps, -eps, sMax + eps, P + eps, T + eps};
+z0() = Surface In BoundingBox{-eps, -eps, -eps, sMax + eps, P + eps, eps};
+z1() = Surface In BoundingBox{-eps, -eps, T - eps, sMax + eps, P + eps, T + eps};
+oLow() = Surface In BoundingBox{-eps, -eps, -eps, eps, P + eps, T + eps};
+oHigh() = Surface In BoundingBox{sMax - eps, -eps, -eps, sMax + eps, P + eps, T + eps};
+vLow() = Volume In BoundingBox{-eps, -eps, -eps, s1 + eps, P + eps, T + eps};
+vMyo() = Volume In BoundingBox{s1 - eps, -eps, -eps, s2 + eps, P + eps, T + eps};
+vHigh() = Volume In BoundingBox{s2 - eps, -eps, -eps, sMax + eps, P + eps, T + eps};
+
+For i In {0:#tau0()-1}
+    Periodic Surface{tau1(i)} = {tau0(i)} Translate{0, P, 0};
+EndFor
+For i In {0:#z0()-1}
+    Periodic Surface{z1(i)} = {z0(i)} Translate{0, 0, T};
+EndFor
+
+Physical Volume("bathLow") = {vLow()};
+Physical Volume("myocardium") = {vMyo()};
+Physical Volume("bathHigh") = {vHigh()};
+Physical Surface("outerLow") = {oLow()};
+Physical Surface("outerHigh") = {oHigh()};
+Physical Surface("tau0") = {tau0()};
+Physical Surface("tau1") = {tau1()};
+Physical Surface("z0") = {z0()};
+Physical Surface("z1") = {z1()};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.MeshSizeFromCurvature = 0;
+Mesh.Algorithm = 6;
+Mesh.Algorithm3D = 1;
+Mesh.Optimize = 1;
+Mesh.RandomSeed = seed;
+Mesh.MaxNumThreads1D = 1;
+Mesh.MaxNumThreads2D = 1;
+Mesh.MaxNumThreads3D = 1;
+General.NumThreads = 1;
+Mesh.MshFileVersion = 2.2;

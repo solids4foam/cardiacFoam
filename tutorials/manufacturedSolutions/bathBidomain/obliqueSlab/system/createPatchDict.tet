@@ -1,0 +1,81 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    object          createPatchDict;
+}
+
+
+// Cyclic pairs of the -mesh tet slab after its rotation by alpha about z;
+// alpha (degrees) and the thickness T come from local/slabTet, written by Allrun
+// from geometryCoeffs.alpha.
+#include "<case>/local/slabTet"
+
+ca      #eval{ cos($alpha*degToRad()) };
+sa      #eval{ sin($alpha*degToRad()) };
+
+pointSync false;
+
+patches
+(
+    {
+        name sideA;
+        patchInfo
+        {
+            type cyclic;
+            neighbourPatch sideB;
+            transform translational;
+            separationVector #eval{ vector(-$sa, $ca, 0) };
+        }
+        constructFrom patches;
+        patches (tau0);
+    }
+    {
+        name sideB;
+        patchInfo
+        {
+            type cyclic;
+            neighbourPatch sideA;
+            transform translational;
+            separationVector #eval{ vector($sa, -$ca, 0) };
+        }
+        constructFrom patches;
+        patches (tau1);
+    }
+    {
+        name frontA;
+        patchInfo
+        {
+            type cyclic;
+            neighbourPatch frontB;
+            transform translational;
+            separationVector #eval{ vector(0, 0, $T) };
+        }
+        constructFrom patches;
+        patches (z0);
+    }
+    {
+        name frontB;
+        patchInfo
+        {
+            type cyclic;
+            neighbourPatch frontA;
+            transform translational;
+            separationVector #eval{ vector(0, 0, -$T) };
+        }
+        constructFrom patches;
+        patches (z1);
+    }
+);
+
+
+// ************************************************************************* //

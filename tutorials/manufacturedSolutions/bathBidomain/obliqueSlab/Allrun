@@ -12,13 +12,16 @@ Usage: ${0##*/} [parallel] [OPTION]...
 
 Options (parameters are written to local/ and included by the dictionaries):
   parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
-  -N n                      cells per unit length in s and per period in tau (default 10; a positive multiple of 10)
+  -mesh hex|tet             blockMesh parallelepipeds (default) or gmsh tetrahedra (slab.geo.template)
+  -N n                      cells per unit length in s and per period in tau (default 10);
+                            hex: a positive multiple of 10; tet: element size 1/n, any positive integer
+  -seed n                   gmsh random seed for -mesh tet (default 1)
   -dt x                     time step
   -endTime x                end time (default 0.2)
   -elliptic                 one step of 1e-9 s (overrides -dt and -endTime)
   -config 0|A|AI|ATI|ATBI   interface configuration (default: ATBI, as in electroProperties)
   -solution affine|levelSet manufactured solution (default levelSet)
-  -shear c                  heart and inner bath block shear both set to c (0: orthogonal slab);
+  -shear c                  hex only: heart and inner bath block shear both set to c (0: orthogonal slab);
                             applied before -shearHeart and -shearBath, whatever the order
   -shearHeart c             heart block shear (default 0.6)
   -shearBath c              inner bath block shear (default -0.4)
@@ -36,7 +39,9 @@ USAGE
 }
 
 parallel=false
+mesh=hex
 N=10
+seed=1
 dt=
 endTime=
 elliptic=false
@@ -64,19 +69,30 @@ do
         parallel)
             parallel=true
             ;;
+        -mesh)
+            needValue "$@"; mesh="$2"; shift
+            case "$mesh" in
+                hex|tet) ;;
+                *) echo "${0##*/}: unknown -mesh $mesh" 1>&2; usage ;;
+            esac
+            ;;
         -N)
             needValue "$@"; N="$2"; shift
             case "$N" in
                 ''|*[!0-9]*|0*)
-                    echo "${0##*/}: -N takes a positive multiple of 10, not $N" 1>&2
+                    echo "${0##*/}: -N takes a positive integer, not $N" 1>&2
                     usage
                     ;;
             esac
-            if [ $((N % 10)) -ne 0 ]
-            then
-                echo "${0##*/}: -N takes a positive multiple of 10, not $N" 1>&2
-                usage
-            fi
+            ;;
+        -seed)
+            needValue "$@"; seed="$2"; shift
+            case "$seed" in
+                ''|*[!0-9]*|0*)
+                    echo "${0##*/}: -seed takes a positive integer, not $seed" 1>&2
+                    usage
+                    ;;
+            esac
             ;;
         -dt)
             needValue "$@"; dt="$2"; shift
@@ -154,10 +170,22 @@ do
     shift
 done
 
-if [ -e log.blockMesh ]
+if [ -e log.blockMesh ] || [ -e log.gmsh ]
 then
-    echo "${0##*/}: log.blockMesh exists; run ./Allclean first" 1>&2
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
     exit 1
+fi
+
+if [ "$mesh" = hex ] && [ $((N % 10)) -ne 0 ]
+then
+    echo "${0##*/}: -mesh hex takes -N as a positive multiple of 10, not $N" 1>&2
+    usage
+fi
+
+if [ "$mesh" = tet ] && [ -n "$shear$shearHeartArg$shearBathArg" ]
+then
+    echo "${0##*/}: -shear, -shearHeart and -shearBath apply to -mesh hex only" 1>&2
+    usage
 fi
 
 # -shear first, then the individual shears override it
@@ -243,6 +271,10 @@ EOF
     then
         echo "bathPredictorCorrector $predictor;"
     fi
+    if [ "$mesh" = tet ]
+    then
+        echo "dimension \"3D\";"
+    fi
 } > local/configuration
 
 [ -s local/configuration ] || rm -f local/configuration
@@ -265,8 +297,51 @@ then
     echo "method simple; coeffs { n (2 2 1); }" > local/decomposition
 fi
 
-runApplication blockMesh
-runApplication checkMesh -allGeometry -allTopology
+if [ "$mesh" = hex ]
+then
+    runApplication blockMesh
+    runApplication checkMesh -allGeometry -allTopology
+else
+    for tool in gmsh gmshToFoam
+    do
+        command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+    done
+
+    # Tetrahedra in slab coordinates (s, tau, z), rotated by geometryCoeffs.alpha about z
+    alpha=$(foamDictionary -entry bidomainSolverCoeffs/verificationModel/geometryCoeffs/alpha -value constant/electroProperties)
+    printf 'alpha   %s;\nT       0.2;\n' "$alpha" > local/slabTet
+    lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    cp slab.geo.template local/slab.geo
+    runApplication gmsh -3 local/slab.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/slab.msh
+    if grep -q "Error" log.gmsh
+    then
+        echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+        exit 1
+    fi
+    runApplication gmshToFoam local/slab.msh
+    runApplication transformPoints -rotate-z "$alpha"
+    runApplication createPatch -dict system/createPatchDict.tet -overwrite
+
+    # The zero-face patch that receives the exposed heart faces, appended after createPatch, which drops empty patches
+    boundary=constant/polyMesh/boundary
+    nFaces=$(sed -n 's/.*nFaces: *\([0-9]*\).*/\1/p' constant/polyMesh/owner | head -n 1)
+    if [ -z "$nFaces" ]
+    then
+        echo "${0##*/}: no face count in constant/polyMesh/owner" 1>&2
+        exit 1
+    fi
+    awk -v start="$nFaces" '
+        !counted && /^[0-9]+[[:space:]]*$/ { print $1 + 1; counted = 1; next }
+        !done && /^\)[[:space:]]*$/ {
+            printf "    exposed\n    {\n        type            patch;\n        nFaces          0;\n        startFace       %s;\n    }\n", start
+            done = 1
+        }
+        { print }
+    ' "$boundary" > "$boundary.new"
+    mv "$boundary.new" "$boundary"
+
+    runApplication checkMesh
+fi
 if grep -q "Failed [0-9]* mesh checks" log.checkMesh
 then
     echo "checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
