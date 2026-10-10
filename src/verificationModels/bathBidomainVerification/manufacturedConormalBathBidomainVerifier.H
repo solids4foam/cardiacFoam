@@ -111,6 +111,12 @@ public:
         const volScalarField& Vm,
         const PtrList<volScalarField>& fields
     ) override;
+
+    //- The bulk/boundary/interface-band rows read the gradient the bath operator uses
+    virtual bool requiresInterfaceFluxDiagnostic() const override
+    {
+        return true;
+    }
 };
 
 } // End namespace Foam

@@ -160,6 +160,35 @@ inline complex unequalConormalI(const unequalConormalProfile& p, const vector& c
 }
 
 
+//- Gradient of the real part of E (x and y components; the profile is z-independent).
+inline vector unequalConormalGradE(const unequalConormalProfile& p, const vector& c)
+{
+    const complex E = unequalConormalE(p, c);
+    const complex dEx = complex(0, -p.q*p.re)*E;
+    const complex dEy = complex(0, p.q)*E;
+    return vector(dEx.real(), dEy.real(), 0);
+}
+
+
+//- Gradient of the real part of I.
+inline vector unequalConormalGradI(const unequalConormalProfile& p, const vector& c)
+{
+    const scalar x = c.x();
+    const complex P = unequalConormalPhase(p.q*(c.y() - p.ri*x));
+    const complex W =
+        p.A*Foam::cosh(p.lambda*x)
+      + p.B*Foam::sinh(p.lambda*x)
+      + p.C*unequalConormalPhase(-p.q*p.delta*x);
+    const complex dW =
+        p.A*(p.lambda*Foam::sinh(p.lambda*x))
+      + p.B*(p.lambda*Foam::cosh(p.lambda*x))
+      + p.C*complex(0, -p.q*p.delta)*unequalConormalPhase(-p.q*p.delta*x);
+    const complex dIx = complex(0, -p.q*p.ri)*P*W + P*dW;
+    const complex dIy = complex(0, p.q)*P*W;
+    return vector(dIx.real(), dIy.real(), 0);
+}
+
+
 inline void computeUnequalConormalV
 (
     scalarField& V,

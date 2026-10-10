@@ -238,7 +238,8 @@ scalar manufacturedTransmissionBathBidomainVerifier::ionicConstant
 
 void manufacturedTransmissionBathBidomainVerifier::validateConfiguration
 (
-    const ionicModel& model
+    const ionicModel& model,
+    const label nD
 ) const
 {
     const word family = model.verificationFamily();
@@ -249,14 +250,15 @@ void manufacturedTransmissionBathBidomainVerifier::validateConfiguration
             family != "bidomainFDAManufactured"
          && family != "bathBidomainFDAManufactured"
         )
-     || model.geometricDimension() != solution_->nSolutionD()
+     || model.geometricDimension() != nD
+     || !solution_->acceptsSolutionD(nD)
     )
     {
         FatalErrorInFunction
             << typeName << " requires the bidomainFDAManufactured or "
-            << "bathBidomainFDAManufactured ionic model with geometric "
-            << "dimension " << solution_->nSolutionD() << " for the "
-            << solution_->geometry() << " geometry. Received ionic "
+            << "bathBidomainFDAManufactured ionic model with the geometric "
+            << "dimension of the mesh (" << nD << "), which the "
+            << solution_->geometry() << " geometry must accept. Received ionic "
             << "model " << model.type() << " with verification family '"
             << family << "' and geometric dimension "
             << model.geometricDimension() << "."
@@ -333,14 +335,17 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
     const fvMesh& phiEMesh = phiEPtr_->mesh();
     const fvMesh& heartMesh = Vm.mesh();
 
-    if (phiEMesh.nSolutionD() != solution_->nSolutionD())
+    if
+    (
+        !solution_->acceptsSolutionD(phiEMesh.nSolutionD())
+     || phiEMesh.nSolutionD() != heartMesh.nSolutionD()
+    )
     {
         FatalErrorInFunction
-            << typeName << " requires a " << solution_->nSolutionD()
-            << "D extracellular-potential mesh for the "
-            << solution_->geometry() << " geometry; mesh '"
-            << phiEMesh.name() << "' solves in " << phiEMesh.nSolutionD()
-            << " directions."
+            << "The " << solution_->geometry() << " geometry cannot be "
+            << "verified on extracellular-potential mesh '" << phiEMesh.name()
+            << "', which solves in " << phiEMesh.nSolutionD()
+            << " directions (heart mesh: " << heartMesh.nSolutionD() << ")."
             << exit(FatalError);
     }
 
@@ -571,7 +576,7 @@ void manufacturedTransmissionBathBidomainVerifier::preProcess
             << exit(FatalError);
     }
 
-    validateConfiguration(model);
+    validateConfiguration(model, Vm.mesh().nSolutionD());
     initialiseIonicConstants(model, Vm.mesh().nCells());
 
     if (phiEHeartCellMapPtr_)
@@ -1351,9 +1356,86 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     const errorNorms gradJumpAwareTangentialNorms =
         weightedNorms(V, gradJumpAwareTangentialErr, interfaceCell);
 
+    // Bulk, boundary-adjacent and interface-band parts of the potentials and of their cell gradients
+
+    vectorField gradVmExact(heartC.size());
+    vectorField gradPhiIExact(heartC.size());
+    forAll(heartC, cellI)
+    {
+        gradVmExact[cellI] = solution_->gradVm(heartC[cellI], t);
+        gradPhiIExact[cellI] =
+            gradVmExact[cellI] + solution_->gradPhiE(heartC[cellI], t, heartZone);
+    }
+    const tmp<volVectorField> tgradHeartPhiE
+    (
+        fvc::grad(heartMesh.lookupObject<volScalarField>("phiE"))
+    );
+    const vectorField gradPhiI(gradVmI + tgradHeartPhiE().primitiveField());
+
+    List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>> splitRows
+    (
+        bulkBoundaryRows
+        (
+            heartMesh, "Vm", VmI, VmExact, gradVmI,
+            exactFieldGradient
+            (
+                heartMesh,
+                Vm.name(),
+                [&](const point& p) { return solution_->Vm(p, t); }
+            )().primitiveField(),
+            gradVmExact
+        )
+    );
+    splitRows.append
+    (
+        bulkBoundaryRows
+        (
+            heartMesh, "phiI", phiIValues, phiIExact, gradPhiI,
+            exactFieldGradient
+            (
+                heartMesh,
+                "phiI",
+                [&](const point& p) { return solution_->phiI(p, t); }
+            )().primitiveField(),
+            gradPhiIExact
+        )
+    );
+
+    boolList isHeart(C.size());
+    scalarField phiEShifted(C.size());
+    scalarField phiEExactCells(C.size());
+    vectorField gradPhiEExact(C.size());
+    forAll(C, cellI)
+    {
+        const label z = zoneOfCell_[cellI];
+        isHeart[cellI] = (z == heartZone);
+        phiEShifted[cellI] = phiEI[cellI] - phiEOffset;
+        phiEExactCells[cellI] = solution_->phiE(C[cellI], t, z);
+        gradPhiEExact[cellI] = solution_->gradPhiE(C[cellI], t, z);
+    }
+    splitRows.append
+    (
+        globalPotentialRows
+        (
+            mesh, isHeart, "phiE", phiEShifted, phiEExactCells,
+            consumedPhiEGradient(phiE)().primitiveField(),
+            exactFieldGradient
+            (
+                mesh,
+                phiE.name(),
+                [&](const point& p)
+                {
+                    return solution_->phiE(p, t, solution_->zoneOf(p));
+                }
+            )().primitiveField(),
+            gradPhiEExact
+        )
+    );
+
     // Header data
 
-    const label nD = solution_->nSolutionD();
+    const label nD = mesh.nSolutionD();
+    const word cellKind(meshCellKind(mesh));
     const label nHeartCells = returnReduce(heartMesh.nCells(), sumOp<label>());
     const scalar heartMeasure =
         nD == 2
@@ -1368,7 +1450,10 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     const fileName outputDir(time.globalPath()/"postProcessing");
     const fileName outputFile =
         outputDir
-      / (dimensionName(nD) + "_" + Foam::name(nPerDirection_) + "_cells.dat");
+      / (
+            dimensionName(nD) + "_" + cellKind + "_"
+          + Foam::name(nPerDirection_) + "_cells.dat"
+        );
 
     List<Tuple2<word, errorNorms>> rows
     ({
@@ -1395,6 +1480,10 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         rows.append({"interfacePartCurrent_1", partNorms[0]});
         rows.append({"interfacePartCurrent_2", partNorms[1]});
     }
+    for (const auto& row : splitRows)
+    {
+        rows.append({row.first(), tupleNorms(row.second())});
+    }
 
     if (Pstream::master())
     {
@@ -1416,6 +1505,7 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         os.precision(12);
         os  << "# Bath-bidomain manufactured solution error summary\n"
             << "# dimension " << dimensionName(nD) << "\n"
+            << "# mesh " << cellKind << "\n"
             << "# geometry " << solution_->geometry() << "\n"
             << "# cellsPerDirection " << nPerDirection_ << "\n"
             << "# h " << h << "\n"

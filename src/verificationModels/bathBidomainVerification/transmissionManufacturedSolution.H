@@ -67,7 +67,8 @@ public:
 
     virtual label zoneOf(const point& pt) const = 0;
 
-    virtual label nSolutionD() const = 0;
+    //- Whether the geometry can be verified on a mesh solving in nD directions
+    virtual bool acceptsSolutionD(const label nD) const = 0;
 
     virtual scalar Vm(const point& pt, const scalar t) const = 0;
     virtual scalar phiE(const point& pt, const scalar t, const label zone) const = 0;

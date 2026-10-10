@@ -79,7 +79,7 @@ class manufacturedTransmissionBathBidomainVerifier
 
     static scalar ionicConstant(const ionicModel& model, const word& name);
 
-    void validateConfiguration(const ionicModel& model) const;
+    void validateConfiguration(const ionicModel& model, const label nD) const;
 
     //- Beta, Chi and Cm of the ionic model, taken from ranks holding heart cells
     void initialiseIonicConstants

@@ -254,11 +254,27 @@ void manufacturedEikonalVerifier::postProcess
     const auto norms =
         computeNorms(mesh_, activationTime.primitiveField(), exact);
 
-    // Same bulk/boundary split the standalone gradientReconstructionOrder
-    // utility reports, so the solved activation error and the
-    // reconstruction-only error can be compared level by level on one mesh
-    // ladder. Both parts are normalised by the total mesh volume, so
-    // total^2 = bulk^2 + boundary^2.
+    // Bulk and boundary-adjacent parts of the activation error and of its cell gradient
+    vectorField gradExact(centres.size());
+    forAll(centres, cellI)
+    {
+        gradExact[cellI] = manufacturedEikonalGradTau(centres[cellI], k);
+    }
+    const auto splitRows = bulkBoundaryRows
+    (
+        mesh_, "activationTime", activationTime.primitiveField(), exact,
+        fvc::grad(activationTime)().primitiveField(),
+        exactFieldGradient
+        (
+            mesh_,
+            activationTime.name(),
+            [&](const point& p) { return manufacturedEikonalTau(p, k); }
+        )().primitiveField(),
+        gradExact
+    );
+
+    // Bulk/boundary split of the activation error, both parts normalised by the
+    // total mesh volume, so total^2 = bulk^2 + boundary^2.
     const auto splitNorms =
         computeBoundaryBulkNorms
         (
@@ -323,8 +339,12 @@ void manufacturedEikonalVerifier::postProcess
             << "-------------------------------------------------" << nl
             << "L2 bulk        " << splitNorms.first().first() << nl
             << "L2 boundary    " << splitNorms.first().second() << nl
-            << "L2 total       " << splitNorms.second() << nl
-            << "-------------------------------------------------" << endl;
+            << "L2 total       " << splitNorms.second() << nl;
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(Info, row.first(), row.second());
+        }
+        Info<< "-------------------------------------------------" << endl;
 
         OFstream os(outputFile);
         os  << "# Eikonal manufactured activation-time summary\n"
@@ -343,6 +363,13 @@ void manufacturedEikonalVerifier::postProcess
             << "activationTimeSplit " << splitNorms.first().first() << " "
             << splitNorms.first().second() << " " << splitNorms.second()
             << "\n";
+        os  << "# bulk and boundary-adjacent parts of the activation error and of its\n"
+            << "# solved (grad) and exact-field (gradRecon) cell gradients\n"
+            << "# field L1 L2 Linf\n";
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(os, row.first(), row.second());
+        }
     }
 
     errorsReported_ = true;

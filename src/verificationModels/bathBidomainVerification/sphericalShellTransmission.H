@@ -71,9 +71,9 @@ public:
         return shellTransmissionMMS::zoneOf(pt, p_);
     }
 
-    virtual label nSolutionD() const override
+    virtual bool acceptsSolutionD(const label nD) const override
     {
-        return 3;
+        return nD == 3;
     }
 
     virtual scalar Vm(const point& pt, const scalar t) const override
@@ -167,15 +167,19 @@ public:
         const labelUList& zone
     ) const override;
 
-    //- The eight octants of each sphere
+    //- The eight parts of each sphere cut by three planes parallel to the coordinate planes
     virtual label nInterfaceParts() const override
     {
         return 8;
     }
 
+    //- The planes are offset from the coordinate planes so that no face centre of a symmetric mesh lies on one
     virtual label interfacePart(const point& Cf) const override
     {
-        return label(Cf.x() > 0) + 2*label(Cf.y() > 0) + 4*label(Cf.z() > 0);
+        return
+            label(Cf.x() > 0.0123)
+          + 2*label(Cf.y() > -0.0217)
+          + 4*label(Cf.z() > 0.0311);
     }
 };
 

@@ -33,6 +33,7 @@ Author
 #include "mathematicalConstants.H"
 #include "scalarField.H"
 #include "tensor.H"
+#include "point.H"
 #include "vector.H"
 
 namespace Foam
@@ -67,6 +68,22 @@ inline void computeF
                  * Foam::cos(3.0*constant::mathematical::pi*z[i]);
         }
     }
+}
+
+//- Spatial factor F at one point.
+inline scalar manufacturedFDAFAt(const point& p, const label dimension)
+{
+    const scalar pi = constant::mathematical::pi;
+    scalar F = Foam::cos(pi*p.x());
+    if (dimension >= 2)
+    {
+        F *= Foam::cos(2.0*pi*p.y());
+    }
+    if (dimension >= 3)
+    {
+        F *= Foam::cos(3.0*pi*p.z());
+    }
+    return F;
 }
 
 inline void computeG

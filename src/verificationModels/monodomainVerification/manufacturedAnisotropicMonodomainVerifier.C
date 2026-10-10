@@ -371,6 +371,30 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
     const auto u2Norms =
         computeNorms(mesh, fields[u2Idx].primitiveField(), u2Exact);
 
+    // Bulk and boundary-adjacent parts of the Vm error and of its cell gradient
+    const scalar S = Foam::sqrt(1.0 + t);
+    vectorField gradVmExact(centres.size());
+    forAll(centres, cellI)
+    {
+        const point& c = centres[cellI];
+        gradVmExact[cellI] = S*pseudoECGManufacturedGradFAnisotropic(c.x(), c.y(), c.z());
+    }
+    const tmp<volVectorField> tgradVm(fvc::grad(Vm));
+    const tmp<volVectorField> tgradRecon
+    (
+        exactFieldGradient
+        (
+            mesh,
+            Vm.name(),
+            [&](const point& c) { return S*Foam::sqr(Foam::sin(constant::mathematical::pi*c.x()))*Foam::sqr(Foam::sin(constant::mathematical::pi*c.y()))*Foam::sqr(Foam::sin(constant::mathematical::pi*c.z())); }
+        )
+    );
+    const auto splitRows = bulkBoundaryRows
+    (
+        mesh, "Vm", Vm.primitiveField(), VmExact,
+        tgradVm().primitiveField(), tgradRecon().primitiveField(), gradVmExact
+    );
+
     const fileName outputDir(mesh.time().globalPath()/"postProcessing");
     mkDir(outputDir);
     const fileName outputFile
@@ -392,8 +416,12 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
              << "u1     " << u1Norms.first().first() << "   "
              << u1Norms.first().second() << "   " << u1Norms.second() << nl
              << "u2     " << u2Norms.first().first() << "   "
-             << u2Norms.first().second() << "   " << u2Norms.second() << nl
-             << "-------------------------------------------------" << endl;
+             << u2Norms.first().second() << "   " << u2Norms.second() << nl;
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(Info, row.first(), row.second());
+        }
+        Info << "-------------------------------------------------" << endl;
 
         OFstream out(outputFile);
         out << "Rotated-anisotropy manufactured-solution error summary "
@@ -405,6 +433,10 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
             << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
         out << "u2     " << u2Norms.first().first() << "   "
             << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(out, row.first(), row.second());
+        }
         out << "-------------------------------------------------\n\n";
 
         out << "Simulation summary:\n";

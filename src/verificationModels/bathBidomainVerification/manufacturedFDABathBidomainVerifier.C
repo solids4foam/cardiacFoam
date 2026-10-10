@@ -412,6 +412,121 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const auto u2Norms = computeNorms(mesh, u2Values, u2Exact);
     const auto u3Norms = computeNorms(mesh, u3Values, u3Exact);
 
+    // Bulk, boundary-adjacent and interface-band parts of the field errors and of their cell gradients
+    const scalar S = Foam::sqrt(1.0 + t);
+    const scalar pi = constant::mathematical::pi;
+    const scalar sigmaB = manufacturedFDABathSigmaB(se);
+    const auto VmAt = [&](const point& c)
+    {
+        return S*Foam::cos(pi*c.x()) - alpha_*c.x()/se;
+    };
+    const auto phiEAt = [&](const point& c)
+    {
+        return manufacturedFDABathPhiEAt(c.x(), t, k_, alpha_, se);
+    };
+    const auto gradVmAt = [&](const point& c)
+    {
+        return vector(-S*pi*Foam::sin(pi*c.x()) - alpha_/se, 0, 0);
+    };
+    const auto gradPhiEHeartAt = [&](const point& c)
+    {
+        return vector(k_*S*pi*Foam::sin(pi*c.x()) + alpha_/se, 0, 0);
+    };
+
+    vectorField gradVmExact(centres.size());
+    vectorField gradPhiIExact(centres.size());
+    forAll(centres, cellI)
+    {
+        gradVmExact[cellI] = gradVmAt(centres[cellI]);
+        gradPhiIExact[cellI] = gradVmExact[cellI] + gradPhiEHeartAt(centres[cellI]);
+    }
+
+    const bool sameMesh = (&phiEMesh == &mesh);
+    const volScalarField& heartPhiE =
+        sameMesh ? *phiEPtr_ : mesh.lookupObject<volScalarField>("phiE");
+
+    const tmp<volVectorField> tgradVm(fvc::grad(Vm));
+    const tmp<volVectorField> tgradHeartPhiE(fvc::grad(heartPhiE));
+    const vectorField gradPhiI
+    (
+        tgradVm().primitiveField() + tgradHeartPhiE().primitiveField()
+    );
+
+    scalarField phiIRowValues(VmValues);
+    scalarField phiIRowExact(phiIExact);
+    forAll(phiIRowValues, i)
+    {
+        phiIRowValues[i] +=
+            sameMesh ? phiEValues[i] : phiEValues[(*phiEHeartCellMapPtr_)[i]];
+    }
+    if (variant_ == bathVariant::electrodePair)
+    {
+        phiIRowValues -= volumeMean(mesh, phiIRowValues);
+        phiIRowExact -= volumeMean(mesh, phiIRowExact);
+    }
+
+    List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>> splitRows
+    (
+        bulkBoundaryRows
+        (
+            mesh, "Vm", VmValues, VmExact, tgradVm().primitiveField(),
+            exactFieldGradient(mesh, Vm.name(), VmAt)().primitiveField(),
+            gradVmExact
+        )
+    );
+    splitRows.append
+    (
+        bulkBoundaryRows
+        (
+            mesh, "phiI", phiIRowValues, phiIRowExact, gradPhiI,
+            exactFieldGradient
+            (
+                mesh,
+                "phiI",
+                [&](const point& c) { return VmAt(c) + phiEAt(c); }
+            )().primitiveField(),
+            gradPhiIExact
+        )
+    );
+
+    vectorField gradPhiEExact(phiECentres.size());
+    boolList isHeart(phiECentres.size(), sameMesh);
+    if (!sameMesh)
+    {
+        for (const label baseCellI : *phiEHeartCellMapPtr_)
+        {
+            isHeart[baseCellI] = true;
+        }
+    }
+    forAll(phiECentres, cellI)
+    {
+        gradPhiEExact[cellI] =
+            isHeart[cellI]
+          ? gradPhiEHeartAt(phiECentres[cellI])
+          : vector(alpha_/sigmaB, 0, 0);
+    }
+    const tmp<volVectorField> tgradPhiE(consumedPhiEGradient(*phiEPtr_));
+    const tmp<volVectorField> tgradReconPhiE
+    (
+        exactFieldGradient(phiEMesh, phiEPtr_->name(), phiEAt)
+    );
+    splitRows.append
+    (
+        sameMesh
+      ? bulkBoundaryRows
+        (
+            phiEMesh, "phiE", phiEComputed, phiEExact,
+            tgradPhiE().primitiveField(), tgradReconPhiE().primitiveField(),
+            gradPhiEExact
+        )
+      : globalPotentialRows
+        (
+            phiEMesh, isHeart, "phiE", phiEComputed, phiEExact,
+            tgradPhiE().primitiveField(), tgradReconPhiE().primitiveField(),
+            gradPhiEExact
+        )
+    );
+
     const label totalCells = globalManufacturedCellCount(mesh);
     const label nPerDirection = structuredCellsPerDirection(totalCells, dimension);
     const scalar dt = time.deltaTValue();
@@ -443,8 +558,12 @@ void manufacturedFDABathBidomainVerifier::postProcess
             << "u2        " << u2Norms.first().first() << "   "
             << u2Norms.first().second() << "   " << u2Norms.second() << nl
             << "u3        " << u3Norms.first().first() << "   "
-            << u3Norms.first().second() << "   " << u3Norms.second() << nl
-            << "-------------------------------------------------" << endl;
+            << u3Norms.first().second() << "   " << u3Norms.second() << nl;
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(Info, row.first(), row.second());
+        }
+        Info<< "-------------------------------------------------" << endl;
 
         OFstream os(outputFile);
         os  << "# Bath-bidomain manufactured solution error summary\n"
@@ -472,6 +591,10 @@ void manufacturedFDABathBidomainVerifier::postProcess
             << u2Norms.first().second() << " " << u2Norms.second() << "\n"
             << "u3 " << u3Norms.first().first() << " "
             << u3Norms.first().second() << " " << u3Norms.second() << "\n";
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(os, row.first(), row.second());
+        }
     }
 
     errorsReported_ = true;

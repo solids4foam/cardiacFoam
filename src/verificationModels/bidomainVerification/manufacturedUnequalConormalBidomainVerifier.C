@@ -418,6 +418,91 @@ void manufacturedUnequalConormalBidomainVerifier::postProcess
     const auto u1Norms = computeNorms(mesh, u1Values, u1Exact);
     const auto u2Norms = computeNorms(mesh, u2Values, u2Exact);
 
+    // Bulk and boundary-adjacent parts of the Vm, phiE and phiI errors and of their cell gradients
+    const scalar S = Foam::sqrt(1.0 + t);
+    vectorField gradVmExact(centres.size());
+    vectorField gradPhiEExact(centres.size());
+    forAll(centres, cellI)
+    {
+        const vector gE(unequalConormalGradE(profile_, centres[cellI]));
+        const vector gI(unequalConormalGradI(profile_, centres[cellI]));
+        gradVmExact[cellI] = S*(gI - gE);
+        gradPhiEExact[cellI] = S*gE;
+    }
+    const vectorField gradPhiIExact(gradVmExact + gradPhiEExact);
+
+    const tmp<volVectorField> tgradVm(fvc::grad(Vm));
+    const tmp<volVectorField> tgradPhiE(fvc::grad(*phiEPtr_));
+    const vectorField gradPhiI
+    (
+        tgradVm().primitiveField() + tgradPhiE().primitiveField()
+    );
+
+    const tmp<volVectorField> tgradReconVm
+    (
+        exactFieldGradient
+        (
+            mesh,
+            Vm.name(),
+            [&](const point& c)
+            {
+                return
+                    S*(unequalConormalI(profile_, c)
+                  - unequalConormalE(profile_, c)).real();
+            }
+        )
+    );
+    const tmp<volVectorField> tgradReconPhiE
+    (
+        exactFieldGradient
+        (
+            mesh,
+            phiEPtr_->name(),
+            [&](const point& c)
+            {
+                return S*unequalConormalE(profile_, c).real() + shift;
+            }
+        )
+    );
+    const tmp<volVectorField> tgradReconPhiI
+    (
+        exactFieldGradient
+        (
+            mesh,
+            "phiI",
+            [&](const point& c)
+            {
+                return S*unequalConormalI(profile_, c).real() + shift;
+            }
+        )
+    );
+
+    List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>> splitRows
+    (
+        bulkBoundaryRows
+        (
+            mesh, "Vm", VmValues, VmExact, tgradVm().primitiveField(),
+            tgradReconVm().primitiveField(), gradVmExact
+        )
+    );
+    splitRows.append
+    (
+        bulkBoundaryRows
+        (
+            mesh, "phiE_gauge", phiEValues, phiEExactGauge,
+            tgradPhiE().primitiveField(), tgradReconPhiE().primitiveField(),
+            gradPhiEExact, "phiE"
+        )
+    );
+    splitRows.append
+    (
+        bulkBoundaryRows
+        (
+            mesh, "phiI_gauge", phiIValues, phiIExactGauge, gradPhiI,
+            tgradReconPhiI().primitiveField(), gradPhiIExact, "phiI"
+        )
+    );
+
     const label totalCells = globalManufacturedCellCount(mesh);
     const label nPerDirection = structuredCellsPerDirection(totalCells, 3);
     const scalar dx = structuredManufacturedDx(nPerDirection);
@@ -454,8 +539,12 @@ void manufacturedUnequalConormalBidomainVerifier::postProcess
             << "u1        " << u1Norms.first().first() << "   "
             << u1Norms.first().second() << "   " << u1Norms.second() << nl
             << "u2        " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << nl
-            << "-------------------------------------------------" << endl;
+            << u2Norms.first().second() << "   " << u2Norms.second() << nl;
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(Info, row.first(), row.second());
+        }
+        Info<< "-------------------------------------------------" << endl;
 
         OFstream out(outputFile);
         out << "Bidomain manufactured-solution error summary (t = "
@@ -476,7 +565,12 @@ void manufacturedUnequalConormalBidomainVerifier::postProcess
         out << "u1        " << u1Norms.first().first() << "   "
             << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
         out << "u2        " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << "\n\n";
+            << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(out, row.first(), row.second());
+        }
+        out << "\n";
 
         out << "Number of cells (N)   = " << nPerDirection << "\n";
 

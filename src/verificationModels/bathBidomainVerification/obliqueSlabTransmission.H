@@ -68,9 +68,10 @@ public:
         return transmissionMMS::zoneOf(pt, p_);
     }
 
-    virtual label nSolutionD() const override
+    //- 2D hex or a 3D (tet) slab of the z-independent solution
+    virtual bool acceptsSolutionD(const label nD) const override
     {
-        return 2;
+        return nD == 2 || nD == 3;
     }
 
     virtual scalar Vm(const point& pt, const scalar t) const override
