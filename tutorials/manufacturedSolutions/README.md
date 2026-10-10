@@ -14,8 +14,8 @@ This folder groups the manufactured-solution verification cases by model scope.
 - [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
 - [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
 - [`bathBidomain/insulatedWall`](bathBidomain/insulatedWall/README.md) : 2D anisotropic heart–bath bidomain with a conormally insulated interface
-- [`bathBidomain/obliqueSlab`](bathBidomain/obliqueSlab/README.md) : 2D heart–bath bidomain transmission across oblique, skewed interfaces, with a manual G0 patch test and a parallel G1 regression
-- [`bathBidomain/sphericalShell`](bathBidomain/sphericalShell/README.md) : 3D heart–bath bidomain transmission across curved interfaces on gmsh tetrahedra, with Neumann or Dirichlet outer data; convergence studies are manual runs
+- [`bathBidomain/obliqueSlab`](bathBidomain/obliqueSlab/README.md) : heart–bath bidomain transmission across oblique, skewed interfaces on 2D sheared hexahedra or 3D gmsh tetrahedra, with a manual G0 patch test and a parallel G1 regression
+- [`bathBidomain/sphericalShell`](bathBidomain/sphericalShell/README.md) : 3D heart–bath bidomain transmission across curved interfaces on a cubed sphere or gmsh tetrahedra, with Neumann or Dirichlet outer data and a parallel hex regression
 
 ## Naming Pattern
 
@@ -100,3 +100,31 @@ directory, run through `tutorials/Alltest-regression`.
 | bath | bathBidomain |
 | bath_tet | bathBidomain (`setup/studies/tetConvergence`) |
 | niederer | NiedererEtAl2011verification |
+
+## Bulk, boundary and gradient rows
+
+Every field verifier (monodomain, bidomain, bath bidomain, eikonal) adds these
+rows to its error summary for each potential `q` it reports, after its own rows:
+
+| row | quantity |
+|---|---|
+| `q_bulk`, `q_boundary` | the error of `q` over the cells without, and with, a face on a physical patch of the mesh `q` lives on |
+| `gradQ`, `gradQ_bulk`, `gradQ_boundary` | the error of the cell gradient of the solved `q`, with the solver's gradient scheme and boundary values |
+| `gradReconQ`, `gradReconQ_bulk`, `gradReconQ_boundary` | the error of the cell gradient of the exact `q`, with exact cell and boundary-face values, through the same scheme: the reconstruction alone |
+
+The physical patches are the sealed wall on a heart sub-mesh, the walls of a
+whole-mesh case and the outer patches of a heart-and-bath mesh; processor,
+cyclic and empty patches are not. L1 and L2 of every part are normalised by the
+total volume of the mesh, so L1 and L2² of the parts add up to the total;
+Linf is the maximum over the part. Gauge-shifted potentials (`phiE_gauge`)
+keep their field rows under that name and their gradient rows under `phiE`.
+
+On a heart-and-bath mesh the extracellular potential has a third part,
+`phiE_interface`, the cells next to a heart–bath face. Its solved gradient is
+the one the bath operator consumes (`phiEInterfaceGradient`: jump-aware under
+`conormalHarmonic`), and the reconstruction rows leave the interface band out,
+since the exact potential has a normal-derivative jump there.
+
+Comparing `gradQ_boundary` with `gradReconQ_boundary` separates an
+inconsistent boundary value of the solved field from the accuracy of the
+reconstruction next to the boundary.

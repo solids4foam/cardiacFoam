@@ -1,9 +1,11 @@
 # bathBidomain/obliqueSlab
 
-2D heart-in-bath bidomain manufactured solution on a slab of myocardium between
+Heart-in-bath bidomain manufactured solution on a slab of myocardium between
 two bath slabs, with planar heart/bath interfaces oblique to the mesh axes,
 rotated anisotropic heart conductivities, spatially varying bath
-conductivities and skewed, non-orthogonal cells at the interfaces.
+conductivities and skewed, non-orthogonal cells at the interfaces: on 2D
+sheared hexahedra (`-mesh hex`, default) or on 3D gmsh tetrahedra
+(`-mesh tet`).
 
 Origin: this work.
 
@@ -68,6 +70,15 @@ interface faces there; the verifier stops if it is missing or has faces.
 `alpha` in `system/blockMeshDict` and `geometryCoeffs.alpha` in
 `constant/electroProperties` must agree.
 
+`-mesh tet` meshes the same three zones with gmsh Delaunay tetrahedra of size
+`1/N` (`slab.geo.template`, copied to `local/slab.geo`) in slab coordinates
+`(s, tau, z)`, periodic in `tau` and in `z` (thickness 0.2), then rotates the
+mesh by `geometryCoeffs.alpha` about `z` (`transformPoints`), turns the
+periodic surfaces into the cyclic pairs `sideA`/`sideB` and `frontA`/`frontB`
+(`system/createPatchDict.tet`) and appends the zero-face `exposed` patch. The
+solution does not depend on `z`, the ionic model runs in 3D, and every
+interface face lies on its plane to round-off.
+
 ### Conductivities
 
 `Gi = R(theta) diag(0.17, 0.019) R(theta)^T (+) 0.019`,
@@ -105,13 +116,15 @@ Every option writes a file in `local/`, which the dictionaries include;
 | option | effect | default |
 |---|---|---|
 | `parallel` | `decomposePar`, parallel `cardiacFoam`, `reconstructPar` | serial |
-| `-N n` | cells per unit length in `s` and per period in `tau`; a positive multiple of 10 | 10 |
+| `-mesh hex\|tet` | sheared blockMesh parallelepipeds or gmsh tetrahedra | hex |
+| `-N n` | hex: cells per unit length in `s` and per period in `tau`, a positive multiple of 10; tet: element size `1/n` | 10 |
+| `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
 | `-endTime x` | end time | 0.2 |
 | `-elliptic` | one step of 1e-9 s from the exact fields (overrides `-dt`, `-endTime`) | off |
 | `-config 0\|A\|AI\|ATI\|ATBI` | interface configuration (below) | ATBI |
 | `-solution affine\|levelSet` | G0 or G1 | levelSet |
-| `-shear c` | heart and inner-bath shear both `c`; `-shear 0` is the orthogonal slab; applied before `-shearHeart` and `-shearBath`, whatever the order | 0.6 / -0.4 |
+| `-shear c` | hex only: heart and inner-bath shear both `c`; `-shear 0` is the orthogonal slab; applied before `-shearHeart` and `-shearBath`, whatever the order | 0.6 / -0.4 |
 | `-shearHeart c` | heart-block shear | 0.6 |
 | `-shearBath c` | inner bath-block shear | -0.4 |
 | `-nOuter n` | PIMPLE `nOuterCorrectors` | 1 |
@@ -135,8 +148,8 @@ adjacent bath (interface faces internal to a rank), rank 1 the other half of
 the heart (interface faces on processor patches) and ranks 2 and 3 one bath
 slab each (ranks without heart cells).
 
-`postProcessing/2D_<N>_cells.dat` holds the error summary (`field L1 L2
-Linf`): `Vm`, `phiI`, `phiE_heart`, `phiE_bath`, `phiE_interfaceBand` (cells
+`postProcessing/<2D|3D>_<hex|tet>_<N>_cells.dat` holds the error summary
+(`field L1 L2 Linf`): `Vm`, `phiI`, `phiE_heart`, `phiE_bath`, `phiE_interfaceBand` (cells
 on either side of an interface face), `phiE_boundaryBand` (cells on
 `outerLow`/`outerHigh`), `u1`, `u2`, `interfaceFlux` (per-face
 extracellular flux through the interface, area-weighted), `interfaceCurrent_1`,
@@ -145,7 +158,9 @@ extracellular flux through the interface, area-weighted), `interfaceCurrent_1`,
 interface cells), `gradJumpAwareTangentialError` (the same for the gradient
 used by the face corrections of the `phiE` operator: jump-aware under
 `conormalHarmonic`, `grad(phiE)` otherwise), `gradHeartTraceError` (heart
-sub-mesh `grad(Vm)` error on the cells of `exposed`) and `outerCurrent`.
+sub-mesh `grad(Vm)` error on the cells of `exposed`) and `outerCurrent`,
+then the bulk, boundary and gradient rows of `Vm`, `phiI` and `phiE` described
+in [Bulk, boundary and gradient rows](../../README.md#bulk-boundary-and-gradient-rows).
 
 Regression (G1, `-N 20`, short end time, parallel with the manual
 decomposition):
@@ -153,6 +168,13 @@ decomposition):
 ```bash
 ./regression/regressionTest.sh
 ```
+
+## Studies
+
+`setup/studies/` holds one study per check, each run in a copy of the case:
+`hexConvergence` (orthogonal and sheared hexahedra), `tetConvergence` (gmsh
+tetrahedra), `patchTest` (G0, hex and tet) and `configurations` (0 to ATBI).
+Each README gives the commands, the ladder and the measured behaviour.
 
 ## G0: three roles
 
