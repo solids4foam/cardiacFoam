@@ -14,8 +14,8 @@ This folder groups the manufactured-solution verification cases by model scope.
 - [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
 - [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
 - [`bathBidomain/insulatedWall`](bathBidomain/insulatedWall/README.md) : 2D anisotropic heart–bath bidomain with a conormally insulated interface
-- [`bathBidomain/transmission/obliqueSlab`](bathBidomain/transmission/obliqueSlab/README.md) : 2D heart–bath bidomain transmission across oblique, skewed interfaces, with a manual G0 patch test and a parallel G1 regression
-- [`bathBidomain/transmission/sphericalShell`](bathBidomain/transmission/sphericalShell/README.md) : 3D heart–bath bidomain transmission across curved interfaces on gmsh tetrahedra, with Neumann or Dirichlet outer data; convergence studies are manual runs
+- [`bathBidomain/obliqueSlab`](bathBidomain/obliqueSlab/README.md) : 2D heart–bath bidomain transmission across oblique, skewed interfaces, with a manual G0 patch test and a parallel G1 regression
+- [`bathBidomain/sphericalShell`](bathBidomain/sphericalShell/README.md) : 3D heart–bath bidomain transmission across curved interfaces on gmsh tetrahedra, with Neumann or Dirichlet outer data; convergence studies are manual runs
 
 ## Naming Pattern
 

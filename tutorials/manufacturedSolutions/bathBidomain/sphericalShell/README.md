@@ -1,4 +1,4 @@
-# bathBidomain/transmission/sphericalShell
+# bathBidomain/sphericalShell
 
 3D heart-in-bath bidomain manufactured solution on a spherical heart shell
 around a bath ball, inside an outer bath box, meshed with gmsh tetrahedra:
@@ -26,7 +26,7 @@ interface construction and the error rows of
 cannot show: tetrahedral cells, interfaces whose normal takes every direction,
 interface faces that only approximate the analytic spheres, fibres at every
 angle to the interface normal, and a pure-Neumann outer boundary as in the
-torso of [electroHeartBath](../../../../idealizedHeart/electroHeartBath/README.md).
+torso of [electroHeartBath](../../../idealizedHeart/electroHeartBath/README.md).
 
 ### Stack
 

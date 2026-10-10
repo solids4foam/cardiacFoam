@@ -1,4 +1,4 @@
-# bathBidomain/transmission/obliqueSlab
+# bathBidomain/obliqueSlab
 
 2D heart-in-bath bidomain manufactured solution on a slab of myocardium between
 two bath slabs, with planar heart/bath interfaces oblique to the mesh axes,
