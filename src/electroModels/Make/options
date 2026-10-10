@@ -57,6 +57,7 @@ EXE_INC = \
     -IelectroCouplers/pvjCoupler/reactionDiffusion \
     -Icore \
     -Icore/verificationModels \
+    -I../numericsModels/lnInclude \
     -I../ionicModels/lnInclude \
     -I../genericWriter/lnInclude \
     -I../activeTensionModels/lnInclude \
@@ -72,6 +73,7 @@ EXE_INC = \
 LIB_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     $(VERSION_SPECIFIC_LIBS) \
+    -lnumericsModels \
     -lionicModels \
     -lgenericWriter \
     -lactiveTensionModels \

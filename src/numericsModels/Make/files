@@ -1,0 +1,6 @@
+sealedWall/insulatedFaceConductivity.C
+sealedWall/conormalZeroFluxFvPatchScalarField.C
+interface/exposedPhiETrace.C
+interface/interfaceGradient.C
+
+LIB = $(FOAM_USER_LIBBIN)/libnumericsModels

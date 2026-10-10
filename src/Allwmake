@@ -25,6 +25,7 @@ wmake lnInclude couplingModels
 wmake $targetType libso genericWriter
 wmake $targetType libso ionicModels
 wmake $targetType libso activeTensionModels
+wmake $targetType libso numericsModels
 wmake $targetType libso electroModels
 wmake $targetType libso verificationModels
 
