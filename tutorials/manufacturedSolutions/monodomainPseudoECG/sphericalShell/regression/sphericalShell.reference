@@ -1,0 +1,9 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+summary  cellsPerDirection  12    0
+summary  finalTime          0.02  1e-12
+error    Vm             L2    0.000265440592  2.65e-10
+error    Vm             Linf  0.00178475445   1.78e-09
+error    Vm_boundary    L2    0.000207729301  2.08e-10
+error    u1             L2    8.83602132e-06  8.84e-12
+error    u2             L2    5.62579511e-06  5.63e-12
