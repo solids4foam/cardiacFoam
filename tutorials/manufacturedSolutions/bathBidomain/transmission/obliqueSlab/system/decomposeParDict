@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    object          decomposeParDict;
+}
+
+numberOfSubdomains 4;
+
+// constant/cellDecomposition is written by setManufacturedFields: two heart
+// domains, one domain per bath slab, and part of the interface bath cells of
+// heart domain 0 moved into domain 0.
+method          manual;
+
+manualCoeffs
+{
+    dataFile        "cellDecomposition";
+}
+
+#includeIfPresent "<case>/local/decomposition"
+
+
+// ************************************************************************* //
