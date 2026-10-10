@@ -12,6 +12,7 @@ bidomainVerification/manufacturedFDABidomainVerifier.C
 bidomainVerification/manufacturedUnequalConormalBidomainVerifier.C
 bathBidomainVerification/manufacturedFDABathBidomainVerifier.C
 bathBidomainVerification/manufacturedConormalBathBidomainVerifier.C
+bathBidomainVerification/manufacturedTransmissionBathBidomainVerifier.C
 
 
 LIB = $(FOAM_USER_LIBBIN)/libverificationModels

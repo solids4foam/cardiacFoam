@@ -28,7 +28,7 @@ input. Five of the six live in `electroModels/core/verificationModels/`; only
 
 | Abstract base | Defined in | Concrete verifiers |
 |---|---|---|
-| `electroVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedFDAMonodomainVerifier`, `manufacturedAnisotropicMonodomainVerifier`, `manufacturedFDABidomainVerifier`, `manufacturedFDABathBidomainVerifier` |
+| `electroVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedFDAMonodomainVerifier`, `manufacturedAnisotropicMonodomainVerifier`, `manufacturedFDABidomainVerifier`, `manufacturedFDABathBidomainVerifier`, `manufacturedTransmissionBathBidomainVerifier` |
 | `eikonalVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedEikonalVerifier` |
 | `ecgVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier` |
 | `couplingVerificationModel` | `electroModels/core/verificationModels/` | `coupled1D3DMonodomainVerifier` |
@@ -37,7 +37,8 @@ input. Five of the six live in `electroModels/core/verificationModels/`; only
 
 `electroVerificationModel` is the myocardium-side base: it provides
 verification hooks that monodomain/bidomain spatial workflows call before or
-after the main solve. `ecgVerificationModel` is built around an upstream
+after the main solve, and the hooks for the global extracellular-potential
+equation: source, boundary data, compatibility projection, and interface flux. `ecgVerificationModel` is built around an upstream
 `electroStateProvider`. `couplingVerificationModel` covers bidirectional or
 unidirectional coupled workflows. `electromechanicalVerificationModel` adds
 `configured(dict)`, reporting whether a verification block is present.
@@ -51,6 +52,7 @@ concrete verifiers — sit beside each family's verifiers:
 - `monodomainVerification/manufacturedAnisotropicMonodomainReference.H`
 - `bidomainVerification/manufacturedFDABidomainReference.H`
 - `bathBidomainVerification/manufacturedFDABathBidomainReference.H`
+- `bathBidomainVerification/manufacturedTransmissionBathBidomainReference.H`
 - `eikonalVerification/manufacturedEikonalReference.H`
 - `electromechanicsVerification/manufacturedElectromechanicsReference.H`
 
