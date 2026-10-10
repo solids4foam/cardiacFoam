@@ -73,6 +73,14 @@ bathTorsoECGParallel                   bath  bathTorsoECG                       
 monodomainPseudoECGRecomputed          slab  monodomainPseudoECG                    pass  post=recomputePseudoECG
 bathBidomainInterfaceMetrics           bath  bathBidomain                           pass  post=bathBidomainInterfaceMetrics  skip=v2312
 
+# ---- Restart from the latest time (startFrom latestTime) -------------------
+# The run is continued to twice its end time from the fields it wrote; a
+# cellZone myocardium reads them back from base-mesh-sized files
+monodomainExplicitRestart              slab  monodomainExplicit                     pass  post=restartLatestTime
+monodomainCellZoneRestart              slab  monodomainCellZone                     pass  post=restartLatestTime  skip=v2312
+bathBidomainRestart                    bath  bathBidomain                           pass  post=restartLatestTime  skip=v2312
+bathBidomainRestartParallel            bath  bathBidomain                           pass  np=2  post=restartLatestTime  skip=v2312
+
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
 missingMyocardiumCoeffs                slab  monodomainExplicit          fail:bidomainSolverCoeffs     myocardiumSolver=bidomainSolver
@@ -96,5 +104,5 @@ torsoECGWithMonodomain                 slab  monodomainPseudoECG         fail:to
 torsoECGWithoutBath                    slab  bidomainPseudoECG           fail:torsoECG                 bidomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
 bathWithoutCellZone                    bath  bathBidomain                fail:subset~cell~map          bidomainSolverCoeffs/cellZone!
 unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
-unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension
 bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ  skip=v2312
+unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension

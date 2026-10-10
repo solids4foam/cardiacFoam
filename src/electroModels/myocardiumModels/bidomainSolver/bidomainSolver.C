@@ -53,7 +53,7 @@ bidomainSolver::bidomainSolver
             mesh,
             electroProperties.found("bathPotentialDomain")
           ? IOobject::NO_READ
-          : IOobject::READ_IF_PRESENT,
+          : myocardiumFieldReadOption(meshSubsetPtr),
             IOobject::AUTO_WRITE
         ),
         mesh,
@@ -71,7 +71,7 @@ bidomainSolver::bidomainSolver
             "grad(" + phiE_.name() + ")",
             mesh.time().timeName(),
             mesh,
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr),
             IOobject::NO_WRITE
         ),
         mesh,
@@ -84,7 +84,7 @@ bidomainSolver::bidomainSolver
             "phiI",
             mesh.time().timeName(),
             mesh,
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr),
             IOobject::AUTO_WRITE
         ),
         mesh,
@@ -169,6 +169,17 @@ bidomainSolver::bidomainSolver
             << exit(FatalIOError);
     }
     setConormalWallConductivity(phiE_, Ge_.name(), word::null);
+
+    if (meshSubsetPtr_ && meshSubsetPtr_->hasSubMesh())
+    {
+        const labelUList& cellMap = meshSubsetPtr_->cellMap();
+
+        if (!electroProperties.found("bathPotentialDomain"))
+        {
+            readMappedCellField(phiE_, supportMesh, cellMap);
+        }
+        readMappedCellField(phiI_, supportMesh, cellMap);
+    }
 }
 
 

@@ -1,0 +1,39 @@
+#!/bin/bash
+# Restart the run from its latest time to twice its end time. The first
+# solved time must lie after the restart time. A decomposed run restarts in
+# parallel from its processor directories and is then reconstructed.
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+if [ -d processor0 ]
+then
+    restartTime="$(foamListTimes -processor -latestTime | tail -1)"
+    solver="mpirun -n $(getNumberOfProcessors) cardiacFoam -parallel"
+else
+    restartTime="$(foamListTimes -latestTime | tail -1)"
+    solver="cardiacFoam"
+fi
+
+endTime="$(foamDictionary system/controlDict -entry endTime -value)"
+foamDictionary system/controlDict -entry startFrom -set latestTime > /dev/null
+foamDictionary system/controlDict -entry endTime \
+    -set "$(awk -v t="$endTime" 'BEGIN { printf "%.8g", 2*t }')" > /dev/null
+
+if ! $solver < /dev/null > log.restartLatestTime 2>&1
+then
+    tail -30 log.restartLatestTime
+    exit 1
+fi
+
+firstTime="$(awk '/^Time = /{ print $3; exit }' log.restartLatestTime)"
+if ! awk -v a="$firstTime" -v b="$restartTime" 'BEGIN { exit !(a > b) }'
+then
+    echo "First solved time ${firstTime} is not after the restart time ${restartTime}"
+    exit 1
+fi
+
+if [ -d processor0 ]
+then
+    runApplication -s restart reconstructPar -newTimes || exit 1
+    runApplication -s restart redistributeRestartState -latestTime || exit 1
+fi

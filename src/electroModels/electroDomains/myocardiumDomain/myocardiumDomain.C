@@ -208,7 +208,7 @@ myocardiumDomain::myocardiumDomain
             "Vm",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -226,7 +226,7 @@ myocardiumDomain::myocardiumDomain
             "grad(" + Vm_.name() + ")",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::NO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -239,7 +239,7 @@ myocardiumDomain::myocardiumDomain
             "externalStimulusCurrent",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -340,7 +340,7 @@ myocardiumDomain::myocardiumDomain
             "activationTime",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -386,6 +386,17 @@ myocardiumDomain::myocardiumDomain
       ? diffusionSolverPtr_->phiEPtr()->name()
       : word::null
     );
+
+    if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+    {
+        const labelUList& cellMap = meshSubsetPtr_->cellMap();
+
+        readMappedCellField(Vm_, supportMesh_, cellMap);
+        readMappedCellField(sourceField_, supportMesh_, cellMap);
+        readMappedCellField(activationTime_, supportMesh_, cellMap);
+
+        VmPrev_ = Vm_;
+    }
 
     if (timeCouplingScheme_ != "godunov" && timeCouplingScheme_ != "sbdf2")
     {
@@ -936,6 +947,12 @@ void myocardiumDomain::write()
         const labelUList& cellMap = meshSubsetPtr_->cellMap();
 
         writeMappedCellField(Vm_, supportMesh_, cellMap);
+
+        if (Vm_.nOldTimes())
+        {
+            writeMappedCellField(Vm_.oldTime(), supportMesh_, cellMap);
+        }
+
         writeMappedCellField(sourceField_, supportMesh_, cellMap);
         writeMappedCellField(implicitSourceCoeff_, supportMesh_, cellMap);
         writeMappedCellField(Iion_, supportMesh_, cellMap);

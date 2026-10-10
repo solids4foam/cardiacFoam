@@ -130,6 +130,21 @@ public:
     );
 };
 
+
+//- NO_READ on a cellZone sub-mesh, otherwise READ_IF_PRESENT
+IOobject::readOption myocardiumFieldReadOption
+(
+    const fvMeshSubset* meshSubsetPtr
+);
+
+//- Gather a sub-mesh field (and its old time) from support-mesh files; false if none
+bool readMappedCellField
+(
+    volScalarField& subField,
+    const fvMesh& supportMesh,
+    const labelUList& cellMap
+);
+
 } // End namespace Foam
 
 #endif

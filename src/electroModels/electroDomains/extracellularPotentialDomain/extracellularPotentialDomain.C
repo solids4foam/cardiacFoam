@@ -853,7 +853,11 @@ void extracellularPotentialDomain::assembleConductivities()
         IOobject
         (
             bathConductivityFieldName_,
-            baseMesh_.time().timeName(),
+            baseMesh_.time().findInstance
+            (
+                baseMesh_.dbDir(),
+                bathConductivityFieldName_
+            ),
             baseMesh_,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
