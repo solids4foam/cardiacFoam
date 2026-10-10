@@ -1,0 +1,8 @@
+local/
+0/
+constant/polyMesh/
+constant/cellDecomposition
+processor*/
+postProcessing/
+log.*
+[0-9]*/
