@@ -107,6 +107,46 @@ public:
         (void)evaluationTime;
     }
 
+    //- Add the manufactured source of the global phiE equation, L(phiE) == rhs, on the base mesh
+    virtual void addManufacturedPhiESource
+    (
+        volScalarField& rhs,
+        const scalar evaluationTime
+    ) const
+    {
+        (void)rhs;
+        (void)evaluationTime;
+    }
+
+    //- Set fixedValue values and fixedGradient gradients on the patches of boundaryDataPatches(); a gradient g gives n . sigmaTotal(owner cell) . n * g = prescribed flux
+    virtual void applyPhiEBoundaryData
+    (
+        volScalarField& phiE,
+        const scalar evaluationTime
+    ) const
+    {
+        (void)phiE;
+        (void)evaluationTime;
+    }
+
+    //- Extracellular-potential patches set by applyPhiEBoundaryData.
+    virtual wordList boundaryDataPatches() const
+    {
+        return wordList();
+    }
+
+    //- Remove the discrete imbalance of a pure-Neumann phiE system before the reference cell is pinned
+    virtual bool requiresPhiECompatibilityProjection() const
+    {
+        return false;
+    }
+
+    //- Store the face flux balanced by the phiE equation on heart-bath faces in phiEInterfaceFlux (A, owner->neighbour, extracellular part)
+    virtual bool requiresInterfaceFluxDiagnostic() const
+    {
+        return false;
+    }
+
     virtual void bindBidomainField
     (
         volScalarField& phiE,

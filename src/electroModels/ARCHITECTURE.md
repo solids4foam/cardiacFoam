@@ -142,6 +142,12 @@ domain. Implements `electroStateDomain`.
 - Rejects a start-time `phiE` file whose patch types differ from the ground
   and surface-current patches.
 
+- Applies a bound verification model's `phiE` source, boundary data, and
+  compatibility projection to the global equation.
+
+- Stores the heart-bath interface flux as `phiEInterfaceFlux` for a
+  verification model that requests it.
+
 - Writes `phiE`, `sigmaTotal`, and `VmGlobal` through the normal electro-model
   output path at OpenFOAM output times.
 
