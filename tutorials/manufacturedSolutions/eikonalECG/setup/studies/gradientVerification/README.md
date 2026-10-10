@@ -10,15 +10,15 @@ Its one existing case, `leastSquares_axis_40_errorField`, supplies the
 ## Purpose
 
 This study exercises the gradient reconstruction operator in isolation
-(`gradientReconstructionOrder`, `applications/test/gradientReconstructionOrder/`)
 against an exact analytic field on the tet mesh, comparing `gaussLinear` vs
-`leastSquares` across `N = 10, 20, 40, 80`.
+`leastSquares` across `N = 10, 20, 40, 80`. Every run's eikonal verifier
+reports it as the `gradReconActivationTime` rows (exact cell and boundary-face
+values through the configured scheme, bulk and boundary parts).
 
-Each case runs the full mesh -> solve pipeline, with
-`gradientReconstructionOrder` appended as a workflow_dag step after the solve
-(`gradient_reconstruction=True`). Its stdout is captured under
-`postProcessing/workflow_logs/` and archived by the sweep's snapshot/diff
-collector.
+The spec also appends a `gradient_reconstruction=True` workflow_dag step after
+the solve, which runs a `gradientReconstructionOrder` executable that this
+repository does not build; its stdout would be captured under
+`postProcessing/workflow_logs/`.
 
 `analyse_error_localisation.py` (the single-case, retained-time-directory
 spatial-correlation deep dive over the SOLVED field's cellwise error -- not

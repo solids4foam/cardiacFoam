@@ -7,9 +7,11 @@ experiment (omnidriver's `verification_experiments.json`):
 isolated `leastSquares` gradient reconstruction on the tet mesh across
 `N = 10, 20, 40, 80`.
 
-`sweep_gradient_tet.json` drives `gradientReconstructionOrder` as a
-`gradient_reconstruction=True` workflow_dag step, for the `leastSquares`
-gradient scheme only.
+`sweep_gradient_tet.json` requests a `gradient_reconstruction=True`
+workflow_dag step, for the `leastSquares` gradient scheme only; that step runs a
+`gradientReconstructionOrder` executable that this repository does not build.
+The same isolated reconstruction error is the verifier's
+`gradReconActivationTime` rows of every run.
 
 ## Execution
 

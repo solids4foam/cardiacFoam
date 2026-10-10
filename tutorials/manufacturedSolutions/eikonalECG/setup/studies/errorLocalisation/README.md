@@ -9,8 +9,8 @@ bulk/boundary error decomposition across the tet `N` ladder
 `eikonalSolverCoeffs.verificationModel.writeErrorField` enabled to get the
 `L2_bulk`/`L2_boundary`/`L2_total` trend the paper reports, using the same
 bulk/boundary split convention (`manufacturedEikonalVerifier.C`'s
-`computeBoundaryBulkNorms`) as the standalone `gradientReconstructionOrder`
-utility's own decomposition (see `../gradientVerification/`).
+`computeBoundaryBulkNorms`) as the verifier's `gradReconActivationTime_bulk` and
+`gradReconActivationTime_boundary` rows.
 
 The workflow also writes the cellwise `activationTimeError` field, mesh-quality
 fields (`checkMesh -writeAllFields`), and cell centres after the solve. These

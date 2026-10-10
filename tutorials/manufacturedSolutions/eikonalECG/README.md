@@ -75,12 +75,13 @@ error from its interior (bulk) error.
 
 #### Gradient-Operator Studies
 
-`gradientReconstructionOrder` (`applications/test/gradientReconstructionOrder/`)
-exercises the gradient reconstruction operator alone against an exact
-analytic field. It is driven as a `gradient_reconstruction=True` workflow_dag
-step, appended after the case's solve (see `manufactured_eikonal_ecg.py`'s
-`_workflow_dag_for`) -- a real omnidriver sweep, not bash, the same as every
-other study here. `setup/studies/gradientVerification/` covers the full
+The gradient reconstruction operator alone, applied to the exact activation
+time with exact boundary-face values, is reported by the eikonal verifier as
+the `gradReconActivationTime` rows, beside the solved-field `gradActivationTime`
+rows (see [Bulk, boundary and gradient rows](../README.md#bulk-boundary-and-gradient-rows)).
+The specs below also request a `gradient_reconstruction=True` workflow_dag step
+(see `manufactured_eikonal_ecg.py`'s `_workflow_dag_for`), which runs a
+`gradientReconstructionOrder` executable that this repository does not build. `setup/studies/gradientVerification/` covers the full
 gaussLinear-vs-leastSquares comparison; `setup/studies/gradient_reconstruction/`
 restricts that same matrix to the registered `eikonal_gradient_tet`
 experiment's leastSquares-only subset. See each folder's `README.md` for the
