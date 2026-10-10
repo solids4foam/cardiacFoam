@@ -51,7 +51,9 @@ bidomainSolver::bidomainSolver
             "phiE",
             mesh.time().timeName(),
             mesh,
-            IOobject::READ_IF_PRESENT,
+            electroProperties.found("bathPotentialDomain")
+          ? IOobject::NO_READ
+          : IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
         mesh,

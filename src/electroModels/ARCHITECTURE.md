@@ -139,6 +139,9 @@ domain. Implements `electroStateDomain`.
 
 - Exposes `phiE` to `torsoECG`-class ECG solvers for electrode sampling.
 
+- Rejects a start-time `phiE` file whose patch types differ from the ground
+  and surface-current patches.
+
 - Writes `phiE`, `sigmaTotal`, and `VmGlobal` through the normal electro-model
   output path at OpenFOAM output times.
 

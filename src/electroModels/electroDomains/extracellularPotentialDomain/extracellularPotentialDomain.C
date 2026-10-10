@@ -25,6 +25,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "PstreamReduceOps.H"
 #include "dimVoltage.H"
+#include "OStringStream.H"
 #include "fixedGradientFvPatchFields.H"
 #include "fixedValueFvPatchFields.H"
 #include "zeroGradientFvPatchFields.H"
@@ -520,6 +521,40 @@ extracellularPotentialDomain::extracellularPotentialDomain
         )
     );
     applyGroundPatchValues(phiEPtr_(), dict);
+
+    {
+        const wordList expectedTypes(potentialPatchTypes(baseMesh_, dict));
+        const auto& bf = phiEPtr_().boundaryField();
+        OStringStream mismatches;
+        label nMismatched = 0;
+
+        forAll(bf, patchI)
+        {
+            const polyPatch& pp = baseMesh_.boundaryMesh()[patchI];
+            if (polyPatch::constraintType(pp.type()))
+            {
+                continue;
+            }
+            if (bf[patchI].type() != expectedTypes[patchI])
+            {
+                mismatches
+                    << ' ' << pp.name() << " (" << bf[patchI].type()
+                    << ", expected " << expectedTypes[patchI] << ')';
+                ++nMismatched;
+            }
+        }
+
+        if (nMismatched)
+        {
+            FatalErrorInFunction
+                << "The global phiE patch types differ from those set by "
+                << "groundPatches, surfaceCurrentPatches and the zeroGradient "
+                << "default:" << mismatches.str().c_str()
+                << ". A phiE file in the start time directory sets them; "
+                << "remove it or give these patches the expected types."
+                << exit(FatalError);
+        }
+    }
 
     {
         const auto& bf = phiEPtr_().boundaryField();
