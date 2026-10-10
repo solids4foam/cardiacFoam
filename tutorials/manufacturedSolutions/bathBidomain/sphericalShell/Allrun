@@ -271,7 +271,13 @@ fi
 # Mesh: gmsh tetrahedra, cellZones from the physical volumes, and the empty
 # patch that receives the exposed heart faces of the myocardium sub-mesh
 lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
-runApplication gmsh -3 shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+cp shell.geo.template local/shell.geo
+runApplication gmsh -3 local/shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+if grep -q "Error" log.gmsh
+then
+    echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+    exit 1
+fi
 runApplication gmshToFoam local/shell.msh
 
 boundary=constant/polyMesh/boundary

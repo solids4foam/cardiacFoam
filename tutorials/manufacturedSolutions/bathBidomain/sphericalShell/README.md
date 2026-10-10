@@ -51,7 +51,7 @@ torso of [electroHeartBath](../../../idealizedHeart/electroHeartBath/README.md).
 
 ### Geometry and mesh
 
-`shell.geo`: the box `[-1.5, 1.5]^3` cut by the spheres `|x| = r1 = 0.5` and
+`shell.geo.template` (copied to `local/shell.geo` by Allrun): the box `[-1.5, 1.5]^3` cut by the spheres `|x| = r1 = 0.5` and
 `|x| = r2 = 1`; cellZones `bloodPool` (`|x| < r1`), `myocardium` and `bath`
 from the gmsh physical volumes, the six box faces in the patch `outer`.
 Delaunay tetrahedra of size `1/N`, a fixed random seed and one thread, so a
