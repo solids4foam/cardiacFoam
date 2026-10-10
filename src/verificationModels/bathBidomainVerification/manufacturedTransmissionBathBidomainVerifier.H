@@ -19,19 +19,20 @@ Class
     manufacturedTransmissionBathBidomainVerifier
 
 Description
-    Manufactured transmission verifier for the heart-in-bath bidomain model
-    on the oblique slab: a myocardium slab between two bath slabs, with
-    planar heart-bath interfaces oblique to the mesh axes, rotated
-    anisotropic heart conductivities and spatially varying bath
-    conductivities.
+    Manufactured transmission verifier for the heart-in-bath bidomain model,
+    with rotated anisotropic heart conductivities and spatially varying bath
+    conductivities, on one of two geometries (transmissionManufacturedSolution):
+    obliqueSlab, a myocardium slab between two bath slabs with planar
+    interfaces oblique to the mesh axes; sphericalShell, a myocardium shell
+    between an inner bath ball and an outer bath.
 
-    The exact fields, conductivities and sources come from
-    manufacturedTransmissionBathBidomainReference.H. The verifier drives the
-    myocardium source, the global extracellular-potential source and the
-    Dirichlet data of the outer bath patches, checks the mesh zones, the
-    exposed-face patch and the cell conductivities against the manufactured
-    solution, and reports field, interface-flux, interface-current,
-    gradient and outer-current errors.
+    The verifier drives the myocardium source, the global
+    extracellular-potential source and the Dirichlet or Neumann data of the
+    outer bath patches, checks the mesh zones, the exposed-face patch and the
+    cell conductivities against the manufactured solution, and reports
+    field, interface-flux, interface-current, gradient and outer-current
+    errors. Without a Dirichlet patch the phiE and phiI errors are taken
+    after removing their volume-weighted mean over the heart-and-bath mesh.
 
     The face conductivity the solver assembles on the heart-bath interface
     is internal to the solver, so its positivity is not checked here.
@@ -44,7 +45,7 @@ Author
 #define manufacturedTransmissionBathBidomainVerifier_H
 
 #include "electroVerificationModel.H"
-#include "manufacturedTransmissionBathBidomainReference.H"
+#include "transmissionManufacturedSolution.H"
 #include "overrideTypeName.H"
 
 namespace Foam
@@ -57,10 +58,11 @@ class manufacturedTransmissionBathBidomainVerifier
     volScalarField* phiEPtr_;
     const labelUList* phiEHeartCellMapPtr_;
     mutable bool errorsReported_;
-    transmissionMMS::Params params_;
+    autoPtr<transmissionManufacturedSolution> solution_;
     word solutionName_;
     label nPerDirection_;
     wordList dirichletPatches_;
+    wordList neumannPatches_;
     scalar beta_;
     scalar capacitanceRatio_;
     bool betaInitialised_;
@@ -69,18 +71,11 @@ class manufacturedTransmissionBathBidomainVerifier
 
     const dictionary& verificationDict() const;
 
-    //- Exact-solution parameters from a verification dictionary.
-    static transmissionMMS::Params readParams(const dictionary& dict);
+    //- Zone index of every cell from the cellZones named by the geometry
+    labelList buildZones(const fvMesh& mesh) const;
 
-    //- Check the reader against the reference defaults and samples
-    static void selfTest();
-
-    //- Zone index of every cell from the bathLow, myocardium and bathHigh cellZones
-    static labelList buildZones
-    (
-        const fvMesh& mesh,
-        const transmissionMMS::Params& p
-    );
+    //- The Dirichlet and the Neumann patches
+    wordList outerPatches() const;
 
     static scalar ionicConstant(const ionicModel& model, const word& name);
 

@@ -20,10 +20,10 @@ License
 #include "manufacturedTransmissionBathBidomainVerifier.H"
 
 #include "FixedList.H"
-#include "IStringStream.H"
 #include "OFstream.H"
 #include "OSspecific.H"
 #include "dimVoltage.H"
+#include "fixedGradientFvPatchFields.H"
 #include "fixedValueFvPatchFields.H"
 #include "fvcGrad.H"
 #include "ionicModel.H"
@@ -49,9 +49,6 @@ addToRunTimeSelectionTable
 
 namespace
 {
-
-//- Cell-zone names indexed by transmissionMMS::Zone.
-const word zoneNames[3] = {"bathLow", "myocardium", "bathHigh"};
 
 const word exposedPatchName("exposed");
 
@@ -123,49 +120,6 @@ scalar relativeError(const tensor& computed, const tensor& exact)
 }
 
 
-scalar sampleValue
-(
-    const transmissionMMS::SelfTestSample& s,
-    const transmissionMMS::Params& p
-)
-{
-    const point pt(s.x, s.y, s.z);
-    const label c = s.component;
-
-    switch (s.fn)
-    {
-        case 0: return transmissionMMS::Vm(pt, s.t, p);
-        case 1: return transmissionMMS::phiE(pt, s.t, s.zone, p);
-        case 2: return transmissionMMS::phiI(pt, s.t, p);
-        case 3:
-            return transmissionMMS::gradPhiE(pt, s.t, s.zone, p).component(c);
-        case 4:
-            return transmissionMMS::gradVm(pt, s.t, p).component(c);
-        case 5: return transmissionMMS::u1(pt, s.t, p);
-        case 6: return transmissionMMS::u2(pt, s.t, p);
-        case 7: return transmissionMMS::Gi(pt, p).component(c);
-        case 8: return transmissionMMS::Ge(pt, p).component(c);
-        case 9: return transmissionMMS::sigmaB(pt, s.zone, p);
-        case 10:
-            return transmissionMMS::divGiGradPhiI(pt, s.t, p);
-        case 11:
-            return transmissionMMS::phiESource(pt, s.t, s.zone, p);
-        case 12:
-        {
-            vector n(Zero);
-            n.component(c) = 1;
-            return transmissionMMS::interfaceFlux(pt, n, s.t, p);
-        }
-        case 13: return transmissionMMS::G(pt, p);
-    }
-
-    FatalErrorInFunction
-        << "Self-test sample function index " << s.fn << " is not known."
-        << exit(FatalError);
-
-    return 0;
-}
-
 } // End anonymous namespace
 
 
@@ -178,220 +132,10 @@ manufacturedTransmissionBathBidomainVerifier::verificationDict() const
 }
 
 
-transmissionMMS::Params
-manufacturedTransmissionBathBidomainVerifier::readParams
-(
-    const dictionary& dict
-)
-{
-    transmissionMMS::Params p;
-
-    const word solution(dict.get<word>("solution"));
-    if (solution == "affine")
-    {
-        p.solution = 0;
-    }
-    else if (solution == "levelSet")
-    {
-        p.solution = 1;
-    }
-    else
-    {
-        FatalIOErrorInFunction(dict)
-            << "Unknown solution '" << solution << "'. Valid solutions: "
-            << "(affine levelSet)."
-            << exit(FatalIOError);
-    }
-
-    const word geometry(dict.get<word>("geometry"));
-    if (geometry != "obliqueSlab")
-    {
-        FatalIOErrorInFunction(dict)
-            << "Unknown geometry '" << geometry << "'. Valid geometries: "
-            << "(obliqueSlab)."
-            << exit(FatalIOError);
-    }
-
-    const dictionary& geom = dict.subDict("geometryCoeffs");
-    p.alpha = degToRad(geom.get<scalar>("alpha"));
-    p.s1 = geom.get<scalar>("s1");
-    p.s2 = geom.get<scalar>("s2");
-    p.period = geom.get<scalar>("period");
-
-    const dictionary& cond = dict.subDict("conductivityCoeffs");
-    const vector gi(cond.get<vector>("gi"));
-    const vector ge(cond.get<vector>("ge"));
-    p.gil = gi.x();
-    p.git = gi.y();
-    p.gin = gi.z();
-    p.gel = ge.x();
-    p.get = ge.y();
-    p.gen = ge.z();
-    p.theta0 = degToRad(cond.get<scalar>("theta0"));
-    p.theta1 = degToRad(cond.get<scalar>("theta1"));
-    p.sigma0Low = cond.get<scalar>("sigma0Low");
-    p.sigma0High = cond.get<scalar>("sigma0High");
-    p.sigmaEps = cond.get<scalar>("sigmaEps");
-
-    const dictionary& sol = dict.subDict("solutionCoeffs");
-    const FixedList<scalar, 4> f(sol.get<FixedList<scalar, 4>>("f"));
-    const FixedList<scalar, 3> h(sol.get<FixedList<scalar, 3>>("h"));
-    forAll(f, i)
-    {
-        p.fA[i] = f[i];
-    }
-    forAll(h, i)
-    {
-        p.hA[i] = h[i];
-    }
-
-    p.cmAmplitude = 0;
-    p.cmOmega = 0;
-    if (const dictionary* cm = sol.findDict("commonMode"))
-    {
-        p.cmAmplitude = cm->getOrDefault<scalar>("amplitude", 0);
-        p.cmOmega = cm->getOrDefault<scalar>("omega", 0);
-    }
-
-    const dictionary& affine = sol.subDict("affine");
-    p.P0 = affine.get<scalar>("P0");
-    p.P1 = affine.get<scalar>("P1");
-    p.C = affine.get<scalar>("C");
-
-    if (p.solution == 0 && p.cmAmplitude != 0)
-    {
-        FatalIOErrorInFunction(dict)
-            << "The affine solution has no common mode, but "
-            << "solutionCoeffs.commonMode.amplitude is " << p.cmAmplitude
-            << ". Set it to 0 or use the levelSet solution."
-            << exit(FatalIOError);
-    }
-
-    return p;
-}
-
-
-void manufacturedTransmissionBathBidomainVerifier::selfTest()
-{
-    IStringStream defaultsStream
-    (
-        "solution levelSet;"
-        "geometry obliqueSlab;"
-        "geometryCoeffs { alpha 25; s1 0.5; s2 1.5; period 1; }"
-        "conductivityCoeffs"
-        "{"
-        "    gi (0.17 0.019 0.019); ge (0.62 0.12 0.12);"
-        "    theta0 -20; theta1 90;"
-        "    sigma0Low 0.3; sigma0High 0.45; sigmaEps 0.2;"
-        "}"
-        "solutionCoeffs"
-        "{"
-        "    f (0.3 0.2 0.4 0.15); h (-0.2 0.3 0.1);"
-        "    commonMode { amplitude 0; omega 0; }"
-        "    affine { P0 0.1; P1 0.4; C 0.3; }"
-        "}"
-    );
-    const dictionary defaultsDict(defaultsStream);
-
-    const transmissionMMS::Params read = readParams(defaultsDict);
-    const transmissionMMS::Params ref = transmissionMMS::defaultParams();
-
-    wordList differing;
-    auto compare = [&differing](const char* name, scalar a, scalar b)
-    {
-        if (a != b)
-        {
-            differing.append(word(name));
-        }
-    };
-
-    compare("alpha", read.alpha, ref.alpha);
-    compare("s1", read.s1, ref.s1);
-    compare("s2", read.s2, ref.s2);
-    compare("period", read.period, ref.period);
-    compare("gil", read.gil, ref.gil);
-    compare("git", read.git, ref.git);
-    compare("gin", read.gin, ref.gin);
-    compare("gel", read.gel, ref.gel);
-    compare("get", read.get, ref.get);
-    compare("gen", read.gen, ref.gen);
-    compare("theta0", read.theta0, ref.theta0);
-    compare("theta1", read.theta1, ref.theta1);
-    compare("sigma0Low", read.sigma0Low, ref.sigma0Low);
-    compare("sigma0High", read.sigma0High, ref.sigma0High);
-    compare("sigmaEps", read.sigmaEps, ref.sigmaEps);
-    for (label i = 0; i < 4; ++i)
-    {
-        compare("fA", read.fA[i], ref.fA[i]);
-    }
-    for (label i = 0; i < 3; ++i)
-    {
-        compare("hA", read.hA[i], ref.hA[i]);
-    }
-    compare("cmAmplitude", read.cmAmplitude, ref.cmAmplitude);
-    compare("cmOmega", read.cmOmega, ref.cmOmega);
-    compare("P0", read.P0, ref.P0);
-    compare("P1", read.P1, ref.P1);
-    compare("C", read.C, ref.C);
-    compare("solution", read.solution, ref.solution);
-
-    if (!differing.empty())
-    {
-        FatalErrorInFunction
-            << "The verification-dictionary reader does not reproduce the "
-            << "reference default parameters; differing fields: "
-            << differing << "."
-            << exit(FatalError);
-    }
-
-    const transmissionMMS::Params paramSets[2] =
-    {
-        transmissionMMS::defaultParams(),
-        transmissionMMS::alternateParams()
-    };
-
-    for (label i = 0; i < transmissionMMS::nSelfTestSamples; ++i)
-    {
-        const transmissionMMS::SelfTestSample& s =
-            transmissionMMS::selfTestSamples[i];
-
-        if (s.param < 0 || s.param > 1)
-        {
-            FatalErrorInFunction
-                << "Self-test sample " << i << " names parameter set "
-                << s.param << "." << exit(FatalError);
-        }
-
-        transmissionMMS::Params pp = paramSets[s.param];
-        pp.solution = s.solution;
-
-        const scalar value = sampleValue(s, pp);
-        const scalar err = mag(value - s.value);
-
-        if (!(err <= 1e-11*max(scalar(1), mag(s.value))))
-        {
-            FatalErrorInFunction
-                << "Transmission MMS self-test sample " << i
-                << " (function " << s.fn << ", parameter set " << s.param
-                << ", solution " << s.solution << ", zone " << s.zone
-                << ", component " << s.component << ", point ("
-                << s.x << ' ' << s.y << ' ' << s.z << "), t " << s.t
-                << ") evaluates to " << value << " against the reference "
-                << s.value << "."
-                << exit(FatalError);
-        }
-    }
-
-    Info<< "transmission MMS self-test: " << transmissionMMS::nSelfTestSamples
-        << " samples OK" << endl;
-}
-
-
 labelList manufacturedTransmissionBathBidomainVerifier::buildZones
 (
-    const fvMesh& mesh,
-    const transmissionMMS::Params& p
-)
+    const fvMesh& mesh
+) const
 {
     labelList zone(mesh.nCells(), -1);
 
@@ -400,7 +144,7 @@ labelList manufacturedTransmissionBathBidomainVerifier::buildZones
 
     for (label z = 0; z < 3; ++z)
     {
-        const label zoneI = mesh.cellZones().findZoneID(zoneNames[z]);
+        const label zoneI = mesh.cellZones().findZoneID(solution_->zoneName(z));
         if (zoneI < 0)
         {
             ++nMissingZones;
@@ -418,18 +162,13 @@ labelList manufacturedTransmissionBathBidomainVerifier::buildZones
     }
 
     label nUnzoned = 0;
-    label nMismatched = 0;
-    const vectorField& C = mesh.C().primitiveField();
+    label nMismatched = solution_->nMisplacedCells(mesh, zone);
 
     forAll(zone, cellI)
     {
         if (zone[cellI] < 0)
         {
             ++nUnzoned;
-        }
-        else if (transmissionMMS::zoneOf(C[cellI], p) != zone[cellI])
-        {
-            ++nMismatched;
         }
     }
 
@@ -442,17 +181,26 @@ labelList manufacturedTransmissionBathBidomainVerifier::buildZones
     {
         FatalErrorInFunction
             << "Mesh '" << mesh.name() << "' does not match the "
-            << "manufactured zones: the cellZones " << zoneNames[0] << ", "
-            << zoneNames[1] << " and " << zoneNames[2]
+            << "manufactured zones: the cellZones " << solution_->zoneName(0)
+            << ", " << solution_->zoneName(1) << " and "
+            << solution_->zoneName(2)
             << " must exist and partition the cells. Missing zones on some "
             << "rank: " << nMissingZones << "; cells in several zones: "
             << nMultiplyZoned << "; cells in no zone: " << nUnzoned
-            << "; cells whose centre lies in another zone: " << nMismatched
-            << "."
+            << "; cells placed outside their zone (" << solution_->geometry()
+            << "): " << nMismatched << "."
             << exit(FatalError);
     }
 
     return zone;
+}
+
+
+wordList manufacturedTransmissionBathBidomainVerifier::outerPatches() const
+{
+    wordList names(dirichletPatches_);
+    names.append(neumannPatches_);
+    return names;
 }
 
 
@@ -501,12 +249,14 @@ void manufacturedTransmissionBathBidomainVerifier::validateConfiguration
             family != "bidomainFDAManufactured"
          && family != "bathBidomainFDAManufactured"
         )
-     || model.geometricDimension() != 2
+     || model.geometricDimension() != solution_->nSolutionD()
     )
     {
         FatalErrorInFunction
-            << typeName << " requires the 2D bidomainFDAManufactured or "
-            << "bathBidomainFDAManufactured ionic model. Received ionic "
+            << typeName << " requires the bidomainFDAManufactured or "
+            << "bathBidomainFDAManufactured ionic model with geometric "
+            << "dimension " << solution_->nSolutionD() << " for the "
+            << solution_->geometry() << " geometry. Received ionic "
             << "model " << model.type() << " with verification family '"
             << family << "' and geometric dimension "
             << model.geometricDimension() << "."
@@ -583,12 +333,14 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
     const fvMesh& phiEMesh = phiEPtr_->mesh();
     const fvMesh& heartMesh = Vm.mesh();
 
-    if (phiEMesh.nSolutionD() != 2)
+    if (phiEMesh.nSolutionD() != solution_->nSolutionD())
     {
         FatalErrorInFunction
-            << typeName << " requires a 2D extracellular-potential mesh; "
-            << "mesh '" << phiEMesh.name() << "' solves in "
-            << phiEMesh.nSolutionD() << " directions."
+            << typeName << " requires a " << solution_->nSolutionD()
+            << "D extracellular-potential mesh for the "
+            << solution_->geometry() << " geometry; mesh '"
+            << phiEMesh.name() << "' solves in " << phiEMesh.nSolutionD()
+            << " directions."
             << exit(FatalError);
     }
 
@@ -642,7 +394,7 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
             relativeError
             (
                 GiField.primitiveField()[cellI],
-                tensor(transmissionMMS::Gi(c, params_))
+                tensor(solution_->Gi(c))
             )
         );
         maxGeErr = max
@@ -651,7 +403,7 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
             relativeError
             (
                 GeField.primitiveField()[cellI],
-                tensor(transmissionMMS::Ge(c, params_))
+                tensor(solution_->Ge(c))
             )
         );
     }
@@ -662,7 +414,7 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
     forAll(baseC, cellI)
     {
         const label z = zoneOfCell_[cellI];
-        if (z != transmissionMMS::myocardium)
+        if (z != transmissionManufacturedSolution::heartZone)
         {
             maxSigmaErr = max
             (
@@ -670,8 +422,7 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
                 relativeError
                 (
                     sigmaTotal.primitiveField()[cellI],
-                    transmissionMMS::sigmaB(baseC[cellI], z, params_)
-                   *tensor::I
+                    solution_->sigmaB(baseC[cellI], z)*tensor::I
                 )
             );
         }
@@ -693,112 +444,7 @@ void manufacturedTransmissionBathBidomainVerifier::validateBoundBath
             << exit(FatalError);
     }
 
-    // Heart-bath faces lie on s = s1 and s = s2; heart cells fill s1 < s < s2 over one period
-
-    const vector nHat(Foam::cos(params_.alpha), Foam::sin(params_.alpha), 0);
-    const labelList nbrZone
-    (
-        syncTools::swapBoundaryCellList(phiEMesh, zoneOfCell_)
-    );
-
-    scalar maxPlaneErr = 0;
-    label nInterfaceFaces = 0;
-
-    auto checkPlane = [&](const label bathZone, const point& Cf)
-    {
-        const scalar sExact =
-            (bathZone == transmissionMMS::bathLow ? params_.s1 : params_.s2);
-        maxPlaneErr = max(maxPlaneErr, mag((nHat & Cf) - sExact));
-        ++nInterfaceFaces;
-    };
-
-    const labelUList& own = phiEMesh.owner();
-    const labelUList& nei = phiEMesh.neighbour();
-
-    forAll(nei, faceI)
-    {
-        const label zo = zoneOfCell_[own[faceI]];
-        const label zn = zoneOfCell_[nei[faceI]];
-
-        if (zo == zn)
-        {
-            continue;
-        }
-        if (zo == transmissionMMS::myocardium)
-        {
-            checkPlane(zn, phiEMesh.Cf()[faceI]);
-        }
-        else if (zn == transmissionMMS::myocardium)
-        {
-            checkPlane(zo, phiEMesh.Cf()[faceI]);
-        }
-    }
-
-    forAll(phiEMesh.boundary(), patchI)
-    {
-        const fvPatch& fp = phiEMesh.boundary()[patchI];
-        if (!fp.coupled())
-        {
-            continue;
-        }
-
-        const labelUList& faceCells = fp.faceCells();
-        const label start = fp.patch().start() - phiEMesh.nInternalFaces();
-
-        forAll(faceCells, i)
-        {
-            const label zLocal = zoneOfCell_[faceCells[i]];
-            const label zNbr = nbrZone[start + i];
-
-            if (zLocal == zNbr)
-            {
-                continue;
-            }
-            if (zLocal == transmissionMMS::myocardium)
-            {
-                checkPlane(zNbr, phiEMesh.Cf().boundaryField()[patchI][i]);
-            }
-            else if (zNbr == transmissionMMS::myocardium)
-            {
-                checkPlane(zLocal, phiEMesh.Cf().boundaryField()[patchI][i]);
-            }
-        }
-    }
-
-    reduce(maxPlaneErr, maxOp<scalar>());
-    reduce(nInterfaceFaces, sumOp<label>());
-
-    const scalar planeTol = 1e-9*params_.period;
-
-    if (nInterfaceFaces == 0 || maxPlaneErr > planeTol)
-    {
-        FatalErrorInFunction
-            << "The heart-bath interface of mesh '" << phiEMesh.name()
-            << "' does not lie on the manufactured planes s = " << params_.s1
-            << " and s = " << params_.s2 << " with normal (cos alpha, "
-            << "sin alpha, 0): alpha " << radToDeg(params_.alpha)
-            << " deg (geometryCoeffs) and period " << params_.period
-            << " must match the mesh. Interface faces: " << nInterfaceFaces
-            << "; maximum distance of a face centre from its plane: "
-            << maxPlaneErr << " (tolerance " << planeTol << ")."
-            << exit(FatalError);
-    }
-
-    const scalar thickness = phiEMesh.bounds().span().z();
-    const scalar heartArea = gSum(heartMesh.V())/thickness;
-    const scalar expectedArea = (params_.s2 - params_.s1)*params_.period;
-
-    if (mag(heartArea - expectedArea) > 1e-9*expectedArea)
-    {
-        FatalErrorInFunction
-            << "The heart of mesh '" << heartMesh.name() << "' has area "
-            << heartArea << " but (s2 - s1)*period = " << expectedArea
-            << " (s1 " << params_.s1 << ", s2 " << params_.s2
-            << ", period " << params_.period << ", alpha "
-            << radToDeg(params_.alpha) << " deg in geometryCoeffs): the "
-            << "geometry must match the mesh."
-            << exit(FatalError);
-    }
+    solution_->validateInterface(phiEMesh, zoneOfCell_, heartMesh);
 }
 
 
@@ -814,21 +460,19 @@ manufacturedTransmissionBathBidomainVerifier
     phiEPtr_(nullptr),
     phiEHeartCellMapPtr_(nullptr),
     errorsReported_(false),
-    params_(),
+    solution_(),
     solutionName_(),
     nPerDirection_(0),
     dirichletPatches_(),
+    neumannPatches_(),
     beta_(0),
     capacitanceRatio_(1),
     betaInitialised_(false),
     zoneOfCell_(),
     zoneMeshPtr_(nullptr)
 {
-    selfTest();
-
     const dictionary& cfg = verificationDict();
-
-    params_ = readParams(cfg);
+    solution_ = transmissionManufacturedSolution::New(cfg);
     solutionName_ = cfg.get<word>("solution");
 
     nPerDirection_ = cfg.get<label>("N");
@@ -840,11 +484,12 @@ manufacturedTransmissionBathBidomainVerifier
     }
 
     const dictionary& bc = cfg.subDict("boundaryData");
-    dirichletPatches_ = bc.get<wordList>("dirichlet");
-    if (dirichletPatches_.empty())
+    dirichletPatches_ = bc.getOrDefault<wordList>("dirichlet", wordList());
+    neumannPatches_ = bc.getOrDefault<wordList>("neumann", wordList());
+    if (dirichletPatches_.empty() && neumannPatches_.empty())
     {
         FatalIOErrorInFunction(bc)
-            << "boundaryData.dirichlet names no patch."
+            << "boundaryData names no dirichlet and no neumann patch."
             << exit(FatalIOError);
     }
 }
@@ -939,7 +584,7 @@ void manufacturedTransmissionBathBidomainVerifier::preProcess
                 << exit(FatalError);
         }
 
-        zoneOfCell_ = buildZones(phiEPtr_->mesh(), params_);
+        zoneOfCell_ = buildZones(phiEPtr_->mesh());
         zoneMeshPtr_ = &phiEPtr_->mesh();
 
         validateBoundBath(Vm);
@@ -959,9 +604,9 @@ void manufacturedTransmissionBathBidomainVerifier::preProcess
 
     forAll(C, cellI)
     {
-        VmI[cellI] = transmissionMMS::Vm(C[cellI], t, params_);
-        u1I[cellI] = transmissionMMS::u1(C[cellI], t, params_);
-        u2I[cellI] = transmissionMMS::u2(C[cellI], t, params_);
+        VmI[cellI] = solution_->Vm(C[cellI], t);
+        u1I[cellI] = solution_->u1(C[cellI], t);
+        u2I[cellI] = solution_->u2(C[cellI], t);
         u3I[cellI] = 0;
     }
 
@@ -990,8 +635,10 @@ void manufacturedTransmissionBathBidomainVerifier::preProcess
         forAll(phiEC, cellI)
         {
             const label z =
-                zoned ? zoneOfCell_[cellI] : label(transmissionMMS::myocardium);
-            phiEI[cellI] = transmissionMMS::phiE(phiEC[cellI], t, z, params_);
+                zoned
+              ? zoneOfCell_[cellI]
+              : label(transmissionManufacturedSolution::heartZone);
+            phiEI[cellI] = solution_->phiE(phiEC[cellI], t, z);
         }
 
         phiEPtr_->correctBoundaryConditions();
@@ -1031,8 +678,8 @@ void manufacturedTransmissionBathBidomainVerifier::addManufacturedPdeSource
     {
         source[cellI] +=
             capacitanceRatio_*beta_
-           *transmissionMMS::Vm(C[cellI], evaluationTime, params_)
-          - transmissionMMS::divGiGradPhiI(C[cellI], evaluationTime, params_);
+           *solution_->Vm(C[cellI], evaluationTime)
+          - solution_->divGiGradPhiI(C[cellI], evaluationTime);
     }
 
     sourceField.correctBoundaryConditions();
@@ -1059,10 +706,8 @@ void manufacturedTransmissionBathBidomainVerifier::addManufacturedPhiESource
 
     forAll(C, cellI)
     {
-        r[cellI] += transmissionMMS::phiESource
-        (
-            C[cellI], evaluationTime, zoneOfCell_[cellI], params_
-        );
+        r[cellI] +=
+            solution_->phiESource(C[cellI], evaluationTime, zoneOfCell_[cellI]);
     }
 }
 
@@ -1103,16 +748,62 @@ void manufacturedTransmissionBathBidomainVerifier::applyPhiEBoundaryData
 
         forAll(Cf, faceI)
         {
-            values[faceI] = transmissionMMS::phiE
+            values[faceI] = solution_->phiE
             (
                 Cf[faceI],
                 evaluationTime,
-                transmissionMMS::zoneOf(Cf[faceI], params_),
-                params_
+                solution_->zoneOf(Cf[faceI])
             );
         }
 
         pf == values;
+    }
+
+    // Neumann data: the exact current sigmaB(Cf) dn(phiE) over the owner conductivity the solver applies
+    const volTensorField& sigmaTotal =
+        mesh.lookupObject<volTensorField>("sigmaTotal");
+
+    for (const word& patchName : neumannPatches_)
+    {
+        const label patchI = mesh.boundaryMesh().findPatchID(patchName);
+
+        if (patchI < 0)
+        {
+            FatalErrorInFunction
+                << "Neumann patch '" << patchName << "' is not a patch of "
+                << "mesh '" << mesh.name() << "'."
+                << exit(FatalError);
+        }
+
+        fvPatchScalarField& pf = phiE.boundaryFieldRef()[patchI];
+
+        if (!isA<fixedGradientFvPatchScalarField>(pf))
+        {
+            FatalErrorInFunction
+                << "Neumann patch '" << patchName << "' of "
+                << phiE.name() << " is " << pf.type()
+                << ", not fixedGradient."
+                << exit(FatalError);
+        }
+
+        const fvPatch& fp = mesh.boundary()[patchI];
+        const vectorField& Cf = fp.Cf();
+        const vectorField nf(fp.nf());
+        const tensorField sigmaOwner
+        (
+            sigmaTotal.boundaryField()[patchI].patchInternalField()
+        );
+        scalarField& gradient =
+            refCast<fixedGradientFvPatchScalarField>(pf).gradient();
+
+        forAll(Cf, faceI)
+        {
+            const label z = solution_->zoneOf(Cf[faceI]);
+            gradient[faceI] =
+                solution_->sigmaB(Cf[faceI], z)
+               *(nf[faceI] & solution_->gradPhiE(Cf[faceI], evaluationTime, z))
+               /(nf[faceI] & sigmaOwner[faceI] & nf[faceI]);
+        }
     }
 }
 
@@ -1120,14 +811,14 @@ void manufacturedTransmissionBathBidomainVerifier::applyPhiEBoundaryData
 wordList manufacturedTransmissionBathBidomainVerifier::boundaryDataPatches()
 const
 {
-    return dirichletPatches_;
+    return outerPatches();
 }
 
 
 bool manufacturedTransmissionBathBidomainVerifier::
 requiresPhiECompatibilityProjection() const
 {
-    return false;
+    return dirichletPatches_.empty();
 }
 
 
@@ -1151,7 +842,7 @@ void manufacturedTransmissionBathBidomainVerifier::writeManufacturedFields
             << exit(FatalError);
     }
 
-    const labelList zone = buildZones(mesh, params_);
+    const labelList zone = buildZones(mesh);
     const vectorField& C = mesh.C().primitiveField();
     const word startTime("0");
 
@@ -1206,12 +897,12 @@ void manufacturedTransmissionBathBidomainVerifier::writeManufacturedFields
 
     forAll(C, cellI)
     {
-        GiI[cellI] = transmissionMMS::Gi(C[cellI], params_);
-        GeI[cellI] = transmissionMMS::Ge(C[cellI], params_);
+        GiI[cellI] = solution_->Gi(C[cellI]);
+        GeI[cellI] = solution_->Ge(C[cellI]);
         sigmaBI[cellI] =
-            zone[cellI] == transmissionMMS::myocardium
+            zone[cellI] == transmissionManufacturedSolution::heartZone
           ? 1.0
-          : transmissionMMS::sigmaB(C[cellI], zone[cellI], params_);
+          : solution_->sigmaB(C[cellI], zone[cellI]);
     }
 
     forAll(mesh.boundary(), patchI)
@@ -1235,57 +926,6 @@ void manufacturedTransmissionBathBidomainVerifier::writeManufacturedFields
 
     IOstream::defaultPrecision(oldPrecision);
 
-    // Manual decomposition into four domains so the interfaces carry processor and internal faces
-    const vector tHat(-Foam::sin(params_.alpha), Foam::cos(params_.alpha), 0);
-    const vector nHat(Foam::cos(params_.alpha), Foam::sin(params_.alpha), 0);
-    const scalar sMid = 0.5*(params_.s1 + params_.s2);
-
-    // Position along the interface in periods, shifted by 1e-6 off the cell centres
-    auto tauMod = [&](const point& p)
-    {
-        const scalar tau = (tHat & p)/params_.period + 1e-6;
-        return tau - std::floor(tau);
-    };
-
-    labelList domain(mesh.nCells(), -1);
-
-    forAll(C, cellI)
-    {
-        if (zone[cellI] == transmissionMMS::myocardium)
-        {
-            domain[cellI] = tauMod(C[cellI]) < 0.5 ? 0 : 1;
-        }
-        else
-        {
-            domain[cellI] = (nHat & C[cellI]) < sMid ? 2 : 3;
-        }
-    }
-
-    const labelUList& own = mesh.owner();
-    const labelUList& nei = mesh.neighbour();
-    labelList movedDomain(domain);
-
-    forAll(nei, faceI)
-    {
-        const label o = own[faceI];
-        const label n = nei[faceI];
-        const bool oHeart = zone[o] == transmissionMMS::myocardium;
-        const bool nHeart = zone[n] == transmissionMMS::myocardium;
-
-        if (oHeart == nHeart)
-        {
-            continue;
-        }
-
-        const label heartCell = oHeart ? o : n;
-        const label bathCell = oHeart ? n : o;
-
-        if (domain[heartCell] == 0 && tauMod(C[bathCell]) < 0.25)
-        {
-            movedDomain[bathCell] = 0;
-        }
-    }
-
     labelIOList decomposition
     (
         IOobject
@@ -1296,7 +936,7 @@ void manufacturedTransmissionBathBidomainVerifier::writeManufacturedFields
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
-        movedDomain
+        solution_->decomposition(mesh, zone)
     );
     decomposition.write();
 
@@ -1347,14 +987,31 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     const volScalarField& phiE = *phiEPtr_;
     const fvMesh& mesh = phiE.mesh();
     const labelUList& heartCellMap = *phiEHeartCellMapPtr_;
-    const vector nHat(Foam::cos(params_.alpha), Foam::sin(params_.alpha), 0);
-    const tensor tangential(tensor::I - sqr(nHat));
+    const label heartZone = transmissionManufacturedSolution::heartZone;
+
+    const vectorField& C = mesh.C().primitiveField();
+    const scalarField& V = mesh.V();
+    const scalarField& phiEI = phiE.primitiveField();
+
+    // Without a Dirichlet patch phiE is fixed up to a constant: remove the volume-weighted mean error
+    scalar phiEOffset = 0;
+    if (dirichletPatches_.empty())
+    {
+        scalar sumErr = 0;
+        forAll(C, cellI)
+        {
+            sumErr +=
+                V[cellI]
+               *(phiEI[cellI] - solution_->phiE(C[cellI], t, zoneOfCell_[cellI]));
+        }
+        reduce(sumErr, sumOp<scalar>());
+        phiEOffset = sumErr/gSum(V);
+    }
 
     // Heart mesh: Vm, phiI, u1, u2
 
     const vectorField& heartC = heartMesh.C().primitiveField();
     const scalarField& VmI = Vm.primitiveField();
-    const scalarField& phiEI = phiE.primitiveField();
 
     if (heartCellMap.size() != VmI.size())
     {
@@ -1372,11 +1029,12 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
 
     forAll(heartC, cellI)
     {
-        VmExact[cellI] = transmissionMMS::Vm(heartC[cellI], t, params_);
-        phiIExact[cellI] = transmissionMMS::phiI(heartC[cellI], t, params_);
-        u1Exact[cellI] = transmissionMMS::u1(heartC[cellI], t, params_);
-        u2Exact[cellI] = transmissionMMS::u2(heartC[cellI], t, params_);
-        phiIValues[cellI] = VmI[cellI] + phiEI[heartCellMap[cellI]];
+        VmExact[cellI] = solution_->Vm(heartC[cellI], t);
+        phiIExact[cellI] = solution_->phiI(heartC[cellI], t);
+        u1Exact[cellI] = solution_->u1(heartC[cellI], t);
+        u2Exact[cellI] = solution_->u2(heartC[cellI], t);
+        phiIValues[cellI] =
+            VmI[cellI] + phiEI[heartCellMap[cellI]] - phiEOffset;
     }
 
     const errorNorms VmNorms =
@@ -1422,8 +1080,7 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         {
             heartTraceErr[cellI] = mag
             (
-                gradVmI[cellI]
-              - transmissionMMS::gradVm(heartC[cellI], t, params_)
+                gradVmI[cellI] - solution_->gradVm(heartC[cellI], t)
             );
         }
     }
@@ -1432,8 +1089,6 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
 
     // Base mesh: interface faces and bands
 
-    const vectorField& C = mesh.C().primitiveField();
-    const scalarField& V = mesh.V();
     const labelUList& own = mesh.owner();
     const labelUList& nei = mesh.neighbour();
     const surfaceScalarField& interfaceFlux =
@@ -1448,9 +1103,14 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     boolList boundaryCell(mesh.nCells(), false);
 
     DynamicList<scalar> faceErr;
+    DynamicList<scalar> faceErrBath;
+    DynamicList<scalar> faceJump;
     DynamicList<scalar> faceArea;
     scalar currentComputed[2] = {0, 0};
     scalar currentExact[2] = {0, 0};
+    const label nParts = solution_->nInterfaceParts();
+    scalarField partComputed(2*nParts, 0);
+    scalarField partExact(2*nParts, 0);
 
     auto addInterfaceFace = [&]
     (
@@ -1463,15 +1123,26 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     {
         const scalar magSf = mag(Sf);
         const vector nOut = sign*Sf/magSf;
-        const scalar exact =
-            transmissionMMS::interfaceFlux(Cf, nOut, t, params_)*magSf;
+        const scalar exact = solution_->interfaceFlux(Cf, nOut, t)*magSf;
+        const scalar exactBath =
+            solution_->sigmaB(Cf, bathZone)
+           *(nOut & solution_->gradPhiE(Cf, t, bathZone))*magSf;
 
         faceErr.append((sign*flux - exact)/magSf);
+        faceErrBath.append((sign*flux - exactBath)/magSf);
+        faceJump.append((exact - exactBath)/magSf);
         faceArea.append(magSf);
 
-        const label j = (bathZone == transmissionMMS::bathLow ? 0 : 1);
+        const label j = (bathZone == 0 ? 0 : 1);
         currentComputed[j] += sign*flux;
         currentExact[j] += exact;
+
+        if (nParts)
+        {
+            const label part = j*nParts + solution_->interfacePart(Cf);
+            partComputed[part] += sign*flux;
+            partExact[part] += exact;
+        }
     };
 
     forAll(nei, faceI)
@@ -1481,14 +1152,7 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         const label zo = zoneOfCell_[o];
         const label zn = zoneOfCell_[n];
 
-        if
-        (
-            zo == zn
-         || (
-                zo != transmissionMMS::myocardium
-             && zn != transmissionMMS::myocardium
-            )
-        )
+        if (zo == zn || (zo != heartZone && zn != heartZone))
         {
             continue;
         }
@@ -1496,7 +1160,7 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         interfaceCell[o] = true;
         interfaceCell[n] = true;
 
-        const bool ownerHeart = (zo == transmissionMMS::myocardium);
+        const bool ownerHeart = (zo == heartZone);
         addInterfaceFace
         (
             ownerHeart ? zn : zo,
@@ -1524,21 +1188,14 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
             const label zLocal = zoneOfCell_[cellI];
             const label zNbr = nbrZone[start + i];
 
-            if
-            (
-                zLocal == zNbr
-             || (
-                    zLocal != transmissionMMS::myocardium
-                 && zNbr != transmissionMMS::myocardium
-                )
-            )
+            if (zLocal == zNbr || (zLocal != heartZone && zNbr != heartZone))
             {
                 continue;
             }
 
             interfaceCell[cellI] = true;
 
-            if (zLocal == transmissionMMS::myocardium)
+            if (zLocal == heartZone)
             {
                 addInterfaceFace
                 (
@@ -1552,12 +1209,13 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         }
     }
 
-    const errorNorms interfaceFluxNorms = weightedNorms
-    (
-        scalarField(faceArea),
-        scalarField(faceErr),
-        boolList(faceErr.size(), true)
-    );
+    const boolList allFaces(faceErr.size(), true);
+    const errorNorms interfaceFluxNorms =
+        weightedNorms(scalarField(faceArea), scalarField(faceErr), allFaces);
+    const errorNorms interfaceFluxBathNorms =
+        weightedNorms(scalarField(faceArea), scalarField(faceErrBath), allFaces);
+    const errorNorms interfaceFluxJumpNorms =
+        weightedNorms(scalarField(faceArea), scalarField(faceJump), allFaces);
 
     reduce(currentComputed[0], sumOp<scalar>());
     reduce(currentComputed[1], sumOp<scalar>());
@@ -1569,20 +1227,41 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     const errorNorms current2 =
         singleValue(mag(currentComputed[1] - currentExact[1]));
 
-    // Outer Dirichlet patches: band cells and current
+    // Partial currents over the interface parts: L1 and L2 are means over the parts, Linf the largest
+    Pstream::listCombineReduce(partComputed, plusEqOp<scalar>());
+    Pstream::listCombineReduce(partExact, plusEqOp<scalar>());
+    errorNorms partNorms[2];
+    for (label j = 0; j < 2; ++j)
+    {
+        scalar sumAbs = 0;
+        scalar sumSq = 0;
+        scalar maxAbs = 0;
+        for (label part = 0; part < nParts; ++part)
+        {
+            const scalar d =
+                mag(partComputed[j*nParts + part] - partExact[j*nParts + part]);
+            sumAbs += d;
+            sumSq += d*d;
+            maxAbs = max(maxAbs, d);
+        }
+        const label n = max(nParts, label(1));
+        partNorms[j] = {sumAbs/n, Foam::sqrt(sumSq/n), maxAbs};
+    }
+
+    // Outer patches: band cells, and the current through the Dirichlet patches
 
     const volTensorField& sigmaTotal =
         mesh.lookupObject<volTensorField>("sigmaTotal");
     scalar outerComputed = 0;
     scalar outerExact = 0;
 
-    for (const word& patchName : dirichletPatches_)
+    for (const word& patchName : outerPatches())
     {
         const label patchI = mesh.boundaryMesh().findPatchID(patchName);
         if (patchI < 0)
         {
             FatalErrorInFunction
-                << "Dirichlet patch '" << patchName << "' is not a patch of "
+                << "Outer patch '" << patchName << "' is not a patch of "
                 << "mesh '" << mesh.name() << "'."
                 << exit(FatalError);
         }
@@ -1591,6 +1270,11 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         for (const label cellI : fp.faceCells())
         {
             boundaryCell[cellI] = true;
+        }
+
+        if (!dirichletPatches_.found(patchName))
+        {
+            continue;
         }
 
         const vectorField nf(fp.nf());
@@ -1607,10 +1291,10 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
             outerComputed +=
                 (nf[i] & sigmaOwner[i] & nf[i])*snGrad[i]*magSf[i];
 
-            const label z = transmissionMMS::zoneOf(Cf[i], params_);
+            const label z = solution_->zoneOf(Cf[i]);
             outerExact +=
-                transmissionMMS::sigmaB(Cf[i], z, params_)
-               *(nf[i] & transmissionMMS::gradPhiE(Cf[i], t, z, params_))
+                solution_->sigmaB(Cf[i], z)
+               *(nf[i] & solution_->gradPhiE(Cf[i], t, z))
                *magSf[i];
         }
     }
@@ -1638,15 +1322,16 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
     {
         const label z = zoneOfCell_[cellI];
         phiEErr[cellI] =
-            phiEI[cellI] - transmissionMMS::phiE(C[cellI], t, z, params_);
-        heartCell[cellI] = (z == transmissionMMS::myocardium);
+            phiEI[cellI] - phiEOffset - solution_->phiE(C[cellI], t, z);
+        heartCell[cellI] = (z == heartZone);
         bathCell[cellI] = !heartCell[cellI];
 
         if (interfaceCell[cellI])
         {
-            const vector gradExact
+            const vector gradExact(solution_->gradPhiE(C[cellI], t, z));
+            const tensor tangential
             (
-                transmissionMMS::gradPhiE(C[cellI], t, z, params_)
+                tensor::I - sqr(solution_->interfaceNormal(C[cellI]))
             );
             gradTangentialErr[cellI] =
                 mag(tangential & (gradPhiEI[cellI] - gradExact));
@@ -1668,19 +1353,24 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
 
     // Header data
 
-    const scalar thickness = mesh.bounds().span().z();
-    const scalar heartArea = gSum(heartMesh.V())/thickness;
+    const label nD = solution_->nSolutionD();
     const label nHeartCells = returnReduce(heartMesh.nCells(), sumOp<label>());
-    const scalar h = Foam::sqrt(heartArea/max(nHeartCells, label(1)));
+    const scalar heartMeasure =
+        nD == 2
+      ? gSum(heartMesh.V())/mesh.bounds().span().z()
+      : gSum(heartMesh.V());
+    const scalar cellMeasure = heartMeasure/max(nHeartCells, label(1));
+    const scalar h =
+        nD == 2 ? Foam::sqrt(cellMeasure) : Foam::cbrt(cellMeasure);
     const scalar dt = time.deltaTValue();
     const label nSteps = max(label(0), time.timeIndex());
 
     const fileName outputDir(time.globalPath()/"postProcessing");
     const fileName outputFile =
         outputDir
-      / (dimensionName(2) + "_" + Foam::name(nPerDirection_) + "_cells.dat");
+      / (dimensionName(nD) + "_" + Foam::name(nPerDirection_) + "_cells.dat");
 
-    const List<Tuple2<word, errorNorms>> rows
+    List<Tuple2<word, errorNorms>> rows
     ({
         {"Vm", VmNorms},
         {"phiI", phiINorms},
@@ -1691,6 +1381,8 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         {"u1", u1Norms},
         {"u2", u2Norms},
         {"interfaceFlux", interfaceFluxNorms},
+        {"interfaceFlux_bathSide", interfaceFluxBathNorms},
+        {"interfaceFluxJumpScale", interfaceFluxJumpNorms},
         {"interfaceCurrent_1", current1},
         {"interfaceCurrent_2", current2},
         {"gradTangentialError", gradTangentialNorms},
@@ -1698,6 +1390,11 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         {"gradHeartTraceError", heartTraceNorms},
         {"outerCurrent", outerCurrent}
     });
+    if (nParts)
+    {
+        rows.append({"interfacePartCurrent_1", partNorms[0]});
+        rows.append({"interfacePartCurrent_2", partNorms[1]});
+    }
 
     if (Pstream::master())
     {
@@ -1705,8 +1402,8 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
 
         Info<< nl
             << "Transmission bath-bidomain manufactured-solution error "
-            << "summary (t = " << t << ", solution " << solutionName_
-            << "):" << nl
+            << "summary (t = " << t << ", " << solution_->geometry()
+            << ", solution " << solutionName_ << "):" << nl
             << "field L1 L2 Linf" << nl;
         for (const auto& row : rows)
         {
@@ -1718,13 +1415,15 @@ void manufacturedTransmissionBathBidomainVerifier::postProcess
         OFstream os(outputFile);
         os.precision(12);
         os  << "# Bath-bidomain manufactured solution error summary\n"
-            << "# dimension " << dimensionName(2) << "\n"
+            << "# dimension " << dimensionName(nD) << "\n"
+            << "# geometry " << solution_->geometry() << "\n"
             << "# cellsPerDirection " << nPerDirection_ << "\n"
             << "# h " << h << "\n"
             << "# steps " << nSteps << "\n"
             << "# dt " << dt << "\n"
             << "# time " << t << "\n"
             << "# solution " << solutionName_ << "\n"
+            << "# phiEGaugeOffset " << phiEOffset << "\n"
             << "# field L1 L2 Linf\n";
         for (const auto& row : rows)
         {

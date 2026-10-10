@@ -53,8 +53,16 @@ concrete verifiers — sit beside each family's verifiers:
 - `bidomainVerification/manufacturedFDABidomainReference.H`
 - `bathBidomainVerification/manufacturedFDABathBidomainReference.H`
 - `bathBidomainVerification/manufacturedTransmissionBathBidomainReference.H`
+- `bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H`
 - `eikonalVerification/manufacturedEikonalReference.H`
 - `electromechanicsVerification/manufacturedElectromechanicsReference.H`
+
+`manufacturedTransmissionBathBidomainVerifier` reaches its exact solution
+through `transmissionManufacturedSolution`, selected by the `geometry`
+entry: `obliqueSlabTransmission` wraps the slab reference header and
+`sphericalShellTransmission` the spherical-shell one. Each implementation
+also checks a mesh against its analytic geometry and writes its manual
+decomposition.
 
 ## Notes on naming
 
