@@ -75,3 +75,8 @@ Requires sympy, mpmath and numpy; each header records the sympy version that
 produced it. `--check` and the header comparisons in the tests compare text
 exactly, including that version line and the common subexpression output, so
 they hold only for the recorded sympy version.
+
+`shell_monodomain_mms.py` writes `monodomainVerification/manufacturedShellMonodomainReference.H`:
+the heart-only monodomain solution on the spherical shell, sealed on both spheres with the
+intracellular tensor of `shell_mms.py`. Its F equals the `shell_mms.py` intracellular potential at
+t = 0. Tests: `test_shell_monodomain_mms.py`.
