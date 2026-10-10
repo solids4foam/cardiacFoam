@@ -1,16 +1,34 @@
-# Transmission manufactured-solution generator
+# Transmission manufactured-solution generators
 
-`transmission_mms.py` builds, with sympy, the exact solution of the
-bath-bidomain transmission problem on the oblique slab: a heart slab between
-two bath slabs with planar interfaces oblique to the mesh axes, rotated
-anisotropic heart conductivities, spatially varying bath conductivities, and
-fields that satisfy potential continuity, extracellular flux continuity and
-intracellular sealing on both interfaces. It checks the construction (interface
-conditions, sources against finite differences, boundedness, periodicity,
-richness of the tangential conormal flux, common-mode invariance of Vm, the
-affine solution, the ionic closure) and writes the C++ reference header
-`../manufacturedTransmissionBathBidomainReference.H` used by the transmission
-verifier.
+Two sympy generators build exact solutions of the bath-bidomain transmission
+problem: fields that satisfy potential continuity, extracellular flux
+continuity and intracellular sealing on every heart/bath interface, with
+rotated anisotropic heart conductivities and spatially varying bath
+conductivities. Each checks its construction and writes a C++ reference
+header for `manufacturedTransmissionBathBidomainVerifier`; `mms_codegen.py`
+holds the C++ emission they share.
+
+| generator | geometry | header |
+|---|---|---|
+| `transmission_mms.py` | oblique slab: a heart slab between two bath slabs, planar interfaces oblique to the mesh axes, periodic along them | `../manufacturedTransmissionBathBidomainReference.H` |
+| `shell_mms.py` | spherical shell: a heart shell around a bath ball, inside an outer bath | `../manufacturedShellTransmissionBathBidomainReference.H` |
+
+Checks, run before a header is written: interface conditions at 30 digits,
+sources and gradients against fourth-order finite differences, boundedness,
+richness of the tangential conormal flux on the interfaces, common-mode
+invariance of Vm, and the ionic closure. The slab also checks periodicity and
+its affine solution. The shell also checks its sources across the extension
+band beyond each sphere, where polyhedral mesh faces put cell and face
+centres, and the positivity of every denominator there.
+
+Every shell field is a polynomial, trigonometric or exponential function of
+x, y, z, or a ratio with a positive denominator, so each zone formula is
+analytic; the only non-smooth feature of the exact solution is the normal
+derivative jump across the interfaces. The fibre frame is fixed and the fibre
+angle varies with the radius: a fibre field tangent to a sphere would vanish
+somewhere on it. Where the sphere normal is an eigenvector of a conductivity
+tensor the tangential conormal flux vanishes, so the shell's richness area
+fraction is 0.7 rather than the slab's 0.8.
 
 Each entry of `selfTestSamples` holds a function index, a parameter set
 (0 `defaultParams()`, 1 `alternateParams()`), the solution (0 affine,
@@ -22,17 +40,25 @@ sampled at the first time only; the others at two times.
 `--write` runs every generator check first and writes nothing if one fails.
 A relative `--write` or `--check` path is taken against this directory.
 
-Regenerate the header (from this directory):
+Regenerate a header (from this directory):
 
 ```bash
 python transmission_mms.py --write ../manufacturedTransmissionBathBidomainReference.H
 ```
 
-Check that the tracked header matches the generator (exit status 1 on a
+```bash
+python shell_mms.py --write ../manufacturedShellTransmissionBathBidomainReference.H
+```
+
+Check that a tracked header matches its generator (exit status 1 on a
 difference):
 
 ```bash
 python transmission_mms.py --check ../manufacturedTransmissionBathBidomainReference.H
+```
+
+```bash
+python shell_mms.py --check ../manufacturedShellTransmissionBathBidomainReference.H
 ```
 
 Run the generator checks:
@@ -41,7 +67,11 @@ Run the generator checks:
 python test_transmission_mms.py
 ```
 
-Requires sympy, mpmath and numpy; the header records the sympy version that
-produced it. `--check` and the header comparison in `test_transmission_mms.py`
-compare text exactly, including that version line and the common
-subexpression output, so they hold only for the recorded sympy version.
+```bash
+python test_shell_mms.py
+```
+
+Requires sympy, mpmath and numpy; each header records the sympy version that
+produced it. `--check` and the header comparisons in the tests compare text
+exactly, including that version line and the common subexpression output, so
+they hold only for the recorded sympy version.
