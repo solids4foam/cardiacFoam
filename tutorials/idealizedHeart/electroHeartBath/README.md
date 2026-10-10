@@ -10,7 +10,8 @@ leads sampled in the torso.
 | part | setting |
 |---|---|
 | myocardium | `bidomainSolver` on cellZone `myocardium`, `solutionAlgorithm implicit` |
-| torso | `bathPotentialDomain`, zones `blood lungs chestWall torso`, `distanceWeightedHarmonic` interface conductivity, `bathPredictorCorrector yes` |
+| torso | `bathPotentialDomain`, zones `blood lungs chestWall torso`, `conormalHarmonic` interface conductivity, `bathPredictorCorrector yes` |
+| heart surface | `sealedHeartBoundary true`, `bathHeartPhiETrace global`, `sealedWallTrace zeroGradient` |
 | ionic | `BuenoOrovio`, endo/M/epi `namedRegions` on `t`, apicobasal `tauSi` gradient |
 | conduction system | human `purkinjeGraph`, `monodomain1DSolver`, `reactionDiffusionPvjCoupler` |
 | pre-pacing | `constant/prePacingProperties`, as in electroHeart |
@@ -88,18 +89,29 @@ posterior-caudal-right corner.
 
 ## Bidomain conductivities
 
-Johnston, "Six conductivity values to use in the bidomain model of cardiac
-tissue", IEEE TBME 63(7), 2016, nominal set, in the fibre / sheet / normal
-frame:
+The per-direction ratios ge/gi of Johnston, "Six conductivity values to use
+in the bidomain model of cardiac tissue", IEEE TBME 63(7), 2016 (nominal set),
+with gi and ge scaled together in each direction so that the
+monodomain-equivalent tensor equals the electroHeart `Conductivity`, in the
+fibre / sheet / normal frame:
 
 | | fibre | sheet | normal |
 |---|---|---|---|
-| intracellular [S/m] | 0.24 | 0.035 | 0.008 |
-| extracellular [S/m] | 0.24 | 0.20 | 0.11 |
-| monodomain-equivalent `gi ge/(gi + ge)` | 0.12 | 0.0298 | 0.0075 |
+| intracellular [S/m] | 1.0 | 0.1175 | 0.1073 |
+| extracellular [S/m] | 1.0 | 0.6714 | 1.475 |
+| monodomain-equivalent `gi ge/(gi + ge)` | 0.5 | 0.1 | 0.1 |
 
-The electroHeart `Conductivity` is (0.5, 0.1, 0.1), so conduction here is
-slower than in electroHeart.
+Conduction therefore matches electroHeart; the extracellular normal value is
+larger than the blood conductivity.
+
+## Heart surface
+
+The intracellular face conductivity is zero on the heart surface
+(`sealedHeartBoundary true`), and the heart-side `phiE` boundary value is the
+two-sided interface value of the global `phiE` (`bathHeartPhiETrace global`).
+With the surface unsealed, the tangential intracellular flux of the
+anisotropic `Gi` crosses the heart surface, current is not conserved and the
+reference-cell `phiE` drifts.
 
 ## Usage
 

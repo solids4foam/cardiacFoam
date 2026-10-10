@@ -24,8 +24,9 @@ myocardiumSolver bidomainSolver;
 
 bidomainSolverCoeffs
 {
-    sealedHeartBoundary false;
+    sealedHeartBoundary true;
     sealedWallTrace     zeroGradient;
+    bathHeartPhiETrace  global;
     cellZone    myocardium;
 
     // 0/ConductivityIntracellular and 0/ConductivityExtracellular are
@@ -78,7 +79,7 @@ bidomainSolverCoeffs
     {
         bathCellZones   ( blood lungs chestWall torso );
         bathConductivityField bodyAndOrgansConductivity;
-        interfaceConductivityInterpolation distanceWeightedHarmonic;
+        interfaceConductivityInterpolation conormalHarmonic;
         groundPatches
         {
         }
