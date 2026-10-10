@@ -27,6 +27,8 @@ monodomainExplicit                     slab  monodomainExplicit                 
 monodomainImplicit                     slab  monodomainImplicit                     pass
 monodomainSbdf2                        slab  monodomainSbdf2                        pass
 monodomainFieldConductivity            slab  monodomainFieldConductivity            pass
+# A field conductivity that jumps across periodic faces, read on a cyclic mesh
+monodomainPeriodicFieldConductivity    slab  monodomainPeriodicFieldConductivity    pass
 monodomainCellZone                     slab  monodomainCellZone                     pass  skip=v2312
 monodomainVerificationNone             slab  monodomainVerificationNone             pass
 bidomain                               slab  bidomain                               pass
@@ -68,6 +70,8 @@ eikonalPurkinjeParallel                slab  eikonalPurkinje                    
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
 bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2  skip=v2312
+# The decomposition splits the periodic faces into processorCyclic faces
+monodomainPeriodicFieldConductivityParallel slab monodomainPeriodicFieldConductivity pass np=2
 
 # ---- Post-processing utilities that link the electro libraries -----------
 monodomainPseudoECGRecomputed          slab  monodomainPseudoECG                    pass  post=recomputePseudoECG
