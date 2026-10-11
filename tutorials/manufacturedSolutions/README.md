@@ -10,15 +10,9 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
 - `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
 - `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
-- [`monodomainPseudoECG/insulatedWall`](monodomainPseudoECG/insulatedWall/README.md) : monodomain with conormally insulated walls
 - [`monodomainPseudoECG/sphericalShell`](monodomainPseudoECG/sphericalShell/README.md) : 3D monodomain with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient and a parallel hex regression
-- [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
 - [`bidomain/sphericalShell`](bidomain/sphericalShell/README.md) : 3D heart-only bidomain with sealed curved walls crossed by two unequal rotated full conductivity tensors, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient, a compatibility-projected phiE equation and a parallel hex regression
-- [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
 - [`eikonalECG/sphericalShell`](eikonalECG/sphericalShell/README.md) : 3D eikonal with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with a pinned stimulus ball, the sealed-wall gradient and a parallel hex regression
-- [`bathBidomain/insulatedWall`](bathBidomain/insulatedWall/README.md) : 2D anisotropic heart–bath bidomain with a conormally insulated interface
-- [`bathBidomain/obliqueSlab`](bathBidomain/obliqueSlab/README.md) : heart–bath bidomain transmission across oblique, skewed interfaces on 2D sheared hexahedra or 3D gmsh tetrahedra, with a manual G0 patch test and a parallel G1 regression
-- [`bathBidomain/sphericalShell`](bathBidomain/sphericalShell/README.md) : 3D heart–bath bidomain transmission across curved interfaces on a cubed sphere or gmsh tetrahedra, with Neumann or Dirichlet outer data and a parallel hex regression
 
 ## Naming Pattern
 
@@ -93,15 +87,15 @@ directory, run through `tutorials/Alltest-regression`.
 | key | case |
 |---|---|
 | tet | monodomainPseudoECG (`setup/studies/tetConvergence`) |
-| eikonal_tet | eikonalECG (`setup/studies/tetConvergence`) |
+| eikonal_tet | eikonalECG (`-mesh tet`) |
 | coupling | monodomain1D3D |
 | eikonal | eikonalECG |
 | mono_spatial | monodomainPseudoECG |
 | pseudo_ecg_spatial | monodomainPseudoECG |
 | bidomain | bidomain |
-| bidomain_tet | bidomain (`setup/studies/tetConvergence`) |
+| bidomain_tet | bidomain (`-mesh tet`) |
 | bath | bathBidomain |
-| bath_tet | bathBidomain (`setup/studies/tetConvergence`) |
+| bath_tet | bathBidomain (`-mesh tet`) |
 | niederer | NiedererEtAl2011verification |
 
 ## Bulk, boundary and gradient rows

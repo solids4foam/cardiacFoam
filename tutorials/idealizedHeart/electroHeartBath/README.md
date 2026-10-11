@@ -11,7 +11,7 @@ leads sampled in the torso.
 |---|---|
 | myocardium | `bidomainSolver` on cellZone `myocardium`, `solutionAlgorithm implicit` |
 | torso | `bathPotentialDomain`, zones `blood lungs chestWall torso`, `conormalHarmonic` interface conductivity, `bathPredictorCorrector yes` |
-| heart surface | `sealedHeartBoundary true`, `bathHeartPhiETrace global`, `sealedWallTrace zeroGradient` |
+| heart surface | `sealedHeartBoundary true`, `bathHeartPhiETrace global` |
 | ionic | `BuenoOrovio`, endo/M/epi `namedRegions` on `t`, apicobasal `tauSi` gradient |
 | conduction system | human `purkinjeGraph`, `monodomain1DSolver`, `reactionDiffusionPvjCoupler` |
 | pre-pacing | `constant/prePacingProperties`, as in electroHeart |
