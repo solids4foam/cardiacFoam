@@ -26,6 +26,8 @@ gradSchemes
     default                 leastSquares;
     grad(Vm)                sealedWallLeastSquares;
     grad(Vm.component(0))   sealedWallLeastSquares;
+
+    #includeIfPresent "<case>/local/wallGradient"
 }
 
 divSchemes

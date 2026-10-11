@@ -23,29 +23,30 @@ bulk, boundary and gradient rows, and the header lines `# h`, `# time` and
 
 ## Execution
 
-In a copy of the case, for each `N`:
+Each run is a copy of the case in `results/` (ignored by git), named
+`<sealed|stock>_hex_N<n>_s<seed>[_T2|_dthalf]`, the names that
+`../summarize.py` reads. From this folder, for each `N`:
 
 ```bash
-./Allrun parallel -mesh hex -N <n>
+mkdir -p results
+rsync -a --exclude setup ../../../ results/sealed_hex_N<n>_s1/
+results/sealed_hex_N<n>_s1/Allrun parallel -mesh hex -N <n>
 ```
 
 The default end time is `T = 0.2` and the time step is
 `endTime/ceil(endTime/(0.00892857 (10/N)^2))`, which scales as `h^2`.
-`log.cardiacFoam` holds the `phiE compatibility projection: imbalance` lines.
 
-The case selects `sealedWallLeastSquares` for `grad(Vm)`, `grad(Vm.component(0))`,
-`grad(phiE)` and `grad(phiE.component(0))` in `system/fvSchemes`. The stock wall
-gradient is the control: in the run copy, delete those four lines, so every
-gradient is `leastSquares`.
+- Stock control: copies named `stock_...`, with `-wallGradient stock`, which
+  replaces the four `sealedWallLeastSquares` entries of `system/fvSchemes`
+  by `leastSquares`.
+- Long window: copies ending in `_T2`, with `-endTime 2`.
+- Time-step control: copies ending in `_dthalf`, with `-dt` set to half the
+  default time step at `T = 0.2`.
 
-### Long window
-
-The long window runs to `T = 2`; the time-step control repeats the short
-window with the default time step halved:
+Every table below is printed by
 
 ```bash
-./Allrun parallel -mesh hex -N <n> -endTime 2
-./Allrun parallel -mesh hex -N <n> -dt <half the default>
+python3 ../summarize.py results
 ```
 
 ## Measured behaviour
@@ -115,10 +116,11 @@ gradient, whose error does not vanish with `h`.
 | 16 | 0.0807 | 4.957e-02 | 2.216e-01 | 5.728e-02 | 1.607e-01 | 3.491e-02 | 3.881e-01 |
 | 24 | 0.0539 | 2.656e-02 | 1.188e-01 | 2.945e-02 | 8.473e-02 | 1.601e-02 | 2.895e-01 |
 | 32 | 0.0404 | 1.809e-02 | 9.014e-02 | 1.915e-02 | 6.179e-02 | 9.738e-03 | 2.441e-01 |
+| 48 | 0.0270 | 1.128e-02 | 6.059e-02 | 1.119e-02 | 4.034e-02 | 5.169e-03 | 1.961e-01 |
 
 | N | Vm L2 | Vm Linf | phiE_gauge L2 | phiE_gauge Linf | Vm_boundary L2 | gradVm_boundary L2 |
 |---|---|---|---|---|---|---|
-| 16, 24, 32 | 1.46 ± 0.06 | 1.32 ± 0.16 | 1.59 ± 0.04 | 1.40 ± 0.13 | 1.85 ± 0.05 | 0.67 ± 0.04 |
+| 24, 32, 48 | 1.23 ± 0.05 | 0.97 ± 0.01 | 1.39 ± 0.05 | 1.07 ± 0.01 | 1.63 ± 0.05 | 0.56 ± 0.01 |
 
 ### Time step
 

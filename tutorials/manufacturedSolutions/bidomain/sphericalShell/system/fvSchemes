@@ -28,6 +28,8 @@ gradSchemes
     grad(Vm.component(0))   sealedWallLeastSquares;
     grad(phiE)              sealedWallLeastSquares;
     grad(phiE.component(0)) sealedWallLeastSquares;
+
+    #includeIfPresent "<case>/local/wallGradient"
 }
 
 divSchemes

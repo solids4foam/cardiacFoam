@@ -23,28 +23,30 @@ lines as in [hexConvergence](../hexConvergence/README.md)).
 
 ## Execution
 
-In a copy of the case, for each `N` and `s`:
+Each run is a copy of the case in `results/` (ignored by git), named
+`<sealed|stock>_tet_N<n>_s<seed>[_T2|_dthalf]`, the names that
+`../summarize.py` reads. From this folder, for each `N` and seed `s`:
 
 ```bash
-./Allrun parallel -mesh tet -N <n> -seed <s>
+mkdir -p results
+rsync -a --exclude setup ../../../ results/sealed_tet_N<n>_s<s>/
+results/sealed_tet_N<n>_s<s>/Allrun parallel -mesh tet -N <n> -seed <s>
 ```
 
-The default end time is `T = 0.2` (the short window) and the time step is
-`endTime/ceil(endTime/(0.00892857 (10/N)^2))`.
+The default end time is `T = 0.2` and the time step is
+`endTime/ceil(endTime/(0.00892857 (10/N)^2))`, which scales as `h^2`.
 
-The case selects `sealedWallLeastSquares` for `grad(Vm)` and
-`grad(Vm.component(0))` in `system/fvSchemes`. The stock wall gradient is the
-control: in the run copy, delete those two lines, so every gradient is
-`leastSquares`.
+- Stock control: copies named `stock_...`, with `-wallGradient stock`, which
+  replaces the two `sealedWallLeastSquares` entries of `system/fvSchemes`
+  by `leastSquares`.
+- Long window: copies ending in `_T2`, with `-endTime 2` (`-seed 1`).
+- Time-step control: copies ending in `_dthalf`, with `-dt` set to half the
+  default time step at `T = 0.2`.
 
-### Long window
-
-The long window runs to `T = 2` (`-seed 1`), and repeats the run with the
-default time step halved:
+Every table below is printed by
 
 ```bash
-./Allrun parallel -mesh tet -N <n> -seed 1 -endTime 2
-./Allrun parallel -mesh tet -N <n> -seed 1 -endTime 2 -dt <half the default>
+python3 ../summarize.py results
 ```
 
 ## Measured behaviour
@@ -124,6 +126,9 @@ Halving the time step at T = 0.2 (`-seed 1`) changes the `Vm` L2 error by
 by +0.10 % and -0.13 % with the stock gradient.
 
 ### `-trace conormal` (stock `leastSquares`)
+
+Runs with `-trace conormal -wallGradient stock`; `summarize.py` does not read
+them, and the orders are between successive levels.
 
 | N | h | Vm L2 | Vm Linf | Vm_boundary L2 | gradVm_boundary L2 | gradReconVm_boundary L2 |
 |---|---|---|---|---|---|---|

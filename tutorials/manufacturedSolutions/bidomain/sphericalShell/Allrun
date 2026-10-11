@@ -18,6 +18,9 @@ Options (parameters are written to local/ and included by the dictionaries):
   -seed n                   gmsh random seed for -mesh tet (default 1)
   -dt x                     time step
   -endTime x                end time (default 0.2)
+  -wallGradient sealed|stock
+                            gradient of the potentials: sealedWallLeastSquares (default) or
+                            the stock leastSquares control
 
 Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
@@ -31,6 +34,7 @@ N=12
 seed=1
 dt=
 endTime=0.2
+wallGradient=sealed
 
 needValue()
 {
@@ -74,6 +78,13 @@ do
         -endTime)
             needValue "$@"; endTime="$2"; shift
             ;;
+        -wallGradient)
+            needValue "$@"; wallGradient="$2"; shift
+            case "$wallGradient" in
+                sealed|stock) ;;
+                *) echo "${0##*/}: unknown -wallGradient $wallGradient" 1>&2; usage ;;
+            esac
+            ;;
         -h|-help|--help)
             usage
             ;;
@@ -110,6 +121,17 @@ mkdir local
 
 echo "N $N;" > local/mesh
 echo "N $N;" > local/verification
+
+# The stock control overrides the gradient entries of system/fvSchemes
+if [ "$wallGradient" = stock ]
+then
+    cat > local/wallGradient <<EOF
+grad(Vm)                leastSquares;
+grad(Vm.component(0))   leastSquares;
+grad(phiE)              leastSquares;
+grad(phiE.component(0)) leastSquares;
+EOF
+fi
 
 # Time step proportional to h^2, ending exactly at endTime
 if [ -z "$dt" ]

@@ -18,6 +18,9 @@ Options (parameters are written to local/ and included by the dictionaries):
   -seed n                   gmsh random seed for -mesh tet (default 1)
   -dt x                     time step
   -endTime x                end time (default 0.2)
+  -wallGradient sealed|stock
+                            gradient of the potentials: sealedWallLeastSquares (default) or
+                            the stock leastSquares control
   -trace zeroGradient|conormal
                             sealedWallTrace (default zeroGradient)
 
@@ -33,6 +36,7 @@ N=12
 seed=1
 dt=
 endTime=0.2
+wallGradient=sealed
 trace=zeroGradient
 
 needValue()
@@ -77,6 +81,13 @@ do
         -endTime)
             needValue "$@"; endTime="$2"; shift
             ;;
+        -wallGradient)
+            needValue "$@"; wallGradient="$2"; shift
+            case "$wallGradient" in
+                sealed|stock) ;;
+                *) echo "${0##*/}: unknown -wallGradient $wallGradient" 1>&2; usage ;;
+            esac
+            ;;
         -trace)
             needValue "$@"; trace="$2"; shift
             case "$trace" in
@@ -120,6 +131,15 @@ mkdir local
 
 echo "N $N;" > local/mesh
 echo "N $N;" > local/verification
+
+# The stock control overrides the gradient entries of system/fvSchemes
+if [ "$wallGradient" = stock ]
+then
+    cat > local/wallGradient <<EOF
+grad(Vm)                leastSquares;
+grad(Vm.component(0))   leastSquares;
+EOF
+fi
 echo "sealedWallTrace $trace;" > local/trace
 
 # Time step proportional to h^2, ending exactly at endTime

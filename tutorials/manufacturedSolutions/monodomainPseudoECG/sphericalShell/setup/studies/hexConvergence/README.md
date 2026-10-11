@@ -24,28 +24,30 @@ boundary and gradient rows, and the header lines `# h`, `# time` and
 
 ## Execution
 
-In a copy of the case, for each `N`:
+Each run is a copy of the case in `results/` (ignored by git), named
+`<sealed|stock>_hex_N<n>_s<seed>[_T2|_dthalf]`, the names that
+`../summarize.py` reads. From this folder, for each `N`:
 
 ```bash
-./Allrun parallel -mesh hex -N <n>
+mkdir -p results
+rsync -a --exclude setup ../../../ results/sealed_hex_N<n>_s1/
+results/sealed_hex_N<n>_s1/Allrun parallel -mesh hex -N <n>
 ```
 
-The default end time is `T = 0.2` (the short window) and the time step is
+The default end time is `T = 0.2` and the time step is
 `endTime/ceil(endTime/(0.00892857 (10/N)^2))`, which scales as `h^2`.
 
-The case selects `sealedWallLeastSquares` for `grad(Vm)` and
-`grad(Vm.component(0))` in `system/fvSchemes`. The stock wall gradient is the
-control: in the run copy, delete those two lines, so every gradient is
-`leastSquares`.
+- Stock control: copies named `stock_...`, with `-wallGradient stock`, which
+  replaces the two `sealedWallLeastSquares` entries of `system/fvSchemes`
+  by `leastSquares`.
+- Long window: copies ending in `_T2`, with `-endTime 2`.
+- Time-step control: copies ending in `_dthalf`, with `-dt` set to half the
+  default time step at `T = 0.2`.
 
-### Long window
-
-The long window runs to `T = 2`, and repeats the run with the default time
-step halved:
+Every table below is printed by
 
 ```bash
-./Allrun parallel -mesh hex -N <n> -endTime 2
-./Allrun parallel -mesh hex -N <n> -endTime 2 -dt <half the default>
+python3 ../summarize.py results
 ```
 
 ## Measured behaviour
@@ -133,6 +135,9 @@ Halving the time step at T = 0.2 changes the `Vm` L2 error by -0.14 %
 -0.21 % and -0.17 % with the stock gradient: the errors above are spatial.
 
 ### `-trace conormal` (stock `leastSquares`)
+
+Runs with `-trace conormal -wallGradient stock`; `summarize.py` does not read
+them, and the orders are between successive levels.
 
 | N | h | Vm L2 | Vm Linf | Vm_boundary L2 | gradVm_boundary L2 | gradReconVm_boundary L2 |
 |---|---|---|---|---|---|---|
