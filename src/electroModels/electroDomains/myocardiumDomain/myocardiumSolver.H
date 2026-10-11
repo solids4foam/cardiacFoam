@@ -36,6 +36,7 @@ Author
 #include "fvMesh.H"
 #include "fvMeshSubset.H"
 #include "electroVolumeFieldDomain.H"
+#include "electroVerificationModel.H"
 
 namespace Foam
 {
@@ -108,6 +109,10 @@ public:
     );
 
     virtual void unbindExternalPhiE();
+
+    //- Verification model whose manufactured sources the solver adds
+    virtual void bindVerifier(const electroVerificationModel* verifier)
+    {}
 
     virtual void solveDiffusionExplicit
     (

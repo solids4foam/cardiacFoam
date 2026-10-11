@@ -5,5 +5,7 @@ sealedWall/sealedWallLeastSquaresGrad.C
 sealedWall/conormalZeroFluxFvPatchScalarField.C
 interface/exposedPhiETrace.C
 interface/interfaceGradient.C
+pureNeumann/compatibilityProjection.C
+diffusion/conormalStabilisation.C
 
 LIB = $(FOAM_USER_LIBBIN)/libnumericsModels

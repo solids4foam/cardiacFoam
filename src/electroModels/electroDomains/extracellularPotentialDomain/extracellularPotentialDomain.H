@@ -132,9 +132,6 @@ class extracellularPotentialDomain
     //- Apply and evaluate the verifier's boundary data on phiE.
     void applyManufacturedBoundaryData();
 
-    //- Subtract the volume-weighted discrete imbalance from a pure-Neumann phiE system
-    void projectPhiECompatibility(fvScalarMatrix& phiEqn) const;
-
     //- Copy the heart-bath face values of F into phiEInterfaceFlux.
     void storeInterfaceFlux(const surfaceScalarField& F);
 

@@ -23,6 +23,7 @@ License
 #include "electroVerificationModel.H"
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
+#include "compatibilityProjection.H"
 #include "exposedPhiETrace.H"
 #include "interfaceGradient.H"
 #include "addToRunTimeSelectionTable.H"
@@ -964,28 +965,6 @@ void extracellularPotentialDomain::applyManufacturedBoundaryData()
 }
 
 
-void extracellularPotentialDomain::projectPhiECompatibility
-(
-    fvScalarMatrix& phiEqn
-) const
-{
-    scalar imbalance = sum(phiEqn.source());
-    forAll(phiEqn.boundaryCoeffs(), patchI)
-    {
-        if (!baseMesh_.boundary()[patchI].coupled())
-        {
-            imbalance += sum(phiEqn.boundaryCoeffs()[patchI]);
-        }
-    }
-    reduce(imbalance, sumOp<scalar>());
-
-    const scalarField& V = baseMesh_.V();
-    phiEqn.source() -= V*(imbalance/gSum(V));
-
-    Info<< "phiE compatibility projection: imbalance " << imbalance << nl;
-}
-
-
 void extracellularPotentialDomain::storeInterfaceFlux
 (
     const surfaceScalarField& F
@@ -1315,7 +1294,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
      && verifier()->requiresPhiECompatibilityProjection()
     )
     {
-        projectPhiECompatibility(phiEqn);
+        projectCompatibility(phiEqn);
     }
 
     // Only pin a reference cell when the BC inventory leaves the system

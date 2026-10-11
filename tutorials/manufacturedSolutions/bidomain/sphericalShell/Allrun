@@ -1,0 +1,160 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
+
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
+  -mesh hex|tet             blockMesh cubed sphere (default) or gmsh tetrahedra (shell.geo.template)
+  -N n                      cells per unit length (default 12); hex: a multiple of 4, radial
+                            cells per unit length; tet: element size 1/n
+  -seed n                   gmsh random seed for -mesh tet (default 1)
+  -dt x                     time step
+  -endTime x                end time (default 0.2)
+
+Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
+-mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
+USAGE
+    exit 2
+}
+
+parallel=false
+mesh=hex
+N=12
+seed=1
+dt=
+endTime=0.2
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
+    esac
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -mesh)
+            needValue "$@"; mesh="$2"; shift
+            case "$mesh" in
+                hex|tet) ;;
+                *) echo "${0##*/}: unknown -mesh $mesh" 1>&2; usage ;;
+            esac
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -seed)
+            needValue "$@"; seed="$2"; shift
+            positiveInteger -seed "$seed"
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.gmsh ] || [ -e log.blockMesh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
+
+if [ "$mesh" = hex ] && [ $((N % 4)) -ne 0 ]
+then
+    echo "${0##*/}: -mesh hex takes -N as a multiple of 4, not $N" 1>&2
+    usage
+fi
+
+if [ "$mesh" = tet ]
+then
+    for tool in gmsh gmshToFoam
+    do
+        command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+    done
+fi
+
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/mesh
+echo "N $N;" > local/verification
+
+# Time step proportional to h^2, ending exactly at endTime
+if [ -z "$dt" ]
+then
+    dt=$(awk -v T="$endTime" -v N="$N" 'BEGIN {
+        h = 0.00892857*(10/N)^2
+        n = int(T/h); if (n*h < T) n++
+        printf "%.17g", T/n }')
+fi
+cat > local/time <<EOF
+endTime         $endTime;
+deltaT          $dt;
+writeInterval   $endTime;
+EOF
+
+# Mesh: blockMesh cubed sphere, or gmsh tetrahedra
+if [ "$mesh" = hex ]
+then
+    runApplication blockMesh
+else
+    lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    cp shell.geo.template local/shell.geo
+    runApplication gmsh -3 local/shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+    if grep -q "Error" log.gmsh
+    then
+        echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+        exit 1
+    fi
+    runApplication gmshToFoam local/shell.msh
+fi
+runApplication checkMesh
+if grep -q "Failed [0-9]* mesh checks" log.checkMesh
+then
+    echo "checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
+    exit 1
+fi
+
+# The cell-wise conductivities 0/ConductivityIntracellular and 0/ConductivityExtracellular
+runApplication setManufacturedFields
+
+if $parallel
+then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar -latestTime
+else
+    runApplication cardiacFoam
+fi

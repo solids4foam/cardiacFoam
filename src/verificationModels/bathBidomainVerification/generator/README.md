@@ -80,3 +80,11 @@ they hold only for the recorded sympy version.
 the heart-only monodomain solution on the spherical shell, sealed on both spheres with the
 intracellular tensor of `shell_mms.py`. Its F equals the `shell_mms.py` intracellular potential at
 t = 0. Tests: `test_shell_monodomain_mms.py`.
+
+`shell_bidomain_mms.py` writes `bidomainVerification/manufacturedShellBidomainReference.H`:
+the heart-only bidomain solution on the spherical shell, with the intracellular and extracellular
+tensors of `shell_mms.py`, each sealed on both spheres by its own potential: Fi equals the field of
+`shell_monodomain_mms.py`, and Fe is built on the time-independent part of the `shell_mms.py` heart
+extracellular potential. Besides the sealing, source, denominator and richness checks of the
+monodomain shell, it checks that the integral of the phiE source div(Gi grad Fi) + div(Ge grad Fe)
+over the shell vanishes by Gauss-Legendre quadrature. Tests: `test_shell_bidomain_mms.py`.

@@ -24,6 +24,8 @@ License
 #include "myocardiumDomain.H"
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
+#include "compatibilityProjection.H"
+#include "conormalStabilisation.H"
 #include "exposedPhiETrace.H"
 #include "conormalZeroFluxFvPatchScalarField.H"
 #include "fvMeshSubset.H"
@@ -151,7 +153,8 @@ bidomainSolver::bidomainSolver
     bathHeartPhiETrace_
     (
         electroProperties.getOrDefault<word>("bathHeartPhiETrace", "zeroGradient")
-    )
+    ),
+    verifierPtr_(nullptr)
 {
     if
     (
@@ -375,34 +378,7 @@ void bidomainSolver::solveDiffusionExplicit
         insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_)
     );
 
-    if (externalPhiEBound())
-    {
-        restrictExternalPhiE();
-    }
-    else
-    {
-        const label refCell = referenceCell();
-
-        updateGradPhiE();
-        fvScalarMatrix phiEqn
-        (
-            fvm::laplacian
-            (
-                insulatedFaceConductivity(GiPlusGe_, phiE_, sealedHeartBoundary_),
-                phiE_
-            )
-         == -fvc::laplacian
-            (
-                insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_),
-                domain.Vm()
-            )
-        );
-        if (refCell >= 0)
-        {
-            phiEqn.setReference(refCell, phiEReferenceValue_, true);
-        }
-        solve(phiEqn);
-    }
+    solvePhiEImplicitOnce(domain);
 
     if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
     {
@@ -464,19 +440,32 @@ void bidomainSolver::solvePhiEImplicitOnce
         const label refCell = referenceCell();
 
         updateGradPhiE();
-        fvScalarMatrix phiEqn
+        volScalarField rhs
         (
-            fvm::laplacian
-            (
-                insulatedFaceConductivity(GiPlusGe_, phiE_, sealedHeartBoundary_),
-                phiE_
-            )
-         == -fvc::laplacian
+            -fvc::laplacian
             (
                 insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_),
                 domain.Vm()
             )
         );
+        if (verifierPtr_)
+        {
+            verifierPtr_->addManufacturedPhiESource(rhs, phiE_.time().value());
+        }
+        const tmp<surfaceTensorField> tGf
+        (
+            insulatedFaceConductivity(GiPlusGe_, phiE_, sealedHeartBoundary_)
+        );
+        fvScalarMatrix phiEqn
+        (
+            fvm::laplacian(tGf(), phiE_)
+          + conormalStabilisation(tGf(), phiE_)
+         == rhs
+        );
+        if (verifierPtr_ && verifierPtr_->requiresPhiECompatibilityProjection())
+        {
+            projectCompatibility(phiEqn);
+        }
         if (refCell >= 0)
         {
             phiEqn.setReference(refCell, phiEReferenceValue_, true);

@@ -107,7 +107,7 @@ public:
         (void)evaluationTime;
     }
 
-    //- Add the manufactured source of the global phiE equation, L(phiE) == rhs, on the base mesh
+    //- Add the manufactured source of the phiE equation, L(phiE) == rhs, on the mesh phiE is solved on
     virtual void addManufacturedPhiESource
     (
         volScalarField& rhs,
