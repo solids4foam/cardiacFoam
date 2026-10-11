@@ -1,119 +1,122 @@
-# manufacturedSolutions/monodomain1D3D tutorial
+# monodomain1D3D
 
-Manufactured 1D-3D monodomain coupling test case. Couples a 3D monodomain myocardium domain to a small 1D Purkinje graph through `reactionDiffusionPvjCoupler` and verifies coupled fields with `coupled1D3DMonodomainVerifier`.
+Coupled 1D-3D monodomain manufactured solution: a reaction-diffusion Purkinje
+graph and the 3D myocardium on the unit cube, joined at two Purkinje-ventricular
+junctions (PVJs) by `reactionDiffusionPvjCoupler`. It checks the node-edge graph
+operator, the 3D monodomain operator and the PVJ source (sampling the tissue
+voltage, depositing the junction current) under joint refinement, for
+unidirectional and bidirectional transfer and explicit and implicit tissue-side
+assembly. The exact junction source is built with the same sampling and
+deposition map as the solver, so the case checks the coupled workflow against
+that map; it does not check the map against an independent continuum coupling,
+a calibrated junction resistance, graph branch points with more than two edges,
+or a wall treatment (the 3D field has a zero normal gradient on every face).
 
-## Overview
+Origin: the 3D field is the monodomain problem of the FDA regulatory science
+tool (Pathmanathan & Gray 2014); the graph field and the PVJ coupling problem
+are this work.
 
-Default graph lies on `y=1/6, z=1/3`, with PVJ terminals at `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. Terminal faces satisfy homogeneous Neumann boundary condition for 3D manufactured solution because terminals are on `x=0` and `x=1` where `d cos(π x)/dx = 0`. Terminal values do not cancel: `F_3D = -0.5 F_1D` at PVJs (unlike older `y=0.5, z=1/3` placement).
+## Problem
 
-## Graph Configuration
+    chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s + S_pvj          in [0,1]^3
+    n . grad Vm = 0                                                      on every face
+    chi Cm dV1D/dt = d/ds(g dV1D/ds) - chi Cm Iion1D + I_s1D (+ I_app1D) on each graph edge
 
-### Generating Refined Graphs
+`Vm = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z)` and `V1D = sqrt(1 + t)
+cos(pi x)` at graph position `x`, with `G = diag(0.111453302, 0.121585420,
+0.030396355)`, graph conductivity `g = 0.111453302`, `chi = 3`, `Cm = 2` and
+the FDA ionic closure (`u1`, `u2`, `u3`) in both domains; `I_s` and `I_s1D`
+are the manufactured sources added by the verifiers.
 
-```bash
-setup/generate_purkinje_graphs.py
-```
+The graph runs from the root `(1/2, 1/6, 1/3)` along two straight branches to
+the terminals `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. There `d Vm/dx = 0`, so the
+3D no-flux condition holds, and `Vm = -V1D/2`, so the junction current does not
+vanish: with `R_pvj = 1` the exact terminal currents are `+-(3/2) sqrt(1 + t)`.
 
-Creates:
+At terminal `k` the junction current `I_pvj,k = (V1D_k - M_k[Vm])/R_pvj`
+samples the tissue voltage with the volume-weighted map `M_k` and is deposited
+as `S_pvj` with a linear kernel of radius 0.11 normalised to unit integral.
+`unidirectional` keeps only the tissue source; `bidirectional` also applies
+`I_app1D = -I_pvj,k` at the graph terminal. `explicit` deposits the terminal
+current; `implicit` assembles a cell-local sink in the tissue voltage. The
+verifiers add the exact junction source, computed from the exact fields with
+the same map and kernel, to the manufactured sources and write the difference
+between the numerical and the exact junction source.
 
-- `constant/purkinjeGraph.nodes003` through `.nodes161`
-- `constant/graphFiles/purkinjeGraph.nodes*.vtk`
+### Stack
 
-### Selecting Active Graph
+- myocardium solver: `monodomainSolver`, `solutionAlgorithm implicit`,
+  `timeCouplingScheme godunov`, `ddt(Vm) backward`, `Gauss linear` gradient,
+  `staggeredElectrophysicsAdvanceScheme`
+- graph: `purkinjeGraphModel` with `monodomain1DSolver` (reaction step, then
+  implicit node-edge diffusion solved by Hines elimination)
+- coupler: `reactionDiffusionPvjCoupler`, `couplingMode` (`-coupling`),
+  `pvjCouplingScheme` (`-pvj`), `rPvj` (`-rPvj`), `pvjRadius 0.11`,
+  `pvjKernel linear`
+- ionic model: `monodomainFDAManufactured` in both domains
+- verifiers: `manufacturedFDAMonodomainVerifier` (3D),
+  `manufacturedGraphVerifier` (graph), `coupled1D3DMonodomainVerifier` (PVJ
+  source)
 
-```bash
-setup/select_purkinje_graph.sh nodes041
-```
+## Mesh
 
-The active 1D graph input is `constant/purkinjeGraph`.
+- 3D (`system/blockMeshDict.3D`): `N` cells per unit length in each direction.
+- Graph (`constant/purkinjeGraph.nodes<k>`, `k` = 3, 11, 21, 41, 81, 161):
+  `(k - 1)/2` equal edges per branch, edge length `1/(k - 1)`. The coupled
+  studies refine both together, `k = N + 1`. `setup/generate_purkinje_graphs.py`
+  writes these files to `constant/` and VTK views to `constant/graphFiles/`.
 
 ## Usage
 
-### Manual Execution
-
 ```bash
-./Allrun
+./Allrun [parallel] [options]
+./Allclean
 ```
 
-`Allrun` regenerates `constant/polyMesh` from `system/blockMeshDict.3D` before launching `cardiacFoam`.
+Every option writes a file in `local/`, which the dictionaries include;
+`Allclean` removes `local/`, the mesh and the verifier outputs. `Allrun` stops
+with `run ./Allclean first` if a mesh log exists.
 
-### Graph-Only Diagnostic
+| option | effect | default |
+|---|---|---|
+| `parallel` | `decomposePar` (6 subdomains, scotch), parallel `cardiacFoam`, `reconstructPar -latestTime` | serial |
+| `-N n` | cells per unit length of the cube | 20 |
+| `-graph nodes003\|...\|nodes161` | Purkinje graph | `nodes<N+1>` (edge length `1/N`) |
+| `-domain coupled\|graph` | `cardiacFoam` on the coupled problem, or `runPurkinjeGraph` on the graph alone (no junction, serial) | coupled |
+| `-coupling unidirectional\|bidirectional` | PVJ `couplingMode` | unidirectional |
+| `-pvj explicit\|implicit` | PVJ `pvjCouplingScheme` | explicit |
+| `-rPvj x` | junction resistance | 1 |
+| `-dt x` | time step | `endTime/ceil(endTime/(0.008971136 (10/N)^2))` |
+| `-endTime x` | end time | 0.1 |
 
-```bash
-blockMesh -dict system/blockMeshDict.3D
-runPurkinjeGraph -case .
-```
+Outputs:
 
-### Graph-Only Convergence Rates
+- `postProcessing/3D_<n>_cells.dat`: 3D errors of `Vm`, `u1`, `u2` and the
+  bulk, boundary and gradient rows of
+  [Bulk, boundary and gradient rows](../README.md#bulk-boundary-and-gradient-rows)
+- `postProcessing/graph_1D_<k>_nodes.dat`: graph errors of `Vm1D`, `u1`, `u2`
+- `verification/coupled1D3DMonodomain_diagnostics.csv`: at the last step, the
+  numerical and exact junction sources (`sourceL1`, `exactSourceL1`), their
+  difference (`sourceErrorL1`, `sourceErrorL2`) and the deposited currents
+- `postProcessing/purkinjeNetwork.dat`: graph node voltages and terminal
+  sources at the write times
 
-Example of running a graph convergence study via omnidriver (selects each `constant/purkinjeGraph.nodes*` input, runs `runPurkinjeGraph`). Spec: `tutorials/manufacturedSolutions/monodomain1D3D/setup/studies/coupledConvergence/sweep_active.json`.
-
-```bash
-[omnidriver command to run]
-```
-
-Writes:
-
-- `outputs/1dGraphConvergence/graph_convergence_summary.csv`
-- `outputs/1dGraphConvergence/graph_convergence_rates.csv`
-
-### Coupled 1D-3D Convergence Sweeps (Suggested)
-
-Active coupling (bidirectional PVJ). Spec: `setup/studies/coupledConvergence/sweep_active.json`.
-
-```bash
-[omnidriver command to run]
-```
-
-Bidirectional coupling. Spec: `setup/studies/coupledConvergence/sweep_bidirectional.json`.
-
-```bash
-[omnidriver command to run]
-```
-
-Decoupled (negligible PVJ coupling with `rPvj=1e6`). Spec: `setup/studies/coupledConvergence/sweep_decoupled.json`.
+Regression (the defaults: `N = 20`, the 21-node graph, unidirectional explicit
+transfer, serial): the 3D errors with their boundary and gradient rows, the
+junction source, its exact value and its error, and the graph errors.
 
 ```bash
-[omnidriver command to run]
+./regression/regressionTest.sh
 ```
 
-Coupled sweeps run `cardiacFoam` under joint 1D/3D refinement, copy verifier summaries, and write:
+## Studies
 
-- `outputs/coupled1D3DConvergence/coupled_convergence_summary.csv`
-- `outputs/coupled1D3DConvergence/coupled_convergence_rates.csv`
-- `outputs/coupled1D3DConvergence/coupled_1D3D_convergence.png`
-- `outputs/coupled1D3DConvergence/coupled_1D3D_convergence.pdf`
+`setup/studies/` holds one study per question, each run in copies of the case
+with the commands in its README; `setup/studies/summarize.py` prints the
+tables.
 
-## Convergence verification
-
-**Why this study exists.** The coupled 1D-3D monodomain implementation has to be shown to converge at the expected rate
-against a known solution. The Method of Manufactured Solutions (MMS) supplies that
-known solution: an analytical `V_exact` is imposed on both domains, the matching
-forcing terms are injected, and the solver error is measured under joint
-`h_1D ≈ h_3D` refinement with `dt ~ h²` so temporal error never masks the spatial
-order.
-
-**Current interpretation.**
-
-- The 1D Purkinje and 3D myocardium solvers each converge at **O(h²)** on their own
-  (1D standalone, 3D standalone, and the negligible-coupling sweep with
-  `rPvj=1e6`).
-- Active-coupling MMS runs use the production PVJ operator directly: the coupled
-  verifier leaves terminal currents, 3D source fields, and implicit source
-  coefficients untouched.
-- The coupled verifier adds the exact PVJ source to the manufactured ionic
-  residual, so the analytical 1D/3D fields solve the coupled MMS equations while
-  the numerical PVJ source remains raw.
-- The coupled verifier also reports the diagnostic residual
-  `S_pvj(V_num) - S_pvj(V_exact)`.
-- The final N=10→20→40→80 baseline scheme matrix confirms **O(h²)** convergence
-  for unidirectional/bidirectional and explicit/implicit PVJ assembly.
-- The production PVJ coupler contains only production physics. The FDA reference
-  lives inside `coupled1D3DMonodomainVerifier`, where it forms the MMS source and
-  diagnostics.
-- The default graph uses the non-cancelling `y=1/6, z=1/3` terminal placement.
-  Boundary fluxes remain zero when terminals lie on x-boundary faces, but the
-  PVJ terms are no longer hidden by a cancelling placement.
-
-A first-step bug (V_1D uninitialised at `t=0`, fixed via `preInitialize()`) found
-during this work is documented in the notes file.
+| study | question |
+|---|---|
+| [graphConvergence](setup/studies/graphConvergence/README.md) | spatial order of the graph operator alone, at a fixed time step |
+| [coupledConvergence](setup/studies/coupledConvergence/README.md) | joint 1D-3D order of the fields and the junction source, for the four transfer and assembly combinations |
+| [weakCouplingControl](setup/studies/weakCouplingControl/README.md) | whether the tissue and graph errors depend on the junction |

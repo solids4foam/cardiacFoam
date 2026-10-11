@@ -13,68 +13,27 @@ if [[ -z "${regressionLib}" ]]; then
 fi
 . "${regressionLib}"
 
-# 1D-3D monodomain manufactured solution at N_CELLS=20 with the default
-# 41-node graph. Case-local reference kinds, each with a relative (rel) or
-# absolute (abs) tolerance:
-#     error3D  <field> <L1|L2|Linf> <expected> <tolerance> <rel|abs>
-#         3-D error summary, postProcessing/3D_20_cells.dat
-#     error1D  <field> <L1|L2|Linf> <expected> <tolerance> <rel|abs>
-#         graph error summary, postProcessing/graph_1D_41_nodes.dat
-#     coupling <column> - <expected> <tolerance> <rel|abs>
-#         final row of the 1D-3D coupling diagnostics CSV
-
-SUMMARY_3D="postProcessing/3D_20_cells.dat"
-SUMMARY_1D="postProcessing/graph_1D_41_nodes.dat"
-DIAGNOSTICS="verification/coupled1D3DMonodomain_diagnostics.csv"
-
-# Final-row value of a named CSV column
-csvFinalValue()
-{
-    awk -F, -v name="$2" '
-        NR == 1 { for (i = 1; i <= NF; i++) if ($i == name) col = i; next }
-        { last = $col }
-        END { if (col) print last }
-    ' "$1"
-}
-
-regression_case_check()
-{
-    local kind="$1" key="${2:-}" metric="${3:-}" expected="${4:-}" tolerance="${5:-}" mode="${6:-abs}"
-    local file actual tolAbs
-
-    case "${kind}" in
-        error3D)  file="${SUMMARY_3D}" ;;
-        error1D)  file="${SUMMARY_1D}" ;;
-        coupling) file="${DIAGNOSTICS}" ;;
-        *) regression_fail "unknown reference kind '${kind}'"; return 1 ;;
-    esac
-
-    if [[ "${kind}" == coupling ]]; then
-        actual="$(csvFinalValue "${file}" "${key}")" || actual=""
-    else
-        REGRESSION_SUMMARY_FILE="${file}"
-        actual="$(regression_error_metric "${key}" "${metric}")" || actual=""
-    fi
-
-    if [[ "${mode}" == rel ]]; then
-        tolAbs="$(awk -v t="${tolerance}" -v e="${expected}" 'BEGIN { if (e < 0) e = -e; print t*e }')"
-    else
-        tolAbs="${tolerance}"
-    fi
-
-    regression_check "${kind} ${key} ${metric} (${mode} ${tolerance})" "${actual}" "${expected}" "${tolAbs}" \
-        "${kind}" "${file}" "" "${key} ${metric}"
-}
+# Runs the case defaults (N 20, 21-node graph, unidirectional explicit PVJ) in
+# serial and compares the 3D error summary, the PVJ source diagnostics and the
+# graph error summary against the references.
 
 regression_init "1D-3D monodomain manufactured-solution regression test" \
     regression/monodomain1D3D.reference "$@"
 
-export N_CELLS=20
 regression_run_or_fail
 
-regression_require_output "3-D error summary" "${SUMMARY_3D}"
-regression_require_output "graph error summary" "${SUMMARY_1D}"
-regression_require_output "coupling diagnostics" "${DIAGNOSTICS}"
+REGRESSION_SUMMARY_FILE="$(regression_resolve_file postProcessing/3D_20_cells.dat)" \
+    || REGRESSION_SUMMARY_FILE=""
+regression_require_output "3D error summary" "${REGRESSION_SUMMARY_FILE}" 'Field     L1-error'
+graphSummary="$(regression_resolve_file postProcessing/graph_1D_21_nodes.dat)" || graphSummary=""
+regression_require_output "graph error summary" "${graphSummary}" 'Field     L1-error'
+diagnostics="$(regression_resolve_file verification/coupled1D3DMonodomain_diagnostics.csv)" \
+    || diagnostics=""
+regression_require_output "PVJ source diagnostics" "${diagnostics}" 'sourceErrorL1'
 
 regression_compare || true
+
+# The Purkinje graph errors
+REGRESSION_SUMMARY_FILE="${graphSummary}"
+regression_compare regression/monodomain1D3D.graph.reference || true
 regression_finish
