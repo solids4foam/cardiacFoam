@@ -1,91 +1,100 @@
-# manufacturedSolutions/monodomainTotalLagrangianEM tutorial
+# monodomainTotalLagrangianEM
 
-Full coupled electromechanics manufactured-solution verification case built on `cardiacFoam` + `solids4foam` stack.
+Coupled electromechanics manufactured solution on the unit cube: the
+monodomain potential, an active tension computed from the numerical `Vm` and
+the numerical fibre stretch, and the nonlinear total-Lagrangian solid of
+solids4foam driven by a manufactured displacement on every boundary and a
+manufactured body force. It checks `Vm`, the displacement `D`, the fibre
+stretch `lambda` and the active tension `Ta` against their exact fields, and
+with them the electro-to-tension and tension-to-solid paths and the field
+mapping between the two regions. It does not check traction or pressure
+boundaries (the displacement is prescribed on every face), non-uniform fibres
+(`f0 = (1, 0, 0)`), a physiological active-tension model, or a wall treatment
+of `Vm` (zero normal gradient on every face). It needs cardiacFoam built with
+solids4foam.
 
-## Overview
+Origin: the `Vm` field is the monodomain problem of the FDA regulatory science
+tool (Pathmanathan & Gray 2014); the mechanics problem is this work.
 
-This case verifies the full coupled electromechanical solve, including interior solid momentum balance:
+## Problem
 
-- `Vm` verified with existing monodomain manufactured verifier
-- `Ta` computed from numerical `Vm` and numerical fibre stretch
-- solid follows manufactured displacement on every outer boundary via tutorial-local `fixedDisplacement` derivative
-- tutorial-local `fvOption` (`manufacturedSolidForce`) adds manufactured body force `B = -Div(P)` so interior `D` converges to manufactured field
+    chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s     in [0,1]^3,  n . grad Vm = 0
+    rho d2D/dt2 = Div P + B                                 in [0,1]^3,  D = D_ex on every face
 
-Stack uses:
+in the reference configuration, with
 
-- numerical monodomain manufactured electrophysiology
-- numerical manufactured active tension (`ManufacturedElectromechanics`)
-- numerical nonlinear solid mechanics (`electroMechanicalLaw`)
-- exact manufactured displacement on solid boundaries + manufactured mechanical body force
+- `Vm = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z)`, `G = diag(0.111453302,
+  0.121585420, 0.030396355)`, `chi = 3`, `Cm = 2` and the FDA ionic closure
+  (`u1`, `u2`, `u3`)
+- `D_ex = (Ax X^2 Y, Ay Y^2 Z, Az Z^2 X) sin(t)`, `Ax = Ay = Az = 0.02`
+- `Ta = TaScale Tmax Vm^2/(V0^2 + Vm^2) (1 + gamma (lambda - 1))`,
+  `lambda = |F f0|`, `f0 = (1, 0, 0)`, `Tmax = 1000`, `V0 = 1`, `gamma = 1`,
+  `TaScale = 1`
+- `P = J sigma F^-T`, `sigma` the compressible neo-Hookean stress of solids4foam
+  `neoHookeanElastic` (`E = 10000`, `nu = 0.3`) plus the active fibre stress
+  `F (Ta f0 f0) F^T / J`; `rho = 1060`
+- `B = rho d2D_ex/dt2 - Div P(D_ex)`, in `src/manufacturedSolidForce/B_expr.H`
 
-Exercises:
+`verification/generate_B_expr_sympy.py` derives `B` with sympy, prints it at
+the test points of `verification/verify_B_expr_harness.cpp` (which compiles
+`B_expr.H`) and, given `B_expr.H`, compares the two at random points.
 
-- electro-to-active-tension path
-- active-tension-to-solid path
-- region coupling and field mapping
-- nonlinear solid solve under prescribed manufactured motion and body force
+### Stack
 
-## Technical Implementation
+- coupling: `electroMechanicalModel sequentialElectroMechanical`, regions
+  `electro` and `solid` on the same mesh
+- electro: `monodomainSolver`, `solutionAlgorithm implicit`, `ddt(Vm)
+  backward`, `Gauss linear` gradient, ionic model `monodomainFDAManufactured`,
+  verifier `manufacturedFDAMonodomainVerifier`
+- active tension: `ManufacturedElectromechanics`
+- solid: `nonLinearGeometryTotalLagrangianTotalDisplacement`,
+  `electroMechanicalLaw` with the `neoHookeanElastic` passive law, `d2dt2`
+  `Euler`; on every patch the case-local condition
+  `manufacturedElectromechanicsDisplacement` (`0/solid/D`); the body force by
+  the case-local `fvOption` `manufacturedSolidForce` (`system/solid/fvOptions`),
+  which reads `amplitude`, `Tmax`, `V0`, `gamma` and `TaScale` from
+  `constant/electroMechanicalProperties` and `E`, `nu` and `rho` from
+  `constant/solid/mechanicalProperties`
+- verifier: `manufacturedElectromechanicsVerifier`, the `verificationModel`
+  entry of `sequentialElectroMechanicalCoeffs` (an entry elsewhere is ignored)
 
-### Manufactured Solution
+The solid relies on two solids4foam features: `electroMechanicalLaw` reads the
+runtime `Ta` and the fibre fields `f0` and `f0f` (`0/solid/f0`, `0/solid/f0f`),
+and `nonLinearGeometryTotalLagrangianTotalDisplacement` applies `fvOptions` in
+its residual.
 
-Manufactured displacement (reference configuration):
+## Mesh
 
-```
-D = ( Ax x² y,  Ay y² z,  Az z² x ) * sin(t)
-```
-
-with fibre `f0 = (1,0,0)`. Active tension:
-
-```
-Ta = Tmax * Vm²/(V₀² + Vm²) * (1 + γ(λ - 1))
-```
-
-Body force `B` is the symbolic divergence of the first Piola-Kirchhoff stress (compressible neo-Hookean passive part plus active fibre stress), generated in `src/manufacturedSolidForce/B_expr.H`.
-
-All of `Vm`, `D`, `λ`, and `Ta` are rigorous manufactured convergence targets and should converge at formal scheme order.
-
-### Parameter Sources (Single Source of Truth)
-
-Body force `manufacturedSolidForce` deduces its physics parameters at runtime from solver dictionaries, so they never drift:
-
-- `amplitude`, `Tmax`, `V0`, `gamma`, `TaScale` from `constant/electroMechanicalProperties`
-- `E`, `nu` from `constant/solid/mechanicalProperties` (`passiveMechanicalLaw`)
-
-Effective active-stress amplitude is `TaScale * Tmax`, matching the `Ta` field the coupler hands to the solid.
-
-### solids4foam Integration
-
-This case requires two `solids4foam` changes:
-
-- `electroMechanicalLaw` looks up runtime `Ta` field and reads fibre fields `f0` and `f0f`. The case ships `0/solid/f0` and `0/solid/f0f` (both uniform `(1 0 0)`) and `0/solid/D`, which carries the manufactured displacement condition on every patch
-- `nonLinGeomTotalLagTotalDispSolid` applies `fvOptions` source in its SNES residual (no-rho `fvOptions()(D)` overload), enabling MMS body force
-
-Implementation note: coupled verifier dictionary is the `verificationModel` entry inside `sequentialElectroMechanicalCoeffs`, the same key every other verifier uses. Electromechanical model stores only that `...Coeffs` sub-dictionary, and looks the verifier up by that exact key: a top-level entry, or one under any other name, is silently ignored.
+`system/blockMeshDict.3D`: `N` hexahedra per unit length in each direction,
+copied to both regions.
 
 ## Usage
 
-### Manual Execution
-
 ```bash
-./Allrun
-./Allrun parallel
+./Allrun [parallel] [options]
+./Allclean
 ```
 
-Local boundary-condition library is compiled from `src/` before case runs. Compiled library is kept case-local under `platforms/$WM_OPTIONS/lib`, keeping the tutorial's build entirely self-contained within the case directory.
+`Allrun` compiles the case-local library (`src/`) into
+`platforms/$WM_OPTIONS/lib` and stops if `libelectroMechanicalModels` is
+missing. Every option writes a file in `local/`, which the dictionaries
+include; `Allclean` removes `local/`, the meshes and the case-local library.
+`Allrun` stops with `run ./Allclean first` if a mesh log exists.
 
-Full solids4foam build only: there is no lightweight variant, and `Allrun` stops if `libelectroMechanicalModels` is missing. `regression/regressionTest.sh` covers the case in `Alltest-regression` on a 20³ mesh. With `CARDIAC_REGRESSION_BUILD_MODE=lightweight` it is an expected skip, so it only runs in a `with-solids4foam` regression run; CI currently runs lightweight only.
+| option | effect | default |
+|---|---|---|
+| `parallel` | `decomposePar` per region (6 subdomains), parallel `cardiacFoam` | serial |
+| `-N n` | cells per unit length | 20 |
+| `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
+| `-endTime x` | end time | 0.1 |
 
-### Omnidriver-Managed Convergence Sweeps (Suggested)
+`postProcessing/manufacturedElectromechanicsSummary.dat` holds the errors of
+`Vm`, `D`, `lambda` and `Ta` at the final time.
+
+Regression (`N = 20`, `-dt 0.00224215`): the final time and the L1, L2 and Linf
+errors of `Vm`, `D`, `lambda` and `Ta`. With
+`CARDIAC_REGRESSION_BUILD_MODE=lightweight` it exits 77 (skip).
 
 ```bash
-[omnidriver command to run]
+./regression/regressionTest.sh
 ```
-
-Refinement sweep follows monodomain manufactured pattern:
-
-- dimensions: `1D`, `2D`, `3D`
-- mesh sizes: `10`, `20`, `40`, `80`
-- temporal discretization: `dt ~ h²`
-
-Post-processing reports rigorous manufactured convergence for `Vm`, `D`, `λ`, and `Ta`.

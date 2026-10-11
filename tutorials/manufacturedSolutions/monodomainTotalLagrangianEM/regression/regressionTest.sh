@@ -16,21 +16,15 @@ fi
 # Coupled monodomain + total-Lagrangian solid manufactured solution. Needs the
 # full solids4foam build: exits 77 under CARDIAC_REGRESSION_BUILD_MODE=lightweight.
 #
-# Compares the final-time error norms that manufacturedElectromechanicsVerifier
+# Runs the case at N 20 with -dt 0.00224215, the step of the reference values,
+# and compares the final-time error norms that manufacturedElectromechanicsVerifier
 # writes for Vm, D, lambda and Ta against the reference.
-#
-# The tracked case runs 40^3 cells at the N=80 time step. The regression runs
-# 20^3 cells at the matching N=20 time step from setup/driver_config.json.
 
 regression_init "Electromechanics manufactured-solution regression test" \
     regression/monodomainTotalLagrangianEM.reference "$@"
 regression_require_solids4foam
 
-regression_edit system/blockMeshDict \
-    's/^([[:space:]]*hex[[:space:]]*\([^)]*\)[[:space:]]*)\([^)]*\)/\1(20 20 20)/'
-regression_set system/controlDict deltaT 0.00224215
-
-regression_run_or_fail
+regression_run_or_fail -dt 0.00224215
 
 REGRESSION_SUMMARY_FILE="postProcessing/manufacturedElectromechanicsSummary.dat"
 regression_require_output "manufactured electromechanics error summary" \
