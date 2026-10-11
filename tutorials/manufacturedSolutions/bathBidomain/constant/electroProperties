@@ -20,7 +20,6 @@ myocardiumSolver bidomainSolver;
 bidomainSolverCoeffs
 {
     sealedHeartBoundary false;
-    sealedWallTrace     zeroGradient;
     conductivitySource uniform;
     cellZone        myocardium;
     bathPredictorCorrector yes;
@@ -29,9 +28,6 @@ bidomainSolverCoeffs
     chi             [ 0 -1 0 0 0 0 0 ] 3;
     cm              [ -1 -4 4 0 0 2 0 ] 2;
     ionicModel      bathBidomainFDAManufactured;
-    // The complete bath workflow uses first-order Lie--Godunov splitting.
-    // Archive it explicitly: temporal verification must record the complete
-    // advance rather than infer its order from the PDE substep.
     timeCouplingScheme godunov;
     outputVariables
     {
@@ -46,9 +42,10 @@ bidomainSolverCoeffs
         type            manufacturedFDABathBidomainVerifier;
         k               0.7071067811865476;
         alpha           0.01;
-        fdaBathVariant  electrodePair;
+        fdaBathVariant  groundElectrode;
+        #includeIfPresent "<case>/local/verifier"
     }
-    dimension       "1D";
+    dimension       "3D";
     solutionAlgorithm implicit;
     solver          RKF45;
     maxSteps        1000000000;
@@ -59,15 +56,18 @@ bidomainSolverCoeffs
         interfaceConductivityInterpolation distanceWeightedHarmonic;
         groundPatches
         {
+            xMin            0;
         }
         surfaceCurrentPatches
         {
             xMax            0.01;
-            xMin            -0.01;
         }
-        phiERefPoint    ( -0.9 0.05 0.05 );
+        // Inside one cell at every level; used by the electrodePair variant only
+        phiERefPoint    ( -0.9013 0.0437 0.0437 );
         phiEReferenceValue 0;
+        #includeIfPresent "<case>/local/bath"
     }
+    #includeIfPresent "<case>/local/solver"
 }
 
 

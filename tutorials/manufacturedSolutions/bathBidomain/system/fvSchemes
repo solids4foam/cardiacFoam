@@ -23,6 +23,8 @@ ddtSchemes
 gradSchemes
 {
     default         leastSquares;
+
+    #includeIfPresent "<case>/local/gradient"
 }
 
 divSchemes
@@ -33,6 +35,8 @@ divSchemes
 laplacianSchemes
 {
     default         Gauss linear corrected;
+
+    #includeIfPresent "<case>/local/laplacian"
 }
 
 interpolationSchemes
@@ -43,6 +47,8 @@ interpolationSchemes
 snGradSchemes
 {
     default         corrected;
+
+    #includeIfPresent "<case>/local/snGrad"
 }
 
 fluxRequired

@@ -1,9 +1,11 @@
-// Conformal tetrahedral bath--myocardium--bath mesh.
-// __LC__ is replaced by setup/run_mesh_gate.sh.
+// Conformal tetrahedral bath-myocardium-bath box [-1,2] x [0,1] x [0,1],
+// Delaunay tetrahedra of size lc. Set lc and seed with
+// gmsh -setnumber lc <value> -setnumber seed <value>.
 
 SetFactory("OpenCASCADE");
 
-lc = __LC__;
+DefineConstant[ lc = { 0.1, Name "lc" }, seed = { 1, Name "seed" } ];
+
 eps = 1e-7;
 
 Box(1) = {-1, 0, 0, 1, 1, 1};
@@ -35,6 +37,7 @@ Physical Surface("sides") = {yMin[], yMax[], zMin[], zMax[]};
 
 Mesh.MeshSizeMin = lc;
 Mesh.MeshSizeMax = lc;
-Mesh.Algorithm3D = 1;
+Mesh.Algorithm3D = 1;      // Delaunay: near-uniform, isotropic tets
 Mesh.Optimize = 1;
-Mesh.MshFileVersion = 2.2;
+Mesh.RandomSeed = seed;
+Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format

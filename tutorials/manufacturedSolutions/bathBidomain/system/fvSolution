@@ -37,18 +37,9 @@ solvers
 
 PIMPLE
 {
-    // Each outer pass solves the global phiE, then Vm.
+    // Each outer pass solves the global phiE, then Vm
     nOuterCorrectors         1;
-    nNonOrthogonalCorrectors 1;
-
-    // residualControl
-    // {
-    //     Vm
-    //     {
-    //         relTol          0.0;
-    //         tolerance       1e-10;
-    //     }
-    // }
+    nNonOrthogonalCorrectors 0;
 }
 
 
