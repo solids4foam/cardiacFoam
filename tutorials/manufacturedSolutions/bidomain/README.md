@@ -1,98 +1,111 @@
-# manufacturedSolutions/bidomain tutorial
+# bidomain
 
-Manufactured-solution verification for the one-mesh bidomain stack.
+Bidomain manufactured solution on the unit cube, on Cartesian hexahedra
+(`-mesh hex`, default, 1D/2D/3D) or gmsh Delaunay tetrahedra (`-mesh tet`).
+The field has a zero normal gradient on every face and the conductivities are
+diagonal, so this case checks the interior operators of the one-mesh bidomain
+stack (the elliptic `phiE` solve, the parabolic `Vm` solve, their outer
+coupling sweeps, cell-gradient reconstruction, non-orthogonal correction,
+ionic coupling, time integration), not a wall treatment; sealed curved walls
+are checked by [sphericalShell](sphericalShell/README.md).
 
-Origin: the bidomain problem of the FDA regulatory science tool (Pathmanathan & Gray 2014).
+Origin: the bidomain problem of the FDA regulatory science tool (Pathmanathan
+& Gray 2014).
 
-## Overview
+## Problem
+
+    chi Cm dVm/dt = div(G_i grad Vm) + div(G_i grad phiE) - chi Cm Iion + I_s
+    0             = div(G_i grad Vm) + div((G_i + G_e) grad phiE)
+    n . grad Vm = n . grad phiE = 0                             on every face
+
+in `[0,1]^d`, with `phiI = Vm + phiE` and
+
+- `Vm = sqrt(1 + t) F`, `F = cos(pi x)`, `cos(pi x) cos(2 pi y)`,
+  `cos(pi x) cos(2 pi y) cos(3 pi z)` in 1D, 2D, 3D
+- `phiE = -k Vm + c`, `phiI = (1 - k) Vm + c`, `k = 1/sqrt(2)`; `c` is a
+  constant gauge
+- `G_i = diag(0.111453302, 0.121585420, 0.030396355)`,
+  `G_e = ((1 - k)/k) G_i = diag(0.046165469, 0.050362330, 0.012590582)`, so the
+  elliptic equation holds with no `phiE` source
+
+with `chi = 3`, `Cm = 2` and the FDA ionic closure (`u1`, `u2`, `u3`). The
+solver fixes the gauge of `phiE` in the cell containing `phiERefPoint (0.125
+0.05 0.05)`. The verifier reports `phiE` and `phiI` against the exact field
+with `phiE = phiEReferenceValue` at that point, and `phiE_gauge`,
+`phiI_gauge` against the exact field shifted by the volume mean of the `phiE`
+error; the gauge rows are the convergence quantities.
 
 ### Stack
 
-- myocardium solver: `bidomainSolver`
+- myocardium solver: `bidomainSolver`, `solutionAlgorithm implicit`,
+  `timeCouplingScheme godunov` or `sbdf2` (`-coupling`), `ddt(Vm)` `backward`
+  or `Euler` (`-ddt`), `nOuterCorrectors 2`
 - ionic model: `bidomainFDAManufactured`
-- field verification: `manufacturedFDABidomainVerifier` from `libverificationModels`
-- shared analytical oracle: `verificationModels`
+- field verifier: `manufacturedFDABidomainVerifier`
+- gradient: `leastSquares` or `Gauss linear` (`-gradient`)
+- linear solvers: PCG/DIC, absolute tolerance `1e-15` (`-phiTolerance` for
+  `phiE`)
 
-### Purpose
+## Mesh
 
-This case verifies:
-
-- field convergence against an analytical oracle
-- manufactured ionic export variables (`u1`, `u2`, `u3`)
-- bidomain potentials (`phiE`, `phiI`) on a single mesh
-
-### Key Configuration
-
-For this workflow, the ionic model exposes manufactured verification metadata.
-
-- ionic-model-side behavior: `bidomainFDAManufactured`
-- analytical oracle: `verificationModels`
-- field verification hook: `modelPrePostProcessors`
-- field verifier: `verificationModels/bidomainVerification`
-
-Typical outputs include:
-
-- manufactured field summaries in `postProcessing/`
-- `Vm`, `phiE`, `phiI`
-
-## Variants & Extensions
-
-### Insulated-Wall Case
-
-[`insulatedWall/`](insulatedWall/README.md) is a separate case with unequal anisotropy and walls that are insulated in the conormal sense, `n.G_i.grad(phi_i) = 0` and `n.G_e.grad(phi_e) = 0`, on a domain periodic in `y` and `z`. The diagonal conductivities here make `n.grad(u) = 0` and `n.G.grad(u) = 0` coincide on the walls; in `insulatedWall/` they differ. It has its own regression and tetrahedral study.
-
-### Tetrahedral (unstructured) Mesh Variant
-
-`setup/studies/tetConvergence/` holds this case's own tetrahedral-mesh overlay, co-located with the study that drives it: a unit-cube Delaunay mesh (`box.geo.template`, gmsh OpenCASCADE, characteristic length placeholder `__LC__`) and an `fvSchemes` copy with `gradSchemes.default` forced to `leastSquares`.
-
-#### Gradient-Scheme Convergence Sweep
-
-Runs both `Gauss linear` and `leastSquares` gradient reconstruction across `N = 10, 20, 40, 80` for the coupled `Vm`/`phiE` (gauge-shifted) bidomain system. The primary ladder uses the case's two outer correctors with `1e-15` linear tolerance and explicit RKF45 controls. Its rates remain combined space--time evidence until the mesh-fixed `dt/2` controls show that the temporal perturbation is smaller than the resolved field-error separation.
-
-#### Corrector Study
-
-`setup/studies/corrector/sweep_corrector_study.json` produces a same-mesh sensitivity screen that separates two solver-loop controls the segregated bidomain equations expose on this tetrahedral family:
-
-- an outer sweep, which repeats the coupled `phiE -> Vm` block
-- an equation-level non-orthogonal reassembly, which resolves each corrected equation before advancing to the next block
-
-The four reported variants (`baseline`, `outer2`, `nonorth1`, `combined`) cross `nOuterCorrectors = 1,2` with `nNonOrthogonalCorrectors = 0,1` on the `N=10,20,40` Delaunay meshes. `setup/studies/correctorN80/` repeats those variants at the finest level. Together these are same-mesh, same-time-step iteration-sensitivity controls that test solver-loop convergence rather than spatial resolution.
+- `-mesh hex` (`system/blockMeshDict.<d>D`): `N` cells per unit length along
+  each of the `d` directions.
+- `-mesh tet` (`box.geo.template`, 3D): Delaunay tetrahedra of size `1/N` from
+  `gmsh -setnumber lc 1/N -setnumber seed <seed>`, imported with `gmshToFoam`.
 
 ## Usage
 
-### Manual Execution
+```bash
+./Allrun [parallel] [options]
+./Allclean
+```
+
+Every option writes a file in `local/`, which the dictionaries include;
+`Allclean` removes `local/` and the mesh. `Allrun` stops with
+`run ./Allclean first` if a mesh log exists.
+
+| option | effect | default |
+|---|---|---|
+| `parallel` | `decomposePar` (6 subdomains, scotch), parallel `cardiacFoam`, `reconstructPar -latestTime` | serial |
+| `-mesh hex\|tet` | blockMesh box or gmsh tetrahedra (3D) | hex |
+| `-dim 1\|2\|3` | dimension of the hex box | 3 |
+| `-N n` | cells per unit length; tet: element size `1/n` | 20 |
+| `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
+| `-gradient leastSquares\|GaussLinear` | cell-gradient reconstruction | leastSquares |
+| `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
+| `-endTime x` | end time | 0.2 |
+| `-coupling godunov\|sbdf2` | ionic-PDE time coupling | godunov |
+| `-ddt backward\|Euler` | time scheme of `Vm` | backward |
+| `-phiTolerance x` | absolute tolerance of the `phiE` solve | 1e-15 |
+
+`postProcessing/<d>D_<n>_cells.dat` holds the field errors (`Vm`, `phiE`,
+`phiE_gauge`, `phiI`, `phiI_gauge`, `u1`, `u2` and the bulk, boundary and
+gradient rows of
+[Bulk, boundary and gradient rows](../README.md#bulk-boundary-and-gradient-rows));
+on tetrahedra `n = round(cbrt(cells))`.
+
+Regression (the defaults: 3D hexahedra, `N = 20`, serial): the field errors
+and their bulk, boundary and gradient rows.
 
 ```bash
-./Allrun
 ./regression/regressionTest.sh
 ```
 
-### Omnidriver-Managed Sweeps (Suggested)
+## Studies
 
-Cartesian spatial convergence. Spec: `setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
+`setup/studies/` holds one study per question, each run in copies of the case
+with the commands in its README; `setup/studies/summarize.py` prints the
+tables.
 
-```bash
-[omnidriver command to run]
-python3 applications/scripts/paperI_results/aggregate.py bidomain_cartesian
-```
+| study | question |
+|---|---|
+| [cartesianConvergence](setup/studies/cartesianConvergence/README.md) | spatial order on hexahedra, 1D/2D/3D |
+| [tetConvergence](setup/studies/tetConvergence/README.md) | spatial order on tetrahedra, `leastSquares` against `Gauss linear` |
+| [temporalConvergence](setup/studies/temporalConvergence/README.md) | temporal order of the four coupling and time-scheme combinations |
+| [linearToleranceControl](setup/studies/linearToleranceControl/README.md) | effect of a loose `phiE` tolerance on the tetrahedral errors |
+| [tetTemporalControl](setup/studies/tetTemporalControl/README.md) | share of the time step in the tetrahedral errors |
 
-Temporal convergence. Spec: `setup/studies/temporalConvergence/sweep_temporal_convergence.json`.
+## Variants
 
-```bash
-[omnidriver command to run]
-python3 applications/scripts/paperI_results/aggregate.py bidomain_temporal
-```
-
-Tetrahedral gradient-scheme and corrector studies. Specs: `setup/studies/tetConvergence/sweep_tet_generic.json`, `setup/studies/corrector/sweep_corrector_study.json`, `setup/studies/linearToleranceControl/sweep_tet_phi_tolerance.json`, `setup/studies/tetTemporalControl/sweep_tet_dt_half.json`, `setup/studies/correctorN80/sweep_corrector_n80.json`.
-
-```bash
-[omnidriver command to run]
-python3 applications/scripts/paperI_results/aggregate.py bidomain_tet_generic
-```
-
-The complete rerun matrix contains 54 cases: Cartesian spatial (12), primary
-tetrahedral reconstruction (8), fixed-grid temporal (8), ODE (2), loose
-`phiE|phiI` tolerance (4), mesh-fixed tetrahedral `dt/2` (4), and corrector
-controls (12 plus 4 at `N=80`). Run the listed driver-managed specifications;
-do not rely on an aggregate wrapper unless it has been versioned with the
-release.
+- [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
+  conductivity that rotates through the wall.

@@ -24,38 +24,50 @@ header lines as in [hexConvergence](../hexConvergence/README.md)).
 
 Each run is a copy of the case in `results/` (ignored by git), named
 `<sealed|stock>_tet_N<n>_s<seed>[_T2|_dthalf]`, the names that
-`../summarize.py` reads. From this folder, for each `N` and seed `s`:
+`../summarize.py` reads: the wall gradient (`-wallGradient`), `N`, the gmsh
+seed, the long window (`-endTime 2`) or half the default time step at
+`T = 0.2` (`-dt`). From this folder:
 
 ```bash
 mkdir -p results
-rsync -a --exclude setup ../../../ results/sealed_tet_N<n>_s<s>/
-results/sealed_tet_N<n>_s<s>/Allrun parallel -mesh tet -N <n> -seed <s>
-```
-
-The default end time is `T = 0.2` and the time step is
-`endTime/ceil(endTime/(0.00892857 (10/N)^2))`, which scales as `h^2`.
-
-- Stock control: copies named `stock_...`, with `-wallGradient stock`, which
-  replaces the four `sealedWallLeastSquares` entries of `system/fvSchemes`
-  by `leastSquares`.
-- Long window: copies ending in `_T2`, with `-endTime 2` (`-seed 1`).
-- Time-step control: copies ending in `_dthalf`, with `-dt` set to half the
-  default time step at `T = 0.2`.
-
-Every table below is printed by
-
-```bash
+for g in sealed stock
+do
+    for n in 6 8 10 14 20 28
+    do
+        for s in 1 2 3
+        do
+            rsync -a --exclude setup ../../../ results/${g}_tet_N${n}_s$s/
+            results/${g}_tet_N${n}_s$s/Allrun parallel -mesh tet -N $n -seed $s -wallGradient $g
+        done
+    done
+    for n in 10 14 20 28
+    do
+        rsync -a --exclude setup ../../../ results/${g}_tet_N${n}_s1_T2/
+        results/${g}_tet_N${n}_s1_T2/Allrun parallel -mesh tet -N $n -seed 1 -wallGradient $g -endTime 2
+    done
+    for n in 14
+    do
+        dt=$(awk -v N=$n 'BEGIN { h = 0.00892857*(10/N)^2; k = int(0.2/h); if (k*h < 0.2) k++; printf "%.17g", 0.1/k }')
+        rsync -a --exclude setup ../../../ results/${g}_tet_N${n}_s1_dthalf/
+        results/${g}_tet_N${n}_s1_dthalf/Allrun parallel -mesh tet -N $n -seed 1 -wallGradient $g -dt $dt
+    done
+done
 python3 ../summarize.py results
 ```
 
+The time step is the case default, `endTime/ceil(endTime/(0.00892857
+(10/N)^2))`, which scales as `h^2`. `-wallGradient stock` replaces the four
+`sealedWallLeastSquares` entries of `system/fvSchemes` by `leastSquares`.
+
 ## Measured behaviour
 
-Errors are L2 norms against the exact fields, except the Linf columns; `h` is
-the verifier's `# h`. `phiE_gauge` compares `phiE` after removing the
-volume-weighted mean error. The boundary rows are normalised by the total
-volume, so their order is half an order above the RMS order over the wall
-band. Orders are least-squares fits of `log(error)` against `log(h)` over the
-three finest levels (every seed at T = 0.2), with their standard errors.
+Results of the last run of this study (`results/`), as printed by
+`../summarize.py`. Errors are L2 norms against the exact fields, except the
+Linf columns; `h` is the verifier's `# h`. `phiE_gauge` compares `phiE` after
+removing the volume-weighted mean error. The boundary rows are normalised by
+the total volume, so their order is half an order above the RMS order over the
+wall band. Orders are least-squares fits of `log(error)` against `log(h)` over
+the three finest levels (every seed at T = 0.2), with their standard errors.
 
 ### `sealedWallLeastSquares` (as shipped), T = 0.2
 
@@ -72,8 +84,9 @@ three finest levels (every seed at T = 0.2), with their standard errors.
 |---|---|---|---|---|---|---|
 | 14, 20, 28 | 1.79 ± 0.01 | 0.96 ± 0.16 | 2.10 ± 0.01 | 2.02 ± 0.02 | 1.94 ± 0.02 | 1.15 ± 0.01 |
 
-Over the seeds at one `N` the `Vm` L2 error varies by at most 1.1 % and the
-`phiE_gauge` L2 error by at most 2.4 % (`N = 20` and `28`).
+With `sealedWallLeastSquares`, over the seeds at one `N` the `Vm` L2 error
+varies by at most 3.3 % (`N = 8`) and the `phiE_gauge` L2 error by at most
+8.0 % (`N = 6`); at `N = 20` and `28` by at most 1.1 % and 2.4 %.
 
 ### `sealedWallLeastSquares`, T = 2
 

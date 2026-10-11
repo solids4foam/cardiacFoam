@@ -13,14 +13,14 @@ if [[ -z "${regressionLib}" ]]; then
 fi
 . "${regressionLib}"
 
-# The bidomain sealed-shell solution on the hex cubed sphere (N = 12), run in
-# parallel on four ranks (scotch); the verifier writes
+# The bidomain sealed-shell solution with the case defaults (hex cubed sphere,
+# N = 12, T = 0.2), run in parallel on four ranks (scotch); the verifier writes
 # postProcessing/3D_hex_12_cells.dat, whose summary values and error norms are
 # compared against the reference.
 regression_init "Bidomain sealed-shell manufactured-solution regression test" \
     regression/sphericalShell.reference "$@"
 
-regression_run_or_fail parallel -N 12 -endTime 0.02
+regression_run_or_fail parallel
 
 REGRESSION_SUMMARY_FILE="$(regression_find_output \
     'Bidomain sealed-shell manufactured solution error summary' 'postProcessing/*_cells.dat')" \

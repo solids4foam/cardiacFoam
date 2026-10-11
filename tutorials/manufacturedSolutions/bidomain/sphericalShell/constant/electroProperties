@@ -20,7 +20,6 @@ myocardiumSolver bidomainSolver;
 bidomainSolverCoeffs
 {
     sealedHeartBoundary true;
-    sealedWallTrace     zeroGradient;
     conductivitySource  field;
     chi             [ 0 -1 0 0 0 0 0 ] 3;
     cm              [ -1 -4 4 0 0 2 0 ] 2;

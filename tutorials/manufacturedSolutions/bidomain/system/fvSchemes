@@ -17,23 +17,22 @@ FoamFile
 
 ddtSchemes
 {
-    //default         CrankNicolson 1.0;
-    //default         backward; // 2nd order
-    // default         Euler; // 1st order
-    default none;
-    ddt(Vm) backward;
+    default         none;
+    ddt(Vm)         backward;
+
+    #includeIfPresent "<case>/local/ddt"
 }
 
 gradSchemes
 {
     default         leastSquares;
+
+    #includeIfPresent "<case>/local/gradient"
 }
 
 divSchemes
 {
     default         none;
-    div((conductivityIntracellular&grad(Vm))) Gauss linear;
-    div((conductivityIntracellular&grad(phiE))) Gauss linear;
 }
 
 laplacianSchemes

@@ -24,39 +24,50 @@ bulk, boundary and gradient rows, and the header lines `# h`, `# time` and
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`<sealed|stock>_hex_N<n>_s<seed>[_T2|_dthalf]`, the names that
-`../summarize.py` reads. From this folder, for each `N`:
+`<sealed|stock>_hex_N<n>_s1[_T2|_dthalf|_serial]`, the names that
+`../summarize.py` reads: the wall gradient (`-wallGradient`), `N`, the long
+window (`-endTime 2`), half the default time step at `T = 0.2` (`-dt`), or a
+serial run. From this folder:
 
 ```bash
 mkdir -p results
-rsync -a --exclude setup ../../../ results/sealed_hex_N<n>_s1/
-results/sealed_hex_N<n>_s1/Allrun parallel -mesh hex -N <n>
-```
-
-The default end time is `T = 0.2` and the time step is
-`endTime/ceil(endTime/(0.00892857 (10/N)^2))`, which scales as `h^2`.
-
-- Stock control: copies named `stock_...`, with `-wallGradient stock`, which
-  replaces the four `sealedWallLeastSquares` entries of `system/fvSchemes`
-  by `leastSquares`.
-- Long window: copies ending in `_T2`, with `-endTime 2`.
-- Time-step control: copies ending in `_dthalf`, with `-dt` set to half the
-  default time step at `T = 0.2`.
-
-Every table below is printed by
-
-```bash
+for g in sealed stock
+do
+    for n in 8 12 16 24 32 40 48
+    do
+        rsync -a --exclude setup ../../../ results/${g}_hex_N${n}_s1/
+        results/${g}_hex_N${n}_s1/Allrun parallel -mesh hex -N $n -wallGradient $g
+    done
+    for n in 16 24 32 48
+    do
+        rsync -a --exclude setup ../../../ results/${g}_hex_N${n}_s1_T2/
+        results/${g}_hex_N${n}_s1_T2/Allrun parallel -mesh hex -N $n -wallGradient $g -endTime 2
+    done
+    for n in 32
+    do
+        dt=$(awk -v N=$n 'BEGIN { h = 0.00892857*(10/N)^2; k = int(0.2/h); if (k*h < 0.2) k++; printf "%.17g", 0.1/k }')
+        rsync -a --exclude setup ../../../ results/${g}_hex_N${n}_s1_dthalf/
+        results/${g}_hex_N${n}_s1_dthalf/Allrun parallel -mesh hex -N $n -wallGradient $g -dt $dt
+    done
+done
+rsync -a --exclude setup ../../../ results/sealed_hex_N16_s1_serial/
+results/sealed_hex_N16_s1_serial/Allrun -mesh hex -N 16
 python3 ../summarize.py results
 ```
 
+The time step is the case default, `endTime/ceil(endTime/(0.00892857
+(10/N)^2))`, which scales as `h^2`. `-wallGradient stock` replaces the four
+`sealedWallLeastSquares` entries of `system/fvSchemes` by `leastSquares`.
+
 ## Measured behaviour
 
-Errors are L2 norms against the exact fields, except the Linf columns; `h` is
-the verifier's `# h`. `phiE_gauge` compares `phiE` after removing the
-volume-weighted mean error. The boundary rows are normalised by the total
-volume, so their order is half an order above the RMS order over the wall
-band. Orders are least-squares fits of `log(error)` against `log(h)` over the
-three finest levels, with their standard errors.
+Results of the last run of this study (`results/`), as printed by
+`../summarize.py`. Errors are L2 norms against the exact fields, except the
+Linf columns; `h` is the verifier's `# h`. `phiE_gauge` compares `phiE` after
+removing the volume-weighted mean error. The boundary rows are normalised by
+the total volume, so their order is half an order above the RMS order over the
+wall band. Orders are least-squares fits of `log(error)` against `log(h)` over
+the three finest levels, with their standard errors.
 
 ### `sealedWallLeastSquares` (as shipped), T = 0.2
 
@@ -127,6 +138,12 @@ gradient, whose error does not vanish with `h`.
 Halving the time step at `N = 32`, T = 0.2, changes the `Vm` and `phiE_gauge`
 L2 errors by less than 0.1 % with either gradient: the errors above are
 spatial.
+
+### Serial and decomposed runs
+
+A serial run and a four-rank scotch run (`parallel`) with
+`sealedWallLeastSquares` at `N = 16` agree to a largest relative difference
+over all rows of 6.6e-12.
 
 ## Outputs
 
