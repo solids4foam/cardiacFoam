@@ -22,8 +22,10 @@ ddtSchemes
 
 gradSchemes
 {
-    default    leastSquares;
-    limitedGrad cellMDLimited leastSquares 1;
+    default         leastSquares;
+    limitedGrad     cellMDLimited leastSquares 1;
+
+    #includeIfPresent "<case>/local/gradient"
 }
 
 divSchemes

@@ -1,16 +1,232 @@
-#!/bin/sh
+#!/bin/bash
 cd "${0%/*}" || exit 1
 set -e
-. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
 
-runApplication blockMesh -dict system/blockMeshDict.3D
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-if [ "${1:-}" = "parallel" ]
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
+
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
+  -mesh hex|tet             blockMesh box (default) or gmsh tetrahedra of the unit cube
+                            (box.geo.template, 3D only)
+  -dim 1|2|3                dimension of the hex box (default 3); the ECG runs in 3D only
+  -N n                      cells per unit length (default 20); tet: element size 1/n
+  -seed n                   gmsh random seed for -mesh tet (default 1)
+  -conductivity rotated|axis
+                            conductivity tensor (default rotated):
+                              rotated  full tensor (0.106875 -0.0084931 -0.022561
+                                       0.116682 -0.0130256 0.0398782)
+                              axis     diagonal (0.111453302 0.121585420 0.030396355)
+  -formulation advectionDiffusion|explicit
+                            metric term c0 |grad psi|_M as a bounded convection term
+                            (default) or evaluated explicitly
+  -gradient leastSquares|GaussLinear
+                            cell-gradient reconstruction (default leastSquares)
+  -tolerance x              outer fixed-point residual tolerance (default 1e-8)
+  -electrodes five|all      ECG at E1-E5 (default) or at E1-E5 and R1-R156
+  -errorField               write the cellwise activation-time error and the cell
+                            centres to the final time
+
+-mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
+USAGE
+    exit 2
+}
+
+parallel=false
+mesh=hex
+dim=3
+N=20
+seed=1
+conductivity=rotated
+formulation=advectionDiffusion
+gradient=leastSquares
+tolerance=
+electrodes=five
+errorField=false
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
+    esac
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -mesh)
+            needValue "$@"; mesh="$2"; shift
+            oneOf -mesh "$mesh" hex tet
+            ;;
+        -dim)
+            needValue "$@"; dim="$2"; shift
+            oneOf -dim "$dim" 1 2 3
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -seed)
+            needValue "$@"; seed="$2"; shift
+            positiveInteger -seed "$seed"
+            ;;
+        -conductivity)
+            needValue "$@"; conductivity="$2"; shift
+            oneOf -conductivity "$conductivity" rotated axis
+            ;;
+        -formulation)
+            needValue "$@"; formulation="$2"; shift
+            oneOf -formulation "$formulation" advectionDiffusion explicit
+            ;;
+        -gradient)
+            needValue "$@"; gradient="$2"; shift
+            oneOf -gradient "$gradient" leastSquares GaussLinear
+            ;;
+        -tolerance)
+            needValue "$@"; tolerance="$2"; shift
+            positiveNumber -tolerance "$tolerance"
+            ;;
+        -electrodes)
+            needValue "$@"; electrodes="$2"; shift
+            oneOf -electrodes "$electrodes" five all
+            ;;
+        -errorField)
+            errorField=true
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.gmsh ] || [ -e log.blockMesh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
+
+if [ "$mesh" = tet ] && [ "$dim" != 3 ]
+then
+    echo "${0##*/}: -mesh tet is 3D only" 1>&2
+    usage
+fi
+
+if [ "$mesh" = tet ]
+then
+    for tool in gmsh gmshToFoam
+    do
+        command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+    done
+fi
+
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/mesh
+
+if [ "$conductivity" = axis ]
+then
+    tensor="( 0.111453302 0 0 0.121585420 0 0.030396355 )"
+else
+    tensor="( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 )"
+fi
+if [ "$formulation" = advectionDiffusion ]
+then
+    advectionDiffusion=true
+else
+    advectionDiffusion=false
+fi
+cat > local/field <<EOF
+conductivity    [ -1 -3 3 0 0 2 0 ] $tensor;
+eikonalAdvectionDiffusionApproach $advectionDiffusion;
+EOF
+
+echo "writeErrorField $errorField;" > local/verifier
+
+# The ECG and its verifier are 3D only
+if [ "$dim" != 3 ]
+then
+    echo "#remove ecgDomains" >> local/field
+fi
+if [ "$electrodes" = five ]
+then
+    echo '#remove "R.*"' > local/electrodes
+fi
+
+if [ "$gradient" = GaussLinear ]
+then
+    echo "default         Gauss linear;" > local/gradient
+fi
+if [ -n "$tolerance" ]
+then
+    echo "tolerance       $tolerance;" > local/tolerance
+fi
+
+# Mesh: blockMesh box of the chosen dimension, or gmsh tetrahedra
+if [ "$mesh" = hex ]
+then
+    runApplication blockMesh -dict system/blockMeshDict.${dim}D
+else
+    lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    runApplication gmsh -3 box.geo.template -setnumber lc "$lc" -setnumber seed "$seed" -o local/box.msh
+    if grep -q "Error" log.gmsh
+    then
+        echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+        exit 1
+    fi
+    runApplication gmshToFoam local/box.msh
+fi
+runApplication checkMesh
+
+if $parallel
 then
     runApplication decomposePar
     runParallel cardiacFoam
-    runApplication reconstructPar
-    runApplication redistributeRestartState
+    runApplication reconstructPar -latestTime
 else
     runApplication cardiacFoam
+fi
+
+if $errorField
+then
+    runApplication postProcess -func writeCellCentres -latestTime
 fi

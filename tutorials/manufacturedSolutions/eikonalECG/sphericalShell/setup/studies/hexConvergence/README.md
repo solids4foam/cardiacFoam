@@ -25,47 +25,63 @@ around the stimulus point) holds 4, 11, 24, 80, 193 and 660 cells at
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`<sealed|stock>_hex_N<n>_s1[_ex][_exact|_best|_cap]`, the names that
-`../summarize.py` reads: wall gradient, `N`, seed, explicit formulation, one
-iteration from the exact field, stopped at the iteration of the smallest
-outer residual, or stopped at an iteration cap. From this folder, for each `N`:
+`<sealed|stock>_hex_N<n>_s1[_ex][_exact|_cap|_parallel]`, the names that
+`../summarize.py` reads: the wall gradient (`-wallGradient`), `N`, the
+explicit formulation (`_ex`, `-formulation explicit`), one iteration from the
+exact field (`-exactStart -iterations 1`), an iteration cap
+(`-iterations 1500`), or a parallel run. The other runs are serial. From this
+folder:
 
 ```bash
 mkdir -p results
-rsync -a --exclude setup ../../../ results/sealed_hex_N<n>_s1/
-results/sealed_hex_N<n>_s1/Allrun -mesh hex -N <n>
-```
-
-- Stock gradient: copies named `stock_...`, with `-wallGradient stock`.
-- Exact start: copies ending in `_exact`, with `-exactStart -iterations 1`.
-- Explicit formulation: copies with `_ex_cap`, with `-formulation explicit
-  -iterations 1500`.
-
-Every table below is printed by
-
-```bash
+for n in 8 12 16 24 32 48
+do
+    rsync -a --exclude setup ../../../ results/sealed_hex_N${n}_s1/
+    results/sealed_hex_N${n}_s1/Allrun -mesh hex -N $n
+    rsync -a --exclude setup ../../../ results/sealed_hex_N${n}_s1_exact/
+    results/sealed_hex_N${n}_s1_exact/Allrun -mesh hex -N $n -exactStart -iterations 1
+done
+for n in 8 12 16 24 32
+do
+    rsync -a --exclude setup ../../../ results/stock_hex_N${n}_s1/
+    results/stock_hex_N${n}_s1/Allrun -mesh hex -N $n -wallGradient stock
+done
+for n in 12 16
+do
+    rsync -a --exclude setup ../../../ results/sealed_hex_N${n}_s1_ex_cap/
+    results/sealed_hex_N${n}_s1_ex_cap/Allrun -mesh hex -N $n -formulation explicit -iterations 1500
+done
+rsync -a --exclude setup ../../../ results/sealed_hex_N12_s1_parallel/
+results/sealed_hex_N12_s1_parallel/Allrun parallel -mesh hex -N 12
 python3 ../summarize.py results
 ```
 
 ## Measured behaviour
 
-Errors are L2 norms against the exact fields, except the `Linf` column; `h`
-is the verifier's `# h`. `outer its` is the number of outer iterations,
-`min residual` the smallest initial residual of the `activationTime` solves
-with the iteration where it occurs, `last residual` that of the last solve.
-Orders are least-squares fits of `log(error)` against `log(h)` over the three
-finest levels, with their standard errors. `activationTime_boundary` is
-normalised by the total volume, so its order is half an order above the RMS
-order over the wall band.
+Results of the last run of this study (`results/`), as printed by
+`../summarize.py`. Errors are L2 norms against the exact fields, except the
+`Linf` column; `h` is the verifier's `# h`. `outer its` is the number of outer
+iterations, `min residual` the smallest initial residual of the
+`activationTime` solves with the iteration where it occurs, `last residual`
+that of the last solve. Orders are least-squares fits of `log(error)` against
+`log(h)` over the three finest levels, with their standard errors.
+`activationTime_boundary` is normalised by the total volume, so its order is
+half an order above the RMS order over the wall band.
 
 With the case defaults (advection-diffusion formulation) both wall gradients
-converge; the number of outer iterations grows roughly as `N^2`, and the
-`N = 48` run stops at the 8000-iteration cap with the outer residual at
-1.3e-8 (falling by about 2.8 per 1000 iterations). One iteration from the
-exact field converges at a higher order than the converged field. With the
-explicit formulation and `sealedWallLeastSquares` the outer iteration does
-not converge: the outer residual passes a minimum and the activation time
-drifts away from the pinned cells.
+converge to the `1e-8` outer tolerance; the number of outer iterations grows
+roughly as `N^2` (154 at `N = 8`, 3069 at `N = 32`), and the `N = 48` run
+stops at the 8000-iteration cap with the outer residual at 1.3e-8 (falling by
+a factor of about 2.8 over its last 1000 iterations). With
+`sealedWallLeastSquares` the `activationTime` L2 error falls at a fitted order
+of 1.5 over `N = 24`-`48`, rising from 1.2 over `N = 16`-`32`. One iteration
+from the exact field (`-exactStart -iterations 1`) gives an error that falls
+at order 2.7 and is about a hundredth of the converged error (0.7 % to 1.6 %
+over `N = 24`-`48`): most of the converged error builds up over the outer
+iteration, not in one linearised solve. With the explicit formulation and
+`sealedWallLeastSquares` the outer iteration does not converge: the outer
+residual passes a minimum and the activation time drifts away from the pinned
+cells.
 
 ### sealed, hex, advectionDiffusion, converged
 
@@ -118,10 +134,13 @@ drifts away from the pinned cells.
 |---|---|---|---|---|---|
 | 16, 24, 32 | 1.15 ± 0.02 | 1.13 ± 0.03 | 1.64 ± 0.02 | 0.88 ± 0.03 | 2.08 ± 0.05 |
 
-## Serial and decomposed runs
+### Serial and decomposed runs
 
 A serial run and a four-rank scotch run (`parallel`) of the case defaults at
-`N = 12` agree to a maximum relative difference over all rows of 7.5e-10.
+`N = 12` agree to a largest relative difference over all rows of 2.1e-7; both
+stop at the `1e-8` outer tolerance after 303 outer iterations. Repeated
+parallel runs differ from each other by up to about 1e-5 relative, within
+what that tolerance allows.
 
 ## Outputs
 

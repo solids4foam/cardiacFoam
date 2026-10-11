@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Spatial localisation of the manufactured eikonal activation-time error.
 
-Discriminates two explanations for the observed ~1.5 convergence order:
+Discriminates two explanations for the activation-time order on tetrahedra:
 
   H1  boundary-sourced.  The reconstruction stencil degrades at the domain
       edge; the elliptic solve and the outward characteristic sweep then
@@ -22,15 +22,12 @@ A ramp in d_seed with a flat profile in d_wall is propagation.  Elevation at
 small d_wall with no d_seed trend is a local boundary effect.  Flat in both
 is interior truncation.
 
-Usage
-    postProcess -func writeCellCentres          # writes Cx, Cy, Cz
-    ./analyse_error_localisation.py [timeDir] [nbins]
+Usage (in a run copy made with Allrun -errorField, which writes
+activationTimeError and the cell centres Cx, Cy, Cz to the final time)
+    python3 analyse_error_localisation.py [timeDir] [nbins]
 
-With no timeDir given, resolves the latest numeric time directory under the
-current directory itself (same convention as `foamListTimes -latestTime`),
-so this can run as an omnidriver workflow_dag step -- a static command with
-no data flow from a preceding step's output -- immediately after a
-`postProcess -func writeCellCentres -latestTime` step.
+Without timeDir it reads the latest numeric time directory of the current
+directory.
 """
 
 import sys

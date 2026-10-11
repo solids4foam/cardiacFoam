@@ -20,34 +20,34 @@ as in [hexConvergence](../hexConvergence/README.md)).
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`<sealed|stock>_tet_N<n>_s<seed>[_ex][_exact|_best|_cap]`, the names that
-`../summarize.py` reads (`_ex`: `-formulation explicit`). From this folder,
-for each `N`:
+`<sealed|stock>_tet_N<n>_s1`, the names that `../summarize.py` reads: the
+wall gradient (`-wallGradient`), `N` and the gmsh seed. The runs are serial.
+From this folder:
 
 ```bash
 mkdir -p results
-rsync -a --exclude setup ../../../ results/sealed_tet_N<n>_s1/
-results/sealed_tet_N<n>_s1/Allrun -mesh tet -N <n> -seed 1
-rsync -a --exclude setup ../../../ results/stock_tet_N<n>_s1/
-results/stock_tet_N<n>_s1/Allrun -mesh tet -N <n> -seed 1 -wallGradient stock
-```
-
-Every table below is printed by
-
-```bash
+for g in sealed stock
+do
+    for n in 6 8 10 14
+    do
+        rsync -a --exclude setup ../../../ results/${g}_tet_N${n}_s1/
+        results/${g}_tet_N${n}_s1/Allrun -mesh tet -N $n -seed 1 -wallGradient $g
+    done
+done
 python3 ../summarize.py results
 ```
 
 ## Measured behaviour
 
-Errors are L2 norms against the exact fields, except the `Linf` column; `h`
-is the verifier's `# h`. `outer its` is the number of outer iterations,
-`min residual` the smallest initial residual of the `activationTime` solves
-with the iteration where it occurs, `last residual` that of the last solve.
-Orders are least-squares fits of `log(error)` against `log(h)` over the three
-finest levels, with their standard errors. Both wall gradients converge to
-the `1e-8` outer tolerance with the case defaults (advection-diffusion
-formulation).
+Results of the last run of this study (`results/`), as printed by
+`../summarize.py`. Errors are L2 norms against the exact fields, except the
+`Linf` column; `h` is the verifier's `# h`. `outer its` is the number of outer
+iterations, `min residual` the smallest initial residual of the
+`activationTime` solves with the iteration where it occurs, `last residual`
+that of the last solve. Orders are least-squares fits of `log(error)` against
+`log(h)` over the three finest levels, with their standard errors. Both wall
+gradients converge to the `1e-8` outer tolerance with the case defaults
+(advection-diffusion formulation).
 
 ### sealed, tet, advectionDiffusion, converged
 

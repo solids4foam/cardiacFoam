@@ -13,14 +13,14 @@ if [[ -z "${regressionLib}" ]]; then
 fi
 . "${regressionLib}"
 
-# The eikonal sealed-shell solution on the hex cubed sphere (N = 12) with the
-# case defaults, run in parallel on four ranks (scotch); the verifier writes
+# The eikonal sealed-shell solution with the case defaults (hex cubed sphere,
+# N = 12), run in parallel on four ranks (scotch); the verifier writes
 # postProcessing/3D_hex_12_cells.dat, whose summary values and error norms are
 # compared against the reference.
 regression_init "Eikonal sealed-shell manufactured-solution regression test" \
     regression/sphericalShell.reference "$@"
 
-regression_run_or_fail parallel -N 12
+regression_run_or_fail parallel
 
 REGRESSION_SUMMARY_FILE="$(regression_find_output \
     'Eikonal sealed-shell manufactured solution error summary' 'postProcessing/*_cells.dat')" \

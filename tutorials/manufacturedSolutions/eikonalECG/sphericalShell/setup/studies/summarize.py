@@ -6,15 +6,17 @@
 #     Convergence tables of the eikonalECG sphericalShell studies from the
 #     verifier summaries postProcessing/3D_<mesh>_<N>_cells.dat and the
 #     solver logs of the run copies in a results folder. Run copies are named
-#     <sealed|stock>_<hex|tet>_N<n>_s<seed>[_ex][_exact|_best|_cap] (wall
-#     gradient, mesh, N, gmsh seed, explicit-metric formulation, one
+#     <sealed|stock>_<hex|tet>_N<n>_s<seed>[_ex][_exact|_best|_cap|_parallel]
+#     (wall gradient, mesh, N, gmsh seed, explicit-metric formulation, one
 #     iteration from the exact field, stopped at the iteration of the smallest
-#     outer residual, or stopped at the iteration cap of a run that does not
-#     converge). For every wall gradient, formulation and window it prints the
-#     error table with the outer iterations, the smallest outer residual and
-#     the iteration where it occurs, and, except for the capped runs, the order
-#     fitted by least squares to log(error) against log(h) over every run of the
-#     three finest levels with its standard error.
+#     outer residual, stopped at the iteration cap of a run that does not
+#     converge, or a parallel run). For every wall gradient, formulation and
+#     window it prints the error table with the outer iterations, the smallest
+#     outer residual and the iteration where it occurs, and, except for the
+#     capped runs, the order fitted by least squares to log(error) against
+#     log(h) over every run of the three finest levels with its standard error;
+#     for a parallel run, the largest relative difference from the serial run
+#     over all rows.
 #
 # Usage
 #     python3 summarize.py hexConvergence/results
@@ -37,7 +39,7 @@ COLUMNS = (
 )
 NORMS = {"L1": 0, "L2": 1, "Linf": 2}
 RUN_RE = re.compile(
-    r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)(_ex)?(?:_(exact|best|cap))?$"
+    r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)(_ex)?(?:_(exact|best|cap|parallel))?$"
 )
 RESIDUAL_RE = re.compile(r"Initial residual = ([0-9.eE+-]+),")
 
@@ -146,8 +148,29 @@ def main() -> None:
 
     for key in sorted(runs):
         gradient, mesh, formulation, window = key
+        if window == "parallel":
+            continue
         print(f"\n### {gradient}, {mesh}, {formulation}, {window}\n")
         print(table(runs[key], window == "cap"))
+
+    for (gradient, mesh, formulation, window), parallel in sorted(runs.items()):
+        if window != "parallel":
+            continue
+        for n, seed, _, rows, _ in parallel:
+            serial = [
+                r for r in runs.get((gradient, mesh, formulation, "converged"), [])
+                if r[0] == n and r[1] == seed
+            ]
+            if serial:
+                difference = max(
+                    abs(a/b - 1)
+                    for row in rows if row in serial[0][3]
+                    for a, b in zip(rows[row], serial[0][3][row]) if b != 0
+                )
+                print(
+                    f"\nParallel against serial, {gradient} {mesh} {formulation} N {n} "
+                    f"seed {seed}: largest relative difference {difference:.1e}"
+                )
 
     for (gradient, mesh, formulation, window), at in sorted(runs.items()):
         seeds = {r[1] for r in at}

@@ -5,7 +5,11 @@ sphere (`-mesh hex`, default) or with gmsh tetrahedra (`-mesh tet`): sealed
 curved boundaries approximated by planar faces, a rotated anisotropic
 conductivity with all six tensor components that turns through the wall, and
 an activation time whose conormal flux vanishes on both spheres and whose
-wavefronts collide on the walls.
+wavefronts collide on the walls. The case checks the sealed-wall operators and
+the outer iteration of the eikonal solver on a field with non-zero normal and
+tangential gradients on the walls; it does not check the ECG, a stimulus
+region (the verifier pins the cells near the stimulus point) or a time
+dependence.
 
 Origin: this work.
 
@@ -31,7 +35,7 @@ a centre in that ball) and imposes no value on a patch. `psi` has critical
 points on the walls, where the metric `sqrt(grad psi . M grad psi)` is not
 differentiable; the generator lists them
 (`python3 shell_eikonal_mms.py --report`, in
-[the generator folder](../../../../src/verificationModels/bathBidomainVerification/generator/README.md)).
+[the generator folder](../../../../src/verificationModels/generator/README.md)).
 
 ### Stack
 
@@ -44,7 +48,7 @@ differentiable; the generator lists them
 - verifier: `manufacturedShellEikonalVerifier`
 - conductivity: `conductivitySource field`; `0/Conductivity` written by
   `setManufacturedFields`
-- walls: `sealedHeartBoundary true`, `sealedWallTrace zeroGradient`
+- walls: `sealedHeartBoundary true`
 - gradient: `sealedWallLeastSquares` for `grad(activationTime)` and
   `grad(activationTime.component(0))` (`system/fvSchemes`): wall cells take no
   value from the sealed walls; `leastSquares` elsewhere
@@ -63,9 +67,10 @@ differentiable; the generator lists them
 - `-mesh hex` (`system/blockMeshDict`): six projected blocks of a cubed
   sphere. `N`, a multiple of 4, sets `k = N/4`: `3k` cells along a cube-face
   edge and `2k` radially, so the shell has `N` radial cells per unit length.
-- `-mesh tet` (`shell.geo.template`, copied to `local/shell.geo`): Delaunay
-  tetrahedra of size `1/N`, a fixed random seed and one thread, so a gmsh
-  version gives the same mesh for the same `N` and seed.
+- `-mesh tet` (`shell.geo.template`): Delaunay tetrahedra of size `1/N` from
+  `gmsh -setnumber lc 1/N -setnumber seed <seed>`, with one thread, so a gmsh
+  version gives the same mesh for the same `N` and seed; imported with
+  `gmshToFoam`.
 
 The mesh has exactly two patches, `endocardium` and `epicardium`, and one
 cellZone, `myocardium`.
@@ -102,33 +107,21 @@ and gradient rows of
 The outer residual history is the `Initial residual` of the
 `activationTime` solves in `log.cardiacFoam`.
 
-Regression (hex cubed sphere, `-N 12`, the case defaults, parallel on four
-ranks; no gmsh needed):
+Regression (the case defaults: hex cubed sphere, `N = 12`, parallel on four
+ranks; no gmsh needed): the `activationTime` errors and the bulk, boundary and
+wall-gradient rows.
 
 ```bash
 ./regression/regressionTest.sh
 ```
 
-## Behaviour
-
-With the defaults (advection-diffusion formulation, `sealedWallLeastSquares`)
-the outer iteration converges to the `1e-8` tolerance on every tested mesh;
-the number of outer iterations grows roughly as `N^2` (154 at hex `N = 8`,
-3069 at `N = 32`). The `activationTime` L2 error falls at a fitted order of
-1.5 on the cubed sphere (`N = 24`-`48`, rising from 1.2 over `N = 16`-`32`;
-the `N = 48` run stops at the 8000-iteration cap at an outer residual of
-1.3e-8) and 1.3 on tetrahedra (`N = 8`-`14`). One outer iteration from the exact field (`-exactStart
--iterations 1`) gives an error that falls at order 2.7 (hex `N = 24`-`48`) and
-is about a hundredth of the converged error: most of the converged error
-builds up over the outer iteration, not in one linearised solve. The explicit formulation evaluates the metric
-from the cell gradient; with `sealedWallLeastSquares` its outer iteration does
-not converge (the activation time drifts away from the pinned cells). The
-tables, the stock-gradient control and the serial-parallel check are in the
-[studies](setup/studies/hexConvergence/README.md).
-
 ## Studies
 
-`setup/studies/` holds one study per mesh family, each run in a copy of the
-case: `hexConvergence` (cubed sphere) and `tetConvergence` (gmsh
-tetrahedra). Each README gives the commands, the ladder and the measured
-behaviour of the sealed and stock gradients and of the two formulations.
+`setup/studies/` holds one study per question, each run in copies of the case
+with the commands in its README; `setup/studies/summarize.py` prints the
+tables, with the outer-iteration counts and residuals.
+
+| study | question |
+|---|---|
+| [hexConvergence](setup/studies/hexConvergence/README.md) | spatial order and outer iteration on the cubed sphere, sealed-wall against stock gradient, one iteration from the exact field, explicit formulation |
+| [tetConvergence](setup/studies/tetConvergence/README.md) | spatial order and outer iteration on gmsh tetrahedra, sealed-wall against stock gradient |

@@ -1,15 +1,18 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
-# final <file> <column> <expected> <tolerance>; probe <file> <time> <column> <expected> <tolerance>
-# (mesh: 20^3 = 8000 cells — set in system/blockMeshDict.3D)
-error  activationTime                 L1    0.000415612     1.2e-04
-error  activationTime                 L2    0.000732836     1.6e-04
-error  activationTime                 Linf  0.00413441      1e-03
-final  postProcessing/eikonalECG.dat  E1    -0.00370201096  5e-05
-final  postProcessing/eikonalECG.dat  E2    0.000192348832  5e-05
-final  postProcessing/eikonalECG.dat  E3    -0.00422479927  5e-05
-final  postProcessing/eikonalECG.dat  E4    0.00131136315   5e-05
-final  postProcessing/eikonalECG.dat  E5    -0.000346651351 5e-05
-probe  postProcessing/eikonalECG.dat  0.5   E1              0.00370201096   5e-05
-probe  postProcessing/eikonalECG.dat  0.5   E3              0.00422479927   5e-05
-probe  postProcessing/eikonalECG.dat  1.5   E4              -0.00131136315  5e-05
+# final <file> <column> <expected> <tolerance>
+summary  cells  8000  0
+error    activationTime                   L1    0.000415519    4.2e-09
+error    activationTime                   L2    0.0007325      7.3e-09
+error    activationTime                   Linf  0.00413436     4.1e-08
+error    activationTime_bulk              L2    0.000451092    4.5e-09
+error    activationTime_boundary          L2    0.000577123    5.8e-09
+error    gradActivationTime               L2    0.0163757      1.6e-07
+error    gradActivationTime_boundary      L2    0.0155716      1.6e-07
+error    gradReconActivationTime          L2    0.00391763     3.9e-08
+error    gradReconActivationTime_boundary L2    0.00201083     2e-08
+final    postProcessing/eikonalECG.dat  E1  -0.00370201047   3.7e-08
+final    postProcessing/eikonalECG.dat  E2  0.000192349304   1.9e-09
+final    postProcessing/eikonalECG.dat  E3  -0.00422479798   4.2e-08
+final    postProcessing/eikonalECG.dat  E4  0.00131136343    1.3e-08
+final    postProcessing/eikonalECG.dat  E5  -0.000346650746  3.5e-09

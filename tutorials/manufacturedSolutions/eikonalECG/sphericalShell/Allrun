@@ -12,7 +12,8 @@ Usage: ${0##*/} [parallel] [OPTION]...
 
 Options (parameters are written to local/ and included by the dictionaries):
   parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
-  -mesh hex|tet             blockMesh cubed sphere (default) or gmsh tetrahedra (shell.geo.template)
+  -mesh hex|tet             blockMesh cubed sphere (default) or gmsh tetrahedra
+                            (shell.geo.template)
   -N n                      cells per unit length (default 12); hex: a multiple of 4, radial
                             cells per unit length; tet: element size 1/n
   -seed n                   gmsh random seed for -mesh tet (default 1)
@@ -58,6 +59,24 @@ positiveInteger()
     esac
 }
 
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
 while [ "$#" -gt 0 ]
 do
     case "$1" in
@@ -66,10 +85,7 @@ do
             ;;
         -mesh)
             needValue "$@"; mesh="$2"; shift
-            case "$mesh" in
-                hex|tet) ;;
-                *) echo "${0##*/}: unknown -mesh $mesh" 1>&2; usage ;;
-            esac
+            oneOf -mesh "$mesh" hex tet
             ;;
         -N)
             needValue "$@"; N="$2"; shift
@@ -81,17 +97,11 @@ do
             ;;
         -wallGradient)
             needValue "$@"; wallGradient="$2"; shift
-            case "$wallGradient" in
-                sealed|stock) ;;
-                *) echo "${0##*/}: unknown -wallGradient $wallGradient" 1>&2; usage ;;
-            esac
+            oneOf -wallGradient "$wallGradient" sealed stock
             ;;
         -formulation)
             needValue "$@"; formulation="$2"; shift
-            case "$formulation" in
-                explicit|advectionDiffusion) ;;
-                *) echo "${0##*/}: unknown -formulation $formulation" 1>&2; usage ;;
-            esac
+            oneOf -formulation "$formulation" explicit advectionDiffusion
             ;;
         -iterations)
             needValue "$@"; iterations="$2"; shift
@@ -102,8 +112,7 @@ do
             ;;
         -pinnedRadius)
             needValue "$@"; pinnedRadius="$2"; shift
-            awk -v r="$pinnedRadius" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
-                || { echo "${0##*/}: -pinnedRadius takes a positive number, not $pinnedRadius" 1>&2; usage; }
+            positiveNumber -pinnedRadius "$pinnedRadius"
             ;;
         -h|-help|--help)
             usage
@@ -152,10 +161,10 @@ echo "N $N;" > local/mesh
 # The stock control overrides the gradient entries of system/fvSchemes
 if [ "$wallGradient" = stock ]
 then
-    cat > local/wallGradient <<EOT
+    cat > local/wallGradient <<EOF
 grad(activationTime)                leastSquares;
 grad(activationTime.component(0))   leastSquares;
-EOT
+EOF
 fi
 
 if [ "$formulation" = advectionDiffusion ]
@@ -176,8 +185,7 @@ then
     runApplication blockMesh
 else
     lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
-    cp shell.geo.template local/shell.geo
-    runApplication gmsh -3 local/shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+    runApplication gmsh -3 shell.geo.template -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
     if grep -q "Error" log.gmsh
     then
         echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
@@ -188,7 +196,7 @@ fi
 runApplication checkMesh
 if grep -q "Failed [0-9]* mesh checks" log.checkMesh
 then
-    echo "checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
+    echo "${0##*/}: checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
     exit 1
 fi
 
