@@ -8,7 +8,7 @@ Built-in verification: verifiers that compare a run with a manufactured solution
 |---|---|
 | `monodomainVerification/` | `manufacturedFDAMonodomainVerifier`, `manufacturedGraphVerifier`, `manufacturedAnisotropicMonodomainVerifier` |
 | `bidomainVerification/` | `manufacturedFDABidomainVerifier` |
-| `bathBidomainVerification/` | `manufacturedFDABathBidomainVerifier`, `manufacturedTransmissionBathBidomainVerifier` |
+| `bathBidomainVerification/` | `manufacturedFDABathBidomainVerifier` |
 | `eikonalVerification/` | `manufacturedEikonalVerifier` |
 | `ecgVerification/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier` |
 | `coupledVerification/` | `coupled1D3DMonodomainVerifier` |

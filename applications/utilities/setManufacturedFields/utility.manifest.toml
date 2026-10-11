@@ -8,10 +8,9 @@ purpose = """
 Selects the verification model named in constant/electroProperties and asks it
 to write the fields its manufactured solution prescribes, so that a
 verification case needs no hand-written conductivity files. For the
-manufactured transmission bath-bidomain verifier these are the intracellular
-and extracellular conductivity tensors, the bath conductivity, and a manual
-cell decomposition. The utility runs on the undecomposed case and is serial
-only.
+sealed-shell verifiers these are the conductivity tensors (intracellular and
+extracellular for the bidomain shell). The utility runs on the undecomposed
+case and is serial only.
 """
 
 inputs = [

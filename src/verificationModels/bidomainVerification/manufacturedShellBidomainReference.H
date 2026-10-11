@@ -21,8 +21,8 @@ Description
     heart-only bidomain manufactured solution on the spherical shell, sealed
     on both spheres, with self-test samples.
 
-    Regenerate from bathBidomainVerification/generator/:
-        python shell_bidomain_mms.py --write ../../bidomainVerification/manufacturedShellBidomainReference.H
+    Regenerate from generator/:
+        python shell_bidomain_mms.py --write ../bidomainVerification/manufacturedShellBidomainReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/

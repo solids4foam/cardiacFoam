@@ -27,6 +27,8 @@ Description
 #include "fvCFD.H"
 #include "IOdictionary.H"
 #include "electroVerificationModel.H"
+#include "eikonalVerificationModel.H"
+#include "dimVoltage.H"
 
 using namespace Foam;
 
@@ -54,21 +56,59 @@ int main(int argc, char *argv[])
     const dictionary& coeffs =
         electroProperties.subDict(solverName + "Coeffs");
 
-    autoPtr<electroVerificationModel> verifier
-    (
-        electroVerificationModel::New(coeffs)
-    );
+    const word modelType(electroVerificationModel::selectedType(coeffs));
 
-    if (!verifier)
+    if (eikonalVerificationModel::dictionaryConstructorTable(modelType))
     {
-        FatalIOErrorInFunction(electroProperties)
-            << "No verification model is selected: "
-            << solverName << "Coeffs needs a verificationModel dictionary "
-            << "whose type names a manufactured-solution verifier."
-            << exit(FatalIOError);
-    }
+        // The verifier reads the conductivity only once the solver uses it
+        const volTensorField conductivity
+        (
+            IOobject
+            (
+                "conductivity",
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE
+            ),
+            mesh,
+            dimensionedTensor(dimless, Zero)
+        );
 
-    verifier->writeManufacturedFields(mesh);
+        eikonalVerificationModel::New
+        (
+            coeffs,
+            mesh,
+            conductivity,
+            dimensionedScalar("chi", dimArea/dimVolume, coeffs),
+            dimensionedScalar
+            (
+                "cm",
+                dimCurrent*dimTime/(dimVoltage*dimArea),
+                coeffs
+            ),
+            dimensionedScalar("c0", coeffs),
+            Switch(coeffs.lookup("eikonalAdvectionDiffusionApproach"))
+        )->writeManufacturedFields(mesh);
+    }
+    else
+    {
+        autoPtr<electroVerificationModel> verifier
+        (
+            electroVerificationModel::New(coeffs)
+        );
+
+        if (!verifier)
+        {
+            FatalIOErrorInFunction(electroProperties)
+                << "No verification model is selected: "
+                << solverName << "Coeffs needs a verificationModel dictionary "
+                << "whose type names a manufactured-solution verifier."
+                << exit(FatalIOError);
+        }
+
+        verifier->writeManufacturedFields(mesh);
+    }
 
     Info<< "End\n" << endl;
 

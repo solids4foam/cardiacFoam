@@ -23,18 +23,13 @@ Author
 #include "labelIOList.H"
 #include "zeroGradientFvPatchFields.H"
 #include "fixedValueFvPatchFields.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
 
 // * * * * * * * * * * * * * * * * Functions * * * * * * * * * * * * * * * //
 
 bool Foam::sealedWallPolicy::isSealed(const fvPatchScalarField& psiP)
 {
     return
-        !psiP.coupled()
-     && (
-            isA<zeroGradientFvPatchScalarField>(psiP)
-         || isA<conormalZeroFluxFvPatchScalarField>(psiP)
-        );
+        !psiP.coupled() && isA<zeroGradientFvPatchScalarField>(psiP);
 }
 
 

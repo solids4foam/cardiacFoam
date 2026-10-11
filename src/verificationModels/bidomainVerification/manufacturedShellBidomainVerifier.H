@@ -34,7 +34,6 @@ Author
 
 SourceFiles
     manufacturedShellBidomainVerifier.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedShellBidomainVerifier_H

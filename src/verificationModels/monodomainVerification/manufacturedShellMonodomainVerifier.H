@@ -30,7 +30,6 @@ Author
 
 SourceFiles
     manufacturedShellMonodomainVerifier.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedShellMonodomainVerifier_H

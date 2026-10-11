@@ -38,18 +38,6 @@ addToRunTimeSelectionTable
     dictionary
 );
 
-defineTypeNameWithName
-(
-    manufacturedShellEikonalFields,
-    "manufacturedShellEikonalVerifier"
-);
-addToRunTimeSelectionTable
-(
-    electroVerificationModel,
-    manufacturedShellEikonalFields,
-    dictionary
-);
-
 namespace
 {
 
@@ -156,7 +144,6 @@ manufacturedShellEikonalVerifier::manufacturedShellEikonalVerifier
     // The family is exact for any front-speed constant
     p_.c0 = c0.value();
     validateConfiguration(chi, Cm);
-    validateConductivity();
 
     Info<< "Enabled manufactured shell eikonal verification: stimulus point "
         << stimulusPoint(p_) << ", pinned radius " << p_.rPin
@@ -252,6 +239,8 @@ void manufacturedShellEikonalVerifier::applyConstraints
     volScalarField& activationTime
 ) const
 {
+    validateConductivity();
+
     const vectorField& C = mesh_.C().primitiveField();
     const point xs(stimulusPoint(p_));
 
@@ -435,67 +424,7 @@ void manufacturedShellEikonalVerifier::postProcess
 }
 
 
-manufacturedShellEikonalFields::manufacturedShellEikonalFields
-(
-    const dictionary& dict
-)
-:
-    electroVerificationModel(dict),
-    p_(shellEikonalMMS::defaultParams())
-{}
-
-
-wordList manufacturedShellEikonalFields::preProcessFieldNames
-(
-    const ionicModel&
-) const
-{
-    return wordList();
-}
-
-
-wordList manufacturedShellEikonalFields::requiredPostProcessFieldNames
-(
-    const ionicModel&
-) const
-{
-    return wordList();
-}
-
-
-bool manufacturedShellEikonalFields::shouldPostProcess
-(
-    const ionicModel&,
-    const volScalarField&
-) const
-{
-    return false;
-}
-
-
-void manufacturedShellEikonalFields::preProcess
-(
-    ionicModel&,
-    volScalarField&,
-    PtrList<volScalarField>&
-)
-{
-    FatalErrorInFunction
-        << typeName << " only writes the conductivity of an eikonal case; "
-        << "it is not a monodomain verification model." << exit(FatalError);
-}
-
-
-void manufacturedShellEikonalFields::postProcess
-(
-    const ionicModel&,
-    const volScalarField&,
-    const PtrList<volScalarField>&
-)
-{}
-
-
-void manufacturedShellEikonalFields::writeManufacturedFields
+void manufacturedShellEikonalVerifier::writeManufacturedFields
 (
     const fvMesh& mesh
 ) const

@@ -21,8 +21,8 @@ Description
     solution on the spherical shell, sealed on both spheres, with the
     stimulus point xs, the pinned radius rPin and self-test samples.
 
-    Regenerate from bathBidomainVerification/generator/:
-        python shell_eikonal_mms.py --write ../../eikonalVerification/manufacturedShellEikonalReference.H
+    Regenerate from generator/:
+        python shell_eikonal_mms.py --write ../eikonalVerification/manufacturedShellEikonalReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/

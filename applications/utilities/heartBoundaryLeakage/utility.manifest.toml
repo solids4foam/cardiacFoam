@@ -104,11 +104,6 @@ description = "bathFDA s_e (required with -exactPhiE)."
 takes_value = true
 
 [[flags]]
-name = "-conormalIterations"
-description = "conormalZeroFlux boundary passes (default 0)."
-takes_value = true
-
-[[flags]]
 name = "-restDrift"
 description = "max|Vm - restValue| on wall and interior heart cells."
 takes_value = false

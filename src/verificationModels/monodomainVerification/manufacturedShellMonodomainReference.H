@@ -21,8 +21,8 @@ Description
     solution on the spherical shell, sealed on both spheres, with self-test
     samples.
 
-    Regenerate from bathBidomainVerification/generator/:
-        python shell_monodomain_mms.py --write ../../monodomainVerification/manufacturedShellMonodomainReference.H
+    Regenerate from generator/:
+        python shell_monodomain_mms.py --write ../monodomainVerification/manufacturedShellMonodomainReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/

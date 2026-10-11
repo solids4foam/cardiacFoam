@@ -21,7 +21,6 @@ License
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
 #include "sealedWallPolicy.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
 {
@@ -214,11 +213,7 @@ myocardiumDomain::myocardiumDomain
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -0.084),
-        conormalWallPatchTypes
-        (
-            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            electroProperties.get<word>("sealedWallTrace")
-        )
+        "zeroGradient"
     ),
     gradVm_
     (
@@ -379,14 +374,6 @@ myocardiumDomain::myocardiumDomain
     ),
     setDeltaT_(true)
 {
-    setConormalWallConductivity
-    (
-        Vm_,
-        diffusionSolverPtr_->intracellularConductivityPtr()->name(),
-        diffusionSolverPtr_->phiEPtr()
-      ? diffusionSolverPtr_->phiEPtr()->name()
-      : word::null
-    );
     sealedWallPolicy::publish(Vm_, diffusionSolverPtr_->sealedHeartBoundary());
 
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())

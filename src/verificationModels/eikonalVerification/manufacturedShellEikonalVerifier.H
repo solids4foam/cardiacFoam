@@ -32,23 +32,17 @@ Description
     and pinnedRadius replaces rPin. Fields from
     manufacturedShellEikonalReference.H.
 
-    manufacturedShellEikonalFields, registered under the same type name for
-    electroVerificationModel, lets setManufacturedFields write the
-    conductivity of an eikonal case.
-
 Author
     Simao Nieto de Castro, UCD.
 
 SourceFiles
     manufacturedShellEikonalVerifier.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedShellEikonalVerifier_H
 #define manufacturedShellEikonalVerifier_H
 
 #include "eikonalVerificationModel.H"
-#include "electroVerificationModel.H"
 #include "overrideTypeName.H"
 #include "Switch.H"
 #include "eikonalVerification/manufacturedShellEikonalReference.H"
@@ -125,51 +119,9 @@ public:
         return false;
     }
 
-    virtual void postProcess(const volScalarField& activationTime) override;
-};
-
-
-//- Writes the conductivity of manufacturedShellEikonalVerifier for setManufacturedFields
-class manufacturedShellEikonalFields
-:
-    public electroVerificationModel
-{
-    shellEikonalMMS::Params p_;
-
-public:
-
-    ClassNameNoDebug("manufacturedShellEikonalVerifier");
-
-    virtual const word& type() const override
-    {
-        return typeName;
-    }
-
-    explicit manufacturedShellEikonalFields(const dictionary& dict);
-
-    virtual wordList preProcessFieldNames(const ionicModel&) const override;
-
-    virtual wordList requiredPostProcessFieldNames
-    (const ionicModel&) const override;
-
-    virtual bool shouldPostProcess
-    (const ionicModel&, const volScalarField&) const override;
-
-    virtual void preProcess
-    (
-        ionicModel&,
-        volScalarField&,
-        PtrList<volScalarField>&
-    ) override;
-
     virtual void writeManufacturedFields(const fvMesh& mesh) const override;
 
-    virtual void postProcess
-    (
-        const ionicModel&,
-        const volScalarField&,
-        const PtrList<volScalarField>&
-    ) override;
+    virtual void postProcess(const volScalarField& activationTime) override;
 };
 
 } // End namespace Foam

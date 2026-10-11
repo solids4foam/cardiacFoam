@@ -28,7 +28,7 @@ input. Five of the six live in `electroModels/core/verificationModels/`; only
 
 | Abstract base | Defined in | Concrete verifiers |
 |---|---|---|
-| `electroVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedFDAMonodomainVerifier`, `manufacturedAnisotropicMonodomainVerifier`, `manufacturedFDABidomainVerifier`, `manufacturedFDABathBidomainVerifier`, `manufacturedTransmissionBathBidomainVerifier` |
+| `electroVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedFDAMonodomainVerifier`, `manufacturedAnisotropicMonodomainVerifier`, `manufacturedFDABidomainVerifier`, `manufacturedFDABathBidomainVerifier` |
 | `eikonalVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedEikonalVerifier` |
 | `ecgVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier` |
 | `couplingVerificationModel` | `electroModels/core/verificationModels/` | `coupled1D3DMonodomainVerifier` |
@@ -52,17 +52,8 @@ concrete verifiers — sit beside each family's verifiers:
 - `monodomainVerification/manufacturedAnisotropicMonodomainReference.H`
 - `bidomainVerification/manufacturedFDABidomainReference.H`
 - `bathBidomainVerification/manufacturedFDABathBidomainReference.H`
-- `bathBidomainVerification/manufacturedTransmissionBathBidomainReference.H`
-- `bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H`
 - `eikonalVerification/manufacturedEikonalReference.H`
 - `electromechanicsVerification/manufacturedElectromechanicsReference.H`
-
-`manufacturedTransmissionBathBidomainVerifier` reaches its exact solution
-through `transmissionManufacturedSolution`, selected by the `geometry`
-entry: `obliqueSlabTransmission` wraps the slab reference header and
-`sphericalShellTransmission` the spherical-shell one. Each implementation
-also checks a mesh against its analytic geometry and writes its manual
-decomposition.
 
 ## Notes on naming
 

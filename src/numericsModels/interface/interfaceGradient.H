@@ -28,7 +28,6 @@ Description
 
 SourceFiles
     interfaceGradient.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef interfaceGradient_H

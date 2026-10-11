@@ -27,7 +27,6 @@ License
 #include "compatibilityProjection.H"
 #include "conormalStabilisation.H"
 #include "exposedPhiETrace.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
 #include "fvMeshSubset.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
@@ -61,11 +60,7 @@ bidomainSolver::bidomainSolver
         ),
         mesh,
         dimensionedScalar("phiE", dimVoltage, 0.0),
-        conormalWallPatchTypes
-        (
-            mesh,
-            electroProperties.get<word>("sealedWallTrace")
-        )
+        "zeroGradient"
     ),
     gradPhiE_
     (
@@ -172,7 +167,6 @@ bidomainSolver::bidomainSolver
             << "bathHeartPhiETrace global requires sealedHeartBoundary true"
             << exit(FatalIOError);
     }
-    setConormalWallConductivity(phiE_, Ge_.name(), word::null);
     sealedWallPolicy::publish(phiE_, sealedHeartBoundary_);
 
     if (meshSubsetPtr_ && meshSubsetPtr_->hasSubMesh())
@@ -245,22 +239,6 @@ void bidomainSolver::bindExternalPhiE
 
     if (bathHeartPhiETrace_ != "global")
     {
-        forAll(phiE_.boundaryField(), patchI)
-        {
-            if
-            (
-                isA<conormalZeroFluxFvPatchScalarField>
-                (
-                    phiE_.boundaryField()[patchI]
-                )
-            )
-            {
-                FatalErrorInFunction
-                    << "sealedWallTrace conormal with a bath requires "
-                    << "bathHeartPhiETrace global"
-                    << exit(FatalError);
-            }
-        }
         return;
     }
     if (!meshSubsetPtr_ || !meshSubsetPtr_->hasSubMesh())

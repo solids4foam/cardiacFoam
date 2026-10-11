@@ -27,7 +27,6 @@ License
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
 {
@@ -82,23 +81,14 @@ const fvMesh& resolveMyocardiumMesh
 }
 
 
-// NOTE: a free function here used to re-derive "is verification enabled?"
-// from type + enabled, in parallel with eikonalVerificationModel::New, which
-// answers the same question by returning nullptr. The boundary types keyed
-// off that duplicate rather than off the verifier that actually got built.
-// The single source of truth is now verificationModelPtr_ itself.
-
-
 // activationTime's boundary conditions come from 0/activationTime like any
-// other field's. They used to be chosen here from the verification settings
-// and handed to the field constructor, which hid them from the case: nothing
-// in the case directory said whether the run used zeroGradient or fixedValue.
+// other field's.
 //
 // Manufactured-solution runs need Dirichlet boundaries -- applyConstraints
 // writes the exact solution onto each patch face, and a zeroGradient patch
 // would extrapolate those values away from the interior on the next
 // evaluate(), silently invalidating the verification while still reporting
-// error norms. checkVerificationBoundaryTypes below enforces that instead.
+// error norms. checkVerificationBoundaryTypes below enforces that.
 void checkVerificationBoundaryTypes
 (
     const volScalarField& activationTime,
@@ -319,45 +309,6 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     ),
     verificationModelPtr_()
 {
-    const wordList wallTypes
-    (
-        conormalWallPatchTypes
-        (
-            mesh(),
-            electroProperties.get<word>("sealedWallTrace")
-        )
-    );
-    volScalarField::Boundary& activationBf = activationTime_.boundaryFieldRef();
-    boolList replaced(activationBf.size(), false);
-    forAll(activationBf, patchI)
-    {
-        if
-        (
-            isA<zeroGradientFvPatchScalarField>(activationBf[patchI])
-         && wallTypes[patchI] != activationBf[patchI].type()
-        )
-        {
-            activationBf.set
-            (
-                patchI,
-                fvPatchScalarField::New
-                (
-                    wallTypes[patchI],
-                    mesh().boundary()[patchI],
-                    activationTime_
-                )
-            );
-            replaced[patchI] = true;
-        }
-    }
-    setConormalWallConductivity(activationTime_, conductivity_.name(), word::null);
-    forAll(activationBf, patchI)
-    {
-        if (replaced[patchI])
-        {
-            activationBf[patchI].evaluate();
-        }
-    }
     sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
     const boundBox bb

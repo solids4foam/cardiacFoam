@@ -211,43 +211,6 @@ tmp<volScalarField> globalTracePotential
 }
 
 
-tmp<volScalarField> conormalPotential
-(
-    const fvMesh& sub,
-    const labelList& cellMap,
-    const volScalarField& base,
-    const bool analyticXY,
-    const volTensorField& G,
-    const label nIter
-)
-{
-    tmp<volScalarField> tpsi = subPotential
-    (
-        sub, cellMap, base, analyticXY, subPatchTypes(sub, "conormalZeroFlux")
-    );
-    volScalarField& psi = tpsi.ref();
-    psi.correctBoundaryConditions();
-
-    const volTensorField Gc
-    (
-        IOobject("conductivity", sub.time().timeName(), sub),
-        G
-    );
-    volVectorField gradPsi
-    (
-        IOobject("grad(" + psi.name() + ")", sub.time().timeName(), sub),
-        sub,
-        dimensionedVector(psi.dimensions()/dimLength, Zero)
-    );
-    gradPsi = fvc::grad(psi);
-    for (label iter = 0; iter < nIter; ++iter)
-    {
-        psi.correctBoundaryConditions();
-        gradPsi = fvc::grad(psi);
-    }
-    return tpsi;
-}
-
 }
 
 
@@ -271,7 +234,6 @@ int main(int argc, char *argv[])
     argList::addOption("mmsK", "scalar", "bathFDA k");
     argList::addOption("mmsAlpha", "scalar", "bathFDA alpha");
     argList::addOption("mmsSe", "scalar", "bathFDA s_e");
-    argList::addOption("conormalIterations", "label", "conormalZeroFlux passes");
     argList::addOption("restValue", "scalar", "Vm rest value for -restDrift");
     argList::addBoolOption("restDrift", "max|Vm - restValue| on wall and interior heart cells");
 
@@ -291,10 +253,6 @@ int main(int argc, char *argv[])
     );
     const bool analyticXY(args.getOrDefault<word>("analyticField", "") == "xy");
     const bool insulated(args.found("insulated"));
-    const label conormalIterations
-    (
-        args.getOrDefault<label>("conormalIterations", 0)
-    );
 
     autoPtr<fvMeshSubset> subsetterPtr;
     label exposedI = -1;
@@ -389,12 +347,7 @@ int main(int argc, char *argv[])
                 mesh
             );
             const tmp<volScalarField> tpsi =
-                conormalIterations > 0
-              ? conormalPotential
-                (
-                    sub, cellMap, base, analyticXY, G, conormalIterations
-                )
-              : sealedPotential(sub, cellMap, base, analyticXY);
+                sealedPotential(sub, cellMap, base, analyticXY);
 
             tmp<volScalarField> tlap;
             if (insulated)
