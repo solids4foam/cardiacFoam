@@ -27,8 +27,7 @@ Author
 
 #include "insulatedFaceConductivity.H"
 #include "linear.H"
-#include "zeroGradientFvPatchFields.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
+#include "sealedWallPolicy.H"
 
 namespace Foam
 {
@@ -49,16 +48,7 @@ tmp<surfaceTensorField> insulatedFaceConductivity
 
     forAll(Gfb, patchI)
     {
-        const fvPatchScalarField& psiP = psi.boundaryField()[patchI];
-
-        if
-        (
-            !psiP.coupled()
-         && (
-                isA<zeroGradientFvPatchScalarField>(psiP)
-             || isA<conormalZeroFluxFvPatchScalarField>(psiP)
-            )
-        )
+        if (sealedWallPolicy::isSealed(psi.boundaryField()[patchI]))
         {
             Gfb[patchI] = Zero;
         }

@@ -23,6 +23,7 @@ License
 #include "PstreamReduceOps.H"
 #include "myocardiumDomain.H"
 #include "insulatedFaceConductivity.H"
+#include "sealedWallPolicy.H"
 #include "exposedPhiETrace.H"
 #include "conormalZeroFluxFvPatchScalarField.H"
 #include "fvMeshSubset.H"
@@ -169,6 +170,7 @@ bidomainSolver::bidomainSolver
             << exit(FatalIOError);
     }
     setConormalWallConductivity(phiE_, Ge_.name(), word::null);
+    sealedWallPolicy::publish(phiE_, sealedHeartBoundary_);
 
     if (meshSubsetPtr_ && meshSubsetPtr_->hasSubMesh())
     {
@@ -281,6 +283,7 @@ void bidomainSolver::bindExternalPhiE
         phiE_, phiE, heartCellMap, meshSubsetPtr_->faceMap(), Ge_,
         phiE.mesh().lookupObject<volTensorField>("sigmaTotal")
     );
+    sealedWallPolicy::publish(phiE_, sealedHeartBoundary_);
 }
 
 
@@ -406,7 +409,8 @@ void bidomainSolver::solveDiffusionExplicit
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(tGif(), domain.Vm() + phiE_)
+          == fvc::laplacian(tGif(), domain.Vm())
+           + fvc::laplacian(tGif(), phiE_)
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
            - (*coeff)*domain.Vm()
@@ -417,7 +421,8 @@ void bidomainSolver::solveDiffusionExplicit
         solve
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(tGif(), domain.Vm() + phiE_)
+          == fvc::laplacian(tGif(), domain.Vm())
+           + fvc::laplacian(tGif(), phiE_)
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
         );

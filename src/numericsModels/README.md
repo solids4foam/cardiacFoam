@@ -6,7 +6,10 @@ The discretisation pieces the tissue solvers share: how a sealed heart wall and 
 
 | File | What it does |
 |---|---|
+| `sealedWall/sealedWallPolicy` | which patches of a potential are sealed, and the per-patch wall-gradient states (stock, sealed, value) a field's owner publishes |
 | `sealedWall/insulatedFaceConductivity` | face conductivity with zero values on sealed walls, so no current crosses them |
+| `sealedWall/sealedWallLeastSquaresGrad` | gradient scheme `sealedWallLeastSquares`: least squares on the point-neighbour stencil without sealed-face values in wall cells, `leastSquares` elsewhere |
+| `sealedWall/sealedWallLeastSquaresVectors` | the wall-cell least-squares vectors of one field, cached on its mesh |
 | `sealedWall/conormalZeroFluxFvPatchScalarField` | boundary condition whose gradient sets the conormal flux of a potential to zero |
 | `interface/extracellularFaceConductivity.H` | face conductivity across the heart-bath interface: linear, harmonic, distance-weighted harmonic and conormal harmonic (header-only) |
 | `interface/exposedPhiETrace` | value of the extracellular potential on a heart-bath face from two-sided flux continuity, and its use as the heart's boundary trace |

@@ -29,6 +29,9 @@ shares its geometry, its mesh generators and its `N` convention.
   `setManufacturedFields`
 - walls: `sealedHeartBoundary true`, `sealedWallTrace zeroGradient` or
   `conormal` (`-trace`)
+- gradient: `sealedWallLeastSquares` for `grad(Vm)` and `grad(Vm.component(0))`
+  (`system/fvSchemes`): wall cells take no value from the sealed walls;
+  `leastSquares` elsewhere
 
 ## Mesh
 
@@ -81,4 +84,4 @@ ranks; no gmsh needed):
 `setup/studies/` holds one study per mesh family, each run in a copy of the
 case: `hexConvergence` (cubed sphere) and `tetConvergence` (gmsh
 tetrahedra). Each README gives the commands, the ladder and the measured
-behaviour for both wall traces.
+behaviour of the shipped gradient and of the stock `leastSquares` control.

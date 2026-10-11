@@ -11,6 +11,7 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
 - `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
 - [`monodomainPseudoECG/insulatedWall`](monodomainPseudoECG/insulatedWall/README.md) : monodomain with conormally insulated walls
+- [`monodomainPseudoECG/sphericalShell`](monodomainPseudoECG/sphericalShell/README.md) : 3D monodomain with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient and a parallel hex regression
 - [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
 - [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
 - [`bathBidomain/insulatedWall`](bathBidomain/insulatedWall/README.md) : 2D anisotropic heart–bath bidomain with a conormally insulated interface

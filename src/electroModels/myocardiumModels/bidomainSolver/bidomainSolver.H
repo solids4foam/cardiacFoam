@@ -101,6 +101,11 @@ public:
         return &phiI_;
     }
 
+    virtual bool sealedHeartBoundary() const override
+    {
+        return sealedHeartBoundary_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return &Gi_;

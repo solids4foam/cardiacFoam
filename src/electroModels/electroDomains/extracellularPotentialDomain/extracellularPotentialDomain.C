@@ -22,6 +22,7 @@ License
 #include "myocardiumDomainInterface.H"
 #include "electroVerificationModel.H"
 #include "insulatedFaceConductivity.H"
+#include "sealedWallPolicy.H"
 #include "exposedPhiETrace.H"
 #include "interfaceGradient.H"
 #include "addToRunTimeSelectionTable.H"
@@ -299,6 +300,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
     }
 
     applyGroundPatchValues(phiEPtr_(), dict);
+    sealedWallPolicy::publish(phiEPtr_(), false);
 
     {
         const auto& bf = phiEPtr_().boundaryField();

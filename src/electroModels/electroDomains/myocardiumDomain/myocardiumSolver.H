@@ -86,6 +86,9 @@ public:
 
     virtual const volTensorField* conductivityPtr() const = 0;
 
+    //- True when no current crosses the heart boundary
+    virtual bool sealedHeartBoundary() const = 0;
+
     virtual const volTensorField* intracellularConductivityPtr() const
     {
         return conductivityPtr();

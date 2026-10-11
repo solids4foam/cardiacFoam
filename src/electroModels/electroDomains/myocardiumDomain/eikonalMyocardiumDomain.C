@@ -26,6 +26,7 @@ License
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
+#include "sealedWallPolicy.H"
 #include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
@@ -357,6 +358,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             activationBf[patchI].evaluate();
         }
     }
+    sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
     const boundBox bb
     (

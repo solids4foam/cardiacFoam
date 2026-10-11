@@ -20,6 +20,7 @@ License
 #include "myocardiumDomain.H"
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
+#include "sealedWallPolicy.H"
 #include "conormalZeroFluxFvPatchScalarField.H"
 
 namespace Foam
@@ -386,6 +387,7 @@ myocardiumDomain::myocardiumDomain
       ? diffusionSolverPtr_->phiEPtr()->name()
       : word::null
     );
+    sealedWallPolicy::publish(Vm_, diffusionSolverPtr_->sealedHeartBoundary());
 
     if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
     {

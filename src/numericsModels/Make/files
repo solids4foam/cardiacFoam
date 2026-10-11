@@ -1,4 +1,7 @@
+sealedWall/sealedWallPolicy.C
 sealedWall/insulatedFaceConductivity.C
+sealedWall/sealedWallLeastSquaresVectors.C
+sealedWall/sealedWallLeastSquaresGrad.C
 sealedWall/conormalZeroFluxFvPatchScalarField.C
 interface/exposedPhiETrace.C
 interface/interfaceGradient.C
