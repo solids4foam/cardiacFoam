@@ -12,17 +12,16 @@ Usage: ${0##*/} [parallel] [OPTION]...
 
 Options (parameters are written to local/ and included by the dictionaries):
   parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
-  -mesh hex|tet             blockMesh cubed sphere (default) or gmsh tetrahedra (shell.geo.template)
+  -mesh hex|tet             blockMesh cubed sphere (default) or gmsh tetrahedra
+                            (shell.geo.template)
   -N n                      cells per unit length (default 12); hex: a multiple of 4, radial
                             cells per unit length; tet: element size 1/n
   -seed n                   gmsh random seed for -mesh tet (default 1)
+  -wallGradient sealed|stock
+                            gradient of Vm: sealedWallLeastSquares (default) or the stock
+                            leastSquares control
   -dt x                     time step
   -endTime x                end time (default 0.2)
-  -wallGradient sealed|stock
-                            gradient of the potentials: sealedWallLeastSquares (default) or
-                            the stock leastSquares control
-  -trace zeroGradient|conormal
-                            sealedWallTrace (default zeroGradient)
 
 Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
@@ -34,10 +33,9 @@ parallel=false
 mesh=hex
 N=12
 seed=1
+wallGradient=sealed
 dt=
 endTime=0.2
-wallGradient=sealed
-trace=zeroGradient
 
 needValue()
 {
@@ -54,6 +52,24 @@ positiveInteger()
     esac
 }
 
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
 while [ "$#" -gt 0 ]
 do
     case "$1" in
@@ -62,10 +78,7 @@ do
             ;;
         -mesh)
             needValue "$@"; mesh="$2"; shift
-            case "$mesh" in
-                hex|tet) ;;
-                *) echo "${0##*/}: unknown -mesh $mesh" 1>&2; usage ;;
-            esac
+            oneOf -mesh "$mesh" hex tet
             ;;
         -N)
             needValue "$@"; N="$2"; shift
@@ -75,25 +88,17 @@ do
             needValue "$@"; seed="$2"; shift
             positiveInteger -seed "$seed"
             ;;
+        -wallGradient)
+            needValue "$@"; wallGradient="$2"; shift
+            oneOf -wallGradient "$wallGradient" sealed stock
+            ;;
         -dt)
             needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
             ;;
         -endTime)
             needValue "$@"; endTime="$2"; shift
-            ;;
-        -wallGradient)
-            needValue "$@"; wallGradient="$2"; shift
-            case "$wallGradient" in
-                sealed|stock) ;;
-                *) echo "${0##*/}: unknown -wallGradient $wallGradient" 1>&2; usage ;;
-            esac
-            ;;
-        -trace)
-            needValue "$@"; trace="$2"; shift
-            case "$trace" in
-                zeroGradient|conormal) ;;
-                *) echo "${0##*/}: unknown -trace $trace" 1>&2; usage ;;
-            esac
+            positiveNumber -endTime "$endTime"
             ;;
         -h|-help|--help)
             usage
@@ -140,7 +145,6 @@ grad(Vm)                leastSquares;
 grad(Vm.component(0))   leastSquares;
 EOF
 fi
-echo "sealedWallTrace $trace;" > local/trace
 
 # Time step proportional to h^2, ending exactly at endTime
 if [ -z "$dt" ]
@@ -162,8 +166,7 @@ then
     runApplication blockMesh
 else
     lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
-    cp shell.geo.template local/shell.geo
-    runApplication gmsh -3 local/shell.geo -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+    runApplication gmsh -3 shell.geo.template -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
     if grep -q "Error" log.gmsh
     then
         echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
@@ -174,7 +177,7 @@ fi
 runApplication checkMesh
 if grep -q "Failed [0-9]* mesh checks" log.checkMesh
 then
-    echo "checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
+    echo "${0##*/}: checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
     exit 1
 fi
 

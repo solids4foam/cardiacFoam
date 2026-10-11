@@ -6,12 +6,14 @@
 #     Convergence tables of the monodomainPseudoECG sphericalShell studies from the
 #     verifier summaries postProcessing/3D_<mesh>_<N>_cells.dat of the run
 #     copies in a results folder. Run copies are named
-#     <sealed|stock>_<hex|tet>_N<n>_s<seed>[_T2|_dthalf] (wall gradient, mesh,
-#     N, gmsh seed, long window or halved time step). For every wall gradient
-#     and window it prints the error table (means over seeds), the order
-#     fitted by least squares to log(error) against log(h) over every run of
-#     the three finest levels with its standard error, the change under the
-#     halved time step and the spread over seeds.
+#     <sealed|stock>_<hex|tet>_N<n>_s<seed>[_T2|_dthalf|_serial] (wall
+#     gradient, mesh, N, gmsh seed, long window, halved time step or serial
+#     run). For every wall gradient and window it prints the error table
+#     (means over seeds), the order fitted by least squares to log(error)
+#     against log(h) over every run of the three finest levels with its
+#     standard error, the change under the halved time step, the largest
+#     relative difference between a serial and the parallel run over all rows,
+#     and the spread over seeds.
 #
 # Usage
 #     python3 summarize.py hexConvergence/results
@@ -35,7 +37,7 @@ COLUMNS = (
 SPREAD_ROWS = ("Vm",)
 NORMS = {"L1": 0, "L2": 1, "Linf": 2}
 RUN_RE = re.compile(
-    r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)(?:_(T2|dthalf))?$"
+    r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)(?:_(T2|dthalf|serial))?$"
 )
 
 
@@ -144,6 +146,25 @@ def main() -> None:
                     for row in SPREAD_ROWS
                 )
                 print(f"\nHalved dt, {gradient} {mesh} N {n} seed {seed}: {change}")
+
+    for (gradient, mesh, window), serial in sorted(runs.items()):
+        if window != "serial":
+            continue
+        for n, seed, _, rows in serial:
+            full = [
+                r for r in runs.get((gradient, mesh, ""), [])
+                if r[0] == n and r[1] == seed
+            ]
+            if full:
+                difference = max(
+                    abs(a/b - 1)
+                    for row in rows if row in full[0][3]
+                    for a, b in zip(rows[row], full[0][3][row]) if b != 0
+                )
+                print(
+                    f"\nSerial against parallel, {gradient} {mesh} N {n} seed {seed}: "
+                    f"largest relative difference {difference:.1e}"
+                )
 
     for (gradient, mesh, window), at in sorted(runs.items()):
         seeds = {r[1] for r in at}

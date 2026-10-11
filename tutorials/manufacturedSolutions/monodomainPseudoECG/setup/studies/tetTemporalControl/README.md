@@ -1,22 +1,63 @@
 # tetTemporalControl - monodomainPseudoECG
 
-## Purpose
+The [tetConvergence](../tetConvergence/README.md) ladder refines the time
+step with the mesh (`dt ~ h^2`), so its slopes are space-time slopes. This
+control keeps the mesh and halves the time step at the two finest levels; a
+small change shows that the tetrahedral errors are spatial.
 
-The generic-Delaunay spatial ladders use `dt ~ h^2`; they are combined
-space--time paths under Lie--Godunov coupling.  This eight-case control holds
-the tetrahedral mesh, conductivity tensor, gradient reconstruction, solver,
-reference quadrature, and end time fixed, while halving `dt` at `N=40` and
-`N=80`.  It covers all four primary configurations (axis/rotated tensor times
-Gauss--linear/least-squares).
+## Ladder
 
-The comparison is accepted only when the fixed-mesh change is smaller than the
-field-error separation used to support the reconstruction conclusion.  Archive
-the pseudo-ECG metrics per electrode together with the field metrics.
+| N | dt | dt/2 |
+|---|---|---|
+| 40 | 0.000560538 | 0.000280269 |
+| 80 | 0.000140174 | 7.0087e-05 |
+
+for both gradient reconstructions and both fields, as in tetConvergence.
 
 ## Execution
 
-Spec: `tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
+Each run is a copy of the case in `results/` (ignored by git), named
+`<gradient>_<field>_tet_N<n>_dt<dt>`, the names that `../summarize.py` reads.
+From this folder:
 
 ```bash
-[omnidriver command to run]
+mkdir -p results
+for spec in "40 0.000560538 0.000280269" "80 0.000140174 7.0087e-05"
+do
+    set -- $spec; n=$1
+    for dt in $2 $3
+    do
+        for g in leastSquares GaussLinear
+        do
+            for f in fda anisotropic
+            do
+                r=results/${g}_${f}_tet_N${n}_dt$dt
+                rsync -a --exclude setup ../../../ $r/
+                $r/Allrun parallel -mesh tet -gradient $g -field $f -N $n -dt $dt
+            done
+        done
+    done
+done
+python3 ../summarize.py results
 ```
+
+## Measured behaviour
+
+Results of the last run of this study (`results/`), `leastSquares`,
+anisotropic field, `N = 40`:
+
+| field | dt | L2 | Linf |
+|---|---|---|---|
+| Vm | 0.000560538 | 1.74622e-04 | 1.65335e-03 |
+| Vm | 0.000280269 | 1.74580e-04 | 1.64906e-03 |
+| u1 | 0.000560538 | 4.89273e-05 | 4.34089e-04 |
+| u1 | 0.000280269 | 4.78638e-05 | 4.50768e-04 |
+
+Halving the time step changes `Vm` by 0.024 % in L2 and 0.26 % in Linf, two
+orders below the change between successive tetrahedral levels: the
+tetrahedral `Vm` errors are spatial.
+
+## Outputs
+
+Run copies, meshes and results stay outside the repository (`results/` is
+ignored).
