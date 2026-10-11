@@ -23,6 +23,8 @@ ddtSchemes
 gradSchemes
 {
     default         leastSquares;
+    grad(Vm)        leastSquares;
+    grad(phiE)      leastSquares;
 }
 
 divSchemes
