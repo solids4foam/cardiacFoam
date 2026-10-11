@@ -1,0 +1,43 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivitySource field;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    c0              [ 0 0 -0.5 0 0 0 0 ] 1;
+    sealedHeartBoundary true;
+    sealedWallTrace zeroGradient;
+    eikonalAdvectionDiffusionApproach true;
+    #includeIfPresent "<case>/local/formulation"
+    useGraphPrePopulation true;
+    // Outside the shell: the verifier pins the cells near its stimulus point
+    stimulusLocationMin ( 10 10 10 );
+    stimulusLocationMax ( 11 11 11 );
+    verificationModel
+    {
+        type    manufacturedShellEikonalVerifier;
+        N       12;
+        #includeIfPresent "<case>/local/verification"
+    }
+}
+
+
+// ************************************************************************* //

@@ -23,12 +23,13 @@ ddtSchemes
 gradSchemes
 {
     default  leastSquares;
+    limitedGrad cellMDLimited leastSquares 1;
 }
 
 divSchemes
 {
     default         none;
-    div(phiU,activationTime)   Gauss upwind;
+    div(phiU,activationTime)   Gauss linearUpwind limitedGrad;
     div(phiU,psi)   Gauss linear;
 }
 

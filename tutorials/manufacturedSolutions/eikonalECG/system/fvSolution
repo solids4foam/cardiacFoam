@@ -61,7 +61,7 @@ relaxationFactors
 {
     equations
     {
-        activationTime    0.9;
+        "activationTime.*"    0.9;
     }
     fields
     {

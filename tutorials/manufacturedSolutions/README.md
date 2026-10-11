@@ -15,6 +15,7 @@ This folder groups the manufactured-solution verification cases by model scope.
 - [`bidomain/insulatedWall`](bidomain/insulatedWall/README.md) : heart-only bidomain with conormally insulated walls and unequal anisotropy
 - [`bidomain/sphericalShell`](bidomain/sphericalShell/README.md) : 3D heart-only bidomain with sealed curved walls crossed by two unequal rotated full conductivity tensors, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient, a compatibility-projected phiE equation and a parallel hex regression
 - [`eikonalECG/insulatedWall`](eikonalECG/insulatedWall/README.md) : eikonal with conormally insulated walls
+- [`eikonalECG/sphericalShell`](eikonalECG/sphericalShell/README.md) : 3D eikonal with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with a pinned stimulus ball, the sealed-wall gradient and a parallel hex regression
 - [`bathBidomain/insulatedWall`](bathBidomain/insulatedWall/README.md) : 2D anisotropic heart–bath bidomain with a conormally insulated interface
 - [`bathBidomain/obliqueSlab`](bathBidomain/obliqueSlab/README.md) : heart–bath bidomain transmission across oblique, skewed interfaces on 2D sheared hexahedra or 3D gmsh tetrahedra, with a manual G0 patch test and a parallel G1 regression
 - [`bathBidomain/sphericalShell`](bathBidomain/sphericalShell/README.md) : 3D heart–bath bidomain transmission across curved interfaces on a cubed sphere or gmsh tetrahedra, with Neumann or Dirichlet outer data and a parallel hex regression

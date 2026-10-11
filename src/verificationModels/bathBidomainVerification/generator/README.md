@@ -88,3 +88,14 @@ tensors of `shell_mms.py`, each sealed on both spheres by its own potential: Fi 
 extracellular potential. Besides the sealing, source, denominator and richness checks of the
 monodomain shell, it checks that the integral of the phiE source div(Gi grad Fi) + div(Ge grad Fe)
 over the shell vanishes by Gauss-Legendre quadrature. Tests: `test_shell_bidomain_mms.py`.
+
+`shell_eikonal_mms.py` writes `eikonalVerification/manufacturedShellEikonalReference.H`: the heart-only
+eikonal solution on the spherical shell, sealed on both spheres, with M = G/(chi cm) and G the
+intracellular tensor of `shell_monodomain_mms.py`. Its psi is the smoothed anisotropic distance from a
+mid-wall stimulus point plus the sealing correction of the monodomain shell, and its source is the exact
+residual of -div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S. The sealed problem fixes psi up to
+a constant, so the header carries the stimulus point and the radius of the ball of pinned cells. Besides
+the sealing (30 digits), gradient, source, denominator and finiteness checks of the monodomain shell, it
+locates every critical point of psi (`--report` prints the table): on each sphere the Morse count
+(minima - saddles + maxima) must be 2 and every point must be non-degenerate. The source stays finite at
+them, where the metric is not differentiable. Tests: `test_shell_eikonal_mms.py`.

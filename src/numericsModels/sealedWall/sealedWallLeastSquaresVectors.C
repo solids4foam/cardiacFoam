@@ -24,12 +24,39 @@ Author
 #include "centredCPCCellToCellStencilObject.H"
 #include "volFields.H"
 #include "bitSet.H"
+#include "mathematicalConstants.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
     defineTypeNameAndDebug(sealedWallLeastSquaresVectors, 0);
+
+    // Smallest-to-largest eigenvalue ratio of a positive semi-definite tensor, exact for repeated eigenvalues
+    static scalar eigenValueRatio(const symmTensor& t)
+    {
+        const scalar q = tr(t)/3;
+        if (q <= VSMALL)
+        {
+            return 0;
+        }
+
+        const scalar p2 =
+            sqr(t.xx() - q) + sqr(t.yy() - q) + sqr(t.zz() - q)
+          + 2*(sqr(t.xy()) + sqr(t.xz()) + sqr(t.yz()));
+        if (p2 <= SMALL*sqr(q))
+        {
+            return 1;
+        }
+
+        const scalar p = sqrt(p2/6);
+        const scalar r = max(scalar(-1), min(scalar(1), det((t - q*I)/p)/2));
+        const scalar phi = acos(r)/3;
+        const scalar eMax = q + 2*p*cos(phi);
+        const scalar eMin = q + 2*p*cos(phi + constant::mathematical::twoPi/3);
+
+        return eMin/max(eMax, VSMALL);
+    }
 }
 
 
@@ -120,8 +147,7 @@ void Foam::sealedWallLeastSquaresVectors::calcVectors()
             lsv[j] = w*d;
         }
 
-        const vector ev(eigenValues(dd));
-        minRatio = min(minRatio, cmptMin(ev)/max(cmptMax(ev), VSMALL));
+        minRatio = min(minRatio, eigenValueRatio(dd));
 
         const symmTensor ddInv(inv(dd) - dd0);
         for (label j = 1; j < lsv.size(); ++j)

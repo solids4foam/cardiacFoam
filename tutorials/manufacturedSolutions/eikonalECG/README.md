@@ -45,6 +45,10 @@ Typical outputs include:
 
 [`insulatedWall/`](insulatedWall/README.md) is a separate case that leaves the faces `x = 0, 1` to the solver's insulated-wall treatment (`productionPatches`) instead of prescribing the exact activation time there, with `k` chosen so that `n.M.grad(psi) = 0` on those faces. It has its own regression and tetrahedral study.
 
+### Spherical-Shell Case
+
+[`sphericalShell/`](sphericalShell/README.md) is a separate case on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a stimulus ball pinned to the exact activation time, on a cubed sphere or gmsh tetrahedra. It has its own regression and convergence studies.
+
 ### Tetrahedral (unstructured) Mesh Variant
 
 `setup/studies/tetConvergence/` is an activatable overlay of this same case

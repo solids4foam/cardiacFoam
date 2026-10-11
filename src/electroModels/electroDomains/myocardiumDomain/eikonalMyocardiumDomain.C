@@ -586,18 +586,10 @@ void eikonalMyocardiumDomain::advance
                 )
               + fvm::div(phiU_, activationTime_)
               + fvm::SuSp(-divPhiU_, activationTime_)
-             == one
-              + fvc::div(phiU_, activationTime_)
-              - divPhiU_*activationTime_
-              - c0_*G_
-              + Smms
+             == one + Smms
             );
 
-            // Under-relax the nonlinear outer loop: G, phiU and divPhiU are
-            // lagged (recomputed from psi each outer iteration), so without
-            // relaxation the deferred-correction fixed point is not contractive
-            // and the outer residual drifts upwards.  relax() also boosts
-            // diagonal dominance, which stabilises the unpreconditioned solve.
+            // c0 |grad psi|_M = u & grad psi with u lagged; a bounded div scheme keeps the transport monotone
             activationEqn.relax();
             activationEqn.setValues(constrainedCells, constrainedValues);
             activationEqn.solve("asymmetric_" + activationTime_.name());
