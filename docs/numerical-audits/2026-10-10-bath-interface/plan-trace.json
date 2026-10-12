@@ -1,0 +1,64 @@
+[
+  {
+    "name": "exactTrace_g1_shear_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_EXACT_TRACE": "1"
+    }
+  },
+  {
+    "name": "exactTrace_g1_shear_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_EXACT_TRACE": "1"
+    }
+  },
+  {
+    "name": "bothControls_g1_shear_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_EXACT_TRACE": "1",
+      "BATH_AUDIT_CORRECTION": "1"
+    }
+  },
+  {
+    "name": "bothControls_g1_shear_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_EXACT_TRACE": "1",
+      "BATH_AUDIT_CORRECTION": "1"
+    }
+  }
+]

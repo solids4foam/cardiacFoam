@@ -1,0 +1,54 @@
+[
+  {
+    "name": "consistentCorrection_g0_shear_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine"
+    ]
+  },
+  {
+    "name": "consistentCorrection_g0_shear_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine"
+    ]
+  },
+  {
+    "name": "consistentCorrection_g1_shear_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "consistentCorrection_g1_shear_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  }
+]

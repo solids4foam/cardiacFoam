@@ -1,0 +1,15 @@
+{
+  "branch": "feat/bath-transmission-mms",
+  "commit": "b9ec319667da266ce9da0d30d2ce6cc20655b470",
+  "workingTree": "included uncommitted transmission MMS implementation",
+  "sourceSha256": {
+    "src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C": "e1d0cf9f16f8fb5c582ed4d8dcce6c774009d900ec013544a4a85ee2ed277b0d",
+    "src/electroModels/electroDomains/myocardiumDomain/sealedWall/exposedPhiETrace.C": "b959ea8525677cf64d07b87683c373933c41d5238771826b32e15e952b66f565",
+    "src/verificationModels/bathBidomainVerification/manufacturedTransmissionBathBidomainReference.H": "4806f2f3fd8afb49b550dd66503782cbd07d41f9bccbeff54d5a94a1ebb79260",
+    "src/verificationModels/bathBidomainVerification/manufacturedTransmissionBathBidomainVerifier.C": "8bf35dc8c1b91c0d8931bcde0c140f36e0fd10848f5d46d0c646c9562e70730c"
+  },
+  "openfoam": "v2412 darwin64ClangDPInt32Opt",
+  "backend": "isolated lightweight physicsModel, copied installed ionicModels/genericWriter/activeTensionModels dependencies",
+  "scratchRoot": "/tmp/bath-mms-audit-20261010",
+  "date": "2026-10-10"
+}

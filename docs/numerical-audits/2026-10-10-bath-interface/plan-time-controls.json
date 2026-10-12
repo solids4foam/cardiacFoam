@@ -1,0 +1,57 @@
+[
+  {
+    "name": "traceTime",
+    "args": [
+      "-N",
+      "10",
+      "-endTime",
+      "0.01",
+      "-dt",
+      "0.001",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_EXACT_TRACE": "1"
+    }
+  },
+  {
+    "name": "correctionTime",
+    "args": [
+      "-N",
+      "10",
+      "-endTime",
+      "0.01",
+      "-dt",
+      "0.001",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_CORRECTION": "1"
+    }
+  },
+  {
+    "name": "bothTime",
+    "args": [
+      "-N",
+      "10",
+      "-endTime",
+      "0.01",
+      "-dt",
+      "0.001",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ],
+    "auditEnv": {
+      "BATH_AUDIT_EXACT_TRACE": "1",
+      "BATH_AUDIT_CORRECTION": "1"
+    }
+  }
+]

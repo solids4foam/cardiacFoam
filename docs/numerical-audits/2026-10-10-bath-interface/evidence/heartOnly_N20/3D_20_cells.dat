@@ -1,0 +1,19 @@
+Bidomain manufactured-solution error summary (t = 1e-09):
+Field     L1-error       L2-error       Linf-error
+Vm        1.0738e-12   1.27185e-12   3.43148e-12
+phiE      0.155218   0.155222   0.158149
+phiE_gauge 0.000857035   0.00106007   0.00293093
+phiI      0.155218   0.155222   0.158149
+phiI_gauge 0.000857035   0.00106007   0.00293093
+u1        1.08731e-16   1.84224e-16   8.88178e-16
+u2        8.18928e-17   9.53516e-17   1.11022e-16
+
+Number of cells (N)   = 20
+Grid spacing (dx)     = 0.05
+Time step (dt)        = 1e-09
+Number of steps       = 1
+Final simulation time = 1e-09
+Beta                  = -2.51888
+phiE reference point  = (0.125 0.25 0.375)
+phiE reference value  = 0
+phiE gauge offset     = -0.155218

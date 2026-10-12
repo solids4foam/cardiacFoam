@@ -1,0 +1,72 @@
+[
+  {
+    "name": "g0_shear_N40",
+    "args": [
+      "-N",
+      "40",
+      "-elliptic",
+      "-solution",
+      "affine",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "g1_shear_N40",
+    "args": [
+      "-N",
+      "40",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "g1_orth_N40",
+    "args": [
+      "-N",
+      "40",
+      "-elliptic",
+      "-shear",
+      "0",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "g1_time_dt1",
+    "args": [
+      "-N",
+      "10",
+      "-endTime",
+      "0.01",
+      "-dt",
+      "0.001",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "g1_time_dtHalf",
+    "args": [
+      "-N",
+      "10",
+      "-endTime",
+      "0.01",
+      "-dt",
+      "0.0005",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  }
+]

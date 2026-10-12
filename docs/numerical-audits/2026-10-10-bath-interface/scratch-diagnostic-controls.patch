@@ -1,0 +1,86 @@
+--- a/src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C
++++ b/src/electroModels/electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C
+@@ -23,6 +23,7 @@
+ #include "electroVerificationModel.H"
+ #include "insulatedFaceConductivity.H"
+ #include "exposedPhiETrace.H"
++#include <cstdlib>
+ #include "addToRunTimeSelectionTable.H"
+ #include "PstreamReduceOps.H"
+ #include "OStringStream.H"
+@@ -1427,16 +1428,32 @@
+                 phiEPtr_(), sigmaE, sigmaIglobalPtr_(), tgrad()
+             );
+         }
+-        tphiEqn =
+-        (
+-            fvm::laplacian(gammaNN, phiEPtr_())
+-          + fvc::div(SfGammaCorr & linearInterpolate(tgrad()))
+-         == rhsGlobal
++        const bool auditCorrection = std::getenv("BATH_AUDIT_CORRECTION");
++        tmp<surfaceScalarField> tExplicitFlux
++        (
++            SfGammaCorr & linearInterpolate(tgrad())
+         );
+-
++        if (auditCorrection)
++        {
++            tExplicitFlux.ref() += gammaNN*baseMesh_.magSf()
++              *(baseMesh_.nonOrthCorrectionVectors() & linearInterpolate(tgrad()));
++            tphiEqn =
++            (
++                fvm::laplacian(gammaNN, phiEPtr_(), "auditPhiELaplacian")
++              + fvc::div(tExplicitFlux()) == rhsGlobal
++            );
++        }
++        else
++        {
++            tphiEqn =
++            (
++                fvm::laplacian(gammaNN, phiEPtr_())
++              + fvc::div(tExplicitFlux()) == rhsGlobal
++            );
++        }
+         if (storeFlux)
+         {
+-            tCrossFlux = SfGammaCorr & linearInterpolate(tgrad());
++            tCrossFlux = tExplicitFlux;
+         }
+     }
+     else
+--- a/src/electroModels/electroDomains/myocardiumDomain/sealedWall/exposedPhiETrace.C
++++ b/src/electroModels/electroDomains/myocardiumDomain/sealedWall/exposedPhiETrace.C
+@@ -29,6 +29,8 @@
+ #include "fixedValueFvPatchFields.H"
+ #include "surfaceFields.H"
+ #include "fvc.H"
++#include <cstdlib>
++#include "../../../../verificationModels/bathBidomainVerification/manufacturedTransmissionBathBidomainReference.H"
+ 
+ namespace Foam
+ {
+@@ -240,6 +242,24 @@
+             }
+         }
+     }
++    if (std::getenv("BATH_AUDIT_EXACT_TRACE"))
++    {
++        auto params = transmissionMMS::defaultParams();
++        if (std::getenv("BATH_AUDIT_AFFINE")) params.solution = 0;
++        forAll(bf, patchI)
++        {
++            if (!isA<fixedValueFvPatchScalarField>(bf[patchI])) continue;
++            const fvPatch& patch = heartPhiE.mesh().boundary()[patchI];
++            forAll(patch, i)
++            {
++                bf[patchI][i] = transmissionMMS::phiE
++                (
++                    patch.Cf()[i], baseMesh.time().value(),
++                    transmissionMMS::myocardium, params
++                );
++            }
++        }
++    }
+     heartPhiE.correctBoundaryConditions();
+ }
+ 

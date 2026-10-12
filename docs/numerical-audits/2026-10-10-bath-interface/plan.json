@@ -1,0 +1,197 @@
+[
+  {
+    "name": "g0_orth_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine",
+      "-shear",
+      "0"
+    ]
+  },
+  {
+    "name": "g0_shear_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine"
+    ]
+  },
+  {
+    "name": "g0_gauss_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine",
+      "-grad",
+      "GaussLinear"
+    ]
+  },
+  {
+    "name": "g1_orth_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-shear",
+      "0"
+    ]
+  },
+  {
+    "name": "g1_shear_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "g0_orth_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine",
+      "-shear",
+      "0"
+    ]
+  },
+  {
+    "name": "g0_shear_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine"
+    ]
+  },
+  {
+    "name": "g0_gauss_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-solution",
+      "affine",
+      "-grad",
+      "GaussLinear"
+    ]
+  },
+  {
+    "name": "g1_orth_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-shear",
+      "0"
+    ]
+  },
+  {
+    "name": "g1_shear_N20",
+    "args": [
+      "-N",
+      "20",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  },
+  {
+    "name": "g1_corr1_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "1",
+      "-nNonOrth",
+      "1"
+    ]
+  },
+  {
+    "name": "g1_corr20_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "20",
+      "-nNonOrth",
+      "20"
+    ]
+  },
+  {
+    "name": "g1_gauss_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10",
+      "-grad",
+      "GaussLinear"
+    ]
+  },
+  {
+    "name": "g1_parallel_N10",
+    "args": [
+      "-N",
+      "10",
+      "-elliptic",
+      "parallel",
+      "-nOuter",
+      "10",
+      "-nNonOrth",
+      "10"
+    ]
+  }
+]
