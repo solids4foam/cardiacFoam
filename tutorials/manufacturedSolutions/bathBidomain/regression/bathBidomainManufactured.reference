@@ -56,5 +56,5 @@ interface      x0IntracellularLeak_L2   0.000432731    4.3e-09
 interface      x1IntracellularLeak_L2   0.000432086    4.3e-09
 interfaceExact x0FluxJump_L2            0.000432305    4.3e-09
 interfaceExact x1FluxJump_L2            0.000432305    4.3e-09
-interfaceExact x0AssembledFlux_L2       0.00146979     1.5e-08
-interfaceExact x1AssembledFlux_L2       0.00146979     1.5e-08
+interfaceExact x0AssembledFlux_L2       0.00146981     1.5e-08
+interfaceExact x1AssembledFlux_L2       0.00146981     1.5e-08

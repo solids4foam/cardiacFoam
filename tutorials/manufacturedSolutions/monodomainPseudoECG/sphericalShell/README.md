@@ -13,8 +13,10 @@ Origin: this work.
 
 ## Problem
 
-    chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in r1 < |x| < r2
-    n . G grad Vm = 0                                       on |x| = r1, |x| = r2
+```text
+chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in r1 < |x| < r2
+n . G grad Vm = 0                                       on |x| = r1, |x| = r2
+```
 
 The shell has `r1 = 0.5` and `r2 = 1`; the inner sphere is the patch
 `endocardium` and the outer sphere the patch `epicardium`. `Vm = sqrt(1 + t)

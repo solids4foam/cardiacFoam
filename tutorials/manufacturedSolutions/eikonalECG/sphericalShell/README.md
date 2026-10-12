@@ -15,8 +15,10 @@ Origin: this work.
 
 ## Problem
 
-    -div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in r1 < |x| < r2
-    n . M grad psi = 0                                            on |x| = r1, |x| = r2
+```text
+-div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in r1 < |x| < r2
+n . M grad psi = 0                                            on |x| = r1, |x| = r2
+```
 
 with `M = G/(chi Cm)`. The shell has `r1 = 0.5` and `r2 = 1`; the inner
 sphere is the patch `endocardium` and the outer sphere the patch

@@ -18,8 +18,10 @@ tool (Pathmanathan & Gray 2014); the mechanics problem is this work.
 
 ## Problem
 
-    chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s     in [0,1]^3,  n . grad Vm = 0
-    rho d2D/dt2 = Div P + B                                 in [0,1]^3,  D = D_ex on every face
+```text
+chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s     in [0,1]^3,  n . grad Vm = 0
+rho d2D/dt2 = Div P + B                                 in [0,1]^3,  D = D_ex on every face
+```
 
 in the reference configuration, with
 

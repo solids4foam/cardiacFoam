@@ -17,19 +17,23 @@ Origin: the bidomain-with-bath problem of the FDA regulatory science tool
 
 ## Problem
 
-    chi (Cm dVm/dt + Iion) = div(Gi grad(Vm + phiE))      in the myocardium
-    div(Gi grad Vm) + div((Gi + Ge) grad phiE) = 0         in the myocardium
-    div(sigmaB grad phiE) = 0                              in the bath
-    n . Gi grad(Vm + phiE) = 0                             on x = 0, x = 1
-    phiE and the extracellular current continuous          on x = 0, x = 1
+```text
+chi (Cm dVm/dt + Iion) = div(Gi grad(Vm + phiE))      in the myocardium
+div(Gi grad Vm) + div((Gi + Ge) grad phiE) = 0         in the myocardium
+div(sigmaB grad phiE) = 0                              in the bath
+n . Gi grad(Vm + phiE) = 0                             on x = 0, x = 1
+phiE and the extracellular current continuous          on x = 0, x = 1
+```
 
 on `[-1, 2] x [0, 1]^(d-1)` (1D: `y, z` in `[0, 0.1]`; 2D: `z` in
 `[0, 0.05]`), with `S = sqrt(1 + t)`, `F = cos(pi x)` and
 
-    Vm   = S F - alpha x/se                                       0 <= x <= 1
-    phiE = -k S F + alpha x/se + C(t)                             0 <= x <= 1
-    phiE = -k S + alpha x/sigmaB + C(t)                          -1 <= x <= 0
-    phiE = k S + alpha/se + alpha (x - 1)/sigmaB + C(t)           1 <= x <= 2
+```text
+Vm   = S F - alpha x/se                                       0 <= x <= 1
+phiE = -k S F + alpha x/se + C(t)                             0 <= x <= 1
+phiE = -k S + alpha x/sigmaB + C(t)                          -1 <= x <= 0
+phiE = k S + alpha/se + alpha (x - 1)/sigmaB + C(t)           1 <= x <= 2
+```
 
 The ionic states are `u1 = (1 + t) G + S F`, `u2 = G^(-1/2)/(1 + t)` and
 `u3 = -alpha x/se`, with `G = 1 + x`, `1 + x y^2` or `1 + x y^2 z^3` in 1D,

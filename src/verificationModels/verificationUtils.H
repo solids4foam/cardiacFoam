@@ -619,7 +619,8 @@ inline boolList interfaceBandCells(const fvMesh& mesh, const boolList& isHeart)
         }
     }
 
-    const boolList nbrIsHeart(syncTools::swapBoundaryCellList(mesh, isHeart));
+    boolList nbrIsHeart;
+    syncTools::swapBoundaryCellList(mesh, isHeart, nbrIsHeart);
     for (const polyPatch& pp : mesh.boundaryMesh())
     {
         if (!pp.coupled())

@@ -14,9 +14,11 @@ Origin: the bidomain problem of the FDA regulatory science tool (Pathmanathan
 
 ## Problem
 
-    chi Cm dVm/dt = div(G_i grad Vm) + div(G_i grad phiE) - chi Cm Iion + I_s
-    0             = div(G_i grad Vm) + div((G_i + G_e) grad phiE)
-    n . grad Vm = n . grad phiE = 0                             on every face
+```text
+chi Cm dVm/dt = div(G_i grad Vm) + div(G_i grad phiE) - chi Cm Iion + I_s
+0             = div(G_i grad Vm) + div((G_i + G_e) grad phiE)
+n . grad Vm = n . grad phiE = 0                             on every face
+```
 
 in `[0,1]^d`, with `phiI = Vm + phiE` and
 

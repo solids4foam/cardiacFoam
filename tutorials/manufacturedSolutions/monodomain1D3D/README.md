@@ -18,9 +18,11 @@ are this work.
 
 ## Problem
 
-    chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s + S_pvj          in [0,1]^3
-    n . grad Vm = 0                                                      on every face
-    chi Cm dV1D/dt = d/ds(g dV1D/ds) - chi Cm Iion1D + I_s1D (+ I_app1D) on each graph edge
+```text
+chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s + S_pvj          in [0,1]^3
+n . grad Vm = 0                                                      on every face
+chi Cm dV1D/dt = d/ds(g dV1D/ds) - chi Cm Iion1D + I_s1D (+ I_app1D) on each graph edge
+```
 
 `Vm = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z)` and `V1D = sqrt(1 + t)
 cos(pi x)` at graph position `x`, with `G = diag(0.111453302, 0.121585420,

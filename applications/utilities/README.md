@@ -63,7 +63,6 @@ flowchart TB
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |
 | measure bath–bidomain interface fluxes | `bathBidomainInterfaceMetrics` | [README](bathBidomainInterfaceMetrics/README.md) |
-| test an exact affine heart–bath interface flux | `bathInterfacePatchTest` | [README](bathInterfacePatchTest/README.md) |
 | test the sealed-wall cell gradient on a shell mesh | `wallGradientProbe` | [README](wallGradientProbe/README.md) |
 | write the conductivity fields a manufactured solution prescribes | `setManufacturedFields` | [README](setManufacturedFields/README.md) |
 

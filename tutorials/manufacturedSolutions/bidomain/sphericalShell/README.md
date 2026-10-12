@@ -13,9 +13,11 @@ Origin: this work.
 
 ## Problem
 
-    chi Cm dVm/dt = div(Gi grad(Vm + phiE)) - chi Cm Iion + I_s     in r1 < |x| < r2
-    div((Gi + Ge) grad phiE) = -div(Gi grad Vm) + s_e                in r1 < |x| < r2
-    n . Gi grad(phiI) = 0,  n . Ge grad(phiE) = 0                   on |x| = r1, |x| = r2
+```text
+chi Cm dVm/dt = div(Gi grad(Vm + phiE)) - chi Cm Iion + I_s     in r1 < |x| < r2
+div((Gi + Ge) grad phiE) = -div(Gi grad Vm) + s_e                in r1 < |x| < r2
+n . Gi grad(phiI) = 0,  n . Ge grad(phiE) = 0                   on |x| = r1, |x| = r2
+```
 
 with `phiI = Vm + phiE`. The shell has `r1 = 0.5` and `r2 = 1`; the inner
 sphere is the patch `endocardium` and the outer sphere the patch

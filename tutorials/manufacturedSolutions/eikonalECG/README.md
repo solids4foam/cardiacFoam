@@ -16,8 +16,10 @@ problems.
 
 ## Problem
 
-    -div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in [0,1]^d
-    psi = psi_ex    on every face and on the cells of smallest centre x, y or z
+```text
+-div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in [0,1]^d
+psi = psi_ex    on every face and on the cells of smallest centre x, y or z
+```
 
 `psi_ex = exp(k . x)` with `k = (1,0,0)`, `(1,1,0)`, `(1,1,1)` in 1D, 2D,
 3D, `M = G/(chi Cm)`, `chi = 3`, `Cm = 2`, `c0 = 1`, and
@@ -30,7 +32,9 @@ problems.
 The ECG is the lead-field integral of the template `Vm = U(t - psi)`,
 `U(s) = sin(2 pi s)`, at external electrodes:
 
-    phi(x_e, t) = int G grad Vm . (x - x_e)/|x - x_e|^3 dx,   grad Vm = -U'(t - psi) grad psi
+```text
+phi(x_e, t) = int G grad Vm . (x - x_e)/|x - x_e|^3 dx,   grad Vm = -U'(t - psi) grad psi
+```
 
 sampled every 0.01 for `t` in `[0, 2]`. The solver evaluates it with the
 reconstructed `grad psi` of the computed field; the reference is a

@@ -16,8 +16,10 @@ problem are this work.
 
 ## Problem
 
-    chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in [0,1]^d
-    n . grad Vm = 0                                       on every face
+```text
+chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in [0,1]^d
+n . grad Vm = 0                                       on every face
+```
 
 `Vm = sqrt(1 + t) F` with
 
