@@ -118,23 +118,6 @@ public:
         (void)evaluationTime;
     }
 
-    //- Set fixedValue values and fixedGradient gradients on the patches of boundaryDataPatches(); a gradient g gives n . sigmaTotal(owner cell) . n * g = prescribed flux
-    virtual void applyPhiEBoundaryData
-    (
-        volScalarField& phiE,
-        const scalar evaluationTime
-    ) const
-    {
-        (void)phiE;
-        (void)evaluationTime;
-    }
-
-    //- Extracellular-potential patches set by applyPhiEBoundaryData.
-    virtual wordList boundaryDataPatches() const
-    {
-        return wordList();
-    }
-
     //- Remove the discrete imbalance of a pure-Neumann phiE system before the reference cell is pinned
     virtual bool requiresPhiECompatibilityProjection() const
     {

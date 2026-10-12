@@ -32,7 +32,7 @@ The ionic model closes the `Vm` equation with `I_s = sqrt(1 + t) (beta F -
 div(Gi grad Fi))`, `F = Fi - Fe`; the `phiE` equation takes
 `s_e = sqrt(1 + t) (div(Gi grad Fi) + div(Ge grad Fe))`, whose integral over the
 shell is zero. The generator is
-[`shell_bidomain_mms.py`](../../../../src/verificationModels/generator/README.md).
+[`shell_bidomain_mms.py`](../../../generators/README.md).
 
 ### Stack
 

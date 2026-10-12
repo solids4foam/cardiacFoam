@@ -22,7 +22,7 @@ Description
     on both spheres, with self-test samples.
 
     Regenerate from generator/:
-        python shell_bidomain_mms.py --write ../bidomainVerification/manufacturedShellBidomainReference.H
+        python shell_bidomain_mms.py --write ../../../src/verificationModels/bidomainVerification/manufacturedShellBidomainReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/

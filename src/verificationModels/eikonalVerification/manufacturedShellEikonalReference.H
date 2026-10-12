@@ -22,7 +22,7 @@ Description
     stimulus point xs, the pinned radius rPin and self-test samples.
 
     Regenerate from generator/:
-        python shell_eikonal_mms.py --write ../eikonalVerification/manufacturedShellEikonalReference.H
+        python shell_eikonal_mms.py --write ../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/

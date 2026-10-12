@@ -22,7 +22,7 @@ The shell has `r1 = 0.5` and `r2 = 1`; the inner sphere is the patch
 `endocardium` and the outer sphere the patch `epicardium`. `Vm = sqrt(1 + t)
 F` with `n . G grad F = 0` on each sphere, `chi = 3`, `Cm = 2` and the FDA
 ionic closure (`u1`, `u2`, `u3`). The generator is
-[`shell_monodomain_mms.py`](../../../../src/verificationModels/generator/README.md).
+[`shell_monodomain_mms.py`](../../../generators/README.md).
 
 ### Stack
 

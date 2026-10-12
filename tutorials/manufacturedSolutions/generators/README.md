@@ -1,5 +1,10 @@
 # Sealed-shell manufactured-solution generators
 
+These scripts belong to the sealed-shell cases (`monodomainPseudoECG`, `bidomain` and
+`eikonalECG` under `sphericalShell`). They are not part of the solver build: the
+headers they write are committed under `src/verificationModels`, and the cases
+compile those headers in. Run a generator only to regenerate or check a header.
+
 Three sympy generators build exact solutions on a spherical heart shell
 `r1 < |x| < r2` whose two spheres are sealed walls, with a full anisotropic
 conductivity whose fibre and sheet rotate through the wall in a fixed frame,
@@ -9,9 +14,9 @@ emission they share.
 
 | generator | problem | header | verifier |
 |---|---|---|---|
-| `shell_monodomain_mms.py` | monodomain, `n . G grad V = 0` on both spheres | `../monodomainVerification/manufacturedShellMonodomainReference.H` | `manufacturedShellMonodomainVerifier` |
-| `shell_bidomain_mms.py` | heart-only bidomain, `phiI` and `phiE` each sealed by its own tensor | `../bidomainVerification/manufacturedShellBidomainReference.H` | `manufacturedShellBidomainVerifier` |
-| `shell_eikonal_mms.py` | eikonal activation time, `n . M grad psi = 0` on both spheres | `../eikonalVerification/manufacturedShellEikonalReference.H` | `manufacturedShellEikonalVerifier` |
+| `shell_monodomain_mms.py` | monodomain, `n . G grad V = 0` on both spheres | `../../../src/verificationModels/monodomainVerification/manufacturedShellMonodomainReference.H` | `manufacturedShellMonodomainVerifier` |
+| `shell_bidomain_mms.py` | heart-only bidomain, `phiI` and `phiE` each sealed by its own tensor | `../../../src/verificationModels/bidomainVerification/manufacturedShellBidomainReference.H` | `manufacturedShellBidomainVerifier` |
+| `shell_eikonal_mms.py` | eikonal activation time, `n . M grad psi = 0` on both spheres | `../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H` | `manufacturedShellEikonalVerifier` |
 
 Every field is a polynomial, trigonometric or exponential function of x, y, z,
 or a ratio with a positive denominator, so the formulas extend smoothly into
@@ -68,15 +73,15 @@ A relative `--write` or `--check` path is taken against this directory.
 Regenerate a header (from this directory):
 
 ```bash
-python shell_monodomain_mms.py --write ../monodomainVerification/manufacturedShellMonodomainReference.H
+python shell_monodomain_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedShellMonodomainReference.H
 ```
 
 ```bash
-python shell_bidomain_mms.py --write ../bidomainVerification/manufacturedShellBidomainReference.H
+python shell_bidomain_mms.py --write ../../../src/verificationModels/bidomainVerification/manufacturedShellBidomainReference.H
 ```
 
 ```bash
-python shell_eikonal_mms.py --write ../eikonalVerification/manufacturedShellEikonalReference.H
+python shell_eikonal_mms.py --write ../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H
 ```
 
 Check that a tracked header matches its generator (exit status 1 on a

@@ -37,7 +37,7 @@ a centre in that ball) and imposes no value on a patch. `psi` has critical
 points on the walls, where the metric `sqrt(grad psi . M grad psi)` is not
 differentiable; the generator lists them
 (`python3 shell_eikonal_mms.py --report`, in
-[the generator folder](../../../../src/verificationModels/generator/README.md)).
+[the generator folder](../../../generators/README.md)).
 
 ### Stack
 

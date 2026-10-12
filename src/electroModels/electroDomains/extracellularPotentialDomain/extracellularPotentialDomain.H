@@ -129,9 +129,6 @@ class extracellularPotentialDomain
     //- Verification model bound to the heart domain, or nullptr.
     const electroVerificationModel* verifier() const;
 
-    //- Apply and evaluate the verifier's boundary data on phiE.
-    void applyManufacturedBoundaryData();
-
     //- Copy the heart-bath face values of F into phiEInterfaceFlux.
     void storeInterfaceFlux(const surfaceScalarField& F);
 

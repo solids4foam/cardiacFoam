@@ -19,8 +19,8 @@ psi has critical points on the walls (where the wave collides behind the
 cavity); there the metric sqrt(grad psi . M grad psi) is not differentiable,
 which is the feature of the solution.
 
-    python shell_eikonal_mms.py --write ../eikonalVerification/manufacturedShellEikonalReference.H
-    python shell_eikonal_mms.py --check ../eikonalVerification/manufacturedShellEikonalReference.H
+    python shell_eikonal_mms.py --write ../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H
+    python shell_eikonal_mms.py --check ../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H
     python shell_eikonal_mms.py --report
 """
 
@@ -38,7 +38,7 @@ import mms_codegen as codegen
 import shell_monodomain_mms as smm
 
 HEADER_NAME = "manufacturedShellEikonalReference.H"
-HEADER_PATH = "../eikonalVerification/" + HEADER_NAME
+HEADER_PATH = "../../../src/verificationModels/eikonalVerification/" + HEADER_NAME
 SAMPLE_DPS = 30
 
 SCALAR_PARAMS = ("r1", "r2", "gamma1", "gamma2", "gil", "git", "gin", "theta0", "theta1",

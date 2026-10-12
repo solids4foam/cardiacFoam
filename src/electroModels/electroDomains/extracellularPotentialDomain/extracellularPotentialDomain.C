@@ -376,38 +376,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     if (const electroVerificationModel* model = verifier())
     {
-        const wordList claimed(model->boundaryDataPatches());
-        if (!claimed.empty())
-        {
-            wordHashSet settable;
-            if (const dictionary* d = dict.findDict("groundPatches"))
-            {
-                settable.insert(d->toc());
-            }
-            if (const dictionary* d = dict.findDict("surfaceCurrentPatches"))
-            {
-                settable.insert(d->toc());
-            }
-
-            const wordHashSet claimedSet(claimed);
-            if (claimedSet.size() != claimed.size())
-            {
-                FatalErrorInFunction
-                    << "Verification boundary-data patches " << claimed
-                    << " contain a duplicate name."
-                    << exit(FatalError);
-            }
-            if (claimedSet != settable)
-            {
-                FatalErrorInFunction
-                    << "Verification boundary-data patches " << claimed
-                    << " must equal the groundPatches and "
-                    << "surfaceCurrentPatches entries "
-                    << settable.sortedToc() << '.'
-                    << exit(FatalError);
-            }
-        }
-
         if
         (
             hasDirichletPatch_
@@ -938,33 +906,6 @@ const electroVerificationModel* extracellularPotentialDomain::verifier() const
 }
 
 
-void extracellularPotentialDomain::applyManufacturedBoundaryData()
-{
-    const electroVerificationModel* model = verifier();
-    if (!model)
-    {
-        return;
-    }
-
-    const wordList patchNames(model->boundaryDataPatches());
-    if (patchNames.empty())
-    {
-        return;
-    }
-
-    volScalarField& phiE = phiEPtr_();
-    model->applyPhiEBoundaryData(phiE, manufacturedEvaluationTime_);
-
-    for (const word& patchName : patchNames)
-    {
-        phiE.boundaryFieldRef()
-        [
-            baseMesh_.boundaryMesh().findPatchID(patchName)
-        ].evaluate();
-    }
-}
-
-
 void extracellularPotentialDomain::storeInterfaceFlux
 (
     const surfaceScalarField& F
@@ -1022,7 +963,6 @@ void extracellularPotentialDomain::storeInterfaceFlux
 void extracellularPotentialDomain::prepareTimeStep(scalar t0, scalar dt)
 {
     manufacturedEvaluationTime_ = t0 + dt;
-    applyManufacturedBoundaryData();
 }
 
 
@@ -1075,8 +1015,6 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
         phiEPatch.evaluate();
     }
-
-    applyManufacturedBoundaryData();
 
     const volTensorField* GiPtr = heartDomain_.intracellularConductivityPtr();
     const volScalarField* VmPtr = heartDomain_.VmPtr();

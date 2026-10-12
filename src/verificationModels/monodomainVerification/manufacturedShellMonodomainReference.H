@@ -22,7 +22,7 @@ Description
     samples.
 
     Regenerate from generator/:
-        python shell_monodomain_mms.py --write ../monodomainVerification/manufacturedShellMonodomainReference.H
+        python shell_monodomain_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedShellMonodomainReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/
