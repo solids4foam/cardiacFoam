@@ -13,10 +13,11 @@
 #     converge, or a parallel run). For every wall gradient, formulation and
 #     window it prints the error table with the outer iterations, the smallest
 #     outer residual and the iteration where it occurs, and, except for the
-#     capped runs, the order fitted by least squares to log(error) against
-#     log(h) over every run of the three finest levels with its standard error;
-#     for a parallel run, the largest relative difference from the serial run
-#     over all rows.
+#     capped runs, the pairwise order between every level N and the level 2N
+#     with the ratio r of their mean h, and the order fitted by least squares
+#     to log(error) against log(h) over every run of the three finest levels
+#     with its standard error; for a parallel run, the largest relative
+#     difference from the serial run over all rows.
 #
 # Usage
 #     python3 summarize.py hexConvergence/results
@@ -123,6 +124,26 @@ def table(runs: list, capped: bool = False) -> str:
             for c in COLUMNS
         )
         lines.append(f"| {level} | {h:.4f} | {cells} | {history(at[0][4])} |")
+    pairs = [(n, 2*n) for n in levels if 2*n in levels]
+    if pairs and not capped:
+        mean_h = {n: statistics.mean(r[2] for r in runs if r[0] == n) for n in levels}
+        lines += [
+            "",
+            f"| N | r | {header} |",
+            "|---" * (len(COLUMNS) + 2) + "|",
+        ]
+        for coarse, fine in pairs:
+            ratio = mean_h[coarse]/mean_h[fine]
+            orders = " | ".join(
+                "%.2f" % (
+                    math.log(
+                        statistics.mean(value(r[3], c) for r in runs if r[0] == coarse)
+                        / statistics.mean(value(r[3], c) for r in runs if r[0] == fine)
+                    )/math.log(ratio)
+                )
+                for c in COLUMNS
+            )
+            lines.append(f"| {coarse} to {fine} | {ratio:.3f} | {orders} |")
     if len(levels) >= 3 and not capped:
         finest = levels[-3:]
         tail = [r for r in runs if r[0] in finest]
