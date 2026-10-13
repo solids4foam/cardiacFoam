@@ -1,0 +1,4 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+rm -rf localCase
+rm -f postProcessing log.cardiacFoam log.Allrun

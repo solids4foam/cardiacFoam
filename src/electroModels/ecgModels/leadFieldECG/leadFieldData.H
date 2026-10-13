@@ -43,6 +43,8 @@ public:
     const wordList& names() const { return names_; }
     void project(const electroStateProvider&, scalarField&) const;
 
+    void projectGradient(const volVectorField&, scalarField&) const;
+
     static tmp<volTensorField> readPhysical
     (
         const fvMesh& mesh,

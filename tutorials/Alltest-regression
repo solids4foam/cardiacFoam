@@ -128,7 +128,7 @@ copyCase()
     local dst="${REG_ROOT}/${case}"
     local -a ex=(
         --exclude='./postProcessing*' --exclude='./processor*' --exclude='./log.*'
-        --exclude='results' --exclude='__pycache__' --exclude='.tmp'
+        --exclude='results' --exclude='__pycache__' --exclude='.tmp' --exclude='./localCase'
         --exclude='./constant/polyMesh' --exclude='./constant/*/polyMesh'
         --exclude='*.foam' --exclude='./platforms'
     )
@@ -167,6 +167,12 @@ for testCase in "${CASES[@]}"; do
     # copy: bring it in once per sweep.
     if [[ "${testCase}" == idealizedHeart/* && ! -d "${REG_ROOT}/idealizedHeart/mesh" ]]; then
         cp -a "${ROOT_DIR}/idealizedHeart/mesh" "${REG_ROOT}/idealizedHeart/mesh"
+    fi
+
+    # The dual eikonal variant reuses the maintained cube in a private copy.
+    if [[ "$testCase" == manufacturedSolutions/eikonalLeadFieldECG \
+       && ! -d "$REG_ROOT/manufacturedSolutions/eikonalECG" ]]; then
+        copyCase manufacturedSolutions/eikonalECG
     fi
 
     rc=0

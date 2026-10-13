@@ -237,9 +237,11 @@ mesh ladder would strengthen spatial evidence. They should extend the small
 conductor fixtures before an anatomical accuracy claim. A rotated conformal
 cyclic fixture would specifically test the hash-exchange path.
 
-Eikonal/template support remains a separate extension. The current runtime
-requires Vm from monodomain or bidomain; the existing eikonal pseudo-ECG test
-does not verify that future reciprocal observer.
+A separate `eikonalLeadFieldECG` observer now supports spatially uniform
+templates through the same sensitivity importer and projection. The
+[eikonal extension guide](EIKONAL_LEAD_FIELD_ECG.md) explains its shared
+template source, activation-gradient path and independent verification.
+Regional-template gradient semantics remain a later extension.
 
 The final build/regression report records the tested revision and platform.
 Cross-version/full-solids4foam CI and later application verification remain

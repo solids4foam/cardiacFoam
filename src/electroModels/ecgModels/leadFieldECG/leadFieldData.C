@@ -223,7 +223,9 @@ void leadFieldData::validateFieldNames(const dictionary& props)
         "leadFieldHeartConnectivitySignature","leadFieldHeartRegion","leadFieldBodyConductivity",
         "leadFieldMetadata","leadFieldGiInput","leadFieldGeInput","leadFieldGiActive",
         "leadFieldGeActive","leadFieldGiGlobal","leadFieldGeGlobal","leadFieldHeartMask",
-        "leadFieldCurrent","leadFieldObservationVm","grad(leadFieldObservationVm)"})) reserved.insert(name);
+        "leadFieldCurrent","leadFieldObservationVm","grad(leadFieldObservationVm)",
+        "eikonalLeadFieldObservationTau","grad(eikonalLeadFieldObservationTau)",
+        "eikonalLeadFieldGradVm","eikonalECG_gradVm"})) reserved.insert(name);
     reserved.insert(props.lookupOrDefault<word>("bathConductivityField","bodyAndOrgansConductivity"));
     for(const word& channel:fields.toc())
     {
@@ -606,13 +608,32 @@ void leadFieldData::project(const electroStateProvider& state, scalarField& valu
     (
         mesh,mesh.gradScheme("leadFieldGradVm")
     )().grad(voltage,"grad("+voltage.name()+')');
-    const vectorField& grad=observationGradient().primitiveField();
+    projectGradient(observationGradient(),values);
+}
+
+void leadFieldData::projectGradient
+(
+    const volVectorField& gradient, scalarField& values
+) const
+{
+    const fvMesh& mesh=fields_[0].mesh();
+    if (&gradient.mesh()!=&mesh || mesh.moving() || mesh.topoChanging()
+     || mesh.nCells()!=signatures_.size()
+     || gradient.dimensions()!=dimensionSet(1,1,-3,0,0,-1,0))
+    {
+        FatalErrorInFunction << "Lead-field projection requires a fixed matching "
+            << "mesh and a voltage gradient in V/m." << exit(FatalError);
+    }
+    const vectorField& grad=gradient.primitiveField();
     values.setSize(names_.size(), 0.0);
     forAll(names_, i)
     {
         scalar sum = 0;
         forAll(mesh.V(), c) sum += mesh.V()[c]*(fields_[i][c] & grad[c]);
         reduce(sum, sumOp<scalar>());
+        if (!std::isfinite(sum))
+            FatalErrorInFunction << "Non-finite lead-field recording for " << names_[i]
+                << exit(FatalError);
         values[i] = sum;
     }
 }

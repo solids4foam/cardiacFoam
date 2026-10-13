@@ -36,6 +36,7 @@ eikonalSolverCoeffs
     }
     ecgDomains
     {
+        #includeIfPresent "<case>/local/leadFieldObserver"
         ECG
         {
             ecgSolver    eikonalECG;

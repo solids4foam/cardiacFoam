@@ -1,6 +1,10 @@
 # eikonalECG
 
-A surrogate ECG for eikonal runs. Instead of solving for the voltage, it shifts a tabulated action potential by the local activation time and sums the result over the cells with the same lead field as `pseudoECG`. It is not a general-purpose ECG model.
+A template-based pseudo-ECG observer for eikonal runs. It reconstructs the
+voltage gradient from an action-potential template and activation time, then
+applies the analytical recording kernel used by `pseudoECG`. The
+`eikonalTemplateSource` helper now supplies this reconstruction to both
+eikonal ECG observers.
 
 ## What's available
 
@@ -11,3 +15,9 @@ A surrogate ECG for eikonal runs. Instead of solving for the voltage, it shifts 
 It writes `postProcessing/eikonalECG.dat`, with one column per electrode, sampled on its own output time grid rather than at every solver step.
 
 A worked set-up is in [tutorials/manufacturedSolutions/eikonalECG](../../../../tutorials/manufacturedSolutions/eikonalECG/README.md).
+
+`templateType endo`, `mid` or `epi` selects one compiled template across the
+heart; `manufactured` selects the sine fixture. The default `regional` path
+preserves the existing regional/personalized template behavior. The
+[eikonalLeadFieldECG observer](../eikonalLeadFieldECG/README.md) uses the same
+uniform-template reconstruction with imported reciprocal sensitivities.

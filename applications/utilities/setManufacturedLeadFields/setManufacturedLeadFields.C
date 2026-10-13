@@ -21,6 +21,9 @@ License
 #include "leadFieldData.H"
 #include "IOdictionary.H"
 #include "sealedWallPolicy.H"
+#include "ecgDomain.H"
+#include "eikonalLeadFieldECG.H"
+#include "tissueTemplates.H"
 using namespace Foam;
 class affineState : public electroStateProvider
 {
@@ -36,10 +39,109 @@ public:
     const volTensorField* intracellularConductivityPtr() const override { return &conductivity_; }
 };
 
+// Verification-only provider deliberately exposes activation time without Vm.
+class activationState : public electroStateProvider
+{
+    const volScalarField& activation_;
+    const volTensorField& conductivity_;
+public:
+    activationState(const volScalarField& a,const volTensorField& g)
+    : activation_(a),conductivity_(g) {}
+    const fvMesh& mesh() const override { return activation_.mesh(); }
+    const volScalarField* activationTimePtr() const override { return &activation_; }
+    const volTensorField* conductivityPtr() const override { return &conductivity_; }
+};
+
+void checkEikonalObservation(const fvMesh& mesh,const volTensorField& Gi,const scalarField& scales)
+{
+    const vector k(0.01,0.02,0.03);
+    volScalarField tau(IOobject("activationTime",mesh.time().timeName(),mesh,
+        IOobject::NO_READ,IOobject::NO_WRITE),mesh,
+        dimensionedScalar("zero",dimTime,0),"fixedValue");
+    forAll(tau,c) tau[c]=1+(k & mesh.C()[c]);
+    forAll(tau.boundaryField(),p)
+    {
+        scalarField faceTimes(mesh.boundary()[p].size());
+        forAll(faceTimes,i) faceTimes[i]=1+(k & mesh.Cf().boundaryField()[p][i]);
+        tau.boundaryFieldRef()[p]==faceTimes;
+    }
+    sealedWallPolicy::publish(tau,false);
+    volVectorField stale(IOobject("grad(activationTime)",mesh.time().timeName(),mesh,
+        IOobject::NO_READ,IOobject::NO_WRITE),mesh,
+        dimensionedVector("stale",dimTime/dimLength,vector(100,100,100)));
+    const scalarField original(tau.primitiveField());
+    List<scalarField> boundaries(tau.boundaryField().size());
+    forAll(boundaries,p) boundaries[p]=tau.boundaryField()[p];
+    activationState state(tau,Gi);
+    const wordList types({"manufactured","endo","mid","epi"});
+    forAll(types,test)
+    {
+        dictionary sampling; sampling.add("start",1.03); sampling.add("end",1.03);
+        sampling.add("deltaT",0.01);
+        dictionary dict; dict.add("ecgSolver",word("eikonalECG"));
+        dict.add("templateType",types[test]); dict.add("sampling",sampling);
+        // Domain supplies state only; the observer under test owns the recording.
+        ecgDomain domain(state,dict,"affineTemplateCheck");
+        eikonalLeadFieldECG observer(dict); observer.initialise(domain);
+        scalarField actual,again; observer.solve(domain,0,1,actual);
+        observer.solve(domain,0,1,again);
+        scalar expected=0;
+        forAll(tau,c)
+        {
+            const scalar t=1.03-tau[c];
+            scalar derivative=0;
+            if (test==0) derivative=2*constant::mathematical::pi
+                *Foam::cos(2*constant::mathematical::pi*t);
+            else
+            {
+                const scalar* times=eikonalECG_templates::endoTimes;
+                const scalar* volts=eikonalECG_templates::endoValues;
+                label count=eikonalECG_templates::numEndoSamples;
+                if (test==2) { times=eikonalECG_templates::midTimes;
+                    volts=eikonalECG_templates::midValues; count=eikonalECG_templates::numMidSamples; }
+                if (test==3) { times=eikonalECG_templates::epiTimes;
+                    volts=eikonalECG_templates::epiValues; count=eikonalECG_templates::numEpiSamples; }
+                // Independent interval scan; do not call the production interpolator.
+                if (t>times[0] && t<times[count-1])
+                    for (label j=0;j<count-1;++j) if (times[j]<=t && t<times[j+1])
+                    { derivative=1e-3*(volts[j+1]-volts[j])/(times[j+1]-times[j]); break; }
+            }
+            expected-=mesh.V()[c]*derivative*(vector(1,2,3) & k);
+        }
+        reduce(expected,sumOp<scalar>());
+        if (mag(expected)<1e-10 || actual.size()!=scales.size() || actual!=again)
+            FatalErrorInFunction << "Degenerate or repeated template recording." << exit(FatalError);
+        forAll(actual,i) if (mag(actual[i]-scales[i]*expected)>1e-10)
+            FatalErrorInFunction << "Affine " << types[test] << " template projection mismatch: "
+                << actual << ", expected " << expected << exit(FatalError);
+        if (tau.primitiveField()!=original)
+            FatalErrorInFunction << "Observer changed activation time." << exit(FatalError);
+        forAll(boundaries,p) if (boundaries[p]!=tau.boundaryField()[p])
+            FatalErrorInFunction << "Observer changed activation boundaries." << exit(FatalError);
+        forAll(stale,c) if (stale[c]!=vector(100,100,100))
+            FatalErrorInFunction << "Observer changed source gradient cache." << exit(FatalError);
+        Info<< "PASS: affine " << types[test] << " template, units, private gradient, "
+            << "Vm-free state and repeated solve" << nl;
+    }
+}
+
 int main(int argc, char* argv[])
 {
     argList::addBoolOption("checkSealedWall","Verify private sealed-wall gradient and source independence with affine voltage.");
+    argList::addOption("eikonalGuard","word","Exercise rejection of regionalTemplate, unknownTemplate or invalidSampling (expected failure).");
+    argList::addBoolOption("eikonal","Write constant eikonal MMS sensitivities and exercise uniform template observers.");
     #include "setRootCase.H"
+    if (args.found("eikonalGuard"))
+    {
+        const word guard(args.get<word>("eikonalGuard"));
+        dictionary sampling; sampling.add("start",0.0); sampling.add("end",1.0);
+        sampling.add("deltaT",guard=="invalidSampling" ? 0.0 : 0.01);
+        dictionary dict; dict.add("sampling",sampling);
+        dict.add("templateType",word(guard=="regionalTemplate" ? "regional"
+            : guard=="unknownTemplate" ? "unknown" : "endo"));
+        eikonalLeadFieldECG observer(dict);
+        FatalErrorInFunction << "Expected eikonal guard was not triggered." << exit(FatalError);
+    }
     #include "createTime.H"
     #include "createMesh.H"
     IOstream::defaultPrecision(17);
@@ -67,10 +169,12 @@ int main(int argc, char* argv[])
             field[c]=scales[i]*vector(Foam::sin(x)*Foam::cos(y)*Foam::cos(z),
                 2*Foam::cos(x)*Foam::sin(y)*Foam::cos(z),3*Foam::cos(x)*Foam::cos(y)*Foam::sin(z));
         }
+        if (args.found("eikonal")) field=dimensionedVector("constant",field.dimensions(),scales[i]*vector(1,2,3));
         if (args.found("checkSealedWall")) field=dimensionedVector("constant",field.dimensions(),vector(scales[i],0,0));
         field.write();
     }
     leadFieldData::writeProvenance(mesh,Gi(),Ge(),props,"analyticManufactured");
+    if (args.found("eikonal")) checkEikonalObservation(mesh,Gi(),scales);
     if (args.found("checkSealedWall"))
     {
         const dimensionSet volts(1,2,-3,0,0,-1,0);

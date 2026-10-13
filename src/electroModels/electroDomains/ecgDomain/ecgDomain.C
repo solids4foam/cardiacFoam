@@ -240,7 +240,7 @@ ecgDomain::ecgDomain
         (void)Vm();
         (void)conductivity();
     }
-    else if (solverType_ == "eikonalECG")
+    else if (solverType_ == "eikonalECG" || solverType_ == "eikonalLeadFieldECG")
     {
         (void)activationTime();
         (void)conductivity();
@@ -323,11 +323,11 @@ autoPtr<ecgDomain> ecgDomain::New
                 << exit(FatalIOError);
         }
     }
-    else if (type == "eikonalECG")
+    else if (type == "eikonalECG" || type == "eikonalLeadFieldECG")
     {
         if (myocardiumType != "eikonalSolver")
         {
-            FatalIOErrorInFunction(dict) << "eikonalECG requires eikonalSolver."
+            FatalIOErrorInFunction(dict) << type << " requires eikonalSolver."
                 << exit(FatalIOError);
         }
     }

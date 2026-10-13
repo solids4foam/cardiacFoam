@@ -344,3 +344,7 @@ tutorials/manufacturedSolutions/*LeadFieldECG/local/
 /docs/validation/
 
 /docs/LEAD_FIELD_ECG_INTEGRATION_VALIDATION.md
+
+# Private maintained-case copy and output link for the eikonal dual variant.
+/tutorials/manufacturedSolutions/eikonalLeadFieldECG/localCase/
+/tutorials/manufacturedSolutions/eikonalLeadFieldECG/postProcessing
