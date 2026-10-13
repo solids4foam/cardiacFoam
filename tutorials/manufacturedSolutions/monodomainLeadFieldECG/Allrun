@@ -1,0 +1,40 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+. "$WM_PROJECT_DIR/bin/tools/RunFunctions"
+N=20; dt=0.0001; endTime=0.002; parallel=false; pseudoECG=no
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        parallel) parallel=true;;
+        fine) N=40;;
+        -N|-dt|-endTime|-pseudoECG)
+            [[ $# -ge 2 ]] || { echo "$1 requires a value" >&2; exit 2; }
+            case "$1" in -N) N="$2";; -dt) dt="$2";; -endTime) endTime="$2";; -pseudoECG) pseudoECG="$2";; esac
+            shift;;
+        *) echo "Usage: ./Allrun [parallel] [fine] [-N n] [-dt dt] [-endTime t] [-pseudoECG yes|no]" >&2; exit 2;;
+    esac
+    shift
+done
+[[ "$N" =~ ^[1-9][0-9]*$ ]] || { echo "N must be a positive integer" >&2; exit 2; }
+awk -v dt="$dt" -v T="$endTime" 'BEGIN { exit !(dt > 0 && T >= dt) }' || exit 2
+[[ ! -e log.blockMesh ]] || { echo "Run ./Allclean before changing configuration" >&2; exit 1; }
+[[ "$pseudoECG" == yes || "$pseudoECG" == no ]] || { echo "-pseudoECG requires yes or no" >&2; exit 2; }
+mkdir -p local
+rm -f local/pseudoECGObserver
+if [[ "$pseudoECG" == yes ]]; then cp setup/pseudoECGObserver local/pseudoECGObserver; fi
+printf 'N %s;\n' "$N" > local/mesh
+printf 'deltaT %s;\nendTime %s;\nwriteInterval %s;\n' "$dt" "$endTime" "$endTime" > local/time
+runApplication blockMesh -dict system/blockMeshDict.3D
+runApplication checkMesh
+runApplication setManufacturedLeadFields
+if $parallel; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar -latestTime
+    runApplication redistributeRestartState
+else
+    runApplication cardiacFoam
+fi
+# Independent affine gradient and source-independence checks on sealed walls.
+runApplication -s sealedWall setManufacturedLeadFields -checkSealedWall
+runApplication -s restore setManufacturedLeadFields

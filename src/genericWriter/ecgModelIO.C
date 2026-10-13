@@ -19,6 +19,9 @@ License
 
 #include "ecgModelIO.H"
 #include "OSspecific.H"
+#include <fstream>
+#include <sstream>
+#include <cmath>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -49,6 +52,52 @@ autoPtr<OFstream> ecgModelIO::openTimeSeries
     os << nl;
 
     return osPtr;
+}
+
+
+autoPtr<OFstream> ecgModelIO::openRestartTimeSeries
+(
+    const fileName& outDir, const word& filename,
+    const wordList& channelNames, scalar restartTime
+)
+{
+    const fileName path(outDir/filename);
+    if (restartTime <= 0 || !isFile(path))
+        return openTimeSeries(outDir,filename,channelNames);
+    std::ifstream previous(path.c_str());
+    std::string line, token;
+    std::getline(previous,line);
+    std::istringstream header(line);
+    header >> token;
+    bool valid=token=="#";
+    header >> token;
+    valid=valid && token=="time";
+    for (const word& name:channelNames)
+    {
+        if (!(header >> token) || token != name.c_str()) valid=false;
+    }
+    if (header >> token) valid=false;
+    scalar lastTime=-GREAT;
+    while (std::getline(previous,line))
+    {
+        if (line.empty()) continue;
+        std::istringstream row(line);
+        scalar time, value;
+        if (!(row >> time) || !std::isfinite(time) || time<=lastTime)
+        { valid=false; break; }
+        forAll(channelNames,i) if (!(row >> value) || !std::isfinite(value)) valid=false;
+        if (row >> token) valid=false;
+        lastTime=time;
+    }
+    if (!valid || lastTime > restartTime+SMALL)
+    {
+        FatalErrorInFunction << "Cannot append " << filename
+            << ": incompatible trace or existing samples later than the restart time."
+            << exit(FatalError);
+    }
+    autoPtr<OFstream> out(new OFstream(path,IOstreamOption(),IOstreamOption::APPEND));
+    out->setf(std::ios::scientific); out->precision(8);
+    return out;
 }
 
 

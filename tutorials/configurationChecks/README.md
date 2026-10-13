@@ -57,3 +57,21 @@ Each check runs in `runs/<name>`, where its logs and outputs can be
 inspected. Serial runs are deterministic, so `same` and `differ` comparisons
 use exact file equality; parallel runs differ from serial ones at round-off
 level, so they are compared within a tolerance.
+
+Lead-field checks use `base/leadFieldColumn`: a bounded passive conductor with
+an embedded myocardial cellZone. They validate reciprocal-current scaling and
+Wilson weights against a piecewise-linear 1D solution, mono/bidomain projection,
+unchanged Vm, canonical/legacy conductivity inputs, MPI output and explicit
+heart-only export. The isolated `post/leadFieldGuards` hook also checks stale
+inputs, field dimensions, independent sampling and checked restart append.
+The column uses a conservative Gauss gradient for its endpoint-voltage oracle.
+Separate 3D manufactured tutorials test the vector functional and refinement.
+
+`bidomainLeadFieldRecovery` and its MPI variant prescribe a fixed, nonzero
+Vm in a verification-owned heart, then converge the production passive
+extracellular recovery and sample with the real `torsoECG` kernel. The same
+balanced weights are applied to those electrode potentials. Both paths must
+match the independent discrete column voltage .00475 V, and Vm must remain
+unchanged. This is a bounded scalar/orthogonal check, not an exact-discrete
+adjoint claim for general meshes. Ordinary bathTorsoECG checks exercise the
+runtime coupled route separately.

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Runs in an isolated configurationChecks/runs case, never in the data source.
+cd "${0%/*}" || exit 1
+set -e
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
+cp postProcessing/leadFieldECG.dat leadFieldConductorTrace.dat
+runApplication subsetMesh -overwrite -patch xMin -zone myocardium
+foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/cellZone -remove >/dev/null
+foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/importMode -set heartOnly >/dev/null
+cardiacFoam > log.leadFieldHeartOnly 2>&1
+python3 - <<'CHECK'
+from pathlib import Path
+old=[list(map(float,r.split())) for r in Path('leadFieldConductorTrace.dat').read_text().splitlines() if r and not r.startswith('#')]
+new=[list(map(float,r.split())) for r in Path('postProcessing/leadFieldECG.dat').read_text().splitlines() if r and not r.startswith('#')]
+assert len(old)==len(new)
+for a,b in zip(old,new):
+    assert all(abs(x-y)<=1e-12+1e-7*max(abs(x),abs(y)) for x,y in zip(a,b)),(a,b)
+print('PASS: standalone heart-only projection matches the conductor-subset run')
+CHECK
+rm leadFieldConductorTrace.dat

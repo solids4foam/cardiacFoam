@@ -1,0 +1,21 @@
+// Optional raw pseudo-ECG verification observer; not a voltage-normalized lead.
+Pseudo
+{
+    ecgSolver pseudoECG;
+    sigmaExtracellular 0;
+    verificationModel
+    {
+        type manufacturedPseudoECGVerifier;
+        enabled yes;
+        dimension "3D";
+        anisotropic false;
+        referenceQuadratureOrder 96;
+        checkQuadratureOrders (48);
+    }
+    electrodePositions
+    {
+        E3 (1.2 .23 .61);
+        E4 (1.35 .74 .28);
+        E5 (1.55 .41 .83);
+    }
+}

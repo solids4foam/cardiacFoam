@@ -248,14 +248,15 @@ tmp<volTensorField> readConductivityField
     word fieldName(spec.fieldName);
     word instance = findFieldInstance(supportMesh, fieldName);
 
-    if (instance.empty() && spec.internalName != spec.fieldName)
+    const word legacyName(spec.legacyFieldName.empty() ? spec.internalName : spec.legacyFieldName);
+    if (instance.empty() && legacyName != spec.fieldName)
     {
         const word legacyInstance =
-            findFieldInstance(supportMesh, spec.internalName);
+            findFieldInstance(supportMesh, legacyName);
 
         if (!legacyInstance.empty())
         {
-            fieldName = spec.internalName;
+            fieldName = legacyName;
             instance = legacyInstance;
             WarningInFunction
                 << "Reading deprecated conductivity field name '" << fieldName

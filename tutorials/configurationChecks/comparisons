@@ -50,3 +50,10 @@ close:1e-6:1e-12  monodomainPeriodicFieldConductivity  monodomainPeriodicFieldCo
 # recomputePseudoECG must reproduce the pseudo-ECG the solver wrote (both
 # are written with 8 significant digits)
 close:1e-7:1e-15  monodomainPseudoECG            monodomainPseudoECGRecomputed                postProcessing/pseudoECG.dat
+
+close:1e-7:1e-12 monodomainLeadFieldECG monodomainLeadFieldECGParallel postProcessing
+close:1e-7:1e-12 bidomainLeadFieldECG bidomainLeadFieldECGParallel postProcessing
+same monodomainLeadFieldECG monodomainLeadFieldBaseline 0.00336323/Vm
+same bidomainLeadFieldECG bidomainLeadFieldBaseline 0.00336323/Vm
+same monodomainLeadFieldECG monodomainLeadFieldECGField postProcessing/leadFieldECG.dat
+same monodomainLeadFieldECG monodomainLeadFieldECGLegacy postProcessing/leadFieldECG.dat

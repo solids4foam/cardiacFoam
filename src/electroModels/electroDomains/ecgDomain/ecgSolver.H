@@ -31,6 +31,8 @@ Author
 #include "autoPtr.H"
 #include "runTimeSelectionTables.H"
 #include "scalarField.H"
+#include "wordList.H"
+#include "vector.H"
 
 namespace Foam
 {
@@ -60,6 +62,12 @@ public:
     static autoPtr<ecgSolver> New(const dictionary& dict);
 
     virtual ~ecgSolver() = default;
+
+    //- Initialise observation data after electrodes and the state are available.
+    virtual void initialise(const ecgDomain&) {}
+
+    virtual wordList channelNames(const ecgDomain& domain) const;
+    virtual List<vector> channelPositions(const ecgDomain& domain) const;
 
     virtual bool writesOwnTimeSeries() const
     {

@@ -20,6 +20,8 @@ License
 #include "ecgDomain.H"
 #include "ecgModelIO.H"
 #include "ecgVerificationModel.H"
+#include "Pstream.H"
+#include <cmath>
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -39,20 +41,6 @@ namespace
 word selectedECGSolverType(const dictionary& dict)
 {
     return dict.lookupOrDefault<word>("ecgSolver", "pseudoECG");
-}
-
-
-word outputFileName(const word& solverType)
-{
-    if (solverType == "eikonalECG")
-    {
-        return word("eikonalECG.dat");
-    }
-
-    return
-        solverType == "torsoECG"
-      ? word("torsoECG.dat")
-      : word("pseudoECG.dat");
 }
 
 
@@ -229,6 +217,10 @@ ecgDomain::ecgDomain
     mesh_(stateProvider.mesh()),
     domainName_(domainName),
     solverType_(selectedECGSolverType(dict)),
+    channelNames_(),
+    channelPositions_(),
+    sampledLeadField_(false),
+    sampleStart_(0), sampleEnd_(0), sampleDelta_(0), nextSample_(0),
     outputPtr_(),
     solverPtr_(ecgSolver::New(dict)),
     verificationModelPtr_(),
@@ -259,17 +251,33 @@ ecgDomain::ecgDomain
     }
 
     readElectrodes(dict);
+    solverPtr_->initialise(*this);
+    channelNames_ = solverPtr_->channelNames(*this);
+    channelPositions_ = solverPtr_->channelPositions(*this);
 
-    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
-    if (!solverPtr_->writesOwnTimeSeries())
+    if (solverType_ == "leadFieldECG" && dict.found("sampling"))
     {
-        outputPtr_ =
-            ecgModelIO::openTimeSeries
-            (
-                outDir,
-                outputFileName(solverType_),
-                electrodeNames_
-            );
+        const dictionary& sampling = dict.subDict("sampling");
+        sampledLeadField_ = true;
+        sampleStart_ = sampling.get<scalar>("start");
+        sampleEnd_ = sampling.get<scalar>("end");
+        sampleDelta_ = sampling.get<scalar>("deltaT");
+        if (!std::isfinite(sampleStart_) || !std::isfinite(sampleEnd_)
+         || !std::isfinite(sampleDelta_) || sampleDelta_ <= 0 || sampleEnd_ < sampleStart_)
+        {
+            FatalIOErrorInFunction(sampling) << "Invalid lead-field sampling interval."
+                << exit(FatalIOError);
+        }
+        nextSample_ = sampleStart_ + max(scalar(0), std::ceil
+            ((mesh_.time().value()-sampleStart_)/sampleDelta_))*sampleDelta_;
+    }
+    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
+    if (!solverPtr_->writesOwnTimeSeries() && Pstream::master())
+    {
+        outputPtr_ = solverType_ == "leadFieldECG"
+          ? ecgModelIO::openRestartTimeSeries(outDir, word(solverType_+".dat"),
+                channelNames_, mesh_.time().value())
+          : ecgModelIO::openTimeSeries(outDir, word(solverType_+".dat"), channelNames_);
     }
 
     const dictionary verificationDict =
@@ -284,13 +292,65 @@ ecgDomain::ecgDomain
         *this,
         domainName_,
         verificationDict,
-        electrodeNames_,
-        electrodePositions_
+        channelNames_,
+        channelPositions_
     );
 
-    numericValues_.setSize(electrodeNames_.size(), 0.0);
+    numericValues_.setSize(channelNames_.size(), 0.0);
 }
 
+
+
+autoPtr<ecgDomain> ecgDomain::New
+(
+    const electroStateProvider& myocardium,
+    const electroStateProvider* potential,
+    const word& myocardiumType,
+    const dictionary& dict,
+    const word& name,
+    const dictionary* inheritedElectrodes,
+    const dictionary* inheritedPotential
+)
+{
+    const word type(selectedECGSolverType(dict));
+    const electroStateProvider* provider = &myocardium;
+    if (type == "leadFieldECG")
+    {
+        if (myocardiumType != "monodomainSolver" && myocardiumType != "bidomainSolver")
+        {
+            FatalIOErrorInFunction(dict)
+                << "leadFieldECG currently requires monodomainSolver or bidomainSolver."
+                << exit(FatalIOError);
+        }
+    }
+    else if (type == "eikonalECG")
+    {
+        if (myocardiumType != "eikonalSolver")
+        {
+            FatalIOErrorInFunction(dict) << "eikonalECG requires eikonalSolver."
+                << exit(FatalIOError);
+        }
+    }
+    else if (type == "torsoECG")
+    {
+        if (myocardiumType != "bidomainSolver" || !potential)
+        {
+            FatalIOErrorInFunction(dict)
+                << "torsoECG requires bidomainSolver and bathPotentialDomain."
+                << exit(FatalIOError);
+        }
+        provider = potential;
+    }
+    else if (type != "pseudoECG")
+    {
+        FatalIOErrorInFunction(dict) << "Unknown ecgSolver '" << type << "'."
+            << exit(FatalIOError);
+    }
+    return autoPtr<ecgDomain>
+    (
+        new ecgDomain(*provider, dict, name, inheritedElectrodes, inheritedPotential)
+    );
+}
 
 ecgDomain::~ecgDomain() = default;
 
@@ -310,7 +370,20 @@ void ecgDomain::evolve
         verificationModelPtr_->record(numericValues_);
     }
 
-    if (!solverPtr_->writesOwnTimeSeries() && mesh_.time().outputTime())
+    bool emit = mesh_.time().outputTime();
+    if (sampledLeadField_)
+    {
+        if (sampleDelta_+SMALL < dt)
+        {
+            FatalErrorInFunction << "leadFieldECG sampling.deltaT must be at least the solver timestep."
+                << exit(FatalError);
+        }
+        const scalar time=mesh_.time().value();
+        emit = time+SMALL >= sampleStart_ && time <= sampleEnd_+SMALL
+            && time+SMALL >= nextSample_;
+        if (emit) while (nextSample_ <= time+SMALL) nextSample_ += sampleDelta_;
+    }
+    if (!solverPtr_->writesOwnTimeSeries() && emit && Pstream::master())
     {
         ecgModelIO::writeRow
         (
@@ -324,9 +397,18 @@ bool ecgDomain::read(const dictionary& dict)
 {
     const wordList previousElectrodeNames(electrodeNames_);
 
+    const List<vector> previousPositions(electrodePositions_);
     readElectrodes(dict);
+    if (solverType_ == "leadFieldECG" && previousPositions != electrodePositions_)
+    {
+        FatalErrorInFunction << "Static leadFieldECG electrodes cannot change "
+            << "during read(). Regenerate the fields and restart."
+            << exit(FatalError);
+    }
+    channelNames_ = solverPtr_->channelNames(*this);
+    channelPositions_ = solverPtr_->channelPositions(*this);
 
-    numericValues_.setSize(electrodeNames_.size(), 0.0);
+    numericValues_.setSize(channelNames_.size(), 0.0);
 
     if (electrodeNames_.size() != previousElectrodeNames.size())
     {
@@ -374,8 +456,8 @@ bool ecgDomain::read(const dictionary& dict)
     {
         verificationModelPtr_->updateElectrodes
         (
-            electrodeNames_,
-            electrodePositions_
+            channelNames_,
+            channelPositions_
         );
 
         return verificationModelPtr_->read(verificationDict);
@@ -387,8 +469,8 @@ bool ecgDomain::read(const dictionary& dict)
         *this,
         domainName_,
         verificationDict,
-        electrodeNames_,
-        electrodePositions_
+        channelNames_,
+        channelPositions_
     );
 
     return true;

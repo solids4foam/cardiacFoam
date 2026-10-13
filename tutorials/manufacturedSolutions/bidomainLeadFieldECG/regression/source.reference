@@ -1,0 +1,5 @@
+# Independent source-field oracle bounds at the default 20^3 mesh.
+error Vm L2 0 1e-5
+error Vm Linf 0 2e-5
+error phiE_gauge L2 0 1e-5
+error phiE_gauge Linf 0 2e-5

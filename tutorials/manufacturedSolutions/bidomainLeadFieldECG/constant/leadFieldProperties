@@ -1,0 +1,17 @@
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    object leadFieldProperties;
+}
+conductivitySource uniform;
+conductivityIntracellular [-1 -3 3 0 0 2 0] (0.111453302 0 0 0.121585420 0 0.030396355);
+conductivityExtracellular [-1 -3 3 0 0 2 0] (0.046165469 0 0 0.050362330 0 0.012590582);
+fieldInstance "0";
+leadFields
+{
+    positive leadField_positive;
+    negative leadField_negative;
+}
+manufacturedScales (1 -1);

@@ -40,6 +40,7 @@ struct conductivityFieldSpec
     word fieldName;
     word dictionaryEntry;
     word internalName;
+    word legacyFieldName = word::null;
 };
 
 

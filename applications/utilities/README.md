@@ -88,3 +88,6 @@ for the field-dimension catalogue, and
 `applications/Allwmake` runs `wmake all utilities`, so every directory here that has a `Make/` folder builds, in both full and lightweight mode. The executable name comes from `EXE` in that utility's `Make/files`.
 
 When you add or rename a utility, update its `Make/files`, the table on this page, its README, and any command examples that name it.
+
+- [buildLeadFields](buildLeadFields/README.md): static reciprocal ECG sensitivity construction.
+- [setManufacturedLeadFields](setManufacturedLeadFields/README.md): independent manufactured projection fixtures.

@@ -60,6 +60,11 @@ class ecgDomain
 
     word domainName_;
     word solverType_;
+    wordList channelNames_;
+    List<vector> channelPositions_;
+    bool sampledLeadField_;
+    scalar sampleStart_, sampleEnd_, sampleDelta_, nextSample_;
+
 
     //- Output stream for pseudoECG.dat, torsoECG.dat or eikonalECG.dat
     autoPtr<OFstream> outputPtr_;
@@ -102,6 +107,18 @@ public:
             const dictionary* inheritedElectrodePositionsPtr = nullptr,
             const dictionary* inheritedPotentialDomainPtr = nullptr
         );
+
+    //- Domain-layer provider routing for downstream observation models.
+    static autoPtr<ecgDomain> New
+    (
+        const electroStateProvider& myocardium,
+        const electroStateProvider* potential,
+        const word& myocardiumSolverType,
+        const dictionary& dict,
+        const word& domainName,
+        const dictionary* inheritedElectrodes,
+        const dictionary* inheritedPotential
+    );
 
     // Destructor
     virtual ~ecgDomain();

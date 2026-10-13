@@ -325,3 +325,12 @@ docs/issues/
 
 # configuration checks: one run directory per check
 tutorials/configurationChecks/runs
+
+# Generated ECG sensitivity fields and provenance (recreated by tutorial Allrun).
+**/0/leadField*
+**/0/leadPotential_*
+**/0/grad(leadPotential_*)
+**/constant/leadFieldMetadata
+
+# Generated parameter includes for the lead-field manufactured runners
+tutorials/manufacturedSolutions/*LeadFieldECG/local/
