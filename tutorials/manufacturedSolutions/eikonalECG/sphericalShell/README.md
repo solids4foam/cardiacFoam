@@ -60,9 +60,10 @@ differentiable; the generator lists them
   effect
 - solver controls (`system/fvSolution`): those of
   [eikonalECG](../README.md) (`nOuterCorrectors 8000`, outer residual
-  tolerance `1e-8`, relaxation `0.9` on every outer iteration, `PBiCGStab`/`DILU` for the
+  tolerance `1e-8`, equation relaxation `0.9` on every outer iteration, `PBiCGStab`/`DILU` for the
   advection-diffusion matrix), with `PCG`/`DIC` at tolerance `1e-11` for the
-  symmetric matrix of the explicit metric
+  symmetric matrix of the explicit metric; see
+  [Outer iteration](#outer-iteration)
 
 ## Mesh
 
@@ -108,6 +109,65 @@ and gradient rows of
 [Bulk, boundary and gradient rows](../../README.md#bulk-boundary-and-gradient-rows).
 The outer residual history is the `Initial residual` of the
 `activationTime` solves in `log.cardiacFoam`.
+
+## Outer iteration
+
+The eikonal equation is steady. `cardiacFoam` solves it with an outer fixed
+point: each outer iteration recomputes the velocity
+`u = c0 M grad psi/|grad psi|_M` from the current activation time, assembles
+the linear advection-diffusion equation with that velocity, and solves it.
+The run stops when the initial residual of an `activationTime` solve falls
+below the `residualControl` tolerance `1e-8`, or after `nOuterCorrectors`
+iterations. `log.cardiacFoam` ends with `PIMPLE: converged in <n>
+iterations` in the first case and `PIMPLE: not converged within <n>
+iterations` in the second; the error summary is written in both cases, so
+check the log before using a result.
+
+The case relaxes the `activationTime` equation by `0.9` on every outer
+iteration (`relaxationFactors/equations` in `system/fvSolution`; the pattern
+`"activationTime.*"` also matches the final iteration `activationTimeFinal`).
+Equation relaxation adds `(1/0.9 - 1)` times the matrix diagonal to both
+sides of the equation, with the current activation time on the right. It
+does not change a converged solution, because the added terms cancel when
+the activation time stops changing, but it shortens every outer step.
+
+- Why the case relaxes. Without relaxation the outer iteration converges
+  quickly on coarse meshes, but on finer meshes it does not settle: the
+  residual stops falling and oscillates, or slowly rises, while the
+  activation time keeps changing. With relaxation `0.9` every level of the
+  studies converges to `1e-8`. Where both converge, the two give the same
+  errors to within what the `1e-8` tolerance allows.
+- What it costs. Each relaxed step moves the activation time only part of
+  the way, so the number of outer iterations grows roughly with the square of
+  `N`. The default cap `nOuterCorrectors 8000` is reached on the finer levels
+  of the studies; raise it with `-iterations n`, which writes `local/outer`.
+  A larger cap only removes the stop; it does not change the solution, and a
+  run that converges stops at the tolerance whatever the cap.
+- Changing the relaxation. There is no `Allrun` option for it. In a copy of
+  the case, edit the factor in `system/fvSolution` with a text editor, or
+  delete the `relaxationFactors` block to run without relaxation. Do not use
+  `foamDictionary -set` or `-remove` on `system/fvSolution` or
+  `constant/electroProperties`: it rewrites the file without its
+  `#includeIfPresent` lines, so `-iterations` and `-formulation` no longer
+  reach the case. Then watch the residual in `log.cardiacFoam`: a residual
+  that stops decreasing well above `1e-8` and keeps fluctuating, or rises, is
+  the outer iteration failing to converge, and more iterations will not fix
+  it.
+- Larger `c0`. The case has `c0 = 1`. The cell Peclet number
+  `c0 h/sqrt(m)`, with `m` an eigenvalue of `M`, is at most about 4 on the
+  coarsest study meshes and falls below 1 in every direction from tet
+  `N = 20` and hex `N = 40`, so diffusion carries much of the equation.
+  `c0` is read from `eikonalSolverCoeffs` in `constant/electroProperties`
+  (edit it by hand, as above), and the exact solution and its source follow
+  it (`psi` scales as `1/c0`), so the same case runs with advection
+  dominating. With larger `c0` the outer
+  iteration does not reach `1e-8` on the tested meshes, with or without
+  relaxation.
+
+The iterations each level needs, the levels where the unrelaxed iteration
+fails, and the larger-`c0` runs are in the study READMEs
+([hexConvergence](setup/studies/hexConvergence/README.md#outer-iterations-and-relaxation),
+[tetConvergence](setup/studies/tetConvergence/README.md#outer-iterations-and-relaxation)).
 
 Regression (the case defaults: hex cubed sphere, `N = 12`, parallel on four
 ranks; no gmsh needed): the `activationTime` errors and the bulk, boundary and

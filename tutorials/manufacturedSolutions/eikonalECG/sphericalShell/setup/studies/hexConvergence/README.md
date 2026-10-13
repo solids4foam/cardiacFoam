@@ -142,6 +142,57 @@ stop at the `1e-8` outer tolerance after 303 outer iterations. Repeated
 parallel runs differ from each other by up to about 1e-5 relative, within
 what that tolerance allows.
 
+### Outer iterations and relaxation
+
+The outer iteration and its relaxation are described in
+[Outer iteration](../../../README.md#outer-iteration). These runs measure
+how many outer iterations each level needs, with the case relaxation `0.9`
+and without relaxation, on the doubling ladders `N = 12, 24, 48` and
+`N = 20, 40, 80` (four ranks, cap raised to 30000 so that only the `1e-8`
+tolerance stops a run). From this folder:
+
+```bash
+mkdir -p results
+for g in sealed stock
+do
+    for n in 12 20 24 40 48 80
+    do
+        rsync -a --exclude setup ../../../ results/${g}_hex_N${n}_relaxed/
+        results/${g}_hex_N${n}_relaxed/Allrun parallel -mesh hex -N $n -wallGradient $g -iterations 30000
+        rsync -a --exclude setup ../../../ results/${g}_hex_N${n}_unrelaxed/
+        sed -i.bak '/^relaxationFactors/,/^}/d' results/${g}_hex_N${n}_unrelaxed/system/fvSolution
+        results/${g}_hex_N${n}_unrelaxed/Allrun parallel -mesh hex -N $n -wallGradient $g -iterations 30000
+    done
+done
+grep -H "PIMPLE: \(not \)\?converged" results/*/log.cardiacFoam
+```
+
+The `sed` line deletes the `relaxationFactors` block and leaves the
+`#includeIfPresent` lines that `Allrun` options rely on.
+
+Outer iterations to the `1e-8` tolerance:
+
+| N | cells | sealed, relaxation 0.9 | stock, relaxation 0.9 | sealed, no relaxation | stock, no relaxation |
+|---|---|---|---|---|---|
+| 12 | 2916 | 303 | 338 | 110 | 106 |
+| 20 | 13500 | 929 | 1038 | 208 | 214 |
+| 24 | 23328 | 1450 | 1631 | 258 | 271 |
+| 40 | 108000 | 5437 | 5236 | does not converge | does not converge |
+| 48 | 186624 | 8253 | 7633 | | |
+| 80 | 864000 | 21242 | 19901 | | |
+
+- With relaxation every level converges, and the count grows roughly with
+  `N^2`. The sealed `N = 48` run needs 8253 iterations, just above the
+  default cap of 8000; with the cap raised its `activationTime` L2 error is
+  the same to four digits as that of the capped run in the table above.
+  `N = 48` and finer need `-iterations`.
+- Without relaxation `N = 12` to `24` converge in a few hundred iterations,
+  to the same `activationTime` L2 errors to four digits. At `N = 40` the
+  outer residual falls to about `2e-2` within five iterations and then
+  oscillates between `4.3e-3` and `4.8e-3`; the runs were stopped at about
+  4300 (sealed) and 5000 (stock) iterations. The unrelaxed `N = 48` and
+  `N = 80` levels were not run.
+
 ## Outputs
 
 Run copies, meshes and results stay outside the repository (`results/` is

@@ -75,6 +75,75 @@ gradients converge to the `1e-8` outer tolerance with the case defaults
 |---|---|---|---|---|---|
 | 8, 10, 14 | 1.82 ± 0.21 | 1.69 ± 0.27 | 2.15 ± 0.07 | 0.97 ± 0.01 | 0.89 ± 0.03 |
 
+### Outer iterations and relaxation
+
+The outer iteration and its relaxation are described in
+[Outer iteration](../../../README.md#outer-iteration). These runs measure
+how many outer iterations each level needs, with the case relaxation `0.9`
+and without relaxation, on a doubling ladder `N = 5, 10, 20, 40` (seed 1,
+four ranks, cap raised to 30000 so that only the `1e-8` tolerance stops a
+run), plus `N = 7, 14, 28` with relaxation. From this folder:
+
+```bash
+mkdir -p results
+for g in sealed stock
+do
+    for n in 5 10 20 40
+    do
+        rsync -a --exclude setup ../../../ results/${g}_tet_N${n}_relaxed/
+        results/${g}_tet_N${n}_relaxed/Allrun parallel -mesh tet -N $n -seed 1 -wallGradient $g -iterations 30000
+        rsync -a --exclude setup ../../../ results/${g}_tet_N${n}_unrelaxed/
+        sed -i.bak '/^relaxationFactors/,/^}/d' results/${g}_tet_N${n}_unrelaxed/system/fvSolution
+        results/${g}_tet_N${n}_unrelaxed/Allrun parallel -mesh tet -N $n -seed 1 -wallGradient $g -iterations 30000
+    done
+done
+grep -H "PIMPLE: \(not \)\?converged" results/*/log.cardiacFoam
+```
+
+The `sed` line deletes the `relaxationFactors` block and leaves the
+`#includeIfPresent` lines that `Allrun` options rely on.
+
+Outer iterations to the `1e-8` tolerance:
+
+| N | cells | sealed, relaxation 0.9 | stock, relaxation 0.9 | sealed, no relaxation | stock, no relaxation |
+|---|---|---|---|---|---|
+| 5 | 2302 | 280 | 314 | 102 | 89 |
+| 7 | 6460 | 710 | 732 | | |
+| 10 | 18177 | 1423 | 1360 | 242 | 212 |
+| 14 | 46846 | 3329 | 3650 | | |
+| 20 | 137124 | 8163 | 8039 | 531 | 499 |
+| 28 | 368100 | 14896 | 14700 | | |
+| 40 | 1075610 | 28990 | 27823 | does not converge | does not converge |
+
+- With relaxation every level converges, and the count grows roughly with
+  `N^2`. `N = 20` and finer exceed the default cap of 8000: run them with
+  `-iterations`.
+- Without relaxation `N = 5` to `20` converge in a few hundred iterations, to
+  the same solution: the sealed `activationTime` L2 errors differ from the
+  relaxed ones by 0.11 % at `N = 10` and 0.02 % at `N = 20`, and the stock
+  error by 0.04 % at `N = 20`. At `N = 40` the outer residual is `1.6e-5`
+  after 100 iterations and rises, slower and slower, to `1.3e-4` by about
+  1000 iterations; the runs were stopped at about 1000 (sealed) and 730
+  (stock) iterations.
+
+Larger `c0` (sealed wall gradient, seed 1; `c0` edited in
+`constant/electroProperties`, for example
+`sed -i.bak 's/^\( *c0 *\[[^]]*\]\) *1;/\1 5;/' constant/electroProperties`).
+`psi` scales as `1/c0`, so `c0 L2` compares the errors across `c0`:
+
+| c0 | N | relaxation | outer iterations | outer residual over the last iterations | activationTime L2 | c0 L2 |
+|---|---|---|---|---|---|---|
+| 1 | 10 | 0.9 | 1423 | converged to `1e-8` | 1.058 | 1.058 |
+| 5 | 10 | 0.9 | 200000, cap (serial) | constant at `4.0e-5` | 0.360 | 1.80 |
+| 20 | 10 | 0.9 | 3000, cap (serial) | between `4.7e-4` and `5.1e-4` | 0.116 | 2.32 |
+| 5 | 10 | none | stopped at about 16000 | between `1.70e-3` and `1.75e-3` | | |
+| 20 | 10 | none | stopped at about 16000 | between `1.94e-3` and `2.27e-3` | | |
+| 5 | 20 | none | 20000, cap | between `9.69e-5` and `9.77e-5` | 0.186 | 0.93 |
+
+No larger-`c0` run reaches the `1e-8` tolerance, with or without relaxation,
+and raising the cap does not change that: the residual has stopped
+decreasing. The errors of these rows are those of unconverged iterates.
+
 ## Outputs
 
 Run copies, meshes and results stay outside the repository (`results/` is
