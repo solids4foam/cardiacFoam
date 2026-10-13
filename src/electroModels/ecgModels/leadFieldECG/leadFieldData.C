@@ -271,10 +271,12 @@ vectorField leadFieldData::topologySignatures
     {
         scalarField data(mesh.nCells());
         forAll(data,c) data[c]=geometry[c][d];
-        const scalarField neighbour(syncTools::swapBoundaryCellList(mesh,data));
+        scalarField neighbour;
+        syncTools::swapBoundaryCellList(mesh,data,neighbour);
         forAll(neighbour,f) neighbourGeometry[f][d]=neighbour[f];
     }
-    const scalarField neighbourMask(syncTools::swapBoundaryCellList(mesh,mask));
+    scalarField neighbourMask;
+    syncTools::swapBoundaryCellList(mesh,mask,neighbourMask);
     vectorField result(mesh.nCells());
     forAll(result,c)
     {

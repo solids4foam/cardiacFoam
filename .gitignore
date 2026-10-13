@@ -334,3 +334,13 @@ tutorials/configurationChecks/runs
 
 # Generated parameter includes for the lead-field manufactured runners
 tutorials/manufacturedSolutions/*LeadFieldECG/local/
+
+# Local development history and staged simulation evidence; maintained inputs,
+# numerical regression references and current public guides are versioned.
+/docs/LEAD_FIELD_ECG_DEVELOPMENT.md
+/docs/LEAD_FIELD_ECG_METHODS.md
+/docs/LEAD_FIELD_ECG_PAPER_VERIFICATION_PLAN.md
+/docs/LEAD_FIELD_ECG_VALIDATION.md
+/docs/validation/
+
+/docs/LEAD_FIELD_ECG_INTEGRATION_VALIDATION.md

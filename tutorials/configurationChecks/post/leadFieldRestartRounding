@@ -3,19 +3,33 @@
 # so restart timing cannot change its canonical output manifest.
 cd "${0%/*}" || exit 1
 set -e
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/lead-field-restart-rounding.XXXXXX")
-trap 'rm -rf "$scratch"' EXIT
+cleanup()
+{
+    status=$?
+    if [[ "$status" != 0 ]]; then
+        for log in "$scratch"/case/log.rounding.*; do
+            [[ ! -f "$log" ]] || tail -30 "$log"
+        done
+    fi
+    rm -rf "$scratch"
+    exit "$status"
+}
+trap cleanup EXIT
 cp -a . "$scratch/case"
 (
     cd "$scratch/case"
     subsetMesh -overwrite -patch xMin -zone myocardium > log.rounding.subset 2>&1
-    foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/cellZone -remove >/dev/null
-    foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/importMode -set heartOnly >/dev/null
-    foamDictionary system/controlDict -entry timePrecision -set 6 >/dev/null
-    foamDictionary system/controlDict -entry deltaT -set 0.0011210781666666667 >/dev/null
-    foamDictionary system/controlDict -entry endTime -set 0.0033632345 >/dev/null
-    foamDictionary system/controlDict -entry writeControl -set timeStep >/dev/null
-    foamDictionary system/controlDict -entry writeInterval -set 1 >/dev/null
+    foamDictionary -precision 17 constant/electroProperties -entry monodomainSolverCoeffs/cellZone -remove >/dev/null
+    foamDictionary -precision 17 constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/importMode -set heartOnly >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry startFrom -set startTime >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry startTime -set 0 >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry timePrecision -set 6 >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry deltaT -set 0.0011210781666666667 >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry endTime -set 0.0033632345 >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry writeControl -set timeStep >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry writeInterval -set 1 >/dev/null
     cardiacFoam > log.rounding.initial 2>&1
     python3 - <<'CHECK'
 from pathlib import Path
@@ -26,8 +40,8 @@ assert rows and rows[-1][0] > 0.00336323
 assert Path('0.00336323/Vm').is_file(), 'Rounded restart folder missing'
 Path('trace.beforeRestart').write_bytes(Path('postProcessing/leadFieldECG.dat').read_bytes())
 CHECK
-    foamDictionary system/controlDict -entry startFrom -set latestTime >/dev/null
-    foamDictionary system/controlDict -entry endTime -set 0.004484308166666667 >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry startFrom -set latestTime >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry endTime -set 0.004484308166666667 >/dev/null
     cardiacFoam > log.rounding.restart 2>&1
     python3 - <<'CHECK'
 from pathlib import Path
@@ -41,8 +55,8 @@ assert len(times) > len(old) and all(b > a for a, b in zip(times, times[1:]))
 CHECK
     # Equality of rounded representations must not permit a genuinely older
     # field folder to append to a trace extending beyond it.
-    foamDictionary system/controlDict -entry startFrom -set startTime >/dev/null
-    foamDictionary system/controlDict -entry startTime -set 0.00224216 >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry startFrom -set startTime >/dev/null
+    foamDictionary -precision 17 system/controlDict -entry startTime -set 0.00224216 >/dev/null
     if cardiacFoam > log.rounding.older 2>&1; then
         echo "Older restart unexpectedly accepted" >&2
         exit 1

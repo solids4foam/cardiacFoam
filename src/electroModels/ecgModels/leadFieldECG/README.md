@@ -27,8 +27,10 @@ Restart appends only after validating the existing header, finite monotone
 samples and that the trace does not extend beyond the restart time. Starting
 again at time zero creates a new trace. Static fields reject moving/changing
 meshes and mismatched geometry, topology, Gi/Ge or construction settings.
-The per-cell fingerprint uses three 16-bit pieces, safe at ordinary ASCII
-field precision. All ranks project local cells; only the master writes.
+Metadata format 2 records geometry, full-conductor topology and myocardial
+connectivity separately. Three 16-bit pieces remain safe at ordinary ASCII
+field precision; processor exchanges use scalar chunks. Regenerate older
+format-1 fields. All ranks project local cells; only the master writes.
 
 Heart-cellZone runs import fields through the existing subset/base addressing.
 Heart-only runs select `importMode heartOnly` and use explicitly exported
@@ -71,3 +73,14 @@ Restart append is verified on this standalone workflow. The PR59 source
 reader maps base-mesh restart values into its active cellZone. One ECG domain
 of this solver type should own `leadFieldECG.dat`, as with the existing
 solver-based output names.
+
+Full-conductor topology checks neighbour geometry and physical patch names/types.
+Heart-only export checks remaining myocardial connectivity while retaining the
+absent conductor as historical provenance. Coupled transformation options and
+AMI/nonconformal mappings need separate validation. Each channel requires a
+unique sensitivity filename, with reserved source/helper names rejected before
+construction and import.
+
+Restart validation accounts for equality in the saved time-folder or trace
+representation, while preserving header/finite/monotone checks and rejecting
+genuinely older restart data.

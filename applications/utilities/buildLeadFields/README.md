@@ -80,3 +80,8 @@ OpenFOAM cubic eigenvalue/eigenvector failures for rotated repeated eigenpairs.
 (isotropic, rotated repeated full rank, and rotated rank two/one) before any
 conductivity solve. The parallel construction hook requires these checks.
 Provenance labels this construction `myocardialNeighbourLeastSquaresSVD`.
+
+The format-2 metadata includes full-support topology and myocardial connectivity
+in addition to geometry. Output filenames must be distinct and may not use
+reserved source, conductivity, metadata or helper names. Validate names before
+reading or solving so malformed mappings cannot overwrite those inputs.
