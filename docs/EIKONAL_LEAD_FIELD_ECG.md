@@ -165,3 +165,30 @@ byte-identical activation-time fields and pseudo-ECG traces. The validation
 report records the final suite/platform checks; local logs and paired-run
 snapshots are retained outside the repository under
 `/tmp/cardiacFoam-lead-field-current-numerics/eikonal`.
+
+## Coarse-resolution addition
+
+Additional serial runs at N=10 and N=20 use the same template, source,
+sensitivities and 201 sample times as the recorded N=40 serial case. The
+coarse recording errors are retained as diagnostic results; the N=40
+regression thresholds are unchanged.
+
+| N | Activation L2 error (s) | Reciprocal relative RMS | Raw pseudo E3–E5 relative RMS | Exact-source midpoint reciprocal RMS error (V) |
+|---|---|---|---|---|
+| 10 | 0.00394392 | 20849.451% | 29178.249% | 20.4783604 |
+| 20 | 0.0007325 | 254.243% | 253.169% | 0.250080444 |
+| 40 | 0.000159934 | 1.679% | 2.498% | 0.00164665117 |
+
+The independent midpoint calculation samples the exact continuum activation
+and voltage gradient. Its large coarse error does not require PDE or gradient-
+reconstruction error. This isolates under-resolution of the oscillatory
+recording integrand as a real contributor; similar RMS values are not an
+additive error budget or complete causal attribution. No asymptotic rate is
+fitted to these coarse decreases. N=80 was not executed.
+
+Paper 1 now contains the uniform-template model, implementation, resolution
+controls, independent surface/midpoint references and source/binary evidence.
+Its untracked local archive is
+`data/paperI/solver/eikonal_lead_field/2026-10-13-pr61` in the manuscript
+repository, checked by `validate_eikonal_lead_field_evidence.py`. Publication
+release and the matched torso experiment remain separate.

@@ -24,11 +24,11 @@ the tested numerical source and platforms; the
 
 1. Review the stacked PR against `feat/mono-bi-eikonal-verification` (PR #59),
    inspect repository CI, and resolve applicable failures before merge.
-2. Add the new uniform-template eikonal observer and its selected-resolution
-   result to Paper 1. Earlier monodomain/bidomain lead-field and dual-pseudo
-   content is already integrated into Papers 1/2; the new eikonal result is
-   not yet integrated. Paper 2 retains its bidomain/bath scope and matching
-   methods/verification/results structure.
+2. Paper 1 now includes the uniform-template eikonal observer, N=10/20/40
+   resolution controls and independent exact-source quadrature. Earlier
+   monodomain/bidomain lead-field and dual-pseudo content is integrated into
+   Papers 1/2. Paper 2 retains its bidomain/bath scope; N=80 is left for the
+   owner's later study.
 3. Refresh manuscript source/build provenance to the committed feature,
    archive the new raw traces/diagnostics immutably, and freeze the publication
    source and evidence release. Existing paper notes still include older
@@ -46,14 +46,16 @@ implementation PR.
   workflow with the same source, physical conductor and electrode reference.
   Compare reciprocal recording with actual torso potential sampling through
   a full time series. Current torso recovery is a static scalar column control.
-- **Anatomical Wilson leads:** verify E1–E6 and RA/LA/LL locations in the user's
-  Niederer dataset, construct the corresponding reciprocal fields, and exercise
-  them. Wilson weights are implemented; private coordinates are not certified
-  inputs or bundled tutorial geometry.
+- **Torso Wilson leads:** preserve the six existing case positions and add
+  explicitly declared torso equivalents for absent arm/leg sites. A proposal
+  for the existing idealized case is documented in
+  [the matched-torso guide](MATCHED_HEART_TORSO_ECG.md). Its frame differs from
+  the Niederer patient meshes; patient-specific registration remains separate.
 - **Refinement for convergence-order claims:** monodomain/bidomain reciprocal
   evidence currently includes a 20³/40³ pair with observed order about 2.13.
   This is a supporting pair, not a settled asymptotic range. New eikonal
-  reciprocal evidence is an accuracy check at 40³ (1.68% normalized RMS error).
+  reciprocal evidence includes N=10/20/40 resolution controls; N=10/20 are
+  under-resolved, while N=40 has 1.68% normalized RMS error.
   Add finer levels only when needed to support stronger paper claims, keeping
   source, sensitivity and sampling definitions fixed and recording field,
   gradient and functional errors separately. The 20³ eikonal constant-sensitivity

@@ -32,6 +32,7 @@ includes the homogeneous-template eikonal extension.
 | A | [docs/LEAD_FIELD_ECG_IMPLEMENTATION.md](LEAD_FIELD_ECG_IMPLEMENTATION.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_NEXT_STEPS.md](LEAD_FIELD_ECG_NEXT_STEPS.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_PR_VALIDATION.md](LEAD_FIELD_ECG_PR_VALIDATION.md) | Documentation |
+| A | [docs/MATCHED_HEART_TORSO_ECG.md](MATCHED_HEART_TORSO_ECG.md) | Documentation |
 | M | [src/electroModels/Make/files](../src/electroModels/Make/files) | Build registration |
 | M | [src/electroModels/Make/options](../src/electroModels/Make/options) | Build registration |
 | M | [src/electroModels/core/ARCHITECTURE.md](../src/electroModels/core/ARCHITECTURE.md) | Documentation |

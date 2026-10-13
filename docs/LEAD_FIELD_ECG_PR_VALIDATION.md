@@ -112,3 +112,24 @@ runner failures (missing copied base and container MPI root policy) were
 resolved before the final successful sweeps; neither was a numerical failure.
 The Linux container needs Python for maintained regression checks and the
 usual OpenMPI root-run environment when launched as root.
+
+## Additional coarse eikonal controls
+
+Native serial N=10/20 runs of the maintained eikonal dual variant complete.
+Together with the existing N=40 serial case, their reciprocal normalized RMS
+errors are 20849.451%, 254.243% and 1.679%. The raw pseudo-ECG E3–E5 cohort
+errors are 29178.249%, 253.169% and 2.498%, against its own reference.
+Independent exact-source midpoint projection has reciprocal RMS errors
+20.4783604, 0.250080444 and 0.00164665117 V. The severe coarse loss persists
+without propagation or reconstructed-gradient error. No asymptotic rate is
+fitted, N=80 is unexecuted and the N=40 regression bounds are unchanged.
+
+Paper 1 source includes these controls; independent eikonal, earlier lead-field,
+dual-observer/shell, headline-results and manuscript-structure validators pass.
+Docker HTML/PDF render and inspection of the new tables/equations pass.
+Local evidence has source, binary and data hashes; immutable publication
+release remains open. See [eikonal details](EIKONAL_LEAD_FIELD_ECG.md).
+
+The [matched torso guide](MATCHED_HEART_TORSO_ECG.md) documents existing chest
+sites and proposed torso equivalents for absent limbs. VTK inclusion checks
+are geometry evidence only, not production ownership or ECG equivalence tests.
