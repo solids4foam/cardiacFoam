@@ -30,6 +30,7 @@ includes the homogeneous-template eikonal extension.
 | A | [docs/EIKONAL_LEAD_FIELD_ECG.md](EIKONAL_LEAD_FIELD_ECG.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_FILES.md](LEAD_FIELD_ECG_FILES.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_IMPLEMENTATION.md](LEAD_FIELD_ECG_IMPLEMENTATION.md) | Documentation |
+| A | [docs/LEAD_FIELD_ECG_NEXT_STEPS.md](LEAD_FIELD_ECG_NEXT_STEPS.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_PR_VALIDATION.md](LEAD_FIELD_ECG_PR_VALIDATION.md) | Documentation |
 | M | [src/electroModels/Make/files](../src/electroModels/Make/files) | Build registration |
 | M | [src/electroModels/Make/options](../src/electroModels/Make/options) | Build registration |
