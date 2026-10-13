@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
     }
     const IOdictionary props(IOobject("leadFieldProperties",runTime.constant(),mesh,
         IOobject::MUST_READ,IOobject::NO_WRITE));
+    leadFieldData::validateFieldNames(props);
     const word instance(props.lookupOrDefault<word>("fieldInstance","0"));
     tmp<volTensorField> Gi=leadFieldData::readPhysical(mesh,props,true);
     tmp<volTensorField> Ge=leadFieldData::readPhysical(mesh,props,false);

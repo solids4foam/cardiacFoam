@@ -1,0 +1,19 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+
+actions
+(
+    { name leadGuardFace; type faceSet; action new; source boxToFace;
+      sourceInfo { box (.499999 -1 -1) (.500001 2 2); } }
+    { name leadGuardFace; type faceZoneSet; action new; source setToFaceZone;
+      sourceInfo { faceSet leadGuardFace; } }
+);

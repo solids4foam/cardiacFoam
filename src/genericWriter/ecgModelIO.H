@@ -80,7 +80,8 @@ public:
             const fileName& outDir,
             const word& filename,
             const wordList& channelNames,
-            scalar restartTime
+            scalar restartTime,
+            const word& restartTimeName = word::null
         );
 
         //- Append one data row: time followed by all values

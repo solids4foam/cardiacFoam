@@ -49,7 +49,13 @@ public:
         const dictionary& dict,
         bool intracellular
     );
+    // Geometry is retained separately because heartOnly deliberately cuts bath faces.
     static vectorField meshSignatures(const fvMesh&);
+    static vectorField topologySignatures
+    (
+        const fvMesh&, const scalarField& heartMask, bool fullConductor
+    );
+    static void validateFieldNames(const dictionary&);
     static void writeProvenance
     (
         const fvMesh&, const volTensorField&, const volTensorField&,

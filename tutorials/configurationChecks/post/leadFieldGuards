@@ -12,6 +12,9 @@ cp 0/leadField_bipolar "$backup/field"
 cp 0/leadFieldMeshSignature "$backup/signature"
 cp 0/bodyAndOrgansConductivity "$backup/body"
 cp postProcessing/leadFieldECG.dat "$backup/trace"
+cp constant/leadFieldMetadata "$backup/metadata"
+cp -a constant/polyMesh "$backup/polyMesh"
+cp -a 0 "$backup/initial"
 : > log.leadFieldGuards
 python3 - <<'CHECK'
 from pathlib import Path
@@ -37,6 +40,52 @@ expectFatal()
     fi
     echo "PASS: $label" >> log.leadFieldGuards
 }
+expectBuilderFatal()
+{
+    local label="$1" text="$2"
+    if buildLeadFields > "expectedFailure.$label.txt" 2>&1; then
+        echo "Expected preprocessing failure: $label"; exit 1
+    fi
+    grep -q 'FOAM FATAL' "expectedFailure.$label.txt"
+    grep -qF "$text" "expectedFailure.$label.txt"
+    ! grep -q 'Solving for' "expectedFailure.$label.txt"
+    cmp "$backup/body" 0/bodyAndOrgansConductivity
+    cmp "$backup/field" 0/leadField_bipolar
+    cmp "$backup/metadata" constant/leadFieldMetadata
+    echo "PASS: $label rejected before any solve or input overwrite" >> log.leadFieldGuards
+}
+foamDictionary constant/leadFieldProperties -entry leadFields/V1 -set leadField_bipolar >/dev/null
+expectBuilderFatal duplicateBuilder 'Duplicate lead-field output name'
+# Supply otherwise-consistent external metadata so runtime rejection exercises
+# the filename contract rather than merely the preprocessing-property mismatch.
+foamDictionary constant/leadFieldMetadata -entry inputProperties/leadFields/V1 -set leadField_bipolar >/dev/null
+foamDictionary constant/leadFieldMetadata -entry leadFields/V1 -set leadField_bipolar >/dev/null
+expectFatal duplicateImport 'Duplicate lead-field output name'
+cp "$backup/properties" constant/leadFieldProperties
+cp "$backup/metadata" constant/leadFieldMetadata
+foamDictionary constant/leadFieldProperties -entry leadFields/bipolar -set bodyAndOrgansConductivity >/dev/null
+expectBuilderFatal reservedBuilder 'Reserved lead-field output name'
+expectFatal reservedImport 'Reserved lead-field output name'
+cp "$backup/properties" constant/leadFieldProperties
+# Boundary semantics change without a coordinate/cell geometry change.
+python3 - <<'CHECK'
+from pathlib import Path
+import re
+p=Path('constant/polyMesh/boundary')
+s,n=re.subn(r'(xMin\s*\{\s*type\s+)patch;',r'\1wall;',p.read_text())
+assert n==1,n
+p.write_text(s)
+CHECK
+expectFatal staleBoundary 'provenance mismatch'
+cp "$backup/polyMesh/boundary" constant/polyMesh/boundary
+# Splitting a heart-heart face into coincident baffles preserves each cell's
+# point/face geometry but changes its electrical connectivity.
+runApplication -s baffle topoSet -dict system/topoSetBaffleDict
+runApplication createBaffles -overwrite
+expectFatal staleAdjacency 'provenance mismatch'
+rm -rf constant/polyMesh 0
+cp -a "$backup/polyMesh" constant/polyMesh
+cp -a "$backup/initial" 0
 foamDictionary constant/leadFieldProperties -entry conductivityExtracellular -remove >/dev/null
 expectFatal missingGe conductivityExtracellular
 cp "$backup/properties" constant/leadFieldProperties
@@ -52,8 +101,7 @@ cp "$backup/signature" 0/leadFieldMeshSignature
 foamDictionary 0/leadField_bipolar -entry dimensions -set '[0 -1 0 0 0 0 0]' >/dev/null
 expectFatal badDimensions 'wrong dimensions'
 cp "$backup/field" 0/leadField_bipolar
-# Export before restart: the existing subset source cannot read its base-size
-# Vm restart directly. The standalone heart workflow has matching field sizes.
+# Export before restart to exercise the standalone heart observation workflow.
 runApplication subsetMesh -overwrite -patch xMin -zone myocardium
 foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/cellZone -remove >/dev/null
 foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/importMode -set heartOnly >/dev/null

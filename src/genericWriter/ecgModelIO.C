@@ -58,7 +58,8 @@ autoPtr<OFstream> ecgModelIO::openTimeSeries
 autoPtr<OFstream> ecgModelIO::openRestartTimeSeries
 (
     const fileName& outDir, const word& filename,
-    const wordList& channelNames, scalar restartTime
+    const wordList& channelNames, scalar restartTime,
+    const word& restartTimeName
 )
 {
     const fileName path(outDir/filename);
@@ -89,7 +90,31 @@ autoPtr<OFstream> ecgModelIO::openRestartTimeSeries
         if (row >> token) valid=false;
         lastTime=time;
     }
-    if (!valid || lastTime > restartTime+SMALL)
+    // A stored folder and an eight-decimal scientific trace can round the
+    // same physical step differently. Accept only equality in an actual
+    // stored representation, rather than an arbitrary time tolerance.
+    std::ostringstream recordedLast, recordedRestart;
+    recordedLast.setf(std::ios::scientific);
+    recordedRestart.setf(std::ios::scientific);
+    recordedLast.precision(8);
+    recordedRestart.precision(8);
+    recordedLast << lastTime;
+    recordedRestart << restartTime;
+    const bool sameRecordedTime =
+        recordedLast.str() == recordedRestart.str();
+    const bool sameRestartFolder =
+        !restartTimeName.empty()
+     && Time::timeName(lastTime) == restartTimeName;
+    if
+    (
+        !valid
+     ||
+        (
+            lastTime > restartTime+SMALL
+         && !sameRecordedTime
+         && !sameRestartFolder
+        )
+    )
     {
         FatalErrorInFunction << "Cannot append " << filename
             << ": incompatible trace or existing samples later than the restart time."

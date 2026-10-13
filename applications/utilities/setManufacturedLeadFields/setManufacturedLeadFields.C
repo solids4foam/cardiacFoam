@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
     IOstream::defaultPrecision(17);
     const IOdictionary props(IOobject("leadFieldProperties", runTime.constant(),
         mesh, IOobject::MUST_READ, IOobject::NO_WRITE));
+    leadFieldData::validateFieldNames(props);
     const scalarField scales(props.lookup("manufacturedScales"));
     const wordList names(props.subDict("leadFields").toc());
     if (scales.size()!=names.size())

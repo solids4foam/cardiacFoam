@@ -276,7 +276,7 @@ ecgDomain::ecgDomain
     {
         outputPtr_ = solverType_ == "leadFieldECG"
           ? ecgModelIO::openRestartTimeSeries(outDir, word(solverType_+".dat"),
-                channelNames_, mesh_.time().value())
+                channelNames_, mesh_.time().value(), mesh_.time().timeName())
           : ecgModelIO::openTimeSeries(outDir, word(solverType_+".dat"), channelNames_);
     }
 

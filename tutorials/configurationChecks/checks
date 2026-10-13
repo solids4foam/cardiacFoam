@@ -127,3 +127,5 @@ monodomainLeadFieldParallelBuild leadFieldColumn monodomainLeadFieldECG pass np=
 
 bidomainLeadFieldRecovery leadFieldColumn bidomainLeadFieldECG pass post=leadFieldRecovery skip=v2312
 bidomainLeadFieldRecoveryParallel leadFieldColumn bidomainLeadFieldECG pass np=2 post=leadFieldRecovery skip=v2312
+
+monodomainLeadFieldRestartRounding leadFieldColumn monodomainLeadFieldECG pass post=leadFieldRestartRounding skip=v2312

@@ -1,0 +1,53 @@
+#!/bin/bash
+# The configuration harness supplies an isolated case; exercise another copy
+# so restart timing cannot change its canonical output manifest.
+cd "${0%/*}" || exit 1
+set -e
+scratch=$(mktemp -d "${TMPDIR:-/tmp}/lead-field-restart-rounding.XXXXXX")
+trap 'rm -rf "$scratch"' EXIT
+cp -a . "$scratch/case"
+(
+    cd "$scratch/case"
+    subsetMesh -overwrite -patch xMin -zone myocardium > log.rounding.subset 2>&1
+    foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/cellZone -remove >/dev/null
+    foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/importMode -set heartOnly >/dev/null
+    foamDictionary system/controlDict -entry timePrecision -set 6 >/dev/null
+    foamDictionary system/controlDict -entry deltaT -set 0.0011210781666666667 >/dev/null
+    foamDictionary system/controlDict -entry endTime -set 0.0033632345 >/dev/null
+    foamDictionary system/controlDict -entry writeControl -set timeStep >/dev/null
+    foamDictionary system/controlDict -entry writeInterval -set 1 >/dev/null
+    cardiacFoam > log.rounding.initial 2>&1
+    python3 - <<'CHECK'
+from pathlib import Path
+rows = [list(map(float, line.split())) for line in
+        Path('postProcessing/leadFieldECG.dat').read_text().splitlines()
+        if line and not line.startswith('#')]
+assert rows and rows[-1][0] > 0.00336323
+assert Path('0.00336323/Vm').is_file(), 'Rounded restart folder missing'
+Path('trace.beforeRestart').write_bytes(Path('postProcessing/leadFieldECG.dat').read_bytes())
+CHECK
+    foamDictionary system/controlDict -entry startFrom -set latestTime >/dev/null
+    foamDictionary system/controlDict -entry endTime -set 0.004484308166666667 >/dev/null
+    cardiacFoam > log.rounding.restart 2>&1
+    python3 - <<'CHECK'
+from pathlib import Path
+before = Path('trace.beforeRestart').read_bytes()
+after = Path('postProcessing/leadFieldECG.dat').read_bytes()
+assert after.startswith(before), 'Rounded restart replaced existing samples'
+old = [line for line in before.decode().splitlines() if line and not line.startswith('#')]
+times = [float(line.split()[0]) for line in after.decode().splitlines()
+         if line and not line.startswith('#')]
+assert len(times) > len(old) and all(b > a for a, b in zip(times, times[1:]))
+CHECK
+    # Equality of rounded representations must not permit a genuinely older
+    # field folder to append to a trace extending beyond it.
+    foamDictionary system/controlDict -entry startFrom -set startTime >/dev/null
+    foamDictionary system/controlDict -entry startTime -set 0.00224216 >/dev/null
+    if cardiacFoam > log.rounding.older 2>&1; then
+        echo "Older restart unexpectedly accepted" >&2
+        exit 1
+    fi
+    grep -q 'FOAM FATAL' log.rounding.older
+    grep -q 'later than the restart time' log.rounding.older
+)
+printf 'PASS: rounded-folder restart preserves the trace; genuinely older restart rejected\nEnd\n' > log.leadFieldRestartRounding

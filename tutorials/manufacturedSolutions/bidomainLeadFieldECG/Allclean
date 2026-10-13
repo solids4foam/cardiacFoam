@@ -18,6 +18,6 @@ rm -rf constant/polyMesh
 rm -rf postProcessing
 rm -rf logs
 
-rm -f 0/leadField_* 0/leadFieldGi 0/leadFieldGe 0/leadFieldMeshSignature constant/leadFieldMetadata
+rm -f 0/leadField_* 0/leadFieldGi 0/leadFieldGe 0/leadFieldMeshSignature 0/leadFieldTopologySignature 0/leadFieldHeartConnectivitySignature 0/leadFieldHeartRegion 0/leadFieldBodyConductivity constant/leadFieldMetadata
 
 rm -rf local

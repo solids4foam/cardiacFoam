@@ -25,6 +25,10 @@ License
 #include "sealedWallPolicy.H"
 #include "labelIOList.H"
 #include "gradScheme.H"
+#include "syncTools.H"
+#include "processorPolyPatch.H"
+#include "processorCyclicPolyPatch.H"
+#include "HashSet.H"
 #include "PstreamReduceOps.H"
 #include <algorithm>
 #include <cmath>
@@ -144,6 +148,52 @@ void hashValue(std::uint64_t& h, std::uint64_t value)
         h *= UINT64_C(1099511628211);
     }
 }
+
+void hashText(std::uint64_t& hash,const word& text)
+{
+    hashValue(hash,text.size());
+    for(const char ch:text) hashValue(hash,static_cast<unsigned char>(ch));
+}
+
+std::uint64_t faceGeometryHash(const fvMesh& mesh,const label faceI)
+{
+    std::vector<point> pts;
+    for(label p:mesh.faces()[faceI]) pts.push_back(mesh.points()[p]);
+    std::sort(pts.begin(),pts.end(),[](const point& a,const point& b)
+    {
+        if(a.x()!=b.x()) return a.x()<b.x();
+        if(a.y()!=b.y()) return a.y()<b.y();
+        return a.z()<b.z();
+    });
+    std::uint64_t hash=UINT64_C(14695981039346656037);
+    hashValue(hash,pts.size());
+    for(const point& p:pts) for(direction d=0;d<3;++d)
+    {
+        const double value=p[d]==0 ? 0 : p[d];
+        std::uint64_t bits;std::memcpy(&bits,&value,sizeof(bits));
+        hashValue(hash,bits);
+    }
+    return hash;
+}
+
+vector hashChunks(const std::uint64_t h)
+{
+    return vector(scalar(h&UINT64_C(0xffff)),scalar((h>>16)&UINT64_C(0xffff)),
+        scalar((h>>32)&UINT64_C(0xffff)));
+}
+
+scalarField heartMask(const fvMesh& mesh,const dictionary& props)
+{
+    scalarField mask(mesh.nCells(),1);
+    if(props.found("cellZone"))
+    {
+        const label zone=mesh.cellZones().findZoneID(props.get<word>("cellZone"));
+        if(zone<0) FatalErrorInFunction << "Unknown lead-field heart cellZone." << exit(FatalError);
+        mask=0;for(label c:mesh.cellZones()[zone]) mask[c]=1;
+    }
+    return mask;
+}
+
 }
 
 tmp<volTensorField> leadFieldData::readPhysical
@@ -161,37 +211,118 @@ tmp<volTensorField> leadFieldData::readPhysical
     return t;
 }
 
+void leadFieldData::validateFieldNames(const dictionary& props)
+{
+    const dictionary& fields=props.subDict("leadFields");
+    wordHashSet reserved;
+    for(const word& name:wordList({"Vm","Vm_0","Vm_0_0","phiE","phiI","activationTime",
+        "Iion","ionicCurrent","externalStimulusCurrent","implicitSourceCoeff",
+        "ConductivityIntracellular","ConductivityExtracellular","conductivityIntracellular",
+        "conductivityExtracellular","conductivity","Conductivity","bodyAndOrgansConductivity",
+        "leadFieldGi","leadFieldGe","leadFieldMeshSignature","leadFieldTopologySignature",
+        "leadFieldHeartConnectivitySignature","leadFieldHeartRegion","leadFieldBodyConductivity",
+        "leadFieldMetadata","leadFieldGiInput","leadFieldGeInput","leadFieldGiActive",
+        "leadFieldGeActive","leadFieldGiGlobal","leadFieldGeGlobal","leadFieldHeartMask",
+        "leadFieldCurrent","leadFieldObservationVm","grad(leadFieldObservationVm)"})) reserved.insert(name);
+    reserved.insert(props.lookupOrDefault<word>("bathConductivityField","bodyAndOrgansConductivity"));
+    for(const word& channel:fields.toc())
+    {
+        reserved.insert("leadPotential_"+channel);
+        reserved.insert("grad(leadPotential_"+channel+")");
+        reserved.insert("leadFieldActive_"+channel);
+    }
+    wordHashSet used;
+    for(const word& channel:fields.toc())
+    {
+        const word field(fields.get<word>(channel));
+        if(reserved.found(field))
+            FatalIOErrorInFunction(props) << "Reserved lead-field output name '" << field
+                << "' would collide with source, conductivity or provenance fields." << exit(FatalIOError);
+        if(!used.insert(field))
+            FatalIOErrorInFunction(props) << "Duplicate lead-field output name '" << field
+                << "'. Every channel requires a distinct sensitivity field." << exit(FatalIOError);
+    }
+}
+
 vectorField leadFieldData::meshSignatures(const fvMesh& mesh)
 {
     vectorField result(mesh.nCells());
-    forAll(result, cellI)
+    forAll(result,c)
     {
-        std::vector<std::uint64_t> faceHashes;
-        for (label faceI : mesh.cells()[cellI])
+        std::vector<std::uint64_t> faces;
+        for(label f:mesh.cells()[c]) faces.push_back(faceGeometryHash(mesh,f));
+        std::sort(faces.begin(),faces.end());
+        std::uint64_t hash=UINT64_C(14695981039346656037);
+        for(const auto f:faces) hashValue(hash,f);
+        result[c]=hashChunks(hash);
+    }
+    return result;
+}
+
+vectorField leadFieldData::topologySignatures
+(
+    const fvMesh& mesh,const scalarField& mask,const bool fullConductor
+)
+{
+    const vectorField geometry(meshSignatures(mesh));
+    // Scalar chunks carry identifiers without cyclic vector/position transforms.
+    vectorField neighbourGeometry(mesh.nBoundaryFaces(),Zero);
+    for(direction d=0;d<3;++d)
+    {
+        scalarField data(mesh.nCells());
+        forAll(data,c) data[c]=geometry[c][d];
+        const scalarField neighbour(syncTools::swapBoundaryCellList(mesh,data));
+        forAll(neighbour,f) neighbourGeometry[f][d]=neighbour[f];
+    }
+    const scalarField neighbourMask(syncTools::swapBoundaryCellList(mesh,mask));
+    vectorField result(mesh.nCells());
+    forAll(result,c)
+    {
+        std::vector<std::uint64_t> faces;
+        for(label f:mesh.cells()[c])
         {
-            std::vector<point> pts;
-            for (label pointI : mesh.faces()[faceI]) pts.push_back(mesh.points()[pointI]);
-            std::sort(pts.begin(), pts.end(), [](const point& a, const point& b)
+            vector neighbour(Zero);bool connection=false;
+            const polyPatch* physical=nullptr;
+            if(f<mesh.nInternalFaces())
             {
-                if (a.x()!=b.x()) return a.x()<b.x();
-                if (a.y()!=b.y()) return a.y()<b.y();
-                return a.z()<b.z();
-            });
-            std::uint64_t h = UINT64_C(14695981039346656037);
-            hashValue(h, pts.size());
-            for (const point& p : pts) for (direction d=0; d<3; ++d)
-            {
-                const double value = p[d] == 0 ? 0 : p[d];
-                std::uint64_t bits;
-                std::memcpy(&bits, &value, sizeof(bits));
-                hashValue(h, bits);
+                const label n=mesh.faceOwner()[f]==c ? mesh.faceNeighbour()[f] : mesh.faceOwner()[f];
+                connection=fullConductor || (mask[c]>0.5 && mask[n]>0.5);
+                neighbour=geometry[n];
             }
-            faceHashes.push_back(h);
+            else
+            {
+                const label patch=mesh.boundaryMesh().whichPatch(f);
+                const polyPatch& pp=mesh.boundaryMesh()[patch];
+                if(pp.coupled())
+                {
+                    const label boundaryFace=f-mesh.nInternalFaces();
+                    connection=fullConductor || (mask[c]>0.5 && neighbourMask[boundaryFace]>0.5);
+                    neighbour=neighbourGeometry[boundaryFace];
+                    if(isA<processorCyclicPolyPatch>(pp))
+                        physical=&refCast<const processorCyclicPolyPatch>(pp).referPatch();
+                    else if(!isA<processorPolyPatch>(pp)) physical=&pp;
+                }
+                else physical=&pp;
+            }
+            // Heart connectivity excludes intentional bath cuts/exterior faces;
+            // a former heart-heart edge removed by a baffle still changes it.
+            if(!fullConductor && !connection) continue;
+            std::uint64_t hash=faceGeometryHash(mesh,f);
+            hashValue(hash,connection ? 1 : 0);
+            if(connection) for(direction d=0;d<3;++d)
+                hashValue(hash,static_cast<std::uint64_t>(neighbour[d]));
+            if(fullConductor && physical)
+            {
+                hashText(hash,physical->name());hashText(hash,physical->type());
+            }
+            faces.push_back(hash);
         }
-        std::sort(faceHashes.begin(), faceHashes.end());
-        std::uint64_t h = UINT64_C(14695981039346656037);
-        for (auto f : faceHashes) hashValue(h, f);
-        result[cellI] = vector(scalar(h & UINT64_C(0xffff)), scalar((h >> 16) & UINT64_C(0xffff)), scalar((h >> 32) & UINT64_C(0xffff)));
+        std::sort(faces.begin(),faces.end());
+        std::uint64_t hash=UINT64_C(14695981039346656037);
+        for(direction d=0;d<3;++d) hashValue(hash,static_cast<std::uint64_t>(geometry[c][d]));
+        hashValue(hash,faces.size());
+        for(const auto f:faces) hashValue(hash,f);
+        result[c]=hashChunks(hash);
     }
     return result;
 }
@@ -212,9 +343,16 @@ void leadFieldData::writeProvenance
         dimensionedVector("zero", dimless, Zero));
     signature.primitiveFieldRef() = meshSignatures(mesh);
     gi.write(); ge.write(); signature.write();
+    const scalarField mask(heartMask(mesh,props));
+    volVectorField topology(IOobject("leadFieldTopologySignature",instance,mesh,
+        IOobject::NO_READ,IOobject::NO_WRITE),signature);
+    topology.primitiveFieldRef()=topologySignatures(mesh,mask,true);topology.write();
+    volVectorField connectivity(IOobject("leadFieldHeartConnectivitySignature",instance,mesh,
+        IOobject::NO_READ,IOobject::NO_WRITE),signature);
+    connectivity.primitiveFieldRef()=topologySignatures(mesh,mask,false);connectivity.write();
     IOdictionary metadata(IOobject("leadFieldMetadata", mesh.time().constant(),
         mesh, IOobject::NO_READ, IOobject::NO_WRITE));
-    metadata.add("formatVersion", 1);
+    metadata.add("formatVersion", 2);
     metadata.add("representation", word("conductivityWeightedVector"));
     metadata.add("gradientConstruction",gradientConstruction);
     metadata.add("leadFields", props.subDict("leadFields"));
@@ -268,11 +406,12 @@ leadFieldData::leadFieldData(const electroStateProvider& state, const dictionary
         FatalIOErrorInFunction(props) << "leadFields must contain at least one named field."
             << exit(FatalIOError);
     }
+    validateFieldNames(props);
     tmp<volTensorField> gi = readPhysical(support, props, true);
     tmp<volTensorField> ge = readPhysical(support, props, false);
     const IOdictionary metadata(IOobject("leadFieldMetadata", support.time().constant(),
         support, IOobject::MUST_READ, IOobject::NO_WRITE));
-    if (metadata.get<label>("formatVersion") != 1
+    if (metadata.get<label>("formatVersion") != 2
      || metadata.get<word>("representation") != "conductivityWeightedVector")
     {
         FatalErrorInFunction << "Unsupported leadFieldMetadata format/representation."
@@ -311,6 +450,10 @@ leadFieldData::leadFieldData(const electroStateProvider& state, const dictionary
     const tmp<volTensorField> savedGi = readStatic<volTensorField>(support, "leadFieldGi", props, sigmaDims);
     const tmp<volTensorField> savedGe = readStatic<volTensorField>(support, "leadFieldGe", props, sigmaDims);
     const tmp<volVectorField> savedSignature = readStatic<volVectorField>(support, "leadFieldMeshSignature", props, dimless);
+    const tmp<volVectorField> savedTopology=readStatic<volVectorField>(support,
+        "leadFieldTopologySignature",props,dimless);
+    const tmp<volVectorField> savedConnectivity=readStatic<volVectorField>(support,
+        "leadFieldHeartConnectivitySignature",props,dimless);
     const dictionary& fieldDict = props.subDict("leadFields");
     const dictionary& savedFields = metadata.subDict("leadFields");
     if (savedFields.size() != fieldDict.size())
@@ -339,6 +482,18 @@ leadFieldData::leadFieldData(const electroStateProvider& state, const dictionary
         state.mesh(), IOobject::NO_READ, IOobject::NO_WRITE), state.mesh(),
         dimensionedTensor("zero", sigmaDims, Zero)));
     bool provenanceOK = true;
+    const scalarField supportMask(heartOnly ? scalarField(support.nCells(),1) : heartMask(support,props));
+    const vectorField supportConnectivity(topologySignatures(support,supportMask,false));
+    forAll(supportConnectivity,c) if(supportMask[c]>0.5)
+        provenanceOK=provenanceOK && supportConnectivity[c]==savedConnectivity()[c];
+    if(!heartOnly)
+    {
+        const vectorField supportTopology(topologySignatures(support,supportMask,true));
+        forAll(supportTopology,c) provenanceOK=provenanceOK && supportTopology[c]==savedTopology()[c];
+    }
+    const vectorField activeConnectivity(topologySignatures(state.mesh(),scalarField(state.mesh().nCells(),1),false));
+    forAll(activeConnectivity,c)
+        provenanceOK=provenanceOK && activeConnectivity[c]==savedConnectivity()[sourceCell(state,c)];
     const vectorField supportSignatures(meshSignatures(support));
     forAll(supportSignatures,c)
         provenanceOK = provenanceOK && supportSignatures[c]==savedSignature()[c];

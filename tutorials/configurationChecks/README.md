@@ -75,3 +75,8 @@ match the independent discrete column voltage .00475 V, and Vm must remain
 unchanged. This is a bounded scalar/orthogonal check, not an exact-discrete
 adjoint claim for general meshes. Ordinary bathTorsoECG checks exercise the
 runtime coupled route separately.
+
+The lead-field restart rounding control uses a private run copy to verify that
+a trace timestamp and its rounded OpenFOAM restart folder can represent the
+same saved step. It preserves previous rows and still rejects genuinely older
+restarts; header, finiteness and strict sample ordering checks remain active.
