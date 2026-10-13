@@ -62,6 +62,16 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
         supportMesh.cellZones()[zoneId],
         myocardiumExposedFacesPatch(supportMesh, electroProperties)
     );
+#if OPENFOAM < 2406
+    // OpenFOAM before 2406 copies the base fvSchemes and fvSolution onto the
+    // sub-mesh without parsing them, so read them for the scheme and solver
+    // lookups to resolve.
+    fvMesh& subMesh = subsetPtr->subMesh();
+    subMesh.fvSchemes::readOpt(IOobject::MUST_READ);
+    subMesh.fvSchemes::read();
+    subMesh.fvSolution::readOpt(IOobject::MUST_READ);
+    subMesh.fvSolution::read();
+#endif
     return subsetPtr;
 }
 

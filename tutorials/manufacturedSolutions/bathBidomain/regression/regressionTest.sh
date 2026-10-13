@@ -42,14 +42,6 @@ regression_case_check()
 regression_init "Bath-bidomain manufactured-solution regression test" \
     regression/bathBidomainManufactured.reference "$@"
 
-# OpenFOAM v2312's dictionary lookup of 'laplacian(conductivityIntracellular,Vm)'
-# against system/fvSchemes fails for this case in both build modes, while
-# v2412 and v2512 pass. The regression is suppressed on v2312 only.
-if [[ "${WM_PROJECT_VERSION:-unknown}" == *2312* ]]; then
-    echo "SKIP: bathBidomain regression is suppressed on OpenFOAM v2312 (regression/skips-on-openfoam)."
-    exit "${REGRESSION_SKIP_CODE}"
-fi
-
 regression_run_or_fail parallel
 
 REGRESSION_SUMMARY_FILE="$(regression_find_output \
