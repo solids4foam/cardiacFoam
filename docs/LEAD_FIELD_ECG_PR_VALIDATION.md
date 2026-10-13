@@ -1,13 +1,13 @@
 # Lead-field ECG PR validation
 
-Tested numerical source: `341695f782d892908d2ca977d600877267af69c8`.
+Tested numerical source: `0c1fe468fd14c478ef776bf189877ab7f28f19b5`.
 Feature branch: `codex/lead-field-ecg-integration`.
 Dependency/base: PR #59, `feat/mono-bi-eikonal-verification` at
 `fd0e548b113c991126580f4262bd4975dd3fe226`.
 
-The PR adds passive monodomain/bidomain recording, static construction,
-independent verification and maintained tutorials. It targets the PR #59 branch
-so its review diff excludes the parent sealed-wall/eikonal work.
+The PR adds passive monodomain/bidomain recording, uniform-template eikonal
+recording, static construction, independent verification and maintained tutorials. It targets the PR #59 branch
+so its review diff excludes the parent propagation and wall-discretization work.
 
 ## Final executed checks
 
@@ -21,13 +21,19 @@ so its review diff excludes the parent sealed-wall/eikonal work.
 | Existing monodomain pseudo-ECG regression on v2412 | 34 checks pass; references unchanged. |
 | Linux ARM64, OpenFOAM v2312, GCC, lightweight | Complete Allwmake passes. |
 | Both combined MMS regressions on v2312 | Same 8/6 numerical bounds and independent dual checks pass, no skips. |
-| Include hierarchy and tutorial index | Pass; 21 indexed regression cases. |
+| New eikonal dual MMS on v2412 and v2312 | Three numerical bounds, independent surface/reference/source diagnostics, four template controls and three rejection controls pass. |
+| Paired native serial eikonal runs with/without reciprocal observation | Written activation field and pseudo-ECG trace are byte-identical. |
+| Native serial/six-rank eikonal trace comparison | Maximum differences 1e-10 V reciprocal and 1e-11 raw pseudo. |
+| Include hierarchy and tutorial index | Pass; 22 indexed regression cases. |
 | Project headers and Markdown | Changed C/H normalizer leaves files unchanged; modified Markdown passes lint. |
 
-The final native sweep runs five maintained case regressions and finishes with
+The final native sweep runs six maintained case regressions and finishes with
 no failures/skips. It repeats the complete configuration harness after SVD,
 format-2 topology/filename and restart updates. The mixed-observer checks compare
 each recording with its own independent reference, not with the other observer.
+The final Linux v2312 sweep runs the monodomain, bidomain and eikonal lead-field
+regressions, with no failures/skips. The extended source/gradient diagnostic
+checker also passes when run directly against both saved eikonal outputs.
 
 The configuration controls exercise physical field modes, source invariance,
 serial/MPI construction and projection, Wilson/reference weights, heart-only
@@ -40,7 +46,8 @@ existing rows and rejects a genuinely older restart.
 The v2312 compatibility check uses the common three-argument boundary exchange
 API. Python 3 was installed in the minimal official OpenFOAM image to execute
 the standard-library independent checker; missing Python was an environment
-failure, not a numerical pass. The final rerun passes both regressions.
+failure, not a numerical pass. The final sweep passes all three lead-field
+regressions.
 
 On macOS the rounding hook sources the established RunFunctions setup to
 restore library lookup after SIP strips DYLD variables. No tracked tutorial
@@ -57,21 +64,25 @@ FOAM_LD_LIBRARY_PATH library lookup, as required by RunFunctions.
 ```bash
 FORCE_LIGHTWEIGHT_PHYSICSMODEL=1 ./Allwmake -j 6
 CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression \
-  --only '^(configurationChecks|manufacturedSolutions/(monodomainLeadFieldECG|bidomainLeadFieldECG|monodomainPseudoECG|eikonalECG))$'
+  --only '^(configurationChecks|manufacturedSolutions/(monodomainLeadFieldECG|bidomainLeadFieldECG|monodomainPseudoECG|eikonalECG|eikonalLeadFieldECG))$'
 ```
 
-The new tutorials also accept serial/fine/timestep variants through their
-own Allclean/Allrun entry points. Generated fields/meshes and full logs are not
+The voltage-based tutorials accept serial/fine/timestep variants through
+their own Allclean/Allrun entry points. The eikonal variant forwards the
+maintained cube options, including resolution and mesh type. Generated fields/meshes and full logs are not
 versioned. Prior two-level scientific evidence remains a local archive;
-its source/projection kernels are unchanged by the final input/IO guards.
+its monodomain/bidomain source and projection kernels are unchanged by the
+uniform-template extension. The existing voltage projection now delegates
+to the same validated gradient-integral method used by eikonal recording.
 
 ## Review and remaining scope
 
-Independent source review found and resolved topology, filename and restart
-issues; the final IO/common-version exchange pass reports no P0/P1 blocker.
+Earlier independent source review found and resolved topology, filename and
+restart issues; the IO/common-version exchange pass reported no P0/P1 blocker.
 The PR remains a bounded implementation change. It does not establish a
 complete discrete adjoint, general rotated/nonorthogonal conductor accuracy,
-clinical lead equivalence, anatomical transfer or eikonal reciprocal recording.
+clinical lead equivalence, anatomical transfer or regional-template eikonal
+recording.
 Heart-only mode cannot revalidate an absent torso. Fingerprints do not encode
 every coupled transform option; AMI and rotating meshes remain outside the
 verified set. Regenerate older format-1 fields.
@@ -79,3 +90,25 @@ verified set. Regenerate older format-1 fields.
 The repository's full CI matrix, including full solids4foam builds and the
 remaining tutorials, is distinct from these executed local checks. The papers
 and private torso dataset are not part of the code PR.
+
+## Uniform-template eikonal extension
+
+The [extension guide](EIKONAL_LEAD_FIELD_ECG.md) describes the shared template
+source, new observer, independent surface-integral verifier and maintained
+cube variant. The eikonal source uses `-U'(t-tau) grad(tau)` and imported
+conductivity-weighted sensitivities. It does not use the placeholder Vm.
+
+On the 40³/six-rank cube, 201 common samples give 1.68% normalized RMS error
+for the prescribed reciprocal cohort and 2.50% for the selected raw
+pseudo-ECG cohort. The surface reference Q64/Q96 difference is about
+2e-15 V. These are different recording functionals at one selected resolution,
+not a model ranking or a convergence-order estimate. The unit/state fixture
+covers all four supported templates independently of the PDE solve.
+
+Native/Linux build logs, complete final sweeps, source-independence snapshots,
+serial/MPI comparisons and diagnostic controls are retained locally under
+`/tmp/cardiacFoam-lead-field-current-numerics/eikonal`. Initial development
+runner failures (missing copied base and container MPI root policy) were
+resolved before the final successful sweeps; neither was a numerical failure.
+The Linux container needs Python for maintained regression checks and the
+usual OpenMPI root-run environment when launched as root.
