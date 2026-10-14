@@ -1,10 +1,13 @@
 # Lead-field ECG file inventory
 
 Paths are relative to the cardiacFoam repository. This inventory is the
-feature diff against PR #59, not the combined diff of PR #59 against main.
-A means added; M means an existing file was extended. Generated cases,
-meshes, fields, logs and local historical evidence are excluded. The inventory
-includes the homogeneous-template eikonal extension.
+feature diff from the common ancestor with PR #59, not PR #59’s diff
+against main. Parent-only updates are excluded, as in the GitHub PR view.
+A means added; M means an existing file was extended. Generated simulation
+results, logs and local evidence archives are excluded. Shared idealized
+heart/torso geometry and physical inputs are intentionally included as Git-LFS
+pointers, identical to the selected bath-branch inputs. The inventory includes
+the uniform-template eikonal extension and the opt-in matched ECG application.
 
 | Change | File | Responsibility |
 |---|---|---|
@@ -21,6 +24,11 @@ includes the homogeneous-template eikonal extension.
 | A | [applications/utilities/checkLeadFieldRecovery/README.md](../applications/utilities/checkLeadFieldRecovery/README.md) | Documentation |
 | A | [applications/utilities/checkLeadFieldRecovery/checkLeadFieldRecovery.C](../applications/utilities/checkLeadFieldRecovery/checkLeadFieldRecovery.C) | Static construction or verification application |
 | A | [applications/utilities/checkLeadFieldRecovery/utility.manifest.toml](../applications/utilities/checkLeadFieldRecovery/utility.manifest.toml) | Utility discovery |
+| A | [applications/utilities/replayLeadFieldECG/Make/files](../applications/utilities/replayLeadFieldECG/Make/files) | Build registration |
+| A | [applications/utilities/replayLeadFieldECG/Make/options](../applications/utilities/replayLeadFieldECG/Make/options) | Build registration |
+| A | [applications/utilities/replayLeadFieldECG/README.md](../applications/utilities/replayLeadFieldECG/README.md) | Documentation |
+| A | [applications/utilities/replayLeadFieldECG/replayLeadFieldECG.C](../applications/utilities/replayLeadFieldECG/replayLeadFieldECG.C) | Frozen-source forward/reciprocal recording application |
+| A | [applications/utilities/replayLeadFieldECG/utility.manifest.toml](../applications/utilities/replayLeadFieldECG/utility.manifest.toml) | Utility discovery |
 | A | [applications/utilities/setManufacturedLeadFields/Make/files](../applications/utilities/setManufacturedLeadFields/Make/files) | Build registration |
 | A | [applications/utilities/setManufacturedLeadFields/Make/options](../applications/utilities/setManufacturedLeadFields/Make/options) | Build registration |
 | A | [applications/utilities/setManufacturedLeadFields/README.md](../applications/utilities/setManufacturedLeadFields/README.md) | Documentation |
@@ -28,6 +36,7 @@ includes the homogeneous-template eikonal extension.
 | A | [applications/utilities/setManufacturedLeadFields/utility.manifest.toml](../applications/utilities/setManufacturedLeadFields/utility.manifest.toml) | Utility discovery |
 | A | [docs/DUAL_ECG_VERIFICATION.md](DUAL_ECG_VERIFICATION.md) | Documentation |
 | A | [docs/EIKONAL_LEAD_FIELD_ECG.md](EIKONAL_LEAD_FIELD_ECG.md) | Documentation |
+| A | [docs/IDEALIZED_HEART_ECG_VERIFICATION.md](IDEALIZED_HEART_ECG_VERIFICATION.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_FILES.md](LEAD_FIELD_ECG_FILES.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_IMPLEMENTATION.md](LEAD_FIELD_ECG_IMPLEMENTATION.md) | Documentation |
 | A | [docs/LEAD_FIELD_ECG_NEXT_STEPS.md](LEAD_FIELD_ECG_NEXT_STEPS.md) | Documentation |
@@ -113,6 +122,45 @@ includes the homogeneous-template eikonal extension.
 | A | [tutorials/configurationChecks/variants/monodomainLeadFieldECGLegacy/0/conductivityIntracellular](../tutorials/configurationChecks/variants/monodomainLeadFieldECGLegacy/0/conductivityIntracellular) | Configuration variant input |
 | A | [tutorials/configurationChecks/variants/monodomainLeadFieldECGLegacy/constant/electroProperties](../tutorials/configurationChecks/variants/monodomainLeadFieldECGLegacy/constant/electroProperties) | Configuration variant input |
 | A | [tutorials/configurationChecks/variants/monodomainLeadFieldECGLegacy/constant/leadFieldProperties](../tutorials/configurationChecks/variants/monodomainLeadFieldECGLegacy/constant/leadFieldProperties) | Configuration variant input |
+| M | [tutorials/idealizedHeart/README.md](../tutorials/idealizedHeart/README.md) | Documentation |
+| A | [tutorials/idealizedHeart/electroHeartECG/Allclean](../tutorials/idealizedHeart/electroHeartECG/Allclean) | Maintained case runner/cleanup |
+| A | [tutorials/idealizedHeart/electroHeartECG/Allrun](../tutorials/idealizedHeart/electroHeartECG/Allrun) | Maintained case runner/cleanup |
+| A | [tutorials/idealizedHeart/electroHeartECG/README.md](../tutorials/idealizedHeart/electroHeartECG/README.md) | Documentation |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/ecgObservers](../tutorials/idealizedHeart/electroHeartECG/constant/ecgObservers) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/electroProperties.bidomain](../tutorials/idealizedHeart/electroHeartECG/constant/electroProperties.bidomain) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/electroProperties.monodomain](../tutorials/idealizedHeart/electroHeartECG/constant/electroProperties.monodomain) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/electrodes](../tutorials/idealizedHeart/electroHeartECG/constant/electrodes) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/leadFieldProperties](../tutorials/idealizedHeart/electroHeartECG/constant/leadFieldProperties) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/passiveECGProperties](../tutorials/idealizedHeart/electroHeartECG/constant/passiveECGProperties) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/physicsProperties](../tutorials/idealizedHeart/electroHeartECG/constant/physicsProperties) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/prePacingProperties](../tutorials/idealizedHeart/electroHeartECG/constant/prePacingProperties) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/constant/torsoConductor](../tutorials/idealizedHeart/electroHeartECG/constant/torsoConductor) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/regression/regressionTest.sh](../tutorials/idealizedHeart/electroHeartECG/regression/regressionTest.sh) | Maintained execution-contract regression |
+| A | [tutorials/idealizedHeart/electroHeartECG/setup/checkMatchedECG.py](../tutorials/idealizedHeart/electroHeartECG/setup/checkMatchedECG.py) | Independent source/Wilson/recording assessment |
+| A | [tutorials/idealizedHeart/electroHeartECG/system/controlDict](../tutorials/idealizedHeart/electroHeartECG/system/controlDict) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/system/decomposeParDict](../tutorials/idealizedHeart/electroHeartECG/system/decomposeParDict) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/system/fvSchemes](../tutorials/idealizedHeart/electroHeartECG/system/fvSchemes) | Case input/check registration |
+| A | [tutorials/idealizedHeart/electroHeartECG/system/fvSolution](../tutorials/idealizedHeart/electroHeartECG/system/fvSolution) | Case input/check registration |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/Conductivity](../tutorials/idealizedHeart/mesh/heartTorso/0/Conductivity) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/ConductivityExtracellular](../tutorials/idealizedHeart/mesh/heartTorso/0/ConductivityExtracellular) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/ConductivityIntracellular](../tutorials/idealizedHeart/mesh/heartTorso/0/ConductivityIntracellular) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/apicobasal](../tutorials/idealizedHeart/mesh/heartTorso/0/apicobasal) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/bodyAndOrgansConductivity](../tutorials/idealizedHeart/mesh/heartTorso/0/bodyAndOrgansConductivity) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/fiber](../tutorials/idealizedHeart/mesh/heartTorso/0/fiber) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/sheet](../tutorials/idealizedHeart/mesh/heartTorso/0/sheet) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/sheetNormal](../tutorials/idealizedHeart/mesh/heartTorso/0/sheetNormal) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/t](../tutorials/idealizedHeart/mesh/heartTorso/0/t) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/tm](../tutorials/idealizedHeart/mesh/heartTorso/0/tm) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/0/tv](../tutorials/idealizedHeart/mesh/heartTorso/0/tv) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/boundary](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/boundary) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/cellZones](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/cellZones) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/faceZones](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/faceZones) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/faces](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/faces) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/neighbour](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/neighbour) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/owner](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/owner) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/pointZones](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/pointZones) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/points](../tutorials/idealizedHeart/mesh/heartTorso/constant/polyMesh/points) | Shared canonical conductor/physical input (Git-LFS) |
+| A | [tutorials/idealizedHeart/mesh/heartTorso/constant/torsoGeometry](../tutorials/idealizedHeart/mesh/heartTorso/constant/torsoGeometry) | Shared canonical conductor/physical input (Git-LFS) |
 | M | [tutorials/manufacturedSolutions/README.md](../tutorials/manufacturedSolutions/README.md) | Documentation |
 | A | [tutorials/manufacturedSolutions/bidomainLeadFieldECG/Allclean](../tutorials/manufacturedSolutions/bidomainLeadFieldECG/Allclean) | Maintained case runner/cleanup |
 | A | [tutorials/manufacturedSolutions/bidomainLeadFieldECG/Allrun](../tutorials/manufacturedSolutions/bidomainLeadFieldECG/Allrun) | Maintained case runner/cleanup |
@@ -129,14 +177,14 @@ includes the homogeneous-template eikonal extension.
 | A | [tutorials/manufacturedSolutions/bidomainLeadFieldECG/system/decomposeParDict](../tutorials/manufacturedSolutions/bidomainLeadFieldECG/system/decomposeParDict) | Case input/check registration |
 | A | [tutorials/manufacturedSolutions/bidomainLeadFieldECG/system/fvSchemes](../tutorials/manufacturedSolutions/bidomainLeadFieldECG/system/fvSchemes) | Case input/check registration |
 | A | [tutorials/manufacturedSolutions/bidomainLeadFieldECG/system/fvSolution](../tutorials/manufacturedSolutions/bidomainLeadFieldECG/system/fvSolution) | Case input/check registration |
-| M | [tutorials/manufacturedSolutions/eikonalECG/Allclean](../tutorials/manufacturedSolutions/eikonalECG/Allclean) | Maintained tutorial runner |
-| M | [tutorials/manufacturedSolutions/eikonalECG/Allrun](../tutorials/manufacturedSolutions/eikonalECG/Allrun) | Maintained tutorial runner |
+| M | [tutorials/manufacturedSolutions/eikonalECG/Allclean](../tutorials/manufacturedSolutions/eikonalECG/Allclean) | Maintained case runner/cleanup |
+| M | [tutorials/manufacturedSolutions/eikonalECG/Allrun](../tutorials/manufacturedSolutions/eikonalECG/Allrun) | Maintained case runner/cleanup |
 | M | [tutorials/manufacturedSolutions/eikonalECG/README.md](../tutorials/manufacturedSolutions/eikonalECG/README.md) | Documentation |
 | M | [tutorials/manufacturedSolutions/eikonalECG/constant/electroProperties](../tutorials/manufacturedSolutions/eikonalECG/constant/electroProperties) | Tutorial inputs and verification controls |
 | A | [tutorials/manufacturedSolutions/eikonalECG/constant/leadFieldProperties](../tutorials/manufacturedSolutions/eikonalECG/constant/leadFieldProperties) | Tutorial inputs and verification controls |
 | A | [tutorials/manufacturedSolutions/eikonalECG/setup/leadFieldObserver](../tutorials/manufacturedSolutions/eikonalECG/setup/leadFieldObserver) | Tutorial inputs and verification controls |
-| A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allclean](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allclean) | Maintained tutorial runner |
-| A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allrun](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allrun) | Maintained tutorial runner |
+| A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allclean](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allclean) | Maintained case runner/cleanup |
+| A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allrun](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/Allrun) | Maintained case runner/cleanup |
 | A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/README.md](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/README.md) | Documentation |
 | A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/regression/leadFieldECG.reference](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/regression/leadFieldECG.reference) | Numerical regression bounds |
 | A | [tutorials/manufacturedSolutions/eikonalLeadFieldECG/regression/regressionTest.sh](../tutorials/manufacturedSolutions/eikonalLeadFieldECG/regression/regressionTest.sh) | Tutorial inputs and verification controls |

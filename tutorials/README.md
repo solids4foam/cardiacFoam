@@ -128,3 +128,11 @@ One case does not meet the time bound: `idealizedHeart/electroMechHeart`.
 Its ionic model is integrated over the 123k-cell heart and its solid solved
 every step, and its stimulus starts at 2 ms, so even the 10 ms the regression
 runs (the tutorial runs 20 ms) take 9 to 15 minutes on a 14-core workstation.
+
+### Idealized heart/torso ECG application control
+
+[idealizedHeart/electroHeartECG](idealizedHeart/electroHeartECG/README.md)
+reuses the supplied heart–lung–torso geometry for monodomain/bidomain source
+runs, Wilson lead fields and frozen-source forward recording. Run it explicitly;
+it is outside the default lightweight regression sweep. Its contract checker
+retains the measured difference between the two recording discretisations.

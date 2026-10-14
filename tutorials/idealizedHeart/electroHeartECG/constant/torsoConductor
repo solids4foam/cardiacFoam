@@ -1,0 +1,7 @@
+bathCellZones (blood lungs chestWall torso);
+bathConductivityField bodyAndOrgansConductivity;
+interfaceConductivityInterpolation distanceWeightedHarmonic;
+phiERefPoint (0.0174906176 0.174255908 0.197011104);
+phiEReferenceValue 0;
+groundPatches {}
+surfaceCurrentPatches {}

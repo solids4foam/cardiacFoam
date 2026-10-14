@@ -1,6 +1,6 @@
 # Lead-field ECG status and follow-ups
 
-Status on 2026-10-13. Numerical implementation and maintained local controls
+Status on 2026-10-14. Numerical implementation and maintained local controls
 are complete for monodomain, bidomain and spatially uniform-template eikonal
 recording. The [validation report](LEAD_FIELD_ECG_PR_VALIDATION.md) identifies
 the tested numerical source and platforms; the
@@ -42,15 +42,22 @@ are preserved; they are not bundled in this code PR.
 These extend the verified scope; they are not prerequisites for the current
 implementation PR.
 
-- **Matched heart/torso recording:** extend the existing bath/idealized-heart
-  workflow with the same source, physical conductor and electrode reference.
-  Compare reciprocal recording with actual torso potential sampling through
-  a full time series. Current torso recovery is a static scalar column control.
-- **Torso Wilson leads:** preserve the six existing case positions and add
-  explicitly declared torso equivalents for absent arm/leg sites. A proposal
-  for the existing idealized case is documented in
-  [the matched-torso guide](MATCHED_HEART_TORSO_ECG.md). Its frame differs from
-  the Niederer patient meshes; patient-specific registration remains separate.
+- **Matched heart/torso recording:** the new opt-in example now exercises
+  a fresh 40-ms monodomain source, a short fresh heart-only bidomain source,
+  and replay of an older coupled source. It records both online ECG models
+  and independently recovers passive torso potentials on the same saved Vm.
+  The measured monodomain forward/reciprocal cohort difference is 8.686%;
+  selected tighter recovery controls do not explain it. Review the corrected
+  operator/source-gradient relation and mesh sensitivity next; do not label
+  the workflow's execution-contract pass an accuracy or equivalence result.
+  A fresh full-window bidomain source run is still open. See the
+  [application report](IDEALIZED_HEART_ECG_VERIFICATION.md).
+- **Torso Wilson leads:** the six existing chest sites and declared torso
+  equivalents for absent RA/LA/LL limbs now ship in the example. Native
+  ownership, balanced referencing and independent Wilson reconstruction are
+  exercised. The [matched-torso guide](MATCHED_HEART_TORSO_ECG.md) gives their
+  coordinates. Its frame differs from the Niederer meshes; patient-specific
+  registration and clinical lead validation remain separate.
 - **Refinement for convergence-order claims:** monodomain/bidomain reciprocal
   evidence currently includes a 20³/40³ pair with observed order about 2.13.
   This is a supporting pair, not a settled asymptotic range. New eikonal
@@ -62,10 +69,14 @@ implementation PR.
   source, sensitivity and sampling definitions fixed and recording field,
   gradient and functional errors separately. The 20³ eikonal constant-sensitivity
   integral is under-resolved and should not define an asymptotic slope.
-- **Conductor reconstruction:** a rotated-anisotropic/nonorthogonal conductor
-  case would extend the scalar orthogonal recovery evidence. Existing
-  source/gradient shell controls do not automatically verify that conductor
-  construction or the whole recording operator.
+- **Conductor reconstruction:** the idealized example now exposes the
+  finite-mesh discrepancy on an anisotropic, nonorthogonal conductor with
+  conductivity jumps. Its optional myocardial point fallback restores affine
+  rank/exactness in 122 deficient face stencils; serial/six-rank checks pass.
+  This does not establish general conductor accuracy or whole-operator
+  equivalence. Existing source/gradient shell controls do not supersede that
+  question. The original bath case's conormal interface model remains a
+  separate control from the matched example's distance-weighted harmonic model.
 - **Temporal evidence:** selected half-step controls already exist for the
   voltage-based observations. A formal temporal-order claim would need its own
   controlled study. Eikonal ECG sampling refinement concerns sampling/template

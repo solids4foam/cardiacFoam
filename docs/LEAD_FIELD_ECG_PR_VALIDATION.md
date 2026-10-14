@@ -132,8 +132,8 @@ Local evidence has source, binary and data hashes; immutable publication
 release remains open. See [eikonal details](EIKONAL_LEAD_FIELD_ECG.md).
 
 The [matched torso guide](MATCHED_HEART_TORSO_ECG.md) documents existing chest
-sites and proposed torso equivalents for absent limbs. VTK inclusion checks
-are geometry evidence only, not production ownership or ECG equivalence tests.
+sites and the declared torso equivalents for absent limbs. The subsequent
+idealized application controls below exercise native ownership and recording.
 
 ## N=80 extension
 
@@ -158,3 +158,41 @@ the earlier run; the mesh parameter is the intended change. No tighter outer-
 criterion repeat bounds N=80 iterative error. The local hashed N80 supplement
 preserves the original three-level archive; manuscripts/raw data remain outside
 this code PR. No production source was changed for this extension.
+
+## Idealized heart/torso application extension
+
+Shared LFS inputs from `feat/bath-transmission-mms` at `f5d8011e` supply the
+299482-cell heart/blood/lungs/chest-wall/torso mesh. No bath solver changes
+are merged. The opt-in `electroHeartECG` tutorial adds source variants and
+simultaneous lead-field/pseudo recording. `replayLeadFieldECG` holds each
+stored Vm fixed and invokes production passive recovery/torso sampling with
+the same physical inputs and Wilson definitions.
+
+The supplied heart has 122 rank-deficient myocardial face stencils. The
+builder's explicit `pointFallback` option extends only those stencils with
+point-connected myocardial neighbours. Its default remains unchanged and
+the required-rank guard remains active. Serial and six-rank actual-mesh
+affine controls both have maximum error 2.88e-11. Both utilities compile on
+native v2412 and Linux ARM64 v2312; application execution is native v2412.
+Four existing serial/MPI configuration/recovery controls pass with zero skips.
+The opt-in tutorial's output/log/source/Wilson contracts pass for both fresh
+source variants (two grouped checks each). Final-wrapper positive replay and
+deliberate mismatched-body rejection also pass.
+
+Fresh monodomain: eight samples at 5–40 ms, six-lead relative RMS
+forward/reciprocal difference 8.686%. Fresh heart-only bidomain: two samples
+at 0.1/0.2 ms, difference 7.874%; this is a software-path check only. A separate
+older coupled source, with byte-identical mesh but uncertified producer
+revision, supplies eight 5–40 ms replay samples, difference 7.741%.
+The fresh full-window bidomain attempt was intentionally interrupted before
+its first snapshot and is not a completed result.
+
+Online/replay reciprocal recordings agree to output rounding. Independent
+checks form Wilson leads from raw torso samples and verify source preservation.
+Tightening recovery's absolute/relative fixed-point criteria changes the
+monodomain forward trace by at most 3.63e-13 V; it does not explain the 8.686%
+difference. This measured finite-mesh discrepancy remains open, without an
+invented accuracy bound or an equivalence claim. Review corrected-operator
+and gradient consistency and mesh sensitivity before a stronger claim.
+See the [application report](IDEALIZED_HEART_ECG_VERIFICATION.md) for scope,
+archived-source qualifications and evidence provenance.

@@ -62,6 +62,9 @@ flowchart TB
 | sweep a cell model's currents | `sweepCurrents` | [README](sweepCurrents/README.md) |
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |
+| build static reciprocal ECG sensitivities | `buildLeadFields` | [README](buildLeadFields/README.md) |
+| compare reciprocal and passive torso recording on saved Vm | `replayLeadFieldECG` | [README](replayLeadFieldECG/README.md) |
+| prescribe sensitivities for manufactured ECG controls | `setManufacturedLeadFields` | [README](setManufacturedLeadFields/README.md) |
 | measure bath–bidomain interface fluxes | `bathBidomainInterfaceMetrics` | [README](bathBidomainInterfaceMetrics/README.md) |
 | test the sealed-wall cell gradient on a shell mesh | `wallGradientProbe` | [README](wallGradientProbe/README.md) |
 | write the conductivity fields a manufactured solution prescribes | `setManufacturedFields` | [README](setManufacturedFields/README.md) |
@@ -90,4 +93,5 @@ for the field-dimension catalogue, and
 When you add or rename a utility, update its `Make/files`, the table on this page, its README, and any command examples that name it.
 
 - [buildLeadFields](buildLeadFields/README.md): static reciprocal ECG sensitivity construction.
+- [replayLeadFieldECG](replayLeadFieldECG/README.md): frozen-voltage forward/reciprocal ECG comparison.
 - [setManufacturedLeadFields](setManufacturedLeadFields/README.md): independent manufactured projection fixtures.

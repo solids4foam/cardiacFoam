@@ -2,6 +2,12 @@
 
 ## Purpose
 
+The protocol below is implemented in the opt-in
+[`electroHeartECG` tutorial](../tutorials/idealizedHeart/electroHeartECG/README.md),
+using the shared heart/torso inputs from `feat/bath-transmission-mms` at
+`f5d8011e`. The [application report](IDEALIZED_HEART_ECG_VERIFICATION.md)
+records executed controls and the remaining forward/reciprocal discrepancy.
+
 Hold one heart/torso geometry, physical Gi/Ge and exterior conductivity,
 electrode definitions, boundary/interface conditions and myocardial voltage
 source fixed. Compare two ways of observing that source:
@@ -59,7 +65,7 @@ that subtraction.
 ## Torso equivalents for absent limbs
 
 The owner accepts assumed arm/leg references because the model contains only
-a torso. The proposal uses upper-right/upper-left anterior torso sites for
+a torso. The implemented case uses upper-right/upper-left anterior torso sites for
 RA/LA and a lower-left anterior site for LL. Each is 20 mm away from the
 cranial/caudal and lateral truncation edges and 1 mm beneath the anterior
 surface, permitting unambiguous interior point ownership.
@@ -71,17 +77,35 @@ surface, permitting unambiguous interior point ownership.
 | LL | 0.183442648 | 0.017795990 | 0.028425169 |
 
 These are declared modified torso placements, not certified full-limb
-clinical electrode coordinates. VTK cell-location checks place all three
-inside the existing 175,865-tetrahedron torso mesh. This verifies geometry;
-production OpenFOAM/MPI point ownership and matched recordings remain to be
-exercised when the tutorial variant is assembled.
+clinical electrode coordinates. Earlier VTK inspection placed all three
+inside the torso. Production OpenFOAM sampling on the complete 299482-cell
+heart/torso mesh now exercises these references and the retained chest sites.
+E2/E5 use bounded nearest-cell ownership at 2.33/3.37 mm from their supplied
+skin points; other sites use interior ownership. The case declares a 15 mm
+maximum distance, and both recording paths use the same electrode cells.
 
 The inspection, front/oblique renders, coordinate record and a balanced
 `electrodePositions`/`leads`/`leadFields` fragment are retained locally under
 `/tmp/cardiacFoam-lead-field-current-numerics/torso-placement`.
-The fragment aliases the retained V1–V6 sites as E1–E6, producing output
-channels V1–V6 with Wilson weights. It must be combined with the appropriate
-physical conductor inputs; it does not define or run that conductor itself.
+The original fragment aliases the retained V1–V6 sites as E1–E6, producing
+output channels V1–V6 with Wilson weights. Those definitions and the physical
+conductor inputs now ship together in the maintained tutorial.
+
+## Executed matched recordings
+
+Fresh monodomain sources supply eight saved samples from 5 to 40 ms, with
+both online observers. A fresh heart-only bidomain software-path check supplies
+two samples at 0.1/0.2 ms; an earlier stored coupled bath-bidomain source supplies
+another eight-sample 5–40 ms recording control. Its producer revision is not
+certified here. These are three distinct datasets, not a propagation comparison.
+
+Independent checks reconstruct Wilson references from raw torso samples and
+compare online/replayed reciprocal projection. The six-lead relative RMS
+forward/reciprocal differences are respectively 8.686%, 7.874% and 7.741%.
+Tighter recovery fixed-point controls barely change the forward traces and
+do not explain these differences. The complete workflow executes, but a review
+of the corrected conductor/source-gradient assemblies and mesh sensitivity
+remains necessary before claiming stronger recording agreement.
 
 ## Relation to the Niederer dataset
 

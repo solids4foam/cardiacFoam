@@ -85,3 +85,23 @@ The format-2 metadata includes full-support topology and myocardial connectivity
 in addition to geometry. Output filenames must be distinct and may not use
 reserved source, conductivity, metadata or helper names. Validate names before
 reading or solving so malformed mappings cannot overwrite those inputs.
+
+## Sparse myocardial boundary stencils
+
+The default `myocardialGradientStencil faceNeighbours` retains the existing
+face-neighbour construction and required-rank guard. An embedded tetrahedral
+heart can contain boundary cells with too few myocardial face-neighbours for
+a full 3-D gradient. Explicit `myocardialGradientStencil pointFallback`
+reconstructs only those deficient cells from point-connected myocardial
+neighbours using OpenFOAM's distributed stencil. Bath samples are excluded;
+full-rank face stencils are unchanged. The final SVD guard still rejects an
+unresolved gradient. Native extended stencils reject transformed coupled
+patches when the fallback is needed. The construction choice is retained in
+format-2 provenance and receives a distinct reconstruction label.
+
+`buildLeadFields -checkMyocardialGradient` checks an affine scalar field on
+the configured myocardial geometry with the selected stencil. It neither
+solves the reciprocal PDE nor writes sensitivities. This complements the
+small algebra controls; affine exactness is not a nonlinear-gradient order
+or conductor-accuracy claim. The idealized-heart ECG tutorial exercises
+this option on its supplied tetrahedra.

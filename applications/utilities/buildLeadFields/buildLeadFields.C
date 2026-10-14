@@ -23,6 +23,8 @@ License
 #include "PstreamReduceOps.H"
 #include "sealedWallPolicy.H"
 #include "SVD.H"
+#include "CPCCellToCellStencil.H"
+#include "extendedCentredCellToCellStencil.H"
 
 #include <cmath>
 using namespace Foam;
@@ -113,8 +115,22 @@ void checkReconstruction()
 // Reconstruct the myocardial side of z using only myocardial cell neighbours.
 // Do not differentiate through a conductivity jump, or impose insulation on
 // the artificial restriction boundary: reciprocal current crosses it.
+label stencilRank(const symmTensor& normal)
+{
+    if (tr(normal)<=VSMALL) return 0;
+    scalarRectangularMatrix matrix(3,3);
+    matrix(0,0)=normal.xx(); matrix(0,1)=normal.xy(); matrix(0,2)=normal.xz();
+    matrix(1,0)=normal.xy(); matrix(1,1)=normal.yy(); matrix(1,2)=normal.yz();
+    matrix(2,0)=normal.xz(); matrix(2,1)=normal.yz(); matrix(2,2)=normal.zz();
+    const SVD decomposition(matrix,1e-12);
+    if (!decomposition.converged())
+        FatalErrorInFunction << "Myocardial stencil rank SVD did not converge."
+            << exit(FatalError);
+    return 3-decomposition.nZeros();
+}
+
 vectorField myocardialGradient(const fvMesh& mesh, const volScalarField& z,
-    const volScalarField& mask)
+    const volScalarField& mask, const bool pointFallback)
 {
     labelList active(mesh.nCells(),-1);
     label count=0;
@@ -147,6 +163,39 @@ vectorField myocardialGradient(const fvMesh& mesh, const volScalarField& z,
         forAll(faceCells,f) if (active[faceCells[f]]>=0 && neighborMask[f]>0.5)
             add(faceCells[f],delta[f],neighborZ[f]-z[faceCells[f]]);
     }
+    if (pointFallback)
+    {
+        boolList deficient(mesh.nCells(),false);
+        label deficientCount=0;
+        forAll(active,c) if (active[c]>=0)
+        {
+            deficient[c]=stencilRank(normal[active[c]])<mesh.nGeometricD();
+            if (deficient[c]) ++deficientCount;
+        }
+        reduce(deficientCount,sumOp<label>());
+        if (deficientCount)
+        {
+            // Native distributed point stencils exchange processor-neighbour
+            // data. Filter before reconstruction: bath cells must not supply
+            // the missing myocardial slope across a conductivity jump.
+            const CPCCellToCellStencil pointStencil(mesh);
+            const extendedCentredCellToCellStencil stencil(pointStencil);
+            List<List<vector>> centres;
+            List<List<scalar>> values,regions;
+            stencil.collectData(mesh.C(),centres);
+            stencil.collectData(z,values);
+            stencil.collectData(mask,regions);
+            forAll(active,c) if (deficient[c])
+            {
+                normal[active[c]]=symmTensor::zero;
+                rhs[active[c]]=vector::zero;
+                forAll(values[c],i) if (regions[c][i]>0.5)
+                    add(c,centres[c][i]-mesh.C()[c],values[c][i]-z[c]);
+            }
+            Info<< "Myocardial point fallback used in " << deficientCount
+                << " rank-deficient face-neighbour stencils." << nl;
+        }
+    }
     vectorField result(mesh.nCells(),vector::zero);
     forAll(active,c) if (active[c]>=0)
     {
@@ -159,6 +208,7 @@ vectorField myocardialGradient(const fvMesh& mesh, const volScalarField& z,
 int main(int argc, char* argv[])
 {
     argList::addBoolOption("checkReconstruction","Check repeated-eigenvalue and reduced-rank affine reconstruction algebra.");
+    argList::addBoolOption("checkMyocardialGradient","Check affine reconstruction on the configured myocardial mesh and stencil.");
     #include "setRootCase.H"
     #include "createTime.H"
     #include "createMesh.H"
@@ -171,6 +221,11 @@ int main(int argc, char* argv[])
     }
     const IOdictionary props(IOobject("leadFieldProperties",runTime.constant(),mesh,
         IOobject::MUST_READ,IOobject::NO_WRITE));
+    const word stencil(props.getOrDefault<word>("myocardialGradientStencil","faceNeighbours"));
+    if (stencil!="faceNeighbours" && stencil!="pointFallback")
+        FatalIOErrorInFunction(props) << "myocardialGradientStencil must be "
+            << "faceNeighbours or pointFallback." << exit(FatalIOError);
+    const bool pointFallback=stencil=="pointFallback";
     leadFieldData::validateFieldNames(props);
     const word instance(props.lookupOrDefault<word>("fieldInstance","0"));
     tmp<volTensorField> Gi=leadFieldData::readPhysical(mesh,props,true);
@@ -200,6 +255,27 @@ int main(int argc, char* argv[])
             for (label c:mesh.boundary()[p].faceCells()) if (mask[c]>0.5)
                 FatalErrorInFunction << "Myocardium touches physical exterior patch "
                     << mesh.boundary()[p].name() << ". Add a surrounding conductor." << exit(FatalError);
+    }
+    if (args.found("checkMyocardialGradient"))
+    {
+        mask.correctBoundaryConditions();
+        volScalarField affine(IOobject("leadFieldAffineCheck",instance,mesh,
+            IOobject::NO_READ,IOobject::NO_WRITE),mesh,
+            dimensionedScalar("zero",dimless,0),"zeroGradient");
+        vector truth(3,-1,2);
+        for(direction d=0;d<3;++d) if(mesh.geometricD()[d]<0) truth[d]=0;
+        forAll(affine,c) affine[c]=0.7+(truth&mesh.C()[c]);
+        affine.correctBoundaryConditions();
+        const vectorField gradient=myocardialGradient(mesh,affine,mask,pointFallback);
+        scalar error=0;
+        forAll(gradient,c) if(mask[c]>0.5) error=max(error,mag(gradient[c]-truth));
+        reduce(error,maxOp<scalar>());
+        if(error>1e-8)
+            FatalErrorInFunction << "Affine myocardial gradient error " << error
+                << exit(FatalError);
+        Info<< "PASS: configured-mesh affine myocardial gradient, max error "
+            << error << nl << "End" << nl;
+        return 0;
     }
     volTensorField giGlobal(IOobject("leadFieldGiGlobal",instance,mesh,IOobject::NO_READ,
         IOobject::NO_WRITE),mesh,dimensionedTensor("zero",sigmaDims,Zero));
@@ -314,7 +390,7 @@ int main(int argc, char* argv[])
         }
         if (!converged) FatalErrorInFunction << "Lead " << name
             << " did not converge corrected assemblies; relative update " << previous << exit(FatalError);
-        const vectorField grad=myocardialGradient(mesh,z,mask);
+        const vectorField grad=myocardialGradient(mesh,z,mask,pointFallback);
         volVectorField L(IOobject(fields.get<word>(name),instance,mesh,IOobject::NO_READ,
             IOobject::NO_WRITE),mesh,dimensionedVector("zero",dimensionSet(0,-2,0,0,0,0,0),Zero));
         forAll(L,c) L[c]=-(giGlobal[c].T() & grad[c]);
@@ -325,7 +401,8 @@ int main(int argc, char* argv[])
         }
         Info<< "Built lead " << name << " (positive potential minus weighted reference)." << nl;
     }
-    leadFieldData::writeProvenance(mesh,Gi(),Ge(),props,"myocardialNeighbourLeastSquaresSVD");
+    leadFieldData::writeProvenance(mesh,Gi(),Ge(),props,pointFallback
+        ? "myocardialPointFallbackLeastSquaresSVD" : "myocardialNeighbourLeastSquaresSVD");
     Info<< "End" << nl;
     return 0;
 }
