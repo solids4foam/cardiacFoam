@@ -168,7 +168,7 @@ snapshots are retained outside the repository under
 
 ## Coarse-resolution addition
 
-Additional serial runs at N=10 and N=20 use the same template, source,
+Additional serial runs at N=10, N=20 and N=80 use the same template, source,
 sensitivities and 201 sample times as the recorded N=40 serial case. The
 coarse recording errors are retained as diagnostic results; the N=40
 regression thresholds are unchanged.
@@ -178,17 +178,32 @@ regression thresholds are unchanged.
 | 10 | 0.00394392 | 20849.451% | 29178.249% | 20.4783604 |
 | 20 | 0.0007325 | 254.243% | 253.169% | 0.250080444 |
 | 40 | 0.000159934 | 1.679% | 2.498% | 0.00164665117 |
+| 80 | 0.0000390149 | 0.394% | 0.568% | 0.000387544686 |
 
 The independent midpoint calculation samples the exact continuum activation
 and voltage gradient. Its large coarse error does not require PDE or gradient-
 reconstruction error. This isolates under-resolution of the oscillatory
 recording integrand as a real contributor; similar RMS values are not an
 additive error budget or complete causal attribution. No asymptotic rate is
-fitted to these coarse decreases. N=80 was not executed.
+fitted to these coarse decreases. N=80 completes with the same 1e-8 outer
+criterion in 1128 iterations. Relative to N=40, reciprocal and raw pseudo
+errors decrease by factors 4.26 and 4.40. This selected fine-pair reduction
+does not establish a settled asymptotic range; no tighter-criterion repeat
+bounds the N=80 iterative error.
+
+The independent N=80 dual check passes without changing any regression bound.
+Its reciprocal RMS error is 0.000386975146 V and maximum error is
+0.000546262733 V. The activation-gradient L2 error is 0.00203656 s/m; the
+exact-field reconstructed-gradient L2 error is 0.000254367 s/m. Effective
+source/sampling/observer/scheme inputs match N=40 byte-for-byte, with only the
+mesh parameter changed. The deployed binary/library hashes match the prior
+study.
 
 Paper 1 now contains the uniform-template model, implementation, resolution
 controls, independent surface/midpoint references and source/binary evidence.
 Its untracked local archive is
 `data/paperI/solver/eikonal_lead_field/2026-10-13-pr61` in the manuscript
-repository, checked by `validate_eikonal_lead_field_evidence.py`. Publication
+repository, with a separate `2026-10-14-pr61-N80` supplement preserving the
+original archive. Both are checked by
+`validate_eikonal_lead_field_evidence.py`. Publication
 release and the matched torso experiment remain separate.

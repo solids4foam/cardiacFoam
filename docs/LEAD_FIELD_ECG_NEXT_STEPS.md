@@ -24,11 +24,11 @@ the tested numerical source and platforms; the
 
 1. Review the stacked PR against `feat/mono-bi-eikonal-verification` (PR #59),
    inspect repository CI, and resolve applicable failures before merge.
-2. Paper 1 now includes the uniform-template eikonal observer, N=10/20/40
+2. Paper 1 now includes the uniform-template eikonal observer, N=10/20/40/80
    resolution controls and independent exact-source quadrature. Earlier
    monodomain/bidomain lead-field and dual-pseudo content is integrated into
-   Papers 1/2. Paper 2 retains its bidomain/bath scope; N=80 is left for the
-   owner's later study.
+   Papers 1/2. Paper 2 retains its bidomain/bath scope. The owner-requested
+   serial N=80 extension is complete and independently checked.
 3. Refresh manuscript source/build provenance to the committed feature,
    archive the new raw traces/diagnostics immutably, and freeze the publication
    source and evidence release. Existing paper notes still include older
@@ -54,8 +54,10 @@ implementation PR.
 - **Refinement for convergence-order claims:** monodomain/bidomain reciprocal
   evidence currently includes a 20³/40³ pair with observed order about 2.13.
   This is a supporting pair, not a settled asymptotic range. New eikonal
-  reciprocal evidence includes N=10/20/40 resolution controls; N=10/20 are
-  under-resolved, while N=40 has 1.68% normalized RMS error.
+  reciprocal evidence includes N=10/20/40/80 resolution controls; N=10/20 are
+  under-resolved, while N=40/80 have 1.679%/0.394% normalized RMS errors.
+  The fine-pair reduction is 4.26; its iterative error has no tighter-criterion
+  bound and a settled asymptotic range is not established.
   Add finer levels only when needed to support stronger paper claims, keeping
   source, sensitivity and sampling definitions fixed and recording field,
   gradient and functional errors separately. The 20³ eikonal constant-sensitivity

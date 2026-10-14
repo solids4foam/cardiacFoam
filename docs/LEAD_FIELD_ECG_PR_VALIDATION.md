@@ -122,7 +122,8 @@ errors are 29178.249%, 253.169% and 2.498%, against its own reference.
 Independent exact-source midpoint projection has reciprocal RMS errors
 20.4783604, 0.250080444 and 0.00164665117 V. The severe coarse loss persists
 without propagation or reconstructed-gradient error. No asymptotic rate is
-fitted, N=80 is unexecuted and the N=40 regression bounds are unchanged.
+fitted and the N=40 regression bounds are unchanged. The subsequently
+requested N=80 extension is recorded below.
 
 Paper 1 source includes these controls; independent eikonal, earlier lead-field,
 dual-observer/shell, headline-results and manuscript-structure validators pass.
@@ -133,3 +134,27 @@ release remains open. See [eikonal details](EIKONAL_LEAD_FIELD_ECG.md).
 The [matched torso guide](MATCHED_HEART_TORSO_ECG.md) documents existing chest
 sites and proposed torso equivalents for absent limbs. VTK inclusion checks
 are geometry evidence only, not production ownership or ECG equivalence tests.
+
+## N=80 extension
+
+The unchanged native serial dual case completes on 512,000 cells and meets
+its 1e-8 outer criterion in 1128 iterations. The independent checker passes
+201 common samples, four template controls, output/verifier agreement,
+opposite polarity, separate cohort bounds, source/gradient bounds and surface
+reference checks without changing thresholds.
+
+| Diagnostic | N=40 | N=80 |
+|---|---|---|
+| Reciprocal relative RMS | 1.679% | 0.394% |
+| Raw pseudo E3–E5 relative RMS | 2.498% | 0.568% |
+| Activation L2 error (s) | 0.000159934 | 0.0000390149 |
+| Activation-gradient L2 error (s/m) | 0.00564762 | 0.00203656 |
+| Exact-source midpoint reciprocal RMS error (V) | 0.00164665117 | 0.000387544686 |
+
+The production reciprocal RMS error is 0.000386975146 V. Fine-pair functional
+reductions of 4.26/4.40 are measured observations, not a settled asymptotic
+claim. Effective source/sampling/scheme inputs and deployed binaries match
+the earlier run; the mesh parameter is the intended change. No tighter outer-
+criterion repeat bounds N=80 iterative error. The local hashed N80 supplement
+preserves the original three-level archive; manuscripts/raw data remain outside
+this code PR. No production source was changed for this extension.
