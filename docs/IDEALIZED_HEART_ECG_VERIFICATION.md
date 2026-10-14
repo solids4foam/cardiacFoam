@@ -30,6 +30,11 @@ owning-cell observations and balanced Wilson weights.
 
 ## Implementation additions
 
+This extension adds a utility and tutorial, with no new domain, propagation
+solver or ECG-model class. It reuses `myocardiumDomainInterface::New`,
+`electroVolumeFieldDomain`, `extracellularPotentialDomain`, `ecgDomain`,
+`torsoECG` and `leadFieldData`; their existing responsibilities remain intact.
+
 - `replayLeadFieldECG` creates an independent recovery-owned bidomain provider,
   loads stored support-mesh Vm through the production cell map, iterates the
   existing extracellular potential domain and invokes production torso sampling.
@@ -49,6 +54,58 @@ owning-cell observations and balanced Wilson weights.
   rejects an incompatible interface model, exterior forcing/patches, unmatched
   heart/body inputs, excessive linear residual, uncompleted recovery and source
   mutation. No exact discrete transpose of the corrected assembly is claimed.
+
+## Mathematical comparison
+
+For a frozen myocardial voltage, let the passive conductivity be
+`K = Gi + Ge` in the heart and the prescribed body conductivity outside it.
+The insulated passive forward problem has weak form
+
+```text
+integral_Omega grad(eta) . K grad(phi) dV
+    = -integral_heart grad(eta) . Gi grad(Vm) dV.
+```
+
+Potential/current transmission is part of that conductor problem. A reference
+fixes its additive constant. Let `D_j(phi)` denote the electrode observation
+with +1 at Ej and -1/3 at RA/LA/LL. The balanced weights make `D_j` independent
+of the potential gauge. A unit-current reciprocal solution satisfies
+
+```text
+integral_Omega grad(eta) . K grad(z_j) dV = D_j(eta).
+```
+
+For the symmetric physical tensors, reciprocity gives
+
+```text
+D_j(phi) = -integral_heart grad(z_j) . Gi grad(Vm) dV
+         = integral_heart L_j . grad(Vm) dV,
+L_j      = -transpose(Gi) grad(z_j).
+```
+
+Here `z_j` is normalized by reciprocal current. `L_j` has units m^-2,
+so cell volume times `L_j . grad(Vm)` has units volts. Native electrodes are
+owning-cell observations with matching cell current injection, rather than
+a resolved finite-area skin contact model. The builder constructs z once;
+the source run or replay only applies the volume projection thereafter.
+
+This continuum identity motivates the comparison. Exact finite-grid equality
+would additionally require reciprocal assembly/projection to be the adjoint
+of the actual forward source operator. The corrected finite-volume solve and
+myocardial cell-gradient quadrature here are independently assembled; that
+additional relationship is not established. The measured difference therefore
+needs operator/mesh investigation, rather than being attributed automatically
+to propagation, physiology or an unconverged passive solve. Pseudo-ECG uses
+its separate free-space kernel and is not a reference for this bounded problem.
+
+The bulk expression for K does not prescribe interpolation of Gi+Ge across
+the heart/torso interface. In the implemented forward solve, a global
+extracellular/body assembly is combined with the mapped, sealed intracellular
+heart assembly; its Vm source uses the corresponding heart operator. In the
+builder, internal myocardial faces carry Gi+Ge, while heart/torso faces carry
+the distance-weighted harmonic extracellular/body coefficient. The interface,
+gradient corrections and projection must therefore be included explicitly in
+the remaining discrete-operator comparison.
 
 ## Executed evidence
 
@@ -97,6 +154,16 @@ serial/MPI lead-field configuration/recovery controls pass with zero skips.
 The final matched-input-name guard is compiled on both platforms and checked
 with a fresh positive replay and deliberate mismatched-body rejection. Full
 PR CI, review and publication archive/tag release remain separate.
+
+After the native application records, PR #59's `04e6bd84` compatibility update
+was merged. It explicitly reads sub-mesh fvSchemes/fvSolution on versions
+before 2406. The affected Linux v2312 library rebuild and independent
+two-snapshot frozen-source replay pass, including the source/Wilson/online
+checks. Maximum forward difference from the native two-snapshot replay is
+1.62e-14 V. This is a separate integration control, not a Linux source
+propagation study or a repeat of every earlier feature regression. An initial
+build invocation omitted the backend resolver; its environment failure is
+retained separately from the successful rebuild.
 
 The local runtime evidence is retained under
 `/tmp/cardiacFoam-lead-field-current-numerics/idealized-torso`. A separately

@@ -1,15 +1,19 @@
 # Lead-field ECG PR validation
 
-Tested numerical source: `0c1fe468fd14c478ef776bf189877ab7f28f19b5`.
+Original feature checks below use numerical source
+`0c1fe468fd14c478ef776bf189877ab7f28f19b5`.
+The idealized application is added in `6b47fb42`; its test sequence and
+final-wrapper qualifications are recorded separately below.
 Feature branch: `codex/lead-field-ecg-integration`.
 Dependency/base: PR #59, `feat/mono-bi-eikonal-verification` at
-`fd0e548b113c991126580f4262bd4975dd3fe226`.
+`04e6bd84cf22f0e0e8510fad0d1c806c2c728d81`, merged after the native application
+records. Earlier feature checks used its predecessor `fd0e548b`.
 
 The PR adds passive monodomain/bidomain recording, uniform-template eikonal
 recording, static construction, independent verification and maintained tutorials. It targets the PR #59 branch
 so its review diff excludes the parent propagation and wall-discretization work.
 
-## Final executed checks
+## Original feature checks
 
 | Platform/control | Result |
 |---|---|
@@ -196,3 +200,11 @@ invented accuracy bound or an equivalence claim. Review corrected-operator
 and gradient consistency and mesh sensitivity before a stronger claim.
 See the [application report](IDEALIZED_HEART_ECG_VERIFICATION.md) for scope,
 archived-source qualifications and evidence provenance.
+
+After integrating parent update `04e6bd84`, the affected Linux v2312 library
+rebuild and independent two-snapshot frozen-source replay pass. Source,
+Wilson and online/replay checks pass, with maximum native/Linux forward
+difference 1.62e-14 V. This selected integration control does not repeat every
+earlier regression or certify Linux source propagation. The parent update
+reads sub-mesh dictionaries on versions before 2406; native v2412 operators
+are unchanged by that conditional fix.
