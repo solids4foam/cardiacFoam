@@ -88,11 +88,9 @@ electromechanics manufactured solution
 electromechanics case (`idealizedHeart/electroMechHeart`). In lightweight
 mode their regression scripts exit 77 and the runner reports an expected
 skip. A case that cannot run on some OpenFOAM versions lists them in
-`regression/skips-on-openfoam`; today `manufacturedSolutions/bathBidomain`
-lists `v2312`, where its `laplacian(conductivityIntracellular,Vm)` lookup
-fails, and `manufacturedSolutions/bidomain/sphericalShell` lists `v2312`,
-where its Vm and ionic-state error rows differ from the v2412 and v2512
-values. Any other exit-77 skip fails the aggregate run.
+`regression/skips-on-openfoam`; today `manufacturedSolutions/bidomain/sphericalShell`
+lists `v2312`, where its Vm and ionic-state error rows differ from the
+reference in the CI image. Any other exit-77 skip fails the aggregate run.
 
 `CARDIAC_REGRESSION_SCOPE` selects how much a case checks: `standard` (the
 default) is the suite gate, `full` widens cases that offer a larger matrix.

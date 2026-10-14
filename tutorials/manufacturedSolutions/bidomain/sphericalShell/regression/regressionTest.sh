@@ -20,10 +20,11 @@ fi
 regression_init "Bidomain sealed-shell manufactured-solution regression test" \
     regression/sphericalShell.reference "$@"
 
-# On OpenFOAM v2312 the Vm and ionic-state error rows of this case differ from
-# the v2412 and v2512 values by about 1e-4 relative, with the phiE and gradient
-# rows unchanged; the cause is not diagnosed. The regression is suppressed on
-# v2312 only (regression/skips-on-openfoam).
+# In the CI v2312 image (x86_64) the Vm and ionic-state error rows of this case
+# differ from the reference by about 1e-4 relative, with the phiE and gradient
+# rows unchanged; a native arm64 v2312 build reproduces the reference, so the
+# difference is specific to that image (issue #60). The regression is
+# suppressed on v2312 only (regression/skips-on-openfoam).
 if [[ "${WM_PROJECT_VERSION:-unknown}" == *2312* ]]; then
     echo "SKIP: bidomain sphericalShell regression is suppressed on OpenFOAM v2312 (regression/skips-on-openfoam)."
     exit "${REGRESSION_SKIP_CODE}"
