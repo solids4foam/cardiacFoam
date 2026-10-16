@@ -46,6 +46,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver specs for this study are `sweep_active.json` and `sweep_bidirectional.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`).

@@ -37,6 +37,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_tet_outer_tolerance.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`), against the matching

@@ -45,6 +45,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_tet_generic.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`): volume-weighted `Vm` L2

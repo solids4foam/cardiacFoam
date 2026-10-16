@@ -36,6 +36,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_tet_dt_half.json`.
+
 ## Measured behaviour
 
 This study has not been run (`results/` is empty).

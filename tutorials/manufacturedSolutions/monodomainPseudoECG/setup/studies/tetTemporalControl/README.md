@@ -41,6 +41,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_tet_dt_half.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`), `leastSquares`,

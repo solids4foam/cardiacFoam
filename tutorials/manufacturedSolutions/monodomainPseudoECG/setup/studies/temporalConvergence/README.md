@@ -47,6 +47,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_temporal_convergence.json`.
+
 The extended `sbdf2`/`backward` ladders add `-dt 0.00078125` and
 `-dt 0.000390625`, `-dim 1 -N 1280` and `-dim 3 -N 80` with the same command.
 

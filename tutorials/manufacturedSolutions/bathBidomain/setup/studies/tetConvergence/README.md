@@ -50,6 +50,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver specs for this study are `sweep_tet_electrodePair.json` and `sweep_tet_generic.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`), on gmsh 4.14.0 meshes

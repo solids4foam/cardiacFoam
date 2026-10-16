@@ -34,6 +34,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_hex_temporal_godunov.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`, 1D only), L2:
