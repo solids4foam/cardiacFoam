@@ -28,7 +28,6 @@ tutorials/NiedererEtAl2011verification/
 │   ├── table_summary.py
 │   └── studies/
 │       ├── cartesianConvergence/
-│       ├── obliqueWall/
 │       └── tetConvergence/
 ├── regression/
 │   ├── regressionTest.sh
@@ -97,10 +96,6 @@ grid: Δx = 0.5, 0.2, 0.1 mm (`dx`/`tetDx` 5e-4, 2e-4, 1e-4 m) × Δt = 0.05,
 0.2, 0.08 and 0.055 s for Δx 0.5, 0.2 and 0.1 mm, chosen so every probe has
 activated.
 The Δx 0.1 mm cases take hours each and are meant for an HPC run.
-
-`obliqueWall` (hex only) runs the same grid with the conductivity rotated 45°
-in the x–y plane, to test the wall treatment; see
-`setup/studies/obliqueWall/README.md`.
 
 ## Regression behavior
 
