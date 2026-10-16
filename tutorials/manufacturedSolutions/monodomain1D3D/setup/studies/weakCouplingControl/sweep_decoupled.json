@@ -7,16 +7,10 @@
   "sweep": {
     "mode": "zip",
     "independent": {
-      "graphFile": [
-        "purkinjeGraph.nodes011",
-        "purkinjeGraph.nodes021",
-        "purkinjeGraph.nodes041",
-        "purkinjeGraph.nodes081"
-      ],
+      "graphFile": ["purkinjeGraph.nodes011", "purkinjeGraph.nodes021", "purkinjeGraph.nodes041", "purkinjeGraph.nodes081"],
       "numberCells": [10, 20, 40, 80],
-      "system/controlDict:deltaT": [
-        0.008971136, 0.002242784, 0.000560696, 0.000140174
-      ]
+      "system/controlDict:deltaT": [0.008971136, 0.002242784, 0.000560696, 0.000140174],
+      "caseId": ["rPvj1e6_N10", "rPvj1e6_N20", "rPvj1e6_N40", "rPvj1e6_N80"]
     }
   }
 }

@@ -6,16 +6,11 @@
   "sweep": {
     "mode": "zip",
     "independent": {
-      "graphFile": [
-        "purkinjeGraph.nodes011",
-        "purkinjeGraph.nodes021",
-        "purkinjeGraph.nodes041",
-        "purkinjeGraph.nodes081"
-      ],
-      "numberCells": [10, 20, 40, 80],
-      "system/controlDict:deltaT": [
-        0.008971136, 0.002242784, 0.000560696, 0.000140174
-      ]
+      "graphFile": ["purkinjeGraph.nodes011", "purkinjeGraph.nodes011", "purkinjeGraph.nodes021", "purkinjeGraph.nodes021", "purkinjeGraph.nodes041", "purkinjeGraph.nodes041", "purkinjeGraph.nodes081", "purkinjeGraph.nodes081"],
+      "numberCells": [10, 10, 20, 20, 40, 40, 80, 80],
+      "system/controlDict:deltaT": [0.008971136, 0.008971136, 0.002242784, 0.002242784, 0.000560696, 0.000560696, 0.000140174, 0.000140174],
+      "constant/electroProperties:monodomainSolverCoeffs.domainCouplings.couplingA.pvjCouplingScheme": ["explicit", "implicit", "explicit", "implicit", "explicit", "implicit", "explicit", "implicit"],
+      "caseId": ["unidirectional_explicit_N10", "unidirectional_implicit_N10", "unidirectional_explicit_N20", "unidirectional_implicit_N20", "unidirectional_explicit_N40", "unidirectional_implicit_N40", "unidirectional_explicit_N80", "unidirectional_implicit_N80"]
     }
   }
 }

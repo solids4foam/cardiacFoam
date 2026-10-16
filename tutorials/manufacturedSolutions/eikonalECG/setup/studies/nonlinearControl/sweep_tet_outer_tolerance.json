@@ -2,8 +2,8 @@
   "base": {
     "entry": "manufacturedEikonalECG",
     "cases_root": "tutorials",
+    "parallel": true,
     "mesh": "tet",
-    "system/fvSchemes:gradSchemes.default": "leastSquares",
     "system/fvSolution:PIMPLE.residualControl.activationTime.tolerance": 1e-10
   },
   "sweep": {
@@ -11,276 +11,57 @@
     "independent": {
       "constant/electroProperties:eikonalSolverCoeffs.conductivity": [
         {
-          "value": [
-            0.111453302,
-            0,
-            0,
-            0.12158542,
-            0,
-            0.030396355
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.111453302, 0, 0, 0.12158542, 0, 0.030396355],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.111453302,
-            0,
-            0,
-            0.12158542,
-            0,
-            0.030396355
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.111453302,
-            0,
-            0,
-            0.12158542,
-            0,
-            0.030396355
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.111453302,
-            0,
-            0,
-            0.12158542,
-            0,
-            0.030396355
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.111453302, 0, 0, 0.12158542, 0, 0.030396355],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.111453302, 0, 0, 0.12158542, 0, 0.030396355],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.111453302, 0, 0, 0.12158542, 0, 0.030396355],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         },
         {
-          "value": [
-            0.106875,
-            -0.0084931,
-            -0.022561,
-            0.116682,
-            -0.0130256,
-            0.0398782
-          ],
-          "dimensions": [
-            -1,
-            -3,
-            3,
-            0,
-            0,
-            2,
-            0
-          ]
+          "value": [0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782],
+          "dimensions": [-1, -3, 3, 0, 0, 2, 0]
         }
       ],
-      "constant/electroProperties:eikonalSolverCoeffs.eikonalAdvectionDiffusionApproach": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true,
-        true
-      ],
-      "tetNumberCells": [
-        10,
-        20,
-        40,
-        80,
-        10,
-        20,
-        40,
-        80,
-        10,
-        20,
-        40,
-        80
-      ],
-      "output_dir_name": [
-        "leastSquares_axis_false_N10_tolerance1e-10",
-        "leastSquares_axis_false_N20_tolerance1e-10",
-        "leastSquares_axis_false_N40_tolerance1e-10",
-        "leastSquares_axis_false_N80_tolerance1e-10",
-        "leastSquares_rotated_false_N10_tolerance1e-10",
-        "leastSquares_rotated_false_N20_tolerance1e-10",
-        "leastSquares_rotated_false_N40_tolerance1e-10",
-        "leastSquares_rotated_false_N80_tolerance1e-10",
-        "leastSquares_rotated_true_N10_tolerance1e-10",
-        "leastSquares_rotated_true_N20_tolerance1e-10",
-        "leastSquares_rotated_true_N40_tolerance1e-10",
-        "leastSquares_rotated_true_N80_tolerance1e-10"
-      ]
+      "constant/electroProperties:eikonalSolverCoeffs.eikonalAdvectionDiffusionApproach": [false, false, true, false, false, true, false, false, true, false, false, true],
+      "tetNumberCells": [10, 10, 10, 20, 20, 20, 30, 30, 30, 40, 40, 40],
+      "caseId": ["axis_explicit_tolerance1e-10_N10", "rotated_explicit_tolerance1e-10_N10", "rotated_advectionDiffusion_tolerance1e-10_N10", "axis_explicit_tolerance1e-10_N20", "rotated_explicit_tolerance1e-10_N20", "rotated_advectionDiffusion_tolerance1e-10_N20", "axis_explicit_tolerance1e-10_N30", "rotated_explicit_tolerance1e-10_N30", "rotated_advectionDiffusion_tolerance1e-10_N30", "axis_explicit_tolerance1e-10_N40", "rotated_explicit_tolerance1e-10_N40", "rotated_advectionDiffusion_tolerance1e-10_N40"]
     }
   }
 }

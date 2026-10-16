@@ -2,27 +2,23 @@
   "base": {
     "entry": "manufacturedBathBidomain",
     "cases_root": "tutorials",
+    "parallel": true,
     "mesh": "tet",
-    "dimension": "3D",
-    "system/controlDict:endTime": 0.02
+    "constant/electroProperties:bidomainSolverCoeffs.verificationModel.fdaBathVariant": "electrodePair",
+    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.groundPatches": {},
+    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.surfaceCurrentPatches": {
+      "xMin": -0.01,
+      "xMax": 0.01
+    },
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02
   },
   "sweep": {
     "mode": "zip",
     "independent": {
       "tetNumberCells": [10, 20, 40],
-      "system/controlDict:deltaT": [0.00892857, 0.00224215, 0.000560538]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": ["tetNumberCells", "system/controlDict:deltaT"]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["tetNumberCells", "system/controlDict:deltaT"]
-      }
-    ]
+      "system/controlDict:deltaT": [0.00892857, 0.00224215, 0.000560538],
+      "caseId": ["electrodePair_tet_N10", "electrodePair_tet_N20", "electrodePair_tet_N40"]
+    }
   }
 }

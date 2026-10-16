@@ -2,19 +2,16 @@
   "base": {
     "entry": "manufacturedMonodomain1D3D",
     "cases_root": "tutorials",
-    "solver": "graphOnly"
+    "solver": "graphOnly",
+    "system/controlDict:endTime": 0.200028,
+    "system/controlDict:writeInterval": 0.200028
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "graphFile": [
-        "purkinjeGraph.nodes003",
-        "purkinjeGraph.nodes011",
-        "purkinjeGraph.nodes021",
-        "purkinjeGraph.nodes041",
-        "purkinjeGraph.nodes081",
-        "purkinjeGraph.nodes161"
-      ]
+      "graphFile": ["purkinjeGraph.nodes003", "purkinjeGraph.nodes003", "purkinjeGraph.nodes011", "purkinjeGraph.nodes011", "purkinjeGraph.nodes021", "purkinjeGraph.nodes021", "purkinjeGraph.nodes041", "purkinjeGraph.nodes041", "purkinjeGraph.nodes081", "purkinjeGraph.nodes081", "purkinjeGraph.nodes161", "purkinjeGraph.nodes161"],
+      "system/controlDict:deltaT": [0.000140174, 8.760875e-06, 0.000140174, 8.760875e-06, 0.000140174, 8.760875e-06, 0.000140174, 8.760875e-06, 0.000140174, 8.760875e-06, 0.000140174, 8.760875e-06],
+      "caseId": ["fixedDt_nodes003", "smallDt_nodes003", "fixedDt_nodes011", "smallDt_nodes011", "fixedDt_nodes021", "smallDt_nodes021", "fixedDt_nodes041", "smallDt_nodes041", "fixedDt_nodes081", "smallDt_nodes081", "fixedDt_nodes161", "smallDt_nodes161"]
     }
   }
 }

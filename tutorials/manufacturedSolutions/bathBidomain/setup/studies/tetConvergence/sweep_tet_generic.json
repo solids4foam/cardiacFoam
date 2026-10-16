@@ -2,27 +2,15 @@
   "base": {
     "entry": "manufacturedBathBidomain",
     "cases_root": "tutorials",
-    "mesh": "tet",
-    "dimension": "3D",
-    "system/controlDict:endTime": 0.02
+    "parallel": true,
+    "mesh": "tet"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "tetNumberCells": [80],
-      "system/controlDict:deltaT": [0.000140135]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": ["tetNumberCells", "system/controlDict:deltaT"]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["tetNumberCells", "system/controlDict:deltaT"]
-      }
-    ]
+      "tetNumberCells": [10, 20, 40, 80],
+      "system/controlDict:deltaT": [0.00892857, 0.00224215, 0.000560538, 0.000140174],
+      "caseId": ["predictor_tet_N10", "predictor_tet_N20", "predictor_tet_N40", "predictor_tet_N80"]
+    }
   }
 }

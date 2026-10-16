@@ -52,7 +52,7 @@ done
 python3 ../summarize.py results
 ```
 
-The omnidriver specs for this study are `sweep_hex_convergence.json`, `sweep_hex_electrodePair.json` and `sweep_hex_groundElectrode.json`.
+The omnidriver specs for this study are `sweep_hex_baseline.json`, `sweep_hex_convergence.json`, `sweep_hex_electrodePair.json` and `sweep_hex_exactInterface.json`.
 
 The exact-field rows are in `bathBidomainInterfaceMetricsExactField.csv` of
 every run; the `exactInterface` runs evaluate them at `t = 0.02`.

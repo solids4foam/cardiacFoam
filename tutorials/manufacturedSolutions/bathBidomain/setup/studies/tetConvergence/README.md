@@ -50,7 +50,7 @@ done
 python3 ../summarize.py results
 ```
 
-The omnidriver specs for this study are `sweep_tet_electrodePair.json` and `sweep_tet_generic.json`.
+The omnidriver specs for this study are `sweep_tet_electrodePair.json`, `sweep_tet_exactInterface.json` and `sweep_tet_generic.json`.
 
 ## Measured behaviour
 

@@ -2,33 +2,17 @@
   "base": {
     "entry": "manufacturedBathBidomain",
     "cases_root": "tutorials",
+    "parallel": true,
+    "numberCells": 640,
     "system/controlDict:endTime": 0.02,
-    "constant/electroProperties:bidomainSolverCoeffs.verificationModel.fdaBathVariant": "groundElectrode",
-    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.groundPatches": {
-      "xMin": 0
-    },
-    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.surfaceCurrentPatches": {
-      "xMax": 0.01
-    }
+    "system/controlDict:writeInterval": 0.02
   },
   "sweep": {
     "mode": "zip",
     "independent": {
       "dimension": ["1D", "1D", "1D", "1D", "2D", "2D", "2D", "2D"],
-      "numberCells": [640, 640, 640, 640, 640, 640, 640, 640],
-      "system/controlDict:deltaT": [0.001121075, 0.000560538, 0.000280269, 0.0001401345, 0.001121075, 0.000560538, 0.000280269, 0.0001401345]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": ["dimension", "numberCells", "system/controlDict:deltaT"]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["dimension", "numberCells", "system/controlDict:deltaT"]
-      }
-    ]
+      "system/controlDict:deltaT": [0.001121075, 0.000560538, 0.000280269, 0.0001401345, 0.001121075, 0.000560538, 0.000280269, 0.0001401345],
+      "caseId": ["1D_dt0.001121075", "1D_dt0.000560538", "1D_dt0.000280269", "1D_dt0.0001401345", "2D_dt0.001121075", "2D_dt0.000560538", "2D_dt0.000280269", "2D_dt0.0001401345"]
+    }
   }
 }

@@ -2,9 +2,10 @@
   "base": {
     "entry": "manufacturedBathBidomain",
     "cases_root": "tutorials",
+    "parallel": true,
     "mesh": "tet",
-    "dimension": "3D",
     "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02,
     "system/fvSchemes:laplacianSchemes.default": "Gauss linear orthogonal",
     "system/fvSchemes:snGradSchemes.default": "orthogonal"
   },
@@ -12,19 +13,8 @@
     "mode": "zip",
     "independent": {
       "tetNumberCells": [20],
-      "system/controlDict:deltaT": [0.00224215]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": ["tetNumberCells"]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["tetNumberCells", "system/controlDict:deltaT"]
-      }
-    ]
+      "system/controlDict:deltaT": [0.00224215],
+      "caseId": ["orthogonal_tet_N20"]
+    }
   }
 }

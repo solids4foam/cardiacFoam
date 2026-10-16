@@ -2,42 +2,16 @@
   "base": {
     "entry": "manufacturedEikonalECG",
     "cases_root": "tutorials",
+    "parallel": true,
     "mesh": "tet-errorLocalisation",
     "constant/electroProperties:eikonalSolverCoeffs.verificationModel.writeErrorField": true
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "system/fvSchemes:gradSchemes.default": [
-        "Gauss linear",
-        "Gauss linear",
-        "Gauss linear",
-        "Gauss linear",
-        "leastSquares",
-        "leastSquares",
-        "leastSquares",
-        "leastSquares"
-      ],
-      "tetNumberCells": [
-        10,
-        20,
-        40,
-        80,
-        10,
-        20,
-        40,
-        80
-      ],
-      "output_dir_name": [
-        "gaussLinear_10",
-        "gaussLinear_20",
-        "gaussLinear_40",
-        "gaussLinear_80",
-        "leastSquares_10",
-        "leastSquares_20",
-        "leastSquares_40",
-        "leastSquares_80"
-      ]
+      "system/fvSchemes:gradSchemes.default": ["Gauss linear", "leastSquares", "Gauss linear", "leastSquares", "Gauss linear", "leastSquares", "Gauss linear", "leastSquares"],
+      "tetNumberCells": [10, 10, 20, 20, 30, 30, 40, 40],
+      "caseId": ["GaussLinear_N10", "leastSquares_N10", "GaussLinear_N20", "leastSquares_N20", "GaussLinear_N30", "leastSquares_N30", "GaussLinear_N40", "leastSquares_N40"]
     }
   }
 }
