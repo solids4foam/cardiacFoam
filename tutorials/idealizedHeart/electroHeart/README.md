@@ -201,9 +201,9 @@ The regression runs `monodomain` on the human tree by default; with
 (`regression/injection.<variant>.reference` for human,
 `injection.<variant>.pig.reference` for pig).
 
-`constant/electroProperties` and `system/controlDict` are symlinks to
+`constant/electroProperties` is a symlink to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
-`controlDict` differs per variant but all share `endTime 0.04`: the
+`system/controlDict` is shared by the variants (`endTime 0.04`): the
 regression probe activates at 28.9 ms (`monodomain`) and 30.1 ms (`hybrid`)
 on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per

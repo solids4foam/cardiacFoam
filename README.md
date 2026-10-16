@@ -39,7 +39,7 @@ This runs a single TWorld endocardial cell, paced twice at 1000 ms, for 2 s of s
 git lfs install && git lfs pull
 mkdir -p "$FOAM_RUN" && cp -r tutorials/idealizedHeart "$FOAM_RUN"/
 cd "$FOAM_RUN"/idealizedHeart/electroHeart
-foamDictionary system/controlDict.monodomain -entry endTime -set 0.6
+foamDictionary system/controlDict -entry endTime -set 0.6
 ./Allrun parallel
 ```
 
