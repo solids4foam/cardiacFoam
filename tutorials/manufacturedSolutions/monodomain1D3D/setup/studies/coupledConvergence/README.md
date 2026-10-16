@@ -1,9 +1,11 @@
 # coupledConvergence - monodomain1D3D
 
 Joint refinement of the 3D mesh and the graph (`k = N + 1` nodes, edge length
-`1/N`) with `dt` proportional to `h^2`, for the four combinations of transfer
-(`-coupling unidirectional|bidirectional`) and tissue-side assembly (`-pvj
-explicit|implicit`), with `R_pvj = 1`. It measures the order of the 3D and
+`1/N`) with `dt` proportional to `h^2`, with `R_pvj = 1`, for unidirectional
+transfer with explicit and implicit tissue-side assembly (`-pvj
+explicit|implicit`) and for bidirectional transfer (`-coupling bidirectional`),
+which the coupler always assembles explicitly on the tissue side, so `-pvj`
+has no effect on it. It measures the order of the 3D and
 graph voltages and of the junction source error, the difference between the
 numerical junction source and the exact one built with the same map.
 
@@ -34,13 +36,12 @@ DT=(0.008971136 0.002242784 0.000560696 0.000140174)
 for i in 0 1 2 3
 do
     n=${N[$i]}; dt=${DT[$i]}
-    for c in unidirectional bidirectional
+    for arm in "unidirectional explicit" "unidirectional implicit" \
+               "bidirectional explicit"
     do
-        for p in explicit implicit
-        do
-            rsync -a --exclude setup ../../../ results/${c}_${p}_N$n/
-            results/${c}_${p}_N$n/Allrun -N $n -dt $dt -coupling $c -pvj $p
-        done
+        set -- $arm; c=$1; p=$2
+        rsync -a --exclude setup ../../../ results/${c}_${p}_N$n/
+        results/${c}_${p}_N$n/Allrun -N $n -dt $dt -coupling $c -pvj $p
     done
 done
 python3 ../summarize.py results
@@ -70,32 +71,28 @@ Unidirectional, implicit:
 | 40 | 0.025 | 1.2138e-04 | 3.4859e-04 | 1.1195e-05 | 2.1956e-05 | 5.9484e-05 | 2.01 | 1.99 | 2.03 | 2.01 | 1.93 |
 | 80 | 0.0125 | 3.0448e-05 | 8.7734e-05 | 2.7873e-06 | 5.5004e-06 | 1.4978e-05 | 2.00 | 1.99 | 2.01 | 2.00 | 1.99 |
 
-Bidirectional, explicit:
+Bidirectional (explicit on the tissue side; a run with `-pvj implicit` gives
+the same numbers to every printed digit):
 
 | N | h | 3D Vm L2 | 3D Vm Linf | 1D Vm L2 | 1D Vm Linf | source error L1 | order 3D L2 | order 3D Linf | order 1D L2 | order 1D Linf | order source |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.1 | 1.8499e-03 | 4.9623e-03 | 1.8183e-04 | 3.4724e-04 | 3.3137e-03 | | | | | |
-| 20 | 0.05 | 4.8860e-04 | 1.3812e-03 | 4.5747e-05 | 8.9172e-05 | 7.8330e-04 | 1.92 | 1.85 | 1.99 | 1.96 | 2.08 |
-| 40 | 0.025 | 1.2168e-04 | 3.4859e-04 | 1.1205e-05 | 2.2053e-05 | 1.9266e-04 | 2.01 | 1.99 | 2.03 | 2.02 | 2.02 |
-| 80 | 0.0125 | 3.0525e-05 | 8.7734e-05 | 2.7884e-06 | 5.5128e-06 | 4.8111e-05 | 2.00 | 1.99 | 2.01 | 2.00 | 2.00 |
+| 10 | 0.1 | 1.8501e-03 | 4.9622e-03 | 1.9770e-04 | 4.1325e-04 | 3.3370e-03 | | | | | |
+| 20 | 0.05 | 4.8865e-04 | 1.3812e-03 | 4.9769e-05 | 1.1425e-04 | 7.9166e-04 | 1.92 | 1.85 | 1.99 | 1.85 | 2.08 |
+| 40 | 0.025 | 1.2170e-04 | 3.4859e-04 | 1.2074e-05 | 2.9211e-05 | 1.9496e-04 | 2.01 | 1.99 | 2.04 | 1.97 | 2.02 |
+| 80 | 0.0125 | 3.0529e-05 | 8.7734e-05 | 2.9816e-06 | 7.3769e-06 | 4.8702e-05 | 2.00 | 1.99 | 2.02 | 1.99 | 2.00 |
 
-Bidirectional, implicit:
-
-| N | h | 3D Vm L2 | 3D Vm Linf | 1D Vm L2 | 1D Vm Linf | source error L1 | order 3D L2 | order 3D Linf | order 1D L2 | order 1D Linf | order source |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.1 | 1.8483e-03 | 4.9600e-03 | 1.8163e-04 | 3.4627e-04 | 7.9590e-04 | | | | | |
-| 20 | 0.05 | 4.8737e-04 | 1.3812e-03 | 4.5759e-05 | 8.9267e-05 | 2.2681e-04 | 1.92 | 1.84 | 1.99 | 1.96 | 1.81 |
-| 40 | 0.025 | 1.2138e-04 | 3.4859e-04 | 1.1206e-05 | 2.2068e-05 | 5.9448e-05 | 2.01 | 1.99 | 2.03 | 2.02 | 1.93 |
-| 80 | 0.0125 | 3.0448e-05 | 8.7734e-05 | 2.7886e-06 | 5.5150e-06 | 1.4973e-05 | 2.00 | 1.99 | 2.01 | 2.00 | 1.99 |
-
-All three quantities converge at second order in every combination. The 3D
-voltage does not depend on the transfer direction; the implicit assembly
-changes its L2 error by under 0.3% and its Linf error by under 0.05%. Under
-unidirectional transfer the graph receives no current, so its error is the
-same for both assemblies; bidirectional transfer changes it by under 1.2%. The
-implicit assembly lowers the junction source error by a factor of 3.2 to 4.2,
-with a lower order on the coarse pairs (1.81, 1.93) that reaches 1.99 on the
-finest pair.
+All three quantities converge at second order in every arm. The 3D voltage
+hardly depends on the transfer direction (bidirectional transfer changes its
+L2 error by under 0.02%); the implicit assembly changes its L2 error by under
+0.3% and its Linf error by under 0.05%. Under unidirectional transfer the
+graph receives no current, so its error is the same for both assemblies.
+Bidirectional transfer, which takes each junction current from the volume of
+the terminal node, raises the graph L2 error by 7 to 9% and its Linf error by
+20 to 34%, with a Linf order of 1.85 on the coarsest pair. Under
+unidirectional transfer the implicit assembly lowers the junction source error
+by a factor of 3.2 to 4.2, with a lower order on the coarse pairs (1.81, 1.93)
+that reaches 1.99 on the finest pair; the bidirectional source error is within
+1.2% of the unidirectional explicit one.
 
 ## Outputs
 

@@ -5,10 +5,10 @@ graph and the 3D myocardium on the unit cube, joined at two Purkinje-ventricular
 junctions (PVJs) by `reactionDiffusionPvjCoupler`. It checks the node-edge graph
 operator, the 3D monodomain operator and the PVJ source (sampling the tissue
 voltage, depositing the junction current) under joint refinement, for
-unidirectional and bidirectional transfer and explicit and implicit tissue-side
-assembly. The exact junction source is built with the same sampling and
-deposition map as the solver, so the case checks the coupled workflow against
-that map; it does not check the map against an independent continuum coupling,
+unidirectional transfer with explicit and implicit tissue-side assembly and for
+bidirectional transfer, which is always explicit on the tissue side. The exact
+junction source is built with the same sampling and deposition map as the
+solver, so the case checks the coupled workflow against that map; it does not check the map against an independent continuum coupling,
 a calibrated junction resistance, graph branch points with more than two edges,
 or a wall treatment (the 3D field has a zero normal gradient on every face).
 
@@ -43,10 +43,11 @@ as `S_pvj` with a linear kernel of radius 0.11 normalised to unit integral.
 volume `π ρ² L` of its terminal node, so the case sets `purkinjeFibreRadius`
 to `1/√π` m (the unit cross-section the manufactured junction current assumes)
 instead of the 20 µm default. `explicit` deposits the terminal current;
-`implicit` assembles a cell-local sink in the tissue voltage. The
-verifiers add the exact junction source, computed from the exact fields with
-the same map and kernel, to the manufactured sources and write the difference
-between the numerical and the exact junction source.
+`implicit` assembles a cell-local sink in the tissue voltage (unidirectional
+only; bidirectional transfer is always explicit). The verifiers add the exact
+junction source, computed from the exact fields with the same map and kernel,
+to the manufactured sources and write the difference between the numerical and
+the exact junction source.
 
 ### Stack
 
@@ -89,7 +90,7 @@ with `run ./Allclean first` if a mesh log exists.
 | `-graph nodes003\|...\|nodes161` | Purkinje graph | `nodes<N+1>` (edge length `1/N`) |
 | `-domain coupled\|graph` | `cardiacFoam` on the coupled problem, or `runPurkinjeGraph` on the graph alone (no junction, serial) | coupled |
 | `-coupling unidirectional\|bidirectional` | PVJ `couplingMode` | unidirectional |
-| `-pvj explicit\|implicit` | PVJ `pvjCouplingScheme` | explicit |
+| `-pvj explicit\|implicit` | PVJ `pvjCouplingScheme` (unidirectional only) | explicit |
 | `-rPvj x` | junction resistance | 1 |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.008971136 (10/N)^2))` |
 | `-endTime x` | end time | 0.1 |
@@ -123,5 +124,5 @@ tables.
 | study | question |
 |---|---|
 | [graphConvergence](setup/studies/graphConvergence/README.md) | spatial order of the graph operator alone, at a fixed time step |
-| [coupledConvergence](setup/studies/coupledConvergence/README.md) | joint 1D-3D order of the fields and the junction source, for the four transfer and assembly combinations |
+| [coupledConvergence](setup/studies/coupledConvergence/README.md) | joint 1D-3D order of the fields and the junction source, for unidirectional transfer with both assemblies and for bidirectional transfer |
 | [weakCouplingControl](setup/studies/weakCouplingControl/README.md) | whether the tissue and graph errors depend on the junction |
