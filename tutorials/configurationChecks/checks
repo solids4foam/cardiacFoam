@@ -84,6 +84,9 @@ monodomainExplicitRestart              slab  monodomainExplicit                 
 monodomainCellZoneRestart              slab  monodomainCellZone                     pass  post=restartLatestTime  skip=v2312
 bathBidomainRestart                    bath  bathBidomain                           pass  post=restartLatestTime  skip=v2312
 bathBidomainRestartParallel            bath  bathBidomain                           pass  np=2  post=restartLatestTime  skip=v2312
+# A decomposed Purkinje run, whose network state the master writes into the
+# case-root time directories, then reconstructed from the restart time on
+purkinjeRestartParallel                slab  monodomainPurkinjeReactionDiffusion    pass  np=2  post=restartLatestTime
 
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver

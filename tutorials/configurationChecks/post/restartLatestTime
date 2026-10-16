@@ -34,6 +34,6 @@ fi
 
 if [ -d processor0 ]
 then
-    runApplication -s restart reconstructPar -newTimes || exit 1
+    runApplication -s restart reconstructPar -time "${restartTime}:" || exit 1
     runApplication -s restart redistributeRestartState -latestTime || exit 1
 fi
