@@ -1,89 +1,152 @@
 #!/bin/bash
-#-------------------------------------------------------------------------------
-# Allrun script for boundary-constrained electromechanics verification tutorial
-#-------------------------------------------------------------------------------
-
 cd "${0%/*}" || exit 1
 set -e
 
+# Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-requireFullElectroMechanicalBuild()
+usage()
 {
-    local lib
-    local libDir="${FOAM_USER_LIBBIN:-}"
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
 
-    if [[ -z "$libDir" ]]; then
-        echo "FOAM_USER_LIBBIN is not set. Source the OpenFOAM environment first."
-        exit 1
-    fi
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar per region, run cardiacFoam in parallel
+  -N n                      cells per unit length of the cube (default 20)
+  -dt x                     time step
+  -endTime x                end time (default 0.1)
 
-    for lib in "${libDir}"/libelectroMechanicalModels.*; do
-        if [[ -e "$lib" ]]; then
-            return 0
-        fi
-    done
-
-    cat <<'EOF'
-This tutorial requires cardiacFoam built in full solids4foam mode.
-The lightweight electrophysiology-only build does not compile
-libelectroMechanicalModels, so electroMechanicalModel is unavailable.
-
-Rebuild cardiacFoam after compiling solids4foam and sourcing that environment.
-EOF
-
-    exit 1
+Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
+Needs cardiacFoam built with solids4foam (libelectroMechanicalModels).
+USAGE
+    exit 2
 }
 
-parallelRun=false
-for arg in "$@"; do
-    case "$arg" in
-        parallel) parallelRun=true ;;
+parallel=false
+N=20
+dt=
+endTime=0.1
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
     esac
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            positiveNumber -endTime "$endTime"
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
 done
 
-requireFullElectroMechanicalBuild
+if [ -e log.blockMesh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
 
+# The lightweight build has no libelectroMechanicalModels
+if ! ls "${FOAM_USER_LIBBIN:?source the OpenFOAM environment first}"/libelectroMechanicalModels.* \
+    > /dev/null 2>&1
+then
+    echo "${0##*/}: needs cardiacFoam built with solids4foam (libelectroMechanicalModels)" 1>&2
+    exit 1
+fi
+
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/mesh
+
+# Time step proportional to h^2, ending exactly at endTime
+if [ -z "$dt" ]
+then
+    dt=$(awk -v T="$endTime" -v N="$N" 'BEGIN {
+        h = 0.00892857*(10/N)^2
+        n = int(T/h); if (n*h < T) n++
+        printf "%.17g", T/n }')
+fi
+cat > local/time <<EOF
+endTime         $endTime;
+deltaT          $dt;
+writeInterval   $endTime;
+EOF
+
+# Case-local library: manufactured displacement condition and body force
 caseLibDir="$PWD/platforms/${WM_OPTIONS}/lib"
-
-case "$(uname -s)" in
-    Darwin) caseLibExt="dylib" ;;
-    MINGW*|MSYS*|CYGWIN*) caseLibExt="dll" ;;
-    *) caseLibExt="so" ;;
-esac
-
 mkdir -p "$caseLibDir"
-
 (
     export FOAM_USER_LIBBIN="$caseLibDir"
     cd src || exit 1
     ./Allwmake -s
 ) || exit 1
+case "$(uname -s)" in
+    Darwin)
+        ln -snf libmanufacturedMonodomainTotalLagrangianEM.dylib \
+            "$caseLibDir/libmanufacturedMonodomainTotalLagrangianEM.so"
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        ln -snf libmanufacturedMonodomainTotalLagrangianEM.dll \
+            "$caseLibDir/libmanufacturedMonodomainTotalLagrangianEM.so"
+        ;;
+esac
 
-if [[ "$caseLibExt" != "so" ]]; then
-    ln -snf \
-        "libmanufacturedMonodomainTotalLagrangianEM.$caseLibExt" \
-        "$caseLibDir/libmanufacturedMonodomainTotalLagrangianEM.so"
-fi
+# One mesh for both regions
+runApplication blockMesh -dict system/blockMeshDict.3D
+cp -r constant/polyMesh constant/electro/
+cp -r constant/polyMesh constant/solid/
 
-if [[ ! -d constant/polyMesh ]]; then
-    runApplication blockMesh
-fi
-
-cp -r constant/polyMesh constant/electro/polyMesh
-cp -r constant/polyMesh constant/solid/polyMesh
-
-if [[ "$(uname -s)" == "Darwin" ]]; then
-    # libsolids4FoamModels references _PETSC_COMM_WORLD via dynamic lookup.
-    # On macOS flat-namespace the symbol must already be in the namespace when
-    # the library loads, so pre-inject PETSc before any cardiacFoam process starts.
-    _petsc_lib="$(find /opt/homebrew/lib /usr/local/lib -name 'libpetsc.dylib' 2>/dev/null | head -1)"
-    if [[ -n "$_petsc_lib" ]]; then
-        export DYLD_INSERT_LIBRARIES="${_petsc_lib}${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+if [ "$(uname -s)" = Darwin ]
+then
+    # libsolids4FoamModels resolves _PETSC_COMM_WORLD by dynamic lookup, so PETSc
+    # must be loaded before it on macOS
+    petscLib="$(find /opt/homebrew/lib /usr/local/lib -name 'libpetsc.dylib' 2>/dev/null | head -1)"
+    if [ -n "$petscLib" ]
+    then
+        export DYLD_INSERT_LIBRARIES="${petscLib}${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
     fi
 fi
 
-if $parallelRun; then
+if $parallel
+then
     runApplication -s electro decomposePar -region electro
     runApplication -s solid decomposePar -region solid
     runParallel cardiacFoam

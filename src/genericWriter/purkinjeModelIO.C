@@ -25,7 +25,11 @@ License
 
 #include "purkinjeModelIO.H"
 #include "OSspecific.H"
+#include "Time.H"
+#include "PstreamReduceOps.H"
+#include "IFstream.H"
 #include <fstream>
+#include <sstream>
 #include "ionicVariableCompatibility.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -97,24 +101,170 @@ autoPtr<OFstream> purkinjeModelIO::openTimeSeries
 (
     const fileName& outDir,
     const word& filename,
-    const wordList& columnNames
+    const wordList& columnNames,
+    const scalar startTime
 )
 {
     mkDir(outDir);
+
+    std::string header("# time");
+    forAll(columnNames, i)
+    {
+        header += "  " + columnNames[i];
+    }
+
+    DynamicList<std::string> keptRows;
+    if (startTime > 0 && isFile(outDir/filename))
+    {
+        // Rows are written with 8 significant digits.
+        const scalar lastKept = startTime*(1 + 1e-6);
+
+        std::ifstream is((outDir/filename).c_str());
+        std::string line;
+        if (std::getline(is, line) && line == header)
+        {
+            while (std::getline(is, line))
+            {
+                std::istringstream row(line);
+                double t = 0;
+                if ((row >> t) && t <= lastKept)
+                {
+                    keptRows.append(line);
+                }
+            }
+        }
+    }
+
     autoPtr<OFstream> osPtr(new OFstream(outDir/filename));
 
     OFstream& os = osPtr.ref();
     os.setf(std::ios::scientific);
     os.precision(8);
 
-    os << "# time";
-    forAll(columnNames, i)
+    os << header.c_str() << nl;
+    forAll(keptRows, i)
     {
-        os << "  " << columnNames[i];
+        os << keptRows[i].c_str() << nl;
     }
-    os << nl;
 
     return osPtr;
+}
+
+
+void purkinjeModelIO::readVTKSeries
+(
+    const fileName& seriesPath,
+    const scalar startTime,
+    scalarList& times,
+    wordList& filenames
+)
+{
+    DynamicList<scalar> keptTimes;
+    DynamicList<word> keptFiles;
+
+    std::ifstream is(seriesPath.c_str());
+    std::string line;
+    const std::string nameKey("\"name\": \"");
+    const std::string timeKey("\"time\": ");
+    while (std::getline(is, line))
+    {
+        const auto n = line.find(nameKey);
+        const auto t = line.find(timeKey);
+        if (n == std::string::npos || t == std::string::npos)
+        {
+            continue;
+        }
+
+        const auto nameStart = n + nameKey.size();
+        const word name(line.substr(nameStart, line.find('"', nameStart) - nameStart));
+        const scalar time = std::stod(line.substr(t + timeKey.size()));
+
+        if (time <= startTime*(1 + 1e-6))
+        {
+            keptTimes.append(time);
+            keptFiles.append(name);
+        }
+    }
+
+    times = keptTimes;
+    filenames = keptFiles;
+}
+
+
+void purkinjeModelIO::writeGlobalField(scalarGlobalIOField& field)
+{
+    bool writeGood = true;
+    const Time& runTime = field.time();
+
+    field.instance() = runTime.timeName();
+
+    if (Pstream::master())
+    {
+        const fileName outputPath
+        (
+            runTime.globalPath()/field.instance()/field.name()
+        );
+
+        mkDir(outputPath.path());
+        OFstream os
+        (
+            outputPath,
+            IOstreamOption
+            (
+                runTime.writeFormat(),
+                runTime.writeCompression()
+            )
+        );
+
+        writeGood = os.good() && field.writeHeader(os) && field.writeData(os);
+
+        if (writeGood)
+        {
+            IOobject::writeEndDivider(os);
+        }
+    }
+
+    reduce(writeGood, andOp<bool>());
+
+    if (!writeGood)
+    {
+        FatalErrorInFunction
+            << "Failed writing " << field.name()
+            << exit(FatalError);
+    }
+}
+
+
+bool purkinjeModelIO::readGlobalField(scalarGlobalIOField& field)
+{
+    const Time& runTime = field.time();
+    const fileName inputPath
+    (
+        runTime.globalPath()/field.instance()/field.name()
+    );
+
+    bool found = false;
+    scalarField values;
+
+    if (Pstream::master() && isFile(inputPath))
+    {
+        IFstream is(inputPath);
+        found = is.good() && field.readHeader(is);
+        if (found)
+        {
+            is >> values;
+        }
+    }
+
+    Pstream::broadcast(found);
+
+    if (found)
+    {
+        Pstream::broadcast(values);
+        static_cast<scalarField&>(field).transfer(values);
+    }
+
+    return found;
 }
 
 

@@ -204,8 +204,20 @@ void pvjMapper::gatherVm3DPvjs
         }
 
         values[i] = localWeightedSum;
-        reduce(values[i], sumOp<scalar>());
+    }
 
+    // One reduction for all terminals.
+    reduce
+    (
+        values.data(),
+        values.size(),
+        sumOp<scalar>(),
+        UPstream::msgType(),
+        UPstream::worldComm
+    );
+
+    forAll(values, i)
+    {
         if (sphereVolumes_[i] > SMALL)
         {
             values[i] /= sphereVolumes_[i];
@@ -386,10 +398,28 @@ void pvjMapper::gatherActivationTimes
                 terminalActivationTime[i] = t;
             }
         }
+    }
 
-        reduce(terminalActivationTime[i], minOp<scalar>());
-        reduce(latestActivationTime[i], maxOp<scalar>());
+    // One reduction each for all terminals.
+    reduce
+    (
+        terminalActivationTime.data(),
+        terminalActivationTime.size(),
+        minOp<scalar>(),
+        UPstream::msgType(),
+        UPstream::worldComm
+    );
+    reduce
+    (
+        latestActivationTime.data(),
+        latestActivationTime.size(),
+        maxOp<scalar>(),
+        UPstream::msgType(),
+        UPstream::worldComm
+    );
 
+    forAll(terminalActivationTime, i)
+    {
         if (terminalActivationTime[i] >= GREAT/2.0)
         {
             terminalActivationTime[i] = -1.0;

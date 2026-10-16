@@ -19,11 +19,15 @@ ddtSchemes
 {
     default         none;
     ddt(Vm)         backward;
+
+    #includeIfPresent "<case>/local/ddt"
 }
 
 gradSchemes
 {
     default         leastSquares;
+
+    #includeIfPresent "<case>/local/gradient"
 }
 
 divSchemes

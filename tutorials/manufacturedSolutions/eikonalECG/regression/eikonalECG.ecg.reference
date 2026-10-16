@@ -1,0 +1,12 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# error <electrode> <norm> <expected> <tolerance>, read from the manufactured eikonal ECG summary
+error  E1  L2    0.00159818   1.6e-08
+error  E1  Linf  0.00225496   2.3e-08
+error  E2  L2    0.000521     5.2e-09
+error  E2  Linf  0.00073775   7.4e-09
+error  E3  L2    0.00348708   3.5e-08
+error  E3  Linf  0.00491964   4.9e-08
+error  E4  L2    0.000628911  6.3e-09
+error  E4  Linf  0.000888192  8.9e-09
+error  E5  L2    0.000790555  7.9e-09
+error  E5  Linf  0.00111888   1.1e-08

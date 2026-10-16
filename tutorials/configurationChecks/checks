@@ -27,6 +27,8 @@ monodomainExplicit                     slab  monodomainExplicit                 
 monodomainImplicit                     slab  monodomainImplicit                     pass
 monodomainSbdf2                        slab  monodomainSbdf2                        pass
 monodomainFieldConductivity            slab  monodomainFieldConductivity            pass
+# A field conductivity that jumps across periodic faces, read on a cyclic mesh
+monodomainPeriodicFieldConductivity    slab  monodomainPeriodicFieldConductivity    pass
 monodomainCellZone                     slab  monodomainCellZone                     pass  skip=v2312
 monodomainVerificationNone             slab  monodomainVerificationNone             pass
 bidomain                               slab  bidomain                               pass
@@ -68,10 +70,23 @@ eikonalPurkinjeParallel                slab  eikonalPurkinje                    
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
 bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2  skip=v2312
+# The decomposition splits the periodic faces into processorCyclic faces
+monodomainPeriodicFieldConductivityParallel slab monodomainPeriodicFieldConductivity pass np=2
 
 # ---- Post-processing utilities that link the electro libraries -----------
 monodomainPseudoECGRecomputed          slab  monodomainPseudoECG                    pass  post=recomputePseudoECG
 bathBidomainInterfaceMetrics           bath  bathBidomain                           pass  post=bathBidomainInterfaceMetrics  skip=v2312
+
+# ---- Restart from the latest time (startFrom latestTime) -------------------
+# The run is continued to twice its end time from the fields it wrote; a
+# cellZone myocardium reads them back from base-mesh-sized files
+monodomainExplicitRestart              slab  monodomainExplicit                     pass  post=restartLatestTime
+monodomainCellZoneRestart              slab  monodomainCellZone                     pass  post=restartLatestTime  skip=v2312
+bathBidomainRestart                    bath  bathBidomain                           pass  post=restartLatestTime  skip=v2312
+bathBidomainRestartParallel            bath  bathBidomain                           pass  np=2  post=restartLatestTime  skip=v2312
+# A decomposed Purkinje run, whose network state the master writes into the
+# case-root time directories, then reconstructed from the restart time on
+purkinjeRestartParallel                slab  monodomainPurkinjeReactionDiffusion    pass  np=2  post=restartLatestTime
 
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
@@ -96,4 +111,5 @@ torsoECGWithMonodomain                 slab  monodomainPseudoECG         fail:to
 torsoECGWithoutBath                    slab  bidomainPseudoECG           fail:torsoECG                 bidomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
 bathWithoutCellZone                    bath  bathBidomain                fail:subset~cell~map          bidomainSolverCoeffs/cellZone!
 unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
+bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ  skip=v2312
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension

@@ -90,15 +90,21 @@ public:
     //- Deposit tissue activation times observed at the terminals; the solver decides their use.
     virtual void setTerminalActivationObservations(const scalarField& values) = 0;
 
-    //- Receive terminal exchange terms prepared by the coupling model.
-    //  Positive terminalCurrent removes charge from the network and injects
-    //  it into the coupled myocardium. terminalSource carries the matching
-    //  myocardium-side volumetric source representation for diagnostics.
+    //- Junction current [A] into the myocardium at each terminal and its
+    //  myocardium-side volumetric source [A/m^3], for output.
     virtual void setTerminalCoupling
     (
         const scalarField& terminalCurrent,
         const scalarField& terminalSource
     ) = 0;
+
+    //- Make each terminal a resistive junction for the rest of the run:
+    //  terminal i loses conductance[i]*(Vm_i - tissueVm_i) [A], with its
+    //  own Vm_i at the new time level of each network advance.
+    virtual void setTerminalConductances(const scalarField& conductance) = 0;
+
+    //- Tissue voltage [V] each junction sees during the next advance.
+    virtual void setTerminalTissueVm(const scalarField& tissueVm) = 0;
 
     //- Terminal-specific PVJ resistances (optional).
     //  If provided, this overrides the coupler's uniform resistance.

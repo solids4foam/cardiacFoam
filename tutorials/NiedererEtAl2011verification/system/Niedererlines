@@ -4,6 +4,8 @@ enabled         true;
 
 writeControl    writeTime;
 
+interpolationScheme cellPoint;
+
 fields
 (
     activationTime

@@ -13,8 +13,9 @@ if [[ -z "${regressionLib}" ]]; then
 fi
 . "${regressionLib}"
 
-# Compares the summary values and error norms of the manufactured-solution
-# error summary written by the verifier against the reference.
+# Runs the case defaults (3D hexahedra, N 20) serially and compares the
+# summary values, the error norms and the bulk, boundary and gradient rows of
+# the manufactured-solution error summary against the reference.
 
 regression_init "Bidomain manufactured-solution regression test" \
     regression/bidomainManufactured.reference "$@"

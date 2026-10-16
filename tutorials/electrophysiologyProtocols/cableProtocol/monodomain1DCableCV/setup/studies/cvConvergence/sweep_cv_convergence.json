@@ -1,0 +1,66 @@
+{
+  "base": {
+    "entry": "cable1DCVConvergence",
+    "cases_root": "tutorials",
+    "constant/electroProperties:monodomainSolverCoeffs.conductivity": {
+      "value": [
+        0.1334,
+        0.0,
+        0.0,
+        0.1334,
+        0.0,
+        0.1334
+      ],
+      "dimensions": [
+        -1,
+        -3,
+        3,
+        0,
+        0,
+        2,
+        0
+      ]
+    },
+    "constant/electroProperties:monodomainSolverCoeffs.tissue": "myocyte",
+    "constant/electroProperties:monodomainSolverCoeffs.ionicModel": "Stewart",
+    "constant/electroProperties:monodomainSolverCoeffs.externalStimulus.stimulusStartTimeList": [
+      0.0
+    ],
+    "constant/electroProperties:monodomainSolverCoeffs.externalStimulus.stimulusLocationMinList": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "constant/electroProperties:monodomainSolverCoeffs.externalStimulus.stimulusLocationMaxList": [
+      [
+        0.002,
+        0.0002,
+        0.0002
+      ]
+    ],
+    "constant/electroProperties:monodomainSolverCoeffs.externalStimulus.stimulusDurationList": [
+      0.004
+    ],
+    "constant/electroProperties:monodomainSolverCoeffs.externalStimulus.stimulusIntensityList": [
+      50000.0
+    ],
+    "system/controlDict:endTime": 0.04
+  },
+  "sweep": {
+    "mode": "cross_product",
+    "independent": {
+      "dx": [
+        0.0005,
+        0.0002,
+        0.0001
+      ],
+      "system/controlDict:deltaT": [
+        2e-05,
+        1e-05,
+        5e-06
+      ]
+    }
+  }
+}

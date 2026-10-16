@@ -2,14 +2,240 @@
 cd "${0%/*}" || exit 1
 set -e
 
+# Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-runApplication blockMesh -dict system/blockMeshDict.3D
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
 
-if [[ "${1:-}" == "parallel" ]]; then
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
+  -mesh hex|tet             blockMesh box (default) or gmsh tetrahedra of the unit cube
+                            (box.geo.template, 3D only)
+  -dim 1|2|3                dimension of the hex box (default 3); the pseudo-ECG runs in 3D only
+  -N n                      cells per unit length (default 20); tet: element size 1/n
+  -seed n                   gmsh random seed for -mesh tet (default 1)
+  -field anisotropic|fda    manufactured field (default anisotropic):
+                              anisotropic  sin^2 field, full rotated conductivity, 3D only
+                              fda          FDA cosine field (Pathmanathan & Gray), diagonal
+                                           conductivity
+  -gradient leastSquares|GaussLinear
+                            cell-gradient reconstruction (default leastSquares)
+  -dt x                     time step
+  -endTime x                end time (default 0.2)
+  -coupling godunov|sbdf2   ionic-PDE time coupling (default godunov)
+  -ddt backward|Euler       time scheme of Vm (default backward)
+
+Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
+-mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
+USAGE
+    exit 2
+}
+
+parallel=false
+mesh=hex
+dim=3
+N=20
+seed=1
+field=anisotropic
+gradient=leastSquares
+dt=
+endTime=0.2
+coupling=godunov
+ddt=backward
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
+    esac
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -mesh)
+            needValue "$@"; mesh="$2"; shift
+            oneOf -mesh "$mesh" hex tet
+            ;;
+        -dim)
+            needValue "$@"; dim="$2"; shift
+            oneOf -dim "$dim" 1 2 3
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -seed)
+            needValue "$@"; seed="$2"; shift
+            positiveInteger -seed "$seed"
+            ;;
+        -field)
+            needValue "$@"; field="$2"; shift
+            oneOf -field "$field" anisotropic fda
+            ;;
+        -gradient)
+            needValue "$@"; gradient="$2"; shift
+            oneOf -gradient "$gradient" leastSquares GaussLinear
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            positiveNumber -endTime "$endTime"
+            ;;
+        -coupling)
+            needValue "$@"; coupling="$2"; shift
+            oneOf -coupling "$coupling" godunov sbdf2
+            ;;
+        -ddt)
+            needValue "$@"; ddt="$2"; shift
+            oneOf -ddt "$ddt" backward Euler
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.gmsh ] || [ -e log.blockMesh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
+
+if [ "$mesh" = tet ] && [ "$dim" != 3 ]
+then
+    echo "${0##*/}: -mesh tet is 3D only" 1>&2
+    usage
+fi
+
+if [ "$field" = anisotropic ] && [ "$dim" != 3 ]
+then
+    echo "${0##*/}: -field anisotropic is 3D only" 1>&2
+    usage
+fi
+
+if [ "$mesh" = tet ]
+then
+    for tool in gmsh gmshToFoam
+    do
+        command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+    done
+fi
+
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/mesh
+
+# The manufactured field selects the conductivity, the field verifier and the
+# pseudo-ECG reference
+if [ "$field" = anisotropic ]
+then
+    conductivity="( 0.106875 -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782 )"
+    verifier=manufacturedAnisotropicMonodomainVerifier
+    anisotropicECG=yes
+else
+    conductivity="( 0.111453302 0 0 0.121585420 0 0.030396355 )"
+    verifier=manufacturedFDAMonodomainVerifier
+    anisotropicECG=no
+fi
+cat > local/field <<EOF
+conductivity        [ -1 -3 3 0 0 2 0 ] $conductivity;
+dimension           "${dim}D";
+timeCouplingScheme  $coupling;
+EOF
+# The pseudo-ECG and its verifier are 3D only
+if [ "$dim" != 3 ]
+then
+    echo "#remove ecgDomains" >> local/field
+fi
+echo "type    $verifier;" > local/verifier
+cat > local/ecgVerification <<EOF
+dimension       "${dim}D";
+anisotropic     $anisotropicECG;
+EOF
+
+if [ "$gradient" = GaussLinear ]
+then
+    echo "default         Gauss linear;" > local/gradient
+fi
+echo "ddt(Vm)         $ddt;" > local/ddt
+
+# Time step proportional to h^2, ending exactly at endTime
+if [ -z "$dt" ]
+then
+    dt=$(awk -v T="$endTime" -v N="$N" 'BEGIN {
+        h = 0.00892857*(10/N)^2
+        n = int(T/h); if (n*h < T) n++
+        printf "%.17g", T/n }')
+fi
+cat > local/time <<EOF
+endTime         $endTime;
+deltaT          $dt;
+writeInterval   $endTime;
+EOF
+
+# Mesh: blockMesh box of the chosen dimension, or gmsh tetrahedra
+if [ "$mesh" = hex ]
+then
+    runApplication blockMesh -dict system/blockMeshDict.${dim}D
+else
+    lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    runApplication gmsh -3 box.geo.template -setnumber lc "$lc" -setnumber seed "$seed" -o local/box.msh
+    if grep -q "Error" log.gmsh
+    then
+        echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+        exit 1
+    fi
+    runApplication gmshToFoam local/box.msh
+fi
+runApplication checkMesh
+
+if $parallel
+then
     runApplication decomposePar
     runParallel cardiacFoam
-    runApplication reconstructPar
+    runApplication reconstructPar -latestTime
     runApplication redistributeRestartState
 else
     runApplication cardiacFoam

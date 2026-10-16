@@ -1,5 +1,18 @@
+"""Manufactured body force B = rho d2D/dt2 - Div(P) of the electromechanics case.
+
+Prints B at fixed test points (matched by verify_B_expr_harness.cpp, which
+compiles src/manufacturedSolidForce/B_expr.H), and with a B_expr.H argument
+compares that file with B at random points. --emit writes sympy's C++ form.
+"""
+
+import argparse
 import sympy as sp
-import re, sys, math, random
+import re, math, random
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("committed", nargs="?", help="B_expr.H to compare with B")
+parser.add_argument("--emit", metavar="PATH", help="write the C++ form of B to PATH")
+cli = parser.parse_args()
 
 X, Y, Z, t = sp.symbols('X Y Z t', real=True)
 Ax, Ay, Az = sp.symbols('Ax Ay Az', real=True)
@@ -41,12 +54,13 @@ args = (X, Y, Z, t, Ax, Ay, Az, Tmax, V0, gamma, mu, K, rho)
 fB = sp.lambdify(args, [B[0], B[1], B[2]], 'math')
 print("sympy B built OK")
 
-# Emit sympy's C++ form (for optional install) using cxxcode/ccode
-from sympy.printing.cxx import cxxcode
-with open('/tmp/B_expr_sympy.H', 'w') as fh:
-    for nm, expr in (('Bx', B[0]), ('By', B[1]), ('Bz', B[2])):
-        fh.write("const scalar %s = %s;\n\n" % (nm, cxxcode(expr, standard='c++11')))
-print("wrote /tmp/B_expr_sympy.H")
+# C++ form of B
+if cli.emit:
+    from sympy.printing.cxx import cxxcode
+    with open(cli.emit, 'w') as fh:
+        for nm, expr in (('Bx', B[0]), ('By', B[1]), ('Bz', B[2])):
+            fh.write("const scalar %s = %s;\n\n" % (nm, cxxcode(expr, standard='c++11')))
+    print("wrote", cli.emit)
 
 # Fixed test points; print sympy B for the C++ harness to match
 PTS = [(0.2, 0.3, 0.4, 0.1), (0.55, 0.65, 0.45, 0.05), (0.8, 0.15, 0.7, 0.08)]
@@ -57,11 +71,10 @@ for label, Tm in (("PASSIVE_Tmax0", 0.0), ("FULL_Tmax1000", 1000.0)):
                base['V0'], base['gamma'], base['mu'], base['K'], base['rho'])
         print("SYMPY %s X=%.2f Y=%.2f Z=%.2f t=%.2f  B=(% .10e % .10e % .10e)"
               % (label, xx, yy, zz, tt, v[0], v[1], v[2]))
-import sys; sys.exit(0)
 
 # ---- load committed B_expr.H as an evaluable python function ----
 def load_committed(path):
-    txt = open(path).read().replace('std::', '')
+    txt = open(path).read().replace('std::', '').replace('constant::mathematical::pi', 'M_PI')
     exprs = {}
     for name in ('Bx', 'By', 'Bz'):
         m = re.search(r'const scalar %s\s*=\s*(.*?);' % name, txt, re.S)
@@ -70,12 +83,12 @@ def load_committed(path):
           'pow': math.pow, 'M_PI': math.pi}
     def f(X_, Y_, Z_, t_, Ax_, Ay_, Az_, Tmax_, V0_, gamma_, mu_, K_, rho_):
         loc = dict(X=X_, Y=Y_, Z=Z_, t=t_, Ax=Ax_, Ay=Ay_, Az=Az_,
-                   Tmax=Tmax_, V0=V0_, gamma=gamma_, mu=mu_, K=K_, rho=rho_)
+                   Tmax=Tmax_, V0=V0_, gamma=gamma_, mu=mu_, K=K_, rho=rho_, rho0=rho_)
         loc.update(ns)
         return [eval(exprs[n], {'__builtins__': {}}, loc) for n in ('Bx', 'By', 'Bz')]
     return f
 
-committed = sys.argv[1] if len(sys.argv) > 1 else None
+committed = cli.committed
 fC = load_committed(committed) if committed else None
 
 def relerr(a, b):

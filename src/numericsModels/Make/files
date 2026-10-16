@@ -1,0 +1,10 @@
+sealedWall/sealedWallPolicy.C
+sealedWall/insulatedFaceConductivity.C
+sealedWall/sealedWallLeastSquaresVectors.C
+sealedWall/sealedWallLeastSquaresGrad.C
+interface/exposedPhiETrace.C
+interface/interfaceGradient.C
+pureNeumann/compatibilityProjection.C
+diffusion/conormalStabilisation.C
+
+LIB = $(FOAM_USER_LIBBIN)/libnumericsModels

@@ -92,6 +92,17 @@ public:
         return true;
     }
 
+    //- Write the fields the manufactured solution prescribes.
+    virtual void writeManufacturedFields(const fvMesh& mesh) const
+    {
+        (void)mesh;
+
+        FatalErrorInFunction
+            << "The selected verification model does not write "
+            << "manufactured fields."
+            << exit(FatalError);
+    }
+
     virtual void postProcess(const volScalarField& activationTime) = 0;
 
 protected:

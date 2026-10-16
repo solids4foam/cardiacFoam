@@ -177,6 +177,31 @@ void manufacturedFDAMonodomainVerifier::postProcess
     const auto u2Norms =
         computeNorms(mesh, fields[u2Idx].primitiveField(), u2Exact);
 
+    // Bulk and boundary-adjacent parts of the Vm error and of its cell gradient
+    const scalar S = Foam::sqrt(1.0 + t);
+    vectorField gradVmExact(centres.size());
+    forAll(centres, cellI)
+    {
+        const point& c = centres[cellI];
+        gradVmExact[cellI] =
+            S*pseudoECGManufacturedGradF(c.x(), c.y(), c.z(), dimension);
+    }
+    const tmp<volVectorField> tgradVm(fvc::grad(Vm));
+    const tmp<volVectorField> tgradRecon
+    (
+        exactFieldGradient
+        (
+            mesh,
+            Vm.name(),
+            [&](const point& p) { return S*manufacturedFDAFAt(p, dimension); }
+        )
+    );
+    const auto splitRows = bulkBoundaryRows
+    (
+        mesh, "Vm", Vm.primitiveField(), VmExact,
+        tgradVm().primitiveField(), tgradRecon().primitiveField(), gradVmExact
+    );
+
     const fileName outputDir(mesh.time().globalPath()/"postProcessing");
     mkDir(outputDir);
     const fileName outputFile
@@ -207,8 +232,12 @@ void manufacturedFDAMonodomainVerifier::postProcess
              << "u1     " << u1Norms.first().first() << "   "
              << u1Norms.first().second() << "   " << u1Norms.second() << nl
              << "u2     " << u2Norms.first().first() << "   "
-             << u2Norms.first().second() << "   " << u2Norms.second() << nl
-             << "-------------------------------------------------" << endl;
+             << u2Norms.first().second() << "   " << u2Norms.second() << nl;
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(Info, row.first(), row.second());
+        }
+        Info << "-------------------------------------------------" << endl;
 
         OFstream out(outputFile);
         out << "Manufactured-solution error summary (t = " << t << "):\n";
@@ -219,6 +248,10 @@ void manufacturedFDAMonodomainVerifier::postProcess
             << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
         out << "u2     " << u2Norms.first().first() << "   "
             << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
+        for (const auto& row : splitRows)
+        {
+            writeNormRow(out, row.first(), row.second());
+        }
         out << "-------------------------------------------------\n\n";
 
         out << "Simulation summary:\n";

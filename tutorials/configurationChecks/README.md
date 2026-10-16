@@ -19,7 +19,8 @@ base case:
 - `np=2` checks run a variant on two processors (simple decomposition) and
   reconstruct it.
 - `post=<script>` checks also run a post-processing utility on the result,
-  from `post/<script>`, e.g. `recomputePseudoECG`.
+  from `post/<script>`, e.g. `recomputePseudoECG`, or restart the run from
+  its latest time to twice its end time (`restartLatestTime`).
 
 [`comparisons`](comparisons) then checks that an option changes the results
 when it should (for example explicit versus implicit monodomain), or leaves

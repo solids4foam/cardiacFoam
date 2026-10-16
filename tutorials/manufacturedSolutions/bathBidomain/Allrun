@@ -5,37 +5,255 @@ set -e
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-# Default direct tutorial use to 1D.  When the shared driver passes
-# "parallel", the mesh has already been generated with the selected
-# system/blockMeshDict.<dimension>.
-DIM=${1:-1D}
-PARALLEL=false
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
 
-if [[ "${DIM}" == "parallel" ]]
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
+  -mesh hex|tet             blockMesh box (default) or gmsh tetrahedra
+                            (three_domain_box.geo.template, 3D only)
+  -dim 1|2|3                dimension of the hex box (default 3)
+  -N n                      cells per unit length (default 20); tet: element size 1/n
+  -seed n                   gmsh random seed for -mesh tet (default 1)
+  -variant groundElectrode|electrodePair
+                            bath boundary variant (default groundElectrode):
+                              groundElectrode  phiE = 0 on xMin, current alpha on xMax
+                              electrodePair    currents -alpha on xMin and alpha on xMax,
+                                               phiE pinned at phiERefPoint
+  -predictorCorrector yes|no
+                            bathPredictorCorrector (default yes)
+  -interface distanceWeightedHarmonic|unweightedHarmonic
+                            interfaceConductivityInterpolation (default
+                            distanceWeightedHarmonic)
+  -gradient leastSquares|GaussLinear
+                            cell-gradient reconstruction (default leastSquares)
+  -snGrad corrected|limited|orthogonal
+                            non-orthogonal correction of the laplacian and snGrad
+                            schemes (default corrected; limited is limited 0.5)
+  -dt x                     time step
+  -endTime x                end time (default 0.2)
+
+Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
+-mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
+USAGE
+    exit 2
+}
+
+parallel=false
+mesh=hex
+dim=3
+N=20
+seed=1
+variant=groundElectrode
+predictorCorrector=yes
+interface=distanceWeightedHarmonic
+gradient=leastSquares
+snGrad=corrected
+dt=
+endTime=0.2
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
+    esac
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -mesh)
+            needValue "$@"; mesh="$2"; shift
+            oneOf -mesh "$mesh" hex tet
+            ;;
+        -dim)
+            needValue "$@"; dim="$2"; shift
+            oneOf -dim "$dim" 1 2 3
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -seed)
+            needValue "$@"; seed="$2"; shift
+            positiveInteger -seed "$seed"
+            ;;
+        -variant)
+            needValue "$@"; variant="$2"; shift
+            oneOf -variant "$variant" groundElectrode electrodePair
+            ;;
+        -predictorCorrector)
+            needValue "$@"; predictorCorrector="$2"; shift
+            oneOf -predictorCorrector "$predictorCorrector" yes no
+            ;;
+        -interface)
+            needValue "$@"; interface="$2"; shift
+            oneOf -interface "$interface" distanceWeightedHarmonic unweightedHarmonic
+            ;;
+        -gradient)
+            needValue "$@"; gradient="$2"; shift
+            oneOf -gradient "$gradient" leastSquares GaussLinear
+            ;;
+        -snGrad)
+            needValue "$@"; snGrad="$2"; shift
+            oneOf -snGrad "$snGrad" corrected limited orthogonal
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            positiveNumber -endTime "$endTime"
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.gmsh ] || [ -e log.blockMesh ]
 then
-    DIM=""
-    PARALLEL=true
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
 fi
 
-if [[ "${2:-}" == "parallel" ]]
+if [ "$mesh" = tet ] && [ "$dim" != 3 ]
 then
-    PARALLEL=true
+    echo "${0##*/}: -mesh tet is 3D only" 1>&2
+    usage
 fi
 
-if [[ -n "${DIM}" ]]
+if [ "$mesh" = tet ]
 then
-    runApplication blockMesh -dict system/blockMeshDict.${DIM}
+    for tool in gmsh gmshToFoam
+    do
+        command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+    done
 fi
 
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/mesh
+
+cat > local/solver <<EOF
+dimension               "${dim}D";
+bathPredictorCorrector  $predictorCorrector;
+EOF
+echo "fdaBathVariant  $variant;" > local/verifier
+
+# The electrode pair replaces the ground on xMin by the opposite current
+cat > local/bath <<EOF
+interfaceConductivityInterpolation $interface;
+EOF
+if [ "$variant" = electrodePair ]
+then
+    cat >> local/bath <<EOF
+#remove groundPatches
+surfaceCurrentPatches
+{
+    xMin            -0.01;
+}
+EOF
+fi
+
+if [ "$gradient" = GaussLinear ]
+then
+    echo "default         Gauss linear;" > local/gradient
+fi
+case "$snGrad" in
+    limited)
+        correction="limited 0.5"
+        ;;
+    *)
+        correction="$snGrad"
+        ;;
+esac
+echo "default         Gauss linear $correction;" > local/laplacian
+echo "default         $correction;" > local/snGrad
+
+# Time step proportional to h^2, ending exactly at endTime
+if [ -z "$dt" ]
+then
+    dt=$(awk -v T="$endTime" -v N="$N" 'BEGIN {
+        h = 0.00892857*(10/N)^2
+        n = int(T/h); if (n*h < T) n++
+        printf "%.17g", T/n }')
+fi
+cat > local/time <<EOF
+endTime         $endTime;
+deltaT          $dt;
+writeInterval   $endTime;
+EOF
+
+# Mesh: blockMesh box of the chosen dimension, or gmsh tetrahedra
+if [ "$mesh" = hex ]
+then
+    runApplication blockMesh -dict system/blockMeshDict.${dim}D
+else
+    lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    runApplication gmsh -3 three_domain_box.geo.template -setnumber lc "$lc" -setnumber seed "$seed" \
+        -o local/three_domain_box.msh
+    if grep -q "Error" log.gmsh
+    then
+        echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+        exit 1
+    fi
+    runApplication gmshToFoam local/three_domain_box.msh
+fi
+runApplication checkMesh
+
+# The myocardium and bath cellZones, and the bath conductivity
 runApplication topoSet
 runApplication setTorsoOrganConductivityField
 
-if ${PARALLEL}
+if $parallel
 then
     runApplication decomposePar
     runParallel cardiacFoam
-    runApplication reconstructPar
+    runApplication reconstructPar -latestTime
     runApplication redistributeRestartState
 else
     runApplication cardiacFoam
 fi
+
+# Interface diagnostics of the solved field and of the exact field
+runApplication bathBidomainInterfaceMetrics -latestTime -writeFaceErrors
+runApplication -s exactFields bathBidomainInterfaceMetrics -latestTime -exactFields -writeFaceErrors

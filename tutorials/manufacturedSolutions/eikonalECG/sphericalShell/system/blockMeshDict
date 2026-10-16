@@ -1,0 +1,136 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "system";
+    object          blockMeshDict;
+}
+
+// Heart shell r1 < |x| < r2 as six projected blocks of a cubed sphere. N (a multiple
+// of 4) sets k = N/4: 3k cells along a cube-face edge and 2k radially, N cells per
+// unit length radially.
+
+N   12;
+#includeIfPresent "<case>/local/mesh"
+
+r1  0.5;
+r2  1.0;
+
+a1  #eval{ $r1/sqrt(3.0) };
+a2  #eval{ $r2/sqrt(3.0) };
+
+k   #eval{ round($N/4) };
+nt  #eval{ 3*$k };
+nM  #eval{ 2*$k };
+
+geometry
+{
+    s1 { type sphere; origin (0 0 0); radius $r1; }
+    s2 { type sphere; origin (0 0 0); radius $r2; }
+}
+
+vertices
+(
+    project #eval{ vector(-$a1, -$a1, -$a1) } (s1)
+    project #eval{ vector($a1, -$a1, -$a1) } (s1)
+    project #eval{ vector($a1, $a1, -$a1) } (s1)
+    project #eval{ vector(-$a1, $a1, -$a1) } (s1)
+    project #eval{ vector(-$a1, -$a1, $a1) } (s1)
+    project #eval{ vector($a1, -$a1, $a1) } (s1)
+    project #eval{ vector($a1, $a1, $a1) } (s1)
+    project #eval{ vector(-$a1, $a1, $a1) } (s1)
+    project #eval{ vector(-$a2, -$a2, -$a2) } (s2)
+    project #eval{ vector($a2, -$a2, -$a2) } (s2)
+    project #eval{ vector($a2, $a2, -$a2) } (s2)
+    project #eval{ vector(-$a2, $a2, -$a2) } (s2)
+    project #eval{ vector(-$a2, -$a2, $a2) } (s2)
+    project #eval{ vector($a2, -$a2, $a2) } (s2)
+    project #eval{ vector($a2, $a2, $a2) } (s2)
+    project #eval{ vector(-$a2, $a2, $a2) } (s2)
+);
+
+blocks
+(
+    hex (8 0 3 11 12 4 7 15) myocardium ($nM $nt $nt) simpleGrading (1 1 1)
+    hex (1 9 10 2 5 13 14 6) myocardium ($nM $nt $nt) simpleGrading (1 1 1)
+    hex (8 9 1 0 12 13 5 4) myocardium ($nt $nM $nt) simpleGrading (1 1 1)
+    hex (3 2 10 11 7 6 14 15) myocardium ($nt $nM $nt) simpleGrading (1 1 1)
+    hex (8 9 10 11 0 1 2 3) myocardium ($nt $nt $nM) simpleGrading (1 1 1)
+    hex (4 5 6 7 12 13 14 15) myocardium ($nt $nt $nM) simpleGrading (1 1 1)
+);
+
+edges
+(
+    arc 0 1 origin (0 0 0)
+    arc 3 2 origin (0 0 0)
+    arc 7 6 origin (0 0 0)
+    arc 4 5 origin (0 0 0)
+    arc 0 3 origin (0 0 0)
+    arc 1 2 origin (0 0 0)
+    arc 5 6 origin (0 0 0)
+    arc 4 7 origin (0 0 0)
+    arc 0 4 origin (0 0 0)
+    arc 1 5 origin (0 0 0)
+    arc 2 6 origin (0 0 0)
+    arc 3 7 origin (0 0 0)
+    arc 8 9 origin (0 0 0)
+    arc 11 10 origin (0 0 0)
+    arc 15 14 origin (0 0 0)
+    arc 12 13 origin (0 0 0)
+    arc 8 11 origin (0 0 0)
+    arc 9 10 origin (0 0 0)
+    arc 13 14 origin (0 0 0)
+    arc 12 15 origin (0 0 0)
+    arc 8 12 origin (0 0 0)
+    arc 9 13 origin (0 0 0)
+    arc 10 14 origin (0 0 0)
+    arc 11 15 origin (0 0 0)
+);
+
+faces
+(
+    project (0 3 7 4) s1
+    project (1 2 6 5) s1
+    project (0 1 5 4) s1
+    project (3 2 6 7) s1
+    project (0 1 2 3) s1
+    project (4 5 6 7) s1
+    project (8 11 15 12) s2
+    project (9 10 14 13) s2
+    project (8 9 13 12) s2
+    project (11 10 14 15) s2
+    project (8 9 10 11) s2
+    project (12 13 14 15) s2
+);
+
+boundary
+(
+    endocardium
+    {
+        type patch;
+        faces
+        (
+            (0 3 7 4) (1 2 6 5) (0 1 5 4) (3 2 6 7) (0 1 2 3) (4 5 6 7)
+        );
+    }
+    epicardium
+    {
+        type patch;
+        faces
+        (
+            (8 11 15 12) (9 10 14 13) (8 9 13 12) (11 10 14 15) (8 9 10 11) (12 13 14 15)
+        );
+    }
+);
+
+
+// ************************************************************************* //

@@ -1,0 +1,11 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# Error tolerances 1e-4 relative: set by the outer residual tolerance 1e-8
+summary  cellsPerDirection  12  0
+summary  finalTime          1  1e-12
+error    activationTime                    L2    2.0416576  0.0002
+error    activationTime                    Linf  4.92102606  0.00049
+error    activationTime_bulk               L2    1.63034156  0.00016
+error    activationTime_boundary           L2    1.22896385  0.00012
+error    gradActivationTime_boundary       L2    4.58085907  0.00046
+error    gradReconActivationTime_boundary  L2    2.98838186  0.0003

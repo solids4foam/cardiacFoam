@@ -1,81 +1,17 @@
 {
   "base": {
     "entry": "manufacturedEikonalECG",
-    "case_dir_name": "manufacturedSolutions/eikonalECG",
-    "setup_dir_name": "setup",
     "cases_root": "tutorials",
-    "dimensions": [
-      "3D"
-    ],
-    "solver_types": [
-      "eikonal"
-    ],
-    "mesh_family": "tet",
-    "numerics_profile": "eikonal_tet",
-    "error_localisation_analysis": true,
-    "postprocess_strict_artifacts": false,
-    "electro_property_overrides": {
-      "eikonalSolverCoeffs.verificationModel.writeErrorField": true
-    },
-    "archive_dir_name": "setup/studies/errorLocalisation/results/sweepCases"
+    "parallel": true,
+    "mesh": "tet-errorLocalisation",
+    "constant/electroProperties:eikonalSolverCoeffs.verificationModel.writeErrorField": true
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "grad_scheme": [
-        "gauss_linear",
-        "gauss_linear",
-        "gauss_linear",
-        "gauss_linear",
-        "least_squares",
-        "least_squares",
-        "least_squares",
-        "least_squares"
-      ],
-      "number_cells": [
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ]
-      ]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": [
-          "grad_scheme",
-          "number_cells"
-        ]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "grad_scheme",
-          "number_cells"
-        ]
-      }
-    ]
+      "system/fvSchemes:gradSchemes.default": ["Gauss linear", "leastSquares", "Gauss linear", "leastSquares", "Gauss linear", "leastSquares", "Gauss linear", "leastSquares"],
+      "tetNumberCells": [10, 10, 20, 20, 30, 30, 40, 40],
+      "caseId": ["GaussLinear_N10", "leastSquares_N10", "GaussLinear_N20", "leastSquares_N20", "GaussLinear_N30", "leastSquares_N30", "GaussLinear_N40", "leastSquares_N40"]
+    }
   }
 }

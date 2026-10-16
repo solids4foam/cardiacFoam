@@ -105,6 +105,99 @@ void myocardiumSolver::solveDiffusionImplicit
     }
 }
 
+
+// * * * * * * * * * * * * * * * Global Functions  * * * * * * * * * * * * * //
+
+namespace
+{
+
+//- Gather the support-mesh file fieldName through cellMap; false if there is none
+bool gatherMappedCellValues
+(
+    const word& fieldName,
+    const fvMesh& supportMesh,
+    const labelUList& cellMap,
+    scalarField& subValues
+)
+{
+    IOobject fullIO
+    (
+        fieldName,
+        supportMesh.time().timeName(),
+        supportMesh,
+        IOobject::MUST_READ,
+        IOobject::NO_WRITE,
+        IOobject::NO_REGISTER
+    );
+
+    if (!fullIO.typeHeaderOk<volScalarField>(true))
+    {
+        return false;
+    }
+
+    const volScalarField fullField(fullIO, supportMesh);
+    const scalarField& fullValues = fullField.primitiveField();
+
+    subValues.setSize(cellMap.size());
+    forAll(cellMap, subCelli)
+    {
+        subValues[subCelli] = fullValues[cellMap[subCelli]];
+    }
+
+    return true;
+}
+
+} // End anonymous namespace
+
+
+IOobject::readOption myocardiumFieldReadOption
+(
+    const fvMeshSubset* meshSubsetPtr
+)
+{
+    return
+    (
+        meshSubsetPtr && meshSubsetPtr->hasSubMesh()
+      ? IOobject::NO_READ
+      : IOobject::READ_IF_PRESENT
+    );
+}
+
+
+bool readMappedCellField
+(
+    volScalarField& subField,
+    const fvMesh& supportMesh,
+    const labelUList& cellMap
+)
+{
+    scalarField values;
+
+    if (!gatherMappedCellValues(subField.name(), supportMesh, cellMap, values))
+    {
+        return false;
+    }
+
+    subField.primitiveFieldRef() = values;
+    subField.correctBoundaryConditions();
+
+    if
+    (
+        gatherMappedCellValues
+        (
+            subField.name() + "_0", supportMesh, cellMap, values
+        )
+    )
+    {
+        volScalarField& subField0 = subField.oldTime();
+        subField0.primitiveFieldRef() = values;
+        subField0.correctBoundaryConditions();
+        subField0.oldTime();
+    }
+
+    return true;
+}
+
 } // End namespace Foam
 
 // ************************************************************************* //

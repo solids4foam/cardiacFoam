@@ -1,0 +1,45 @@
+# applications/utilities/setManufacturedFields/utility.manifest.toml
+
+name = "setManufacturedFields"
+description = "Write the conductivity fields and cell decomposition a manufactured-solution verification model prescribes."
+category = "verification"
+
+purpose = """
+Selects the verification model named in constant/electroProperties and asks it
+to write the fields its manufactured solution prescribes, so that a
+verification case needs no hand-written conductivity files. For the
+sealed-shell verifiers these are the conductivity tensors (intracellular and
+extracellular for the bidomain shell). The utility runs on the undecomposed
+case and is serial only.
+"""
+
+inputs = [
+  "constant/polyMesh",
+  "constant/electroProperties",
+  "system/controlDict",
+]
+
+outputs = [
+  "0/ConductivityIntracellular",
+  "0/ConductivityExtracellular",
+  "0/bodyAndOrgansConductivity",
+  "constant/cellDecomposition",
+]
+
+requires_mesh = true
+
+example = "setManufacturedFields -case ./myCase"
+
+[[produces]]
+artifact_id = "manufactured_conductivity_fields"
+path_pattern = "0/*Conductivity*"
+format = "openfoam_log"
+description = "Conductivity fields evaluated from the manufactured solution's tensors."
+produced_by = "setManufacturedFields"
+
+[[produces]]
+artifact_id = "manufactured_cell_decomposition"
+path_pattern = "constant/cellDecomposition"
+format = "openfoam_log"
+description = "Per-cell domain labels for method manual decomposition."
+produced_by = "setManufacturedFields"

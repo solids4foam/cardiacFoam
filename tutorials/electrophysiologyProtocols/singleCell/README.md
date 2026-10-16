@@ -9,7 +9,7 @@ This case is the single integration-point electrophysiology workflow.
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/singleCell/
+tutorials/electrophysiologyProtocols/singleCell/
 ├── constant/
 │   ├── electroProperties
 │   ├── physicsProperties
@@ -20,8 +20,11 @@ tutorials/coreProtocols/singleCell/
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setup/
-│   ├── run_cases.sh
-│   └── singleCellinteractivePlots.py
+│   ├── singleCellinteractivePlots.py
+│   ├── table_summary.py
+│   ├── sweep_ionic_model_tissue.json
+│   └── studies/
+│       └── tworldVsGaur/
 ├── singleCell.reference
 ├── regressionTest.sh
 ├── Allrun
@@ -115,14 +118,26 @@ Manual:
 ./regressionTest.sh
 ```
 
-Driver-managed sweep:
+omniD-managed sweeps (this case IS the default -- omniD's `singleCell`
+tutorial record points at this directory and stages a clone of it for every
+case; nothing here is ever written in place):
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam describe --entry singleCell --cases-root <path to tutorials>
+omnidriver --plugin cardiacfoam sweep-plan --spec setup/sweep_ionic_model_tissue.json --output-dir <scratch output dir>
+omnidriver --plugin cardiacfoam sweep-run  --spec setup/sweep_ionic_model_tissue.json --output-dir <scratch output dir>
 ```
 
-The Python driver mutates ionic model, tissue, and stimulus amplitude for each case,
-then collects outputs and post-processes in `setup`.
+`setup/sweep_ionic_model_tissue.json` and `setup/studies/tworldVsGaur
+/sweep_tworld_vs_gaur.json` are this tutorial's own studies, in omniD's
+tutorial-record vocabulary: a study name is either a
+literal `document:dotted.path` dictionary key
+(`constant/electroProperties:singleCellSolverCoeffs.tissue`, set directly)
+or this record's one allowed axis, `ionicModel` (a bare model name; derives
+`singleCellSolverCoeffs.ionicModel` and this model's catalogued single-cell
+`stim_amplitude`). Neither study varies S2 pacing, so there is no
+`s1s2Protocol`-style axis here; `stim_period_S1` and
+`outputVariables.ionic.export` are set as direct keys.
 
 ## Regression behavior
 

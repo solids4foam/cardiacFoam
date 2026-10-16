@@ -1,32 +1,22 @@
-# Reference grammar: case-local kinds, see regression/regressionTest.sh.
-# error3D|error1D <field> <L1|L2|Linf> <expected> <tolerance> <rel|abs>; coupling <column> - <expected> <tolerance> <rel|abs>
-# Generated from a v2512 serial run at N_CELLS=20 with the 41-node graph.
-# The summaries print 6 significant digits, so a round-off change can flip the
-# last digit (up to 1e-5 relative): rel 2e-5 allows one printed digit. The net
-# junction current is near zero by cancellation, so it gets an absolute
-# tolerance.
-error3D Vm L1 0.000853948 2e-5 rel
-error3D Vm L2 0.00116361 2e-5 rel
-error3D Vm Linf 0.00336237 2e-5 rel
-error3D u1 L1 0.000111841 2e-5 rel
-error3D u1 L2 0.000155118 2e-5 rel
-error3D u1 Linf 0.000551867 2e-5 rel
-error3D u2 L1 4.86786e-05 2e-5 rel
-error3D u2 L2 6.66589e-05 2e-5 rel
-error3D u2 Linf 0.000195356 2e-5 rel
-error1D Vm1D L1 5.9471e-06 2e-5 rel
-error1D Vm1D L2 7.11648e-06 2e-5 rel
-error1D Vm1D Linf 1.36983e-05 2e-5 rel
-error1D u1 L1 5.78369e-06 2e-5 rel
-error1D u1 L2 6.51348e-06 2e-5 rel
-error1D u1 Linf 1.08006e-05 2e-5 rel
-error1D u2 L1 1.52323e-06 2e-5 rel
-error1D u2 L2 1.81432e-06 2e-5 rel
-error1D u2 Linf 3.78511e-06 2e-5 rel
-coupling sourceL1 - 3.17832 2e-5 rel
-coupling sourceL2 - 53.7473 2e-5 rel
-coupling sourceErrorL1 - 0.000249206 2e-5 rel
-coupling sourceErrorL2 - 0.00421579 2e-5 rel
-coupling totalAbsCurrent - 3.17832 2e-5 rel
-coupling nonZeroCells - 42 2e-5 rel
-coupling totalCurrent - 6.81632e-06 1e-9 abs
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# csv <file> <time> <column> <expected> <tolerance>
+summary  cells      20   0
+summary  finalTime  0.1  1e-9
+error    Vm                     L1    0.00035563    3.6e-09
+error    Vm                     L2    0.000484591   4.8e-09
+error    Vm                     Linf  0.0013697     1.4e-08
+error    u1                     L1    3.86916e-06   3.9e-11
+error    u1                     L2    5.57353e-06   5.6e-11
+error    u1                     Linf  4.86609e-05   4.9e-10
+error    u2                     L1    2.02335e-06   2e-11
+error    u2                     L2    2.83304e-06   2.8e-11
+error    u2                     Linf  2.6878e-05    2.7e-10
+error    Vm_boundary            L2    0.000334352   3.3e-09
+error    gradVm_boundary        L2    0.0772548     7.7e-07
+error    gradReconVm            L2    0.159188      1.6e-06
+csv      verification/coupled1D3DMonodomain_diagnostics.csv  0.1  sourceL1      3.04196       3e-05
+csv      verification/coupled1D3DMonodomain_diagnostics.csv  0.1  exactSourceL1 3.04273       3e-05
+csv      verification/coupled1D3DMonodomain_diagnostics.csv  0.1  sourceErrorL1 0.000774834   7.7e-09
+csv      verification/coupled1D3DMonodomain_diagnostics.csv  0.1  sourceErrorL2 0.0131038     1.3e-07
+csv      verification/coupled1D3DMonodomain_diagnostics.csv  0.1  nonZeroCells  42            0

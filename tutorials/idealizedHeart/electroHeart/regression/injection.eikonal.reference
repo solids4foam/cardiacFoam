@@ -8,6 +8,6 @@
 # directory, 1/, whatever endTime says. Sample that.
 #
 probe  postProcessing/injectionProbe/0/activationTime  1      2  0.0058399     1e-4
-probe  postProcessing/eikonalECG.dat                   0.025  5  0.003966149   2e-4
-probe  postProcessing/eikonalECG.dat                   0.035  3  -0.006853826  2e-4
-probe  postProcessing/eikonalECG.dat                   0.04   7  0.006916027   2e-4
+probe  postProcessing/eikonalECG.dat                   0.025  5  0.00256479095   2e-4
+probe  postProcessing/eikonalECG.dat                   0.035  3  0.0021867525  2e-4
+probe  postProcessing/eikonalECG.dat                   0.04   7  0.00444827601   2e-4

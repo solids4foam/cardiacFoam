@@ -50,6 +50,7 @@ SourceFiles
 #include "labelList.H"
 #include "autoPtr.H"
 #include "Switch.H"
+#include "globalIOFields.H"
 
 namespace Foam
 {
@@ -68,9 +69,11 @@ class restitutionEikonalSolver1D
 
     scalarField lastActTime_;   //- time of last activation [s]; -GREAT if never fired
     scalarField DI_;
-    scalarField nextTact_;
+    //- Pending activation per node and the node it comes from; written
+    //  with the time directories so a wave in transit survives a restart.
+    scalarGlobalIOField nextTact_;
     labelList   activatedFrom_;
-    labelList   nextTactSource_;
+    scalarGlobalIOField nextTactSource_;
 
     labelList   blockCount_;
     labelList   wavebreakCount_;
@@ -109,6 +112,8 @@ public:
         scalar t0,
         scalar dt
     ) override;
+
+    virtual void write() override;
 
     virtual bool writesGraphVm() const override
     {

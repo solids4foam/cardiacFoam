@@ -19,6 +19,7 @@ License
 
 #include "pvjCoupler.H"
 #include "electroDomainInterface.H"
+#include "purkinjeModelIO.H"
 
 namespace Foam
 {
@@ -100,10 +101,39 @@ pvjCoupler::pvjCoupler
     ),
     lastObservedTissueActivation_
     (
-        networkTerminalDomain_.terminalNodes().size(),
-        -1.0
+        IOobject
+        (
+            IOobject::groupName
+            (
+                "lastObservedTissueActivation",
+                dict.dictName()
+            ),
+            primaryDomain.mesh().time().timeName(),
+            primaryDomain.mesh(),
+            IOobject::READ_IF_PRESENT,
+            IOobject::NO_WRITE
+        ),
+        0
     )
-{}
+{
+    if (!purkinjeModelIO::readGlobalField(lastObservedTissueActivation_))
+    {
+        lastObservedTissueActivation_.setSize
+        (
+            networkTerminalDomain_.terminalNodes().size(),
+            -1.0
+        );
+    }
+}
+
+
+void pvjCoupler::write()
+{
+    if (couplingMode_ == bidirectional && mesh_.time().outputTime())
+    {
+        purkinjeModelIO::writeGlobalField(lastObservedTissueActivation_);
+    }
+}
 
 
 void pvjCoupler::clearTerminalCouplingBuffers() const

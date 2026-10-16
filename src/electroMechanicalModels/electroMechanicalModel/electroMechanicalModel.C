@@ -189,7 +189,7 @@ void Foam::electroMechanicalModel::writeFields(const Time& runTime)
 
 void Foam::electroMechanicalModel::end()
 {
-    this->IOobject::rename(this->IOobject::name() + ".withDefaultValues");
+    this->regIOobject::rename(this->IOobject::name() + ".withDefaultValues");
     this->regIOobject::write();
     electro().end();
     solid().end();

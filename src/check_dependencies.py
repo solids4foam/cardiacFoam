@@ -8,6 +8,7 @@ hierarchy = [
     'genericWriter',
     'ionicModels',
     'activeTensionModels',
+    'numericsModels',
     'electroModels',
     'verificationModels',
     'electroMechanicalModels'

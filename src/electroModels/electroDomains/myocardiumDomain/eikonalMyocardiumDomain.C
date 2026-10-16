@@ -26,7 +26,7 @@ License
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
+#include "sealedWallPolicy.H"
 
 namespace Foam
 {
@@ -62,6 +62,16 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
         supportMesh.cellZones()[zoneId],
         myocardiumExposedFacesPatch(supportMesh, electroProperties)
     );
+#if OPENFOAM < 2406
+    // OpenFOAM before 2406 copies the base fvSchemes and fvSolution onto the
+    // sub-mesh without parsing them, so read them for the scheme and solver
+    // lookups to resolve.
+    fvMesh& subMesh = subsetPtr->subMesh();
+    subMesh.fvSchemes::readOpt(IOobject::MUST_READ);
+    subMesh.fvSchemes::read();
+    subMesh.fvSolution::readOpt(IOobject::MUST_READ);
+    subMesh.fvSolution::read();
+#endif
     return subsetPtr;
 }
 
@@ -81,23 +91,14 @@ const fvMesh& resolveMyocardiumMesh
 }
 
 
-// NOTE: a free function here used to re-derive "is verification enabled?"
-// from type + enabled, in parallel with eikonalVerificationModel::New, which
-// answers the same question by returning nullptr. The boundary types keyed
-// off that duplicate rather than off the verifier that actually got built.
-// The single source of truth is now verificationModelPtr_ itself.
-
-
 // activationTime's boundary conditions come from 0/activationTime like any
-// other field's. They used to be chosen here from the verification settings
-// and handed to the field constructor, which hid them from the case: nothing
-// in the case directory said whether the run used zeroGradient or fixedValue.
+// other field's.
 //
 // Manufactured-solution runs need Dirichlet boundaries -- applyConstraints
 // writes the exact solution onto each patch face, and a zeroGradient patch
 // would extrapolate those values away from the interior on the next
 // evaluate(), silently invalidating the verification while still reporting
-// error norms. checkVerificationBoundaryTypes below enforces that instead.
+// error norms. checkVerificationBoundaryTypes below enforces that.
 void checkVerificationBoundaryTypes
 (
     const volScalarField& activationTime,
@@ -318,45 +319,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     ),
     verificationModelPtr_()
 {
-    const wordList wallTypes
-    (
-        conormalWallPatchTypes
-        (
-            mesh(),
-            electroProperties.get<word>("sealedWallTrace")
-        )
-    );
-    volScalarField::Boundary& activationBf = activationTime_.boundaryFieldRef();
-    boolList replaced(activationBf.size(), false);
-    forAll(activationBf, patchI)
-    {
-        if
-        (
-            isA<zeroGradientFvPatchScalarField>(activationBf[patchI])
-         && wallTypes[patchI] != activationBf[patchI].type()
-        )
-        {
-            activationBf.set
-            (
-                patchI,
-                fvPatchScalarField::New
-                (
-                    wallTypes[patchI],
-                    mesh().boundary()[patchI],
-                    activationTime_
-                )
-            );
-            replaced[patchI] = true;
-        }
-    }
-    setConormalWallConductivity(activationTime_, conductivity_.name(), word::null);
-    forAll(activationBf, patchI)
-    {
-        if (replaced[patchI])
-        {
-            activationBf[patchI].evaluate();
-        }
-    }
+    sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
     const boundBox bb
     (
@@ -584,18 +547,10 @@ void eikonalMyocardiumDomain::advance
                 )
               + fvm::div(phiU_, activationTime_)
               + fvm::SuSp(-divPhiU_, activationTime_)
-             == one
-              + fvc::div(phiU_, activationTime_)
-              - divPhiU_*activationTime_
-              - c0_*G_
-              + Smms
+             == one + Smms
             );
 
-            // Under-relax the nonlinear outer loop: G, phiU and divPhiU are
-            // lagged (recomputed from psi each outer iteration), so without
-            // relaxation the deferred-correction fixed point is not contractive
-            // and the outer residual drifts upwards.  relax() also boosts
-            // diagonal dominance, which stabilises the unpreconditioned solve.
+            // c0 |grad psi|_M = u & grad psi with u lagged; a bounded div scheme keeps the transport monotone
             activationEqn.relax();
             activationEqn.setValues(constrainedCells, constrainedValues);
             activationEqn.solve("asymmetric_" + activationTime_.name());

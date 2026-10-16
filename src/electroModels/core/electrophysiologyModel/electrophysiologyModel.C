@@ -158,7 +158,19 @@ bool Foam::electrophysiologyModel::readRestartState()
         if (loaded)
         {
             setVmFromRestartState();
-            ionicModelPtr_->refreshRestartState(mesh());
+
+            const electroVolumeFieldDomain* volumeDomainPtr =
+                domainSystem_.hasMyocardium()
+              ? dynamic_cast<const electroVolumeFieldDomain*>
+                (
+                    &domainSystem_.myocardium()
+                )
+              : nullptr;
+
+            ionicModelPtr_->refreshRestartState
+            (
+                volumeDomainPtr ? volumeDomainPtr->Vm().mesh() : mesh()
+            );
         }
         return loaded;
     }

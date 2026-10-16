@@ -37,20 +37,9 @@ solvers
 
 PIMPLE
 {
-    // The global bath phiE is advanced outside the PIMPLE outer loop.
-    // This shared count applies the same corrected-Laplacian reassembly
-    // policy to phiE and Vm.
+    // Each outer pass solves the global phiE, then Vm
     nOuterCorrectors         1;
-    nNonOrthogonalCorrectors 1;
-
-    // residualControl
-    // {
-    //     Vm
-    //     {
-    //         relTol          0.0;
-    //         tolerance       1e-10;
-    //     }
-    // }
+    nNonOrthogonalCorrectors 0;
 }
 
 

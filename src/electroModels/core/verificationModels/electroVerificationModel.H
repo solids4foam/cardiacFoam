@@ -107,6 +107,40 @@ public:
         (void)evaluationTime;
     }
 
+    //- Add the manufactured source of the phiE equation, L(phiE) == rhs, on the mesh phiE is solved on
+    virtual void addManufacturedPhiESource
+    (
+        volScalarField& rhs,
+        const scalar evaluationTime
+    ) const
+    {
+        (void)rhs;
+        (void)evaluationTime;
+    }
+
+    //- Remove the discrete imbalance of a pure-Neumann phiE system before the reference cell is pinned
+    virtual bool requiresPhiECompatibilityProjection() const
+    {
+        return false;
+    }
+
+    //- Store the face flux balanced by the phiE equation on heart-bath faces in phiEInterfaceFlux (A, owner->neighbour, extracellular part) and the gradient of its face corrections in phiEInterfaceGradient
+    virtual bool requiresInterfaceFluxDiagnostic() const
+    {
+        return false;
+    }
+
+    //- Write the fields the manufactured solution prescribes.
+    virtual void writeManufacturedFields(const fvMesh& mesh) const
+    {
+        (void)mesh;
+
+        FatalErrorInFunction
+            << "The selected verification model does not write "
+            << "manufactured fields."
+            << exit(FatalError);
+    }
+
     virtual void bindBidomainField
     (
         volScalarField& phiE,

@@ -54,6 +54,7 @@ Author
 #include "PstreamReduceOps.H"
 #include "mathematicalConstants.H"
 #include "conductivityFieldIO.H"
+#include "sealedWallPolicy.H"
 
 using namespace Foam;
 
@@ -364,6 +365,11 @@ int main(int argc, char *argv[])
                 IOobject::NO_WRITE
             ),
             mesh
+        );
+        sealedWallPolicy::publish
+        (
+            Vm,
+            myocardiumCoeffs.get<Switch>("sealedHeartBoundary")
         );
 
         const tmp<volVectorField> tgradVm = fvc::grad(Vm);
