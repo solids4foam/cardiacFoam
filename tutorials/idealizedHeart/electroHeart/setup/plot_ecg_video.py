@@ -12,9 +12,9 @@ both can be played side-by-side.
 Usage
 -----
 Run from within a case directory after Allrun (--case-dir defaults to `.`):
-    python3 plot_ecg_video.py
-    python3 plot_ecg_video.py --fps 30 --output lbbb_ecg.mp4
-    python3 plot_ecg_video.py --fps 30 --tmax 0.5
+    python3 setup/plot_ecg_video.py
+    python3 setup/plot_ecg_video.py --fps 30 --output lbbb_ecg.mp4
+    python3 setup/plot_ecg_video.py --fps 30 --tmax 0.5
 
 Requirements
 ------------

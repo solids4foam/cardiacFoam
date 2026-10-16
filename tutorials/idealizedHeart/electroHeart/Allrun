@@ -31,6 +31,7 @@ for arg in "$@"; do
         monodomain|eikonal|hybrid) variant="$arg" ;;
         human|pig)                 purkinjeTree="$arg" ;;
         parallel)                  parallelRun=true ;;
+        *) echo "Unknown argument '$arg'. Use monodomain, eikonal or hybrid, human or pig, and/or parallel." ; exit 1 ;;
     esac
 done
 

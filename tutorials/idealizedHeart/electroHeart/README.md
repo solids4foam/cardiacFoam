@@ -193,7 +193,7 @@ as the junction delay. Keep it fixed when comparing meshes.
 ./Allrun hybrid pig   # any variant on the pig Purkinje tree
 ```
 
-`python3 plot_pseudo_ecg.py --case-dir . --monodomain` (`--eikonal` for the
+`python3 setup/plot_pseudo_ecg.py --case-dir . --monodomain` (`--eikonal` for the
 `eikonal` variant) plots the pseudo-ECG of a finished run.
 
 The regression runs `monodomain` on the human tree by default; with

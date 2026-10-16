@@ -67,4 +67,4 @@ tissue.
 ./Allrun ischemia parallel
 ```
 
-`python3 plot_pseudo_ecg.py --case-dir .` plots the pseudo-ECG of a finished run.
+`python3 setup/plot_pseudo_ecg.py --case-dir .` plots the pseudo-ECG of a finished run.
