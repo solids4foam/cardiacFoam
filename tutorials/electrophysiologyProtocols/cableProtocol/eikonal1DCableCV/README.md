@@ -142,7 +142,10 @@ so keep those fixed while calibrating conductivity.
 - field writes in time directories (`Vm`, `activationTime`, ...)
 - probe traces in `postProcessing/cableProbes/`
 - CV summary in `postProcessing/cv_summary.txt`
-- sweep artifacts grouped by ionic model inside `outputsCVConvergence/<ionicModel>/`
+- `setup/table_summary.py` walks a sweep's own `<output_dir>/cases/case_NNNN/
+  postProcessing/*_cv_summary.json` (one per case) and writes
+  `cable1DCVConvergence_summary.csv`/`.html` plus dx/dt convergence plots at
+  the sweep's own output_dir
 
 ## Typical use
 

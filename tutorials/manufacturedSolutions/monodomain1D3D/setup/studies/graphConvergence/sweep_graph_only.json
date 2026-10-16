@@ -1,0 +1,20 @@
+{
+  "base": {
+    "entry": "manufacturedMonodomain1D3D",
+    "cases_root": "tutorials",
+    "solver": "graphOnly"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "graphFile": [
+        "purkinjeGraph.nodes003",
+        "purkinjeGraph.nodes011",
+        "purkinjeGraph.nodes021",
+        "purkinjeGraph.nodes041",
+        "purkinjeGraph.nodes081",
+        "purkinjeGraph.nodes161"
+      ]
+    }
+  }
+}

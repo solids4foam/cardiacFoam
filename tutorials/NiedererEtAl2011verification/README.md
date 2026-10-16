@@ -23,12 +23,12 @@ tutorials/NiedererEtAl2011verification/
 │   ├── Niedererlines
 │   └── Niedererpoints
 ├── setup/
-│   ├── convert_raw_samples.py
 │   ├── line_postProcessing.py
 │   ├── points_postProcessing.py
 │   ├── table_summary.py
 │   └── studies/
 │       ├── cartesianConvergence/
+│       ├── obliqueWall/
 │       └── tetConvergence/
 ├── regression/
 │   ├── regressionTest.sh
@@ -78,14 +78,29 @@ regression/regressionTest.sh
 regression/regressionTest.sh parallel
 ```
 
-Driver-managed sweep:
+Omnidriver-managed (from the repository root; a record stages into a scratch
+directory you supply, never into this tree):
 
 ```bash
 [omnidriver command to run]
 ```
 
-Driver sweeps are controlled by omnidriver's `niederer_2011`
-cardiacFoam plugin defaults.
+omnidriver reads this case as it is: `niederer2011` is a pointer at this
+directory, and each study under `setup/studies/` states only what it
+varies (`dx`/`tetDx`, `deltaT`, `endTime`). Each study's `base` names
+`cases_root` (`tutorials`, relative to the repository root), because a
+omnidriver sweep over a tutorial record has no cases root it could discover.
+
+`cartesianConvergence` and `tetConvergence` run Niederer et al. (2011)'s
+grid: Δx = 0.5, 0.2, 0.1 mm (`dx`/`tetDx` 5e-4, 2e-4, 1e-4 m) × Δt = 0.05,
+0.01, 0.005 ms (`deltaT` 5e-5, 1e-5, 5e-6 s), nine cases each, with `endTime`
+0.2, 0.08 and 0.055 s for Δx 0.5, 0.2 and 0.1 mm, chosen so every probe has
+activated.
+The Δx 0.1 mm cases take hours each and are meant for an HPC run.
+
+`obliqueWall` (hex only) runs the same grid with the conductivity rotated 45°
+in the x–y plane, to test the wall treatment; see
+`setup/studies/obliqueWall/README.md`.
 
 ## Regression behavior
 

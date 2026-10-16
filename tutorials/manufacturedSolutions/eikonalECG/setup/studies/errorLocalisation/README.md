@@ -36,6 +36,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_tet_error_localisation.json`.
+
 `analyse_error_localisation.py` bins the cellwise error of one run by the
 distance from the planes `x, y, z = 0` next to the imposed cells and by the
 distance from the nearest face, and reports the correlations:

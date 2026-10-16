@@ -13,7 +13,7 @@ All the output logic, shared by the ionic, active-tension and electro libraries:
 | `activeTensionIO` | active-tension output |
 | `ecgModelIO` | ECG output |
 | `purkinjeModelIO` | Purkinje-network time series |
-| `restartStateIO.H` | saves and restores internal model state as binary files in the time directory, for restarts (header-only) |
+| `restartStateIO.H` | saves and restores internal model state as binary files in the time directory, for restarts: one file per processor, or one file in the case root for a conduction network (header-only) |
 | `conductivityFieldIO` | resolves the conductivity used by the tissue solvers |
 
 ## Folders

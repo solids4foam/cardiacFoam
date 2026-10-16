@@ -1,13 +1,12 @@
 {
   "base": {
     "entry": "singleCell",
-    "case_dir_name": "electrophysiologyProtocols/singleCell",
-    "setup_dir_name": "setup"
+    "cases_root": "tutorials"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "ionic_model": [
+      "ionicModel": [
         "AlievPanfilov",
         "BuenoOrovio",
         "BuenoOrovio",
@@ -49,7 +48,7 @@
         "TWorldcompactBatched",
         "TWorldcompactBatched"
       ],
-      "tissue": [
+      "constant/electroProperties:singleCellSolverCoeffs.tissue": [
         "myocyte",
         "epicardialCells",
         "mCells",
@@ -97,16 +96,16 @@
         "name": "caseId",
         "derive": "case_id_template",
         "of": [
-          "ionic_model",
-          "tissue"
+          "ionicModel",
+          "constant/electroProperties:singleCellSolverCoeffs.tissue"
         ]
       },
       {
         "name": "output_dir_name",
         "derive": "output_dir_name_template",
         "of": [
-          "ionic_model",
-          "tissue"
+          "ionicModel",
+          "constant/electroProperties:singleCellSolverCoeffs.tissue"
         ]
       }
     ]

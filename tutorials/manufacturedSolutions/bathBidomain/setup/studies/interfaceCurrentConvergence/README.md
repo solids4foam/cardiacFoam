@@ -44,6 +44,8 @@ python3 ../summarize.py results
 python3 ../summarize.py results --relative-to distanceWeightedHarmonic_tet
 ```
 
+The omnidriver specs for this study are `sweep_tet_distanceWeightedHarmonic.json` and `sweep_tet_unweightedHarmonic.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`, `N = 10` only, gmsh

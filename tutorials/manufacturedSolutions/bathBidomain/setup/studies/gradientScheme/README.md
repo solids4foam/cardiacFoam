@@ -38,6 +38,8 @@ python3 ../summarize.py results
 python3 ../summarize.py results --relative-to current_tet
 ```
 
+The omnidriver specs for this study are `sweep_current.json`, `sweep_gaussLinear.json`, `sweep_limitedCorrection.json` and `sweep_orthogonalControl.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`), L2:

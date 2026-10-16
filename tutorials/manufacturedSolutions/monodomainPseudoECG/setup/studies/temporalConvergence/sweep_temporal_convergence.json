@@ -1,23 +1,12 @@
 {
   "base": {
     "entry": "manufacturedMonodomainPseudoECG",
-    "case_dir_name": "manufacturedSolutions/monodomainPseudoECG",
-    "setup_dir_name": "setup",
-    "cases_root": "tutorials",
-    "solver_types": [
-      "implicit"
-    ],
-    "piecewise_sweep": false,
-    "mesh_family": "hex",
-    "postprocess_strict_artifacts": false,
-    "ecg_enabled": true,
-    "archive_dir_name": "setup/studies/temporalConvergence/results/sweepCases",
-    "convergence_axis": "temporal"
+    "cases_root": "tutorials"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "dimensions": [
+      "dimension": [
         "1D",
         "1D",
         "1D",
@@ -31,7 +20,7 @@
         "3D",
         "3D"
       ],
-      "number_cells": [
+      "numberCells": [
         640,
         640,
         640,
@@ -45,7 +34,7 @@
         160,
         160
       ],
-      "dt_values": [
+      "system/controlDict:deltaT": [
         0.001121075,
         0.000560538,
         0.000280269,
@@ -58,27 +47,373 @@
         0.00224215,
         0.000560538,
         0.0001401345
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.verificationModel.type": [
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier",
+        "manufacturedFDAMonodomainVerifier"
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.ecgDomains.ECG.verificationModel.anisotropic": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions.E1": [
+        [
+          -0.5,
+          0,
+          0
+        ],
+        [
+          -0.5,
+          0,
+          0
+        ],
+        [
+          -0.5,
+          0,
+          0
+        ],
+        [
+          -0.5,
+          0,
+          0
+        ],
+        [
+          -0.5,
+          0.5,
+          0
+        ],
+        [
+          -0.5,
+          0.5,
+          0
+        ],
+        [
+          -0.5,
+          0.5,
+          0
+        ],
+        [
+          -0.5,
+          0.5,
+          0
+        ],
+        [
+          -0.5,
+          0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5,
+          0.5
+        ],
+        [
+          -0.5,
+          0.5,
+          0.5
+        ]
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions.E2": [
+        [
+          1.5,
+          0,
+          0
+        ],
+        [
+          1.5,
+          0,
+          0
+        ],
+        [
+          1.5,
+          0,
+          0
+        ],
+        [
+          1.5,
+          0,
+          0
+        ],
+        [
+          1.5,
+          0.5,
+          0
+        ],
+        [
+          1.5,
+          0.5,
+          0
+        ],
+        [
+          1.5,
+          0.5,
+          0
+        ],
+        [
+          1.5,
+          0.5,
+          0
+        ],
+        [
+          1.5,
+          0.5,
+          0.5
+        ],
+        [
+          1.5,
+          0.5,
+          0.5
+        ],
+        [
+          1.5,
+          0.5,
+          0.5
+        ],
+        [
+          1.5,
+          0.5,
+          0.5
+        ]
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions.E3": [
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ]
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions.E4": [
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ]
+      ],
+      "constant/electroProperties:monodomainSolverCoeffs.ecgDomains.ECG.electrodePositions.E5": [
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ]
+      ],
+      "caseId": [
+        "1D_640_dt0",
+        "1D_640_dt1",
+        "1D_640_dt2",
+        "1D_640_dt3",
+        "2D_640_dt4",
+        "2D_640_dt5",
+        "2D_640_dt6",
+        "2D_640_dt7",
+        "3D_160_dt8",
+        "3D_160_dt9",
+        "3D_160_dt10",
+        "3D_160_dt11"
+      ],
+      "output_dir_name": [
+        "1D_640_dt0",
+        "1D_640_dt1",
+        "1D_640_dt2",
+        "1D_640_dt3",
+        "2D_640_dt4",
+        "2D_640_dt5",
+        "2D_640_dt6",
+        "2D_640_dt7",
+        "3D_160_dt8",
+        "3D_160_dt9",
+        "3D_160_dt10",
+        "3D_160_dt11"
       ]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": [
-          "dimensions",
-          "number_cells",
-          "dt_values"
-        ]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "dimensions",
-          "number_cells",
-          "dt_values"
-        ]
-      }
-    ]
+    }
   }
 }

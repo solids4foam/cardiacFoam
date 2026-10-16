@@ -40,6 +40,8 @@ done
 python3 ../summarize.py results
 ```
 
+The omnidriver spec for this study is `sweep_hex_convergence.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`), gauge-shifted potentials.

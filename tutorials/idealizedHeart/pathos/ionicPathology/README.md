@@ -30,7 +30,7 @@ files are identical except for the `ionicConstantOverrides` block:
   dispersion of repolarisation). References: Coronel et al. 2009,
   Shimizu & Antzelevitch 1999.
 
-Purkinje conduction and junction coupling: `purkinjeConductivity 0.4`
+Purkinje conduction and junction coupling: `purkinjeConductivity 0.4` S/m
 (~3.3 m/s along the tree) and `pvjRadius 1.65e-3`, the smallest junction
 radius valid on this mesh.
 

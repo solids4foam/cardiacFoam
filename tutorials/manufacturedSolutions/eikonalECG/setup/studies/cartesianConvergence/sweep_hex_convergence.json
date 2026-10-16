@@ -1,90 +1,347 @@
 {
   "base": {
     "entry": "manufacturedEikonalECG",
-    "case_dir_name": "manufacturedSolutions/eikonalECG",
-    "setup_dir_name": "setup",
-    "cases_root": "tutorials",
-    "postprocess_strict_artifacts": false,
-    "run_in_parallel": true,
-    "archive_dir_name": "setup/studies/cartesianConvergence/results/sweepCases"
+    "cases_root": "tutorials"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "dimensions": [
+      "dimension": [
+        "1D",
+        "1D",
+        "1D",
+        "1D",
+        "2D",
+        "2D",
+        "2D",
+        "2D",
+        "3D",
+        "3D",
+        "3D",
+        "3D"
+      ],
+      "numberCells": [
+        10,
+        20,
+        40,
+        80,
+        10,
+        20,
+        40,
+        80,
+        10,
+        20,
+        40,
+        80
+      ],
+      "constant/electroProperties:eikonalSolverCoeffs.ecgDomains.ECG.electrodePositions.E1": [
         [
-          "1D"
+          -0.5,
+          0,
+          0
         ],
         [
-          "1D"
+          -0.5,
+          0,
+          0
         ],
         [
-          "1D"
+          -0.5,
+          0,
+          0
         ],
         [
-          "1D"
+          -0.5,
+          0,
+          0
         ],
         [
-          "2D"
+          -0.5,
+          0.5,
+          0
         ],
         [
-          "2D"
+          -0.5,
+          0.5,
+          0
         ],
         [
-          "2D"
+          -0.5,
+          0.5,
+          0
         ],
         [
-          "2D"
+          -0.5,
+          0.5,
+          0
         ],
         [
-          "3D"
+          -0.5,
+          0.5,
+          0.5
         ],
         [
-          "3D"
+          -0.5,
+          0.5,
+          0.5
         ],
         [
-          "3D"
+          -0.5,
+          0.5,
+          0.5
         ],
         [
-          "3D"
+          -0.5,
+          0.5,
+          0.5
         ]
       ],
-      "number_cells": [
+      "constant/electroProperties:eikonalSolverCoeffs.ecgDomains.ECG.electrodePositions.E2": [
         [
-          10
+          1.5,
+          0,
+          0
         ],
         [
-          20
+          1.5,
+          0,
+          0
         ],
         [
-          40
+          1.5,
+          0,
+          0
         ],
         [
-          80
+          1.5,
+          0,
+          0
         ],
         [
-          10
+          1.5,
+          0.5,
+          0
         ],
         [
-          20
+          1.5,
+          0.5,
+          0
         ],
         [
-          40
+          1.5,
+          0.5,
+          0
         ],
         [
-          80
+          1.5,
+          0.5,
+          0
         ],
         [
-          10
+          1.5,
+          0.5,
+          0.5
         ],
         [
-          20
+          1.5,
+          0.5,
+          0.5
         ],
         [
-          40
+          1.5,
+          0.5,
+          0.5
         ],
         [
-          80
+          1.5,
+          0.5,
+          0.5
+        ]
+      ],
+      "constant/electroProperties:eikonalSolverCoeffs.ecgDomains.ECG.electrodePositions.E3": [
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ],
+        [
+          1.2,
+          0.23,
+          0.61
+        ]
+      ],
+      "constant/electroProperties:eikonalSolverCoeffs.ecgDomains.ECG.electrodePositions.E4": [
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.78,
+          0
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ],
+        [
+          1.35,
+          0.74,
+          0.28
+        ]
+      ],
+      "constant/electroProperties:eikonalSolverCoeffs.ecgDomains.ECG.electrodePositions.E5": [
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          1.65,
+          0,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          0.18,
+          1.35,
+          0
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
+        ],
+        [
+          1.55,
+          0.41,
+          0.83
         ]
       ]
     },
@@ -93,8 +350,8 @@
         "name": "output_dir_name",
         "derive": "output_dir_name_template",
         "of": [
-          "dimensions",
-          "number_cells"
+          "dimension",
+          "numberCells"
         ]
       }
     ]

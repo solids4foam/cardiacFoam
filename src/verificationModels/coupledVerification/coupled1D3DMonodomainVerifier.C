@@ -28,6 +28,7 @@ License
 #include "ionicModel.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "pvjMapper.H"
+#include "mathematicalConstants.H"
 #include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -352,10 +353,25 @@ void coupled1D3DMonodomainVerifier::updateManufacturedSource
                 exactCurrent
             );
 
+            // The node volume pi*rho^2*L from the inputs, not from the
+            // network under test, so a wrong volume there fails the MMS.
+            const scalar radius(graphDomain->purkinjeFibreRadius());
+            const scalarField& edgeLengths = graphDomain->edgeLengths();
+            scalarField nodeVolume(exactSecondaryAppliedCurrent_.size(), 0.0);
+            forAll(edgeLengths, edgeI)
+            {
+                const scalar halfEdge =
+                    0.5*constant::mathematical::pi*sqr(radius)
+                   *edgeLengths[edgeI];
+                nodeVolume[graphDomain->edgeStartNodes()[edgeI]] += halfEdge;
+                nodeVolume[graphDomain->edgeEndNodes()[edgeI]] += halfEdge;
+            }
+
             const labelList& terminalNodes = graphDomain->terminalNodes();
             forAll(terminalNodes, i)
             {
-                exactSecondaryAppliedCurrent_[terminalNodes[i]] -= exactCurrent[i];
+                exactSecondaryAppliedCurrent_[terminalNodes[i]] -=
+                    exactCurrent[i]/nodeVolume[terminalNodes[i]];
             }
         }
 

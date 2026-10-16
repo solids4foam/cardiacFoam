@@ -39,8 +39,11 @@ At terminal `k` the junction current `I_pvj,k = (V1D_k - M_k[Vm])/R_pvj`
 samples the tissue voltage with the volume-weighted map `M_k` and is deposited
 as `S_pvj` with a linear kernel of radius 0.11 normalised to unit integral.
 `unidirectional` keeps only the tissue source; `bidirectional` also applies
-`I_app1D = -I_pvj,k` at the graph terminal. `explicit` deposits the terminal
-current; `implicit` assembles a cell-local sink in the tissue voltage. The
+`I_app1D = -I_pvj,k` at the graph terminal, which the network loses from the
+volume `π ρ² L` of its terminal node, so the case sets `purkinjeFibreRadius`
+to `1/√π` m (the unit cross-section the manufactured junction current assumes)
+instead of the 20 µm default. `explicit` deposits the terminal current;
+`implicit` assembles a cell-local sink in the tissue voltage. The
 verifiers add the exact junction source, computed from the exact fields with
 the same map and kernel, to the manufactured sources and write the difference
 between the numerical and the exact junction source.

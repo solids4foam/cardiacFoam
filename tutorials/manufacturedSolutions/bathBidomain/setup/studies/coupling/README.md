@@ -43,6 +43,8 @@ python3 ../summarize.py results
 python3 ../summarize.py results --relative-to baseline_tet
 ```
 
+The omnidriver spec for this study is `sweep_coupling_study.json`.
+
 ## Measured behaviour
 
 Results of the last run of this study (`results/`, `N = 10, 20, 40`):
