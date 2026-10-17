@@ -29,6 +29,10 @@ Options (parameters are written to local/ and included by the dictionaries):
                             cell-gradient reconstruction (default leastSquares)
   -tolerance x              outer fixed-point residual tolerance (default 1e-8)
   -electrodes five|all      ECG at E1-E5 (default) or at E1-E5 and R1-R156
+  -template singleEvent|sine
+                            manufactured ECG template (default singleEvent): one
+                            action-potential-like event sampled from -6 to 92 by 0.25,
+                            or sin(2 pi s) sampled from 0 to 2 by 0.01
   -errorField               write the cellwise activation-time error and the cell
                             centres to the final time
 
@@ -47,6 +51,7 @@ formulation=advectionDiffusion
 gradient=leastSquares
 tolerance=
 electrodes=five
+template=singleEvent
 errorField=false
 
 needValue()
@@ -124,6 +129,10 @@ do
             needValue "$@"; electrodes="$2"; shift
             oneOf -electrodes "$electrodes" five all
             ;;
+        -template)
+            needValue "$@"; template="$2"; shift
+            oneOf -template "$template" singleEvent sine
+            ;;
         -errorField)
             errorField=true
             ;;
@@ -190,6 +199,21 @@ fi
 if [ "$electrodes" = five ]
 then
     echo '#remove "R.*"' > local/electrodes
+fi
+if [ "$template" = sine ]
+then
+    cat > local/ecgTemplate <<EOF
+sampling
+{
+    start           0;
+    end             2;
+    deltaT          0.01;
+}
+verificationModel
+{
+    template    sine;
+}
+EOF
 fi
 
 if [ "$gradient" = GaussLinear ]

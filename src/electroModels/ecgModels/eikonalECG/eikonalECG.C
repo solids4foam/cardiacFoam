@@ -30,6 +30,7 @@ License
 #include "IOdictionary.H"
 #include "stimulusIO.H"
 #include "tissueTemplates.H"
+#include "manufacturedTemplate.H"
 
 namespace Foam
 {
@@ -42,6 +43,9 @@ addToRunTimeSelectionTable(ecgSolver, eikonalECG, dictionary);
 eikonalECG::eikonalECG(const dictionary& dict)
 :
     useManufacturedTemplate_(false),
+    manufacturedSineTemplate_(false),
+    manufacturedTemplateDuration_(0),
+    manufacturedTemplateRise_(0),
     startTime_(0.0),
     endTime_(0.0),
     deltaT_(0.0),
@@ -70,6 +74,13 @@ eikonalECG::eikonalECG(const dictionary& dict)
     )
     {
         useManufacturedTemplate_ = true;
+        eikonalECG_templates::readManufacturedTemplate
+        (
+            dict.subOrEmptyDict("verificationModel"),
+            manufacturedSineTemplate_,
+            manufacturedTemplateDuration_,
+            manufacturedTemplateRise_
+        );
     }
 
     const dictionary& samplingDict = dict.subDict("sampling");
@@ -186,14 +197,6 @@ eikonalECG::eikonalECG(const dictionary& dict)
 }
 
 
-scalar eikonalECG::manufacturedTemplateDerivative(scalar localTime) const
-{
-    return
-        2.0*constant::mathematical::pi
-       *Foam::cos(2.0*constant::mathematical::pi*localTime);
-}
-
-
 void eikonalECG::reconstructGradVm
 (
     scalar sampleTime,
@@ -213,7 +216,13 @@ void eikonalECG::reconstructGradVm
 
         if (useManufacturedTemplate_)
         {
-            dUds = manufacturedTemplateDerivative(localTime);
+            dUds = eikonalECG_templates::evaluateManufacturedTemplateDerivative
+            (
+                localTime,
+                manufacturedSineTemplate_,
+                manufacturedTemplateDuration_,
+                manufacturedTemplateRise_
+            );
         }
         else if (personalizedTemplatesEnabled_)
         {

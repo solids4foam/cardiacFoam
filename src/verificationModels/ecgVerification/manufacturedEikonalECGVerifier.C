@@ -53,6 +53,9 @@ manufacturedEikonalECGVerifier::manufacturedEikonalECGVerifier
     referenceQuadratureOrder_(96),
     checkQuadratureOrders_(),
     k_(vector::zero),
+    sineTemplate_(false),
+    templateDuration_(0),
+    templateRise_(0),
     sampleCount_(0),
     referenceErrorL1Sum_(electrodePositions_.size(), scalar(0)),
     referenceErrorL2Sum_(electrodePositions_.size(), scalar(0)),
@@ -221,6 +224,10 @@ bool manufacturedEikonalECGVerifier::read(const dictionary& dict)
     }
 
     k_ = cfg.getOrDefault<vector>("k", manufacturedEikonalK(dimension_));
+    eikonalECG_templates::readManufacturedTemplate
+    (
+        cfg, sineTemplate_, templateDuration_, templateRise_
+    );
     referenceQuadratureOrder_ =
         cfg.lookupOrDefault<label>("referenceQuadratureOrder", 96);
 
@@ -422,6 +429,9 @@ void manufacturedEikonalECGVerifier::record
                     conductivity,
                     k_,
                     dimension_,
+                    sineTemplate_,
+                    templateDuration_,
+                    templateRise_,
                     checkNodes[checkI],
                     checkWeights[checkI]
                 );
@@ -435,6 +445,9 @@ void manufacturedEikonalECGVerifier::record
                 conductivity,
                 k_,
                 dimension_,
+                sineTemplate_,
+                templateDuration_,
+                templateRise_,
                 referenceNodes,
                 referenceWeights
             );

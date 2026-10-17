@@ -41,15 +41,16 @@ eikonalSolverCoeffs
             ecgSolver    eikonalECG;
             sampling
             {
-                start           0;
-                end             2;
-                deltaT          0.01;
+                start           -6;
+                end             92;
+                deltaT          0.25;
             }
             verificationModel
             {
                 type    manufacturedEikonalECGVerifier;
                 enabled    yes;
                 referenceQuadratureOrder    48;
+                template    singleEvent;
                 checkQuadratureOrders    ();
             }
             electrodePositions
@@ -219,6 +220,7 @@ eikonalSolverCoeffs
                 R156    (-0.520427 1.617508 -0.492151);
                 #includeIfPresent "<case>/local/electrodes"
             }
+            #includeIfPresent "<case>/local/ecgTemplate"
         }
     }
     #includeIfPresent "<case>/local/field"

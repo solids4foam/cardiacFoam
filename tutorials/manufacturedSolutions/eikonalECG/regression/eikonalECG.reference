@@ -1,6 +1,6 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
-# final <file> <column> <expected> <tolerance>
+# probe <file> <time> <column> <expected> <tolerance>
 summary  cells  8000  0
 error    activationTime                   L1    0.000415519    4.2e-09
 error    activationTime                   L2    0.0007325      7.3e-09
@@ -11,8 +11,13 @@ error    gradActivationTime               L2    0.0163757      1.6e-07
 error    gradActivationTime_boundary      L2    0.0155716      1.6e-07
 error    gradReconActivationTime          L2    0.00391763     3.9e-08
 error    gradReconActivationTime_boundary L2    0.00201083     2e-08
-final    postProcessing/eikonalECG.dat  E1  -0.00370201047   3.7e-08
-final    postProcessing/eikonalECG.dat  E2  0.000192349304   1.9e-09
-final    postProcessing/eikonalECG.dat  E3  -0.00422479798   4.2e-08
-final    postProcessing/eikonalECG.dat  E4  0.00131136343    1.3e-08
-final    postProcessing/eikonalECG.dat  E5  -0.000346650746  3.5e-09
+probe    postProcessing/eikonalECG.dat  10  E1  -0.014755943     1.5e-07
+probe    postProcessing/eikonalECG.dat  10  E2  0.0162687229     1.6e-07
+probe    postProcessing/eikonalECG.dat  10  E3  -0.00773222261   7.7e-08
+probe    postProcessing/eikonalECG.dat  10  E4  0.0272131276     2.7e-07
+probe    postProcessing/eikonalECG.dat  10  E5  0.0143652434     1.4e-07
+probe    postProcessing/eikonalECG.dat  75  E1  0.0105053212     1.1e-07
+probe    postProcessing/eikonalECG.dat  75  E2  -0.0104885818    1e-07
+probe    postProcessing/eikonalECG.dat  75  E3  0.00990647434    9.9e-08
+probe    postProcessing/eikonalECG.dat  75  E4  -0.0179150061    1.8e-07
+probe    postProcessing/eikonalECG.dat  75  E5  -0.00940401899   9.4e-08

@@ -47,6 +47,9 @@ class manufacturedEikonalECGVerifier
     label referenceQuadratureOrder_;
     List<label> checkQuadratureOrders_;
     vector k_;
+    bool sineTemplate_;
+    scalar templateDuration_;
+    scalar templateRise_;
 
     label sampleCount_;
     List<scalar> referenceErrorL1Sum_;

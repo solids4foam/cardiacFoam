@@ -45,6 +45,9 @@ class eikonalECG
     public ecgSolver
 {
     Switch useManufacturedTemplate_;
+    bool manufacturedSineTemplate_;
+    scalar manufacturedTemplateDuration_;
+    scalar manufacturedTemplateRise_;
 
     scalar startTime_;
     scalar endTime_;
@@ -71,8 +74,6 @@ class eikonalECG
     bool personalizedTemplatesGenerated_;
     dictionary personalizedTemplatesDict_;
     List<eikonalECG_templates::DynamicTemplate> personalizedTemplates_;
-
-    scalar manufacturedTemplateDerivative(scalar localTime) const;
 
     //- Shared so calculateTransmuralWeights() and
     //  generatePersonalizedTemplates() always agree on which dict is active.

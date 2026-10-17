@@ -14,8 +14,9 @@ fi
 . "${regressionLib}"
 
 # Runs the case defaults (3D hex, rotated conductivity, N 20) in parallel and
-# compares the activation-time error summary, the final ECG values of E1-E5
-# and their manufactured ECG errors against the references.
+# compares the activation-time error summary, the ECG values of E1-E5 on the
+# upstroke (t = 10) and on repolarisation (t = 75) and their manufactured ECG
+# errors against the references.
 
 regression_init "Eikonal ECG manufactured-solution regression test" \
     regression/eikonalECG.reference "$@"
