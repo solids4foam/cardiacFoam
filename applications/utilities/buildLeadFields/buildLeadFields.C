@@ -19,18 +19,30 @@ Application
     buildLeadFields
 
 Description
-    Lead fields of a leadFieldECG domain: for each electrode, the reciprocal
-    solve A z = delta with the forward heart+torso operator A of
-    passiveConductor and a unit current delta in the electrode cell.
+    Lead fields of a leadFieldECG domain: for each electrode e, the discrete
+    adjoint z = A^-T e of the heart+torso operator A of passiveConductor,
+    with e the unit vector of the electrode cell. Then z^T b equals the
+    electrode value of the converged forward solve A phi = b of the same
+    conductor, on any mesh.
+
+    A = M + C. M is the implicit matrix, assembled once on a zero field with
+    the reference pin; it is symmetric. C is the explicit part (cross-
+    diffusion, non-orthogonal and interface corrections), stored by coloured
+    probing of the same assembly (leadFieldAdjoint). Each lead field is the
+    fixed point M z = e - C^T z, solved from z = 0 until the relative change
+    of z between passes is below 1e-10: with the fvSolution entry leadField
+    until the change first falls below it, then with leadFieldFinal (relTol
+    0, tight tolerance) until it falls below it again.
+
+    The build checks the linearity of C, the probed C against the assembled
+    one, the transpose, the symmetry of M and, for each lead field, the
+    residual of A^T z = e and the reference pin; each is fatal above its
+    tolerance and is reported in the log.
 
     The unknown is named phiE on the base and heart meshes, so the forward's
     fvSchemes entries and wall-gradient states apply. Ground patches are
     fixedValue 0, other non-coupled patches zeroGradient; without them the
-    reference cell is pinned to 0. Assembly, reference and solve repeat
-    until the relative change of z between passes is below 1e-10: with the
-    fvSolution entry leadField until the change first falls below it, then
-    with leadFieldFinal (relTol 0, tight tolerance) until it falls below it
-    again.
+    reference cell is pinned to 0.
 
     Every electrode lies in a torso cell; an electrode in a myocardium cell
     is fatal (leadFieldConductor).
@@ -38,7 +50,7 @@ Description
     Writes constant/[region/]leadField_<electrode> and leadFieldSignature.
     With -parallel each processor writes its own processorN/constant, so a
     parallel ECG run needs lead fields built on its decomposition (run after
-    decomposePar) or decomposed from a serial build.
+    decomposePar), or a serial build decomposed with decomposePar -constant.
 
 Usage
     buildLeadFields [-region <name>] [-ecgDomain <name>]
@@ -49,9 +61,8 @@ Author
 
 #include "fvCFD.H"
 #include "leadFieldConductor.H"
-#include "sealedWallPolicy.H"
+#include "leadFieldAdjoint.H"
 #include "fixedValueFvPatchFields.H"
-#include "zeroGradientFvPatchFields.H"
 #include <limits>
 
 using namespace Foam;
@@ -140,62 +151,49 @@ int main(int argc, char *argv[])
 
     const leadFieldConductor lfc(mesh, electroCoeffs, ecgDomainName);
     const passiveConductor& conductor = lfc.conductor();
-    const fvMesh& heart = lfc.heartMesh();
-    const labelList& heartToBase = conductor.heartCellToBaseCell();
     const dictionary& solverDict = mesh.solverDict("leadField");
     const dictionary& finalSolverDict = mesh.solverDict("leadFieldFinal");
     const scalar convergenceTol = 1e-10;
     const label maxPasses = 100;
 
-    // z is in 1/(conductivity length), so that A z = delta in 1/volume.
-    const dimensionedScalar zZero
-    (
-        "zero", dimless/(conductor.sigmaTotal().dimensions()*dimLength), 0.0
-    );
+    // z is in 1/(conductivity length), so that A z = e in units of the
+    // matrix source
+    volScalarField z(lfc.leadFieldPotential());
+    volScalarField heartZ(lfc.heartPotential());
 
-    wordList patchTypes
-    (
-        mesh.boundary().size(), zeroGradientFvPatchScalarField::typeName
-    );
-    for (const word& patchName : lfc.groundPatches())
+    // M: the operator on z = 0 (C(0) = 0), with the reference pin
+    conductor.fillHeart(z, heartZ);
+    tmp<fvScalarMatrix> tM(conductor.assemble(z, heartZ));
+    fvScalarMatrix& M = tM.ref();
+
+    bool pinned = lfc.referenceCell() >= 0;
+    forAll(z.boundaryField(), patchI)
     {
-        patchTypes[mesh.boundaryMesh().findPatchID(patchName)] =
-            fixedValueFvPatchScalarField::typeName;
+        pinned = pinned
+         && !isA<fixedValueFvPatchScalarField>(z.boundaryField()[patchI]);
     }
+    const scalar refDiag = pinned ? M.diag()[lfc.referenceCell()] : 0;
+    pinned = returnReduce(pinned, orOp<bool>());
+    conductor.applyReference(M, z, lfc.referenceCell(), 0.0);
 
-    volScalarField z
-    (
-        fieldIO("phiE", runTime.timeName(), mesh, true), mesh, zZero,
-        patchTypes
-    );
-    sealedWallPolicy::publish(z, false);
-
-    volScalarField heartZ
-    (
-        fieldIO("phiE", runTime.timeName(), heart, true), heart, zZero,
-        "zeroGradient"
-    );
-    sealedWallPolicy::publish(heartZ, conductor.sealedHeartBoundary());
-
-    volScalarField delta
-    (
-        fieldIO("leadFieldSource", runTime.timeName(), mesh, false), mesh,
-        dimensionedScalar("zero", dimless/dimVolume, 0.0)
-    );
+    const leadFieldAdjoint adjoint(lfc);
+    adjoint.checkSymmetry(M, z);
+    Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
+        << "  ClockTime = " << runTime.elapsedClockTime() << " s" << nl;
 
     const wordList& names = lfc.electrodeNames();
     const labelList& cells = lfc.electrodeCells();
+    scalarField e(mesh.nCells());
 
     forAll(names, electrodeI)
     {
         Info<< "Lead field " << names[electrodeI] << nl;
 
-        z == zZero;
-        delta.primitiveFieldRef() = 0.0;
+        z == dimensionedScalar(z.dimensions(), Zero);
+        e = 0.0;
         if (cells[electrodeI] >= 0)
         {
-            delta.primitiveFieldRef()[cells[electrodeI]] =
-                1.0/mesh.V()[cells[electrodeI]];
+            e[cells[electrodeI]] = 1.0;
         }
 
         const scalarField& zI = z.primitiveField();
@@ -204,9 +202,9 @@ int main(int argc, char *argv[])
         label pass = 0;
         label finalPasses = 0;
 
-        // Fixed point of the explicit corrections, started from z = 0.
-        // Once the change is below the tolerance, the passes solve with
-        // leadFieldFinal until it is below the tolerance again.
+        // Fixed point M z = e - C^T z from z = 0. Once the change is below
+        // the tolerance, the passes solve with leadFieldFinal until it is
+        // below the tolerance again.
         while (finalPasses == 0 || change >= convergenceTol)
         {
             if (pass == maxPasses)
@@ -220,18 +218,7 @@ int main(int argc, char *argv[])
             }
 
             zPrev = zI;
-
-            // The heart companion takes the base values before each
-            // assembly, as the forward's heart phiE does.
-            scalarField& heartZI = heartZ.primitiveFieldRef();
-            forAll(heartToBase, heartCellI)
-            {
-                heartZI[heartCellI] = z[heartToBase[heartCellI]];
-            }
-            heartZ.correctBoundaryConditions();
-
-            tmp<fvScalarMatrix> tEqn(conductor.assemble(z, heartZ, &delta));
-            conductor.applyReference(tEqn.ref(), z, lfc.referenceCell(), 0.0);
+            M.source() = e - adjoint.applyTranspose(zI);
 
             const bool finalPass =
                 finalPasses > 0 || (pass >= 2 && change < convergenceTol);
@@ -239,14 +226,21 @@ int main(int argc, char *argv[])
             {
                 ++finalPasses;
             }
-            solve(tEqn.ref(), finalPass ? finalSolverDict : solverDict);
+            M.solve(finalPass ? finalSolverDict : solverDict);
 
             ++pass;
             change = gMax(mag(zI - zPrev))/max(gMax(mag(zI)), VSMALL);
         }
 
         Info<< "  " << pass << " passes (" << finalPasses
-            << " with leadFieldFinal), relative change " << change << nl;
+            << " with leadFieldFinal), relative change " << change << nl
+            << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
+            << "  ClockTime = " << runTime.elapsedClockTime() << " s" << nl;
+
+        adjoint.checkSolution
+        (
+            M, z, e, pinned, lfc.referenceCell(), refDiag
+        );
 
         const word fieldName("leadField_" + names[electrodeI]);
         volScalarField

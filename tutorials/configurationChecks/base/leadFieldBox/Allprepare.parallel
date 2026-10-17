@@ -1,0 +1,6 @@
+#!/bin/bash
+# Build the lead fields of each processor of the decomposed case
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runParallel -s parallel buildLeadFields || exit 1

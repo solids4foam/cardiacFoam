@@ -36,8 +36,12 @@ Two conductivity configurations, both monodomain with `corrected` snGrad:
 | tet (gmsh 4.15.2, seed 1) | 10, 14, 20, 28, 40 | 14792, 39131, 111482, 299957, 867138 |
 
 All runs use `-endTime 0.02` (two samples, `dt = 0.01`). On tetrahedra the
-lead fields need 36 to 52 passes of their explicit-correction fixed point,
-and each direct solve about as many.
+lead fields need 40 to 67 passes of their adjoint fixed point, and each
+direct solve about as many.
+
+The `N = 40` tetrahedra and the `N = 40` and `80` hexahedra in the tables
+were run on 8 ranks (`parallel` with `numberOfSubdomains 8`); the other
+levels serially.
 
 ## Execution
 
@@ -95,43 +99,36 @@ Tetrahedra, `default`:
 
 | N | h | LF torso | order | direct torso | order | LF near | order | direct near | order |
 |---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.0588 | 6.4987e-03 | | 5.8402e-03 | | 5.0950e-03 | | 6.6177e-03 | |
-| 14 | 0.0425 | 3.9020e-03 | 1.57 | 3.0812e-03 | 1.97 | 3.6559e-03 | 1.02 | 2.9405e-03 | 2.50 |
-| 20 | 0.0300 | 1.6913e-03 | 2.40 | 1.5963e-03 | 1.88 | 1.8612e-03 | 1.93 | 1.6353e-03 | 1.68 |
-| 28 | 0.0216 | 8.0511e-04 | 2.25 | 8.1237e-04 | 2.05 | 6.1093e-04 | 3.38 | 7.1297e-04 | 2.52 |
-| 40 | 0.0151 | 3.9453e-04 | 2.02 | 4.0169e-04 | 1.99 | 3.5916e-04 | 1.50 | 4.0338e-04 | 1.61 |
+| 10 | 0.0588 | 5.8575e-03 | | 5.8575e-03 | | 6.6472e-03 | | 6.6472e-03 | |
+| 14 | 0.0425 | 3.0903e-03 | 1.97 | 3.0903e-03 | 1.97 | 2.9428e-03 | 2.51 | 2.9428e-03 | 2.51 |
+| 20 | 0.0300 | 1.6008e-03 | 1.88 | 1.6008e-03 | 1.88 | 1.6392e-03 | 1.68 | 1.6392e-03 | 1.68 |
+| 28 | 0.0216 | 8.1462e-04 | 2.05 | 8.1462e-04 | 2.05 | 7.1188e-04 | 2.53 | 7.1188e-04 | 2.53 |
+| 40 | 0.0151 | 4.0274e-04 | 1.99 | 4.0274e-04 | 1.99 | 4.0446e-04 | 1.60 | 4.0446e-04 | 1.60 |
 
 Tetrahedra, `unequal`:
 
 | N | h | LF torso | order | direct torso | order | LF near | order | direct near | order |
 |---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.0588 | 4.0509e-03 | | 6.8823e-03 | | 8.5340e-03 | | 7.5662e-03 | |
-| 14 | 0.0425 | 6.7166e-04 | 5.54 | 3.5530e-03 | 2.04 | 1.9832e-03 | 4.50 | 3.4220e-03 | 2.45 |
-| 20 | 0.0300 | 7.4107e-04 | -0.28 | 1.8637e-03 | 1.85 | 2.0171e-04 | 6.55 | 1.9861e-03 | 1.56 |
-| 28 | 0.0216 | 5.3362e-04 | 1.00 | 9.4959e-04 | 2.04 | 8.9572e-04 | -4.52 | 8.7939e-04 | 2.47 |
-| 40 | 0.0151 | 3.4775e-04 | 1.21 | 4.7022e-04 | 1.99 | 3.9603e-04 | 2.31 | 4.9056e-04 | 1.65 |
+| 10 | 0.0588 | 6.9005e-03 | | 6.9005e-03 | | 7.5938e-03 | | 7.5938e-03 | |
+| 14 | 0.0425 | 3.5622e-03 | 2.04 | 3.5622e-03 | 2.04 | 3.4221e-03 | 2.46 | 3.4221e-03 | 2.46 |
+| 20 | 0.0300 | 1.8683e-03 | 1.85 | 1.8683e-03 | 1.85 | 1.9919e-03 | 1.55 | 1.9919e-03 | 1.55 |
+| 28 | 0.0216 | 9.5185e-04 | 2.04 | 9.5185e-04 | 2.04 | 8.7854e-04 | 2.48 | 8.7854e-04 | 2.48 |
+| 40 | 0.0151 | 4.7127e-04 | 1.99 | 4.7127e-04 | 1.99 | 4.9225e-04 | 1.64 | 4.9225e-04 | 1.64 |
 
 - **Hexahedra.** The lead field and the direct solve agree to every printed
   digit and converge at 2.00 in both groups. The ECG between the slabs,
   `torsoRight - torsoLeft`, has the error of the `LF torso` column. With
   either configuration the heart rows are exact on this mesh, so these
   rows measure the interface, the torso and the recording.
-- **Tetrahedra, `default`, direct solve.** It converges at 1.9 to 2.05 in
-  the torso group (orders 1.97, 1.88, 2.05, 1.99). Here too the heart rows
-  are exact (`Ge` proportional to `Gi`), so the order is that of the
-  interface and the torso.
-- **Tetrahedra, `unequal`, direct solve.** It converges at 1.85 to 2.04 in
-  the torso group (orders 2.04, 1.85, 2.04, 1.99), with an error 10 to 20%
-  larger than with `default`, whose heart rows are exact.
-- **Tetrahedra, lead field.** With `default` it converges at 1.6 to 2.4 in the
-  torso group, 2.02 between `N = 28` and 40, with an error within 30% of the
-  direct solve's. With `unequal` its torso error is not monotone (4.1e-3,
-  6.7e-4, 7.4e-4, 5.3e-4, 3.5e-4) and no order is measured. The difference
-  between the lead field and the direct solve falls from 7.7e-3 to 5.7e-4
-  (static rows); see [leadFieldReciprocity](../leadFieldReciprocity/README.md).
+- **Tetrahedra.** The lead field equals the direct solve to every printed
+  digit (gap at most 2.8e-10 relative, see
+  [leadFieldReciprocity](../leadFieldReciprocity/README.md)). Both converge
+  at 1.85 to 2.05 in the torso group: `default` 1.97, 1.88, 2.05, 1.99, whose
+  heart rows are exact (`Ge` proportional to `Gi`); `unequal` 2.04, 1.85,
+  2.04, 1.99, with an error 10 to 20% larger.
 - **Electrodes next to the heart.** The `near` group converges as the far
-  torso electrodes do, at a less regular order: a torso cell that touches
-  the heart does not affect convergence.
+  torso electrodes do, at a less regular order (1.55 to 2.53): a torso cell
+  that touches the heart does not affect convergence.
 
 ## Outputs
 

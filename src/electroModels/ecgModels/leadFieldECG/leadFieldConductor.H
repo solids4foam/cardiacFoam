@@ -23,8 +23,10 @@ Description
     the case dictionaries, with its electrodes, reference and signature.
 
     - Heart: the myocardium cellZone sub-mesh (createMyocardiumMeshSubset).
-    - Gi, Ge: bidomainSolver reads them from its Coeffs; monodomainSolver and
-      eikonalSolver read them from the ECG domain entry with the same keys.
+    - Myocardium: bidomainSolver or monodomainSolver; eikonalSolver is not
+      supported.
+    - Gi, Ge: bidomainSolver reads them from its Coeffs; monodomainSolver
+      reads them from the ECG domain entry with the same keys.
       For monodomainSolver the Coeffs conductivity must equal
       Gi (Gi+Ge)^-1 Ge in every cell.
     - Torso: the bathPotentialDomain block of the Coeffs, or the torso
@@ -33,6 +35,8 @@ Description
       that is zeroGradient on every non-coupled patch.
     - Electrodes: each lies in a torso cell; an electrode whose cell is a
       myocardium cell is fatal.
+    - bidomainSolver: bathHeartPhiETrace must be zeroGradient, the heart
+      phiE companion the conductor assembles.
 
     Built from the case alone, the heart sub-mesh and the sealing Vm are
     its own. Built from a running myocardium, they are the myocardium's
@@ -64,6 +68,9 @@ class leadFieldConductor
 
     // Myocardium solver type (Coeffs name without "Coeffs").
     const word solverType_;
+
+    // bidomainSolver heart phiE trace at the heart-torso wall.
+    word bathHeartPhiETrace_;
 
     // Myocardium cellZone of the base mesh.
     word myocardiumZone_;
@@ -170,6 +177,11 @@ public:
         return conductorPtr_();
     }
 
+    const fvMesh& baseMesh() const
+    {
+        return baseMesh_;
+    }
+
     const fvMesh& heartMesh() const
     {
         return subsetPtr_->subMesh();
@@ -243,12 +255,15 @@ public:
         return surfaceCurrentValues_;
     }
 
-    //- Decomposition-independent signature: global cell counts, the global
-    //  sum of base-mesh cell volumes and of volume times cell centre, the
-    //  global cell count of the myocardium and of each torso cellZone, sums
-    //  of Gi, Ge and the torso conductivity, interface option, seal flag,
-    //  sealing patch types, electrodes, ground and surface-current patches
-    //  and the reference
+    //- Decomposition-independent signature: the operator (adjoint), global
+    //  cell counts, the global sum of base-mesh cell volumes and of volume
+    //  times cell centre, the global cell count of the myocardium and of
+    //  each torso cellZone, sums of Gi, Ge and the torso conductivity,
+    //  myocardium solver, interface option, seal flag, sealing patch types,
+    //  bidomain heart trace, geometry scheme, the base and heart fvSchemes
+    //  entries that can resolve the schemes of phiE (default, patterns and
+    //  keys containing phiE), electrodes, ground and surface-current
+    //  patches and the reference
     dictionary signature() const;
 
     //- True if built, a signature written by buildLeadFields, equals
@@ -260,6 +275,11 @@ public:
     //- Zero potential phiE on the base mesh (unregistered) with the
     //  forward's patch types, ground values and surface-current gradients
     tmp<volScalarField> forwardPotential() const;
+
+    //- Zero lead-field potential phiE on the base mesh (unregistered):
+    //  fixedValue 0 on ground patches, zeroGradient on the other
+    //  non-coupled patches
+    tmp<volScalarField> leadFieldPotential() const;
 
     //- Zero heart companion phiE on the heart mesh (unregistered,
     //  zeroGradient), sealed as the forward's

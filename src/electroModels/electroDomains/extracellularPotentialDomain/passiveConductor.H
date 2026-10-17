@@ -29,9 +29,14 @@ Description
 
     Heart-torso faces carry Ge on the heart side when the intracellular
     potential is insulated at the heart wall (bidomain), and Gi + Ge when the
-    source Vm is sealed there (monodomain, eikonal): the current crossing the
+    source Vm is sealed there (a monodomain source): the current crossing the
     wall is Ge grad(phi).n in the first case and (Gi + Ge) grad(phi).n in the
     second.
+
+    Torso faces between cells of different conductivity take the
+    distance-weighted harmonic mean of the two conductivities, which carries
+    the exact flux of a potential that is linear on each side; torso faces
+    between equal conductivities take the linear one.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -179,8 +184,9 @@ public:
     //  conductivity on the base mesh and its cellZones, the heart-torso face
     //  interpolation, the seal flag and the heart field whose patch types
     //  decide sealing. totalWallConductivity selects Gi + Ge (true) or Ge
-    //  (false) on the heart side of heart-torso faces. registerFields false keeps the base-mesh fields out
-    //  of the base-mesh registry (their names stay the same).
+    //  (false) on the heart side of heart-torso faces. registerFields false
+    //  keeps the base-mesh fields out of the base-mesh registry (their names
+    //  stay the same).
     passiveConductor
     (
         const fvMesh& baseMesh,
@@ -216,6 +222,10 @@ public:
         const volScalarField* source = nullptr,
         faceCorrection* correction = nullptr
     ) const;
+
+    //- Set the heart companion heartPsi to the base values of psi in the
+    //  heart cells and correct its boundary conditions
+    void fillHeart(const volScalarField& psi, volScalarField& heartPsi) const;
 
     //- Pin refCell to value when psi has no fixedValue patch
     void applyReference
@@ -264,6 +274,13 @@ public:
     Switch sealedHeartBoundary() const
     {
         return sealedHeartBoundary_;
+    }
+
+    //- True when heart-torso faces carry Gi + Ge on the heart side (a sealed
+    //  source), false when they carry Ge (bidomain)
+    bool totalWallConductivity() const
+    {
+        return totalWallConductivity_;
     }
 };
 

@@ -14,8 +14,9 @@ base case:
   `regression/manifests/<name>`, which catches a field or output file that is
   no longer written, or a new one.
 - `fail:<text>` checks must stop with a FOAM FATAL error that mentions
-  `<text>`. They cover unknown selector values and invalid combinations, such
-  as `torsoECG` without a bath.
+  `<text>`, in `cardiacFoam` or in the case preparation (`Allprepare`). They
+  cover unknown selector values and invalid combinations, such as `torsoECG`
+  without a bath.
 - `np=2` checks run a variant on two processors (simple decomposition) and
   reconstruct it.
 - `post=<script>` checks also run a post-processing utility on the result,
@@ -36,6 +37,7 @@ reproduces the pseudo-ECG written by the solver; these use
 | --- | --- |
 | `base/slab` | 10 mm x 10 mm 2-D slab (20 x 20 cells) with a small Purkinje graph; monodomain, bidomain and eikonal |
 | `base/bath` | 1-D bath-myocardium-bath column (60 cells); bidomain with the extracellular potential domain |
+| `base/leadFieldBox` | 3-D heart+torso box (16 x 5 x 5 cells) sheared in y and z, so that every face is non-orthogonal; the heart touches outer patches and its wall is the processor boundary of a 2-subdomain simple decomposition. Its `Allprepare` builds the lead fields; the variants exercise the discrete adjoint with rotated conductivities |
 | `base/singleCell` | one cell; `singleCellSolver` |
 | `variants/<name>` | files copied over a base, at least `constant/electroProperties` |
 | `post/<script>` | post-processing run after the solver by `post=<script>` checks |

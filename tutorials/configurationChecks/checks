@@ -10,7 +10,8 @@
 #   expect   pass: must complete and write the files in
 #                  regression/manifests/<name>
 #            fail:<text>: must stop with a FOAM FATAL error mentioning <text>
-#                  (write spaces in <text> as ~)
+#                  (write spaces in <text> as ~), in cardiacFoam or in the
+#                  case preparation
 #   edit     applied to constant/electroProperties with foamDictionary,
 #            after the case preparation (Allprepare, decomposePar and
 #            Allprepare.parallel), before cardiacFoam:
@@ -62,6 +63,14 @@ bathTorsoECG                           bath  bathTorsoECG                       
 # and a torso sub-dictionary in the ECG domain entry
 bathLeadFieldECG                       bath  bathLeadFieldECG                       pass  skip=v2312
 monodomainLeadFieldECG                 bath  monodomainLeadFieldECG                 pass  skip=v2312
+# The discrete adjoint where its explicit part is non-zero: a sheared box
+# with rotated Gi and Ge, the heart touching outer patches, pinned with a
+# non-zero reference value; buildLeadFields stops on a failed self-check
+leadFieldBox                           leadFieldBox  leadFieldBox               pass  skip=v2312
+leadFieldBoxGroundSealed               leadFieldBox  leadFieldBoxGroundSealed   pass  skip=v2312
+leadFieldBoxConormal                   leadFieldBox  leadFieldBoxConormal       pass  skip=v2312
+leadFieldBoxPointGradient              leadFieldBox  leadFieldBoxPointGradient  pass  skip=v2312
+leadFieldBoxCyclic                     leadFieldBox  leadFieldBoxCyclic         pass  skip=v2312
 
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
@@ -82,6 +91,8 @@ eikonalECGParallel                     slab  eikonalECG                         
 bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2  skip=v2312
 # Lead fields built on the decomposition by Allprepare.parallel
 bathLeadFieldECGParallel               bath  bathLeadFieldECG                       pass  np=2  skip=v2312
+# The heart wall x = 0 of the box is the processor boundary
+leadFieldBoxParallel                   leadFieldBox  leadFieldBox               pass  np=2  skip=v2312
 # The decomposition splits the periodic faces into processorCyclic faces
 monodomainPeriodicFieldConductivityParallel slab monodomainPeriodicFieldConductivity pass np=2
 
@@ -127,11 +138,17 @@ bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:g
 # Lead-field ECG: no lead fields built; the conductivity changed after
 # building; Gi (Gi+Ge)^-1 Ge not the monodomain conductivity; Gi given to a
 # bidomain ECG domain; both a bath block and a torso sub-dictionary; an
-# electrode in the heart
+# electrode in the heart; the bidomain global heart trace; a nonlinear
+# scheme and a cached gradient (refused by buildLeadFields); schemes changed
+# after building
 leadFieldMissing                       bath  bathTorsoECG                fail:has~no~lead-field~file   bidomainSolverCoeffs/ecgDomains/ECG/ecgSolver=leadFieldECG  skip=v2312
 leadFieldSignatureStale                bath  bathLeadFieldECG            fail:case:~~sumGe   bidomainSolverCoeffs/conductivityExtracellular=[~-1~-3~3~0~0~2~0~]~(0.05~0~0~0.05~0~0.0125)  skip=v2312
 monodomainLeadFieldInconsistentGi      bath  monodomainLeadFieldECG      fail:differs~from~Gi~(Gi+Ge)^-1~Ge  monodomainSolverCoeffs/ecgDomains/ECG/conductivityIntracellular=[~-1~-3~3~0~0~2~0~]~(0.24~0~0~0.12~0~0.06)  skip=v2312
 bidomainLeadFieldWithGi                bath  bathLeadFieldECG            fail:but~bidomainSolver~reads~Gi~and~Ge  bidomainSolverCoeffs/ecgDomains/ECG/conductivityIntracellular=[~-1~-3~3~0~0~2~0~]~(0.1~0~0~0.1~0~0.1)  skip=v2312
 leadFieldBathAndTorso                  bath  bathLeadFieldECG            fail:has~a~torso~sub-dictionary  bidomainSolverCoeffs/ecgDomains/ECG/torso={bathCellZones~(bath);}  skip=v2312
 leadFieldElectrodeInHeart              bath  monodomainLeadFieldECG      fail:must~lie~in~the~torso  monodomainSolverCoeffs/ecgDomains/ECG/electrodePositions/right=(0.5~0.05~0.05)  skip=v2312
+leadFieldHeartTraceGlobal              bath  bathLeadFieldECG            fail:bathHeartPhiETrace~global~is~not~supported  bidomainSolverCoeffs/sealedHeartBoundary=true  bidomainSolverCoeffs/bathHeartPhiETrace=global  skip=v2312
+leadFieldNonlinearScheme               leadFieldBox  leadFieldBoxLimited        fail:is~not~linear  skip=v2312
+leadFieldGradientCache                 leadFieldBox  leadFieldBoxGradientCache  fail:remove~it~from~the~cache  skip=v2312
+leadFieldSchemesStale                  leadFieldBox  leadFieldBoxStaleSchemes   fail:Gauss~linear~uncorrected  skip=v2312
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension

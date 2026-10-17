@@ -55,13 +55,6 @@ void leadFieldECG::load
     const wordList& electrodeNames
 )
 {
-    if (electroCoeffs_.dictName() == "eikonalSolverCoeffs")
-    {
-        FatalErrorInFunction
-            << "leadFieldECG with eikonalSolver requires Task 9"
-            << exit(FatalError);
-    }
-
     const fvMeshSubset* subsetPtr = provider.meshSubsetPtr();
     if (!subsetPtr)
     {

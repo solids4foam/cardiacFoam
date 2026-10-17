@@ -30,8 +30,6 @@ License
 #include "fixedValueFvPatchFields.H"
 #include "zeroGradientFvPatchFields.H"
 #include "surfaceFields.H"
-#include "fvm.H"
-#include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
 
 namespace Foam
@@ -82,8 +80,9 @@ wordList potentialPatchTypes
 
     forAll(torso.groundPatches, patchI)
     {
-        patchTypes[mesh.boundaryMesh().findPatchID(torso.groundPatches[patchI])] =
-            fixedValueFvPatchScalarField::typeName;
+        const label patchID =
+            mesh.boundaryMesh().findPatchID(torso.groundPatches[patchI]);
+        patchTypes[patchID] = fixedValueFvPatchScalarField::typeName;
     }
 
     forAll(torso.surfaceCurrentPatches, patchI)

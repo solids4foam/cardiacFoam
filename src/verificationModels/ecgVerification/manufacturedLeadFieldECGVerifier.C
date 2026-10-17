@@ -232,6 +232,19 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
         alpha_ = 0.5*(alphaMin + alphaMax);
     }
 
+    // With a current the exact heart slope alpha/(Gi + Ge)_xx at the walls
+    // carries the intracellular flux alpha Gi_xx/(Gi + Ge)_xx, which a
+    // sealed Vm admits and an insulated bidomain intracellular potential
+    // does not
+    if (alpha_ != 0 && !lfc.conductor().totalWallConductivity())
+    {
+        FatalErrorInFunction
+            << "The layered reference with a surface current (alpha "
+            << alpha_ << ") is a monodomain solution; the bidomain conductor "
+            << "insulates the intracellular potential at the heart wall."
+            << exit(FatalError);
+    }
+
     // (Gi + Ge)_xx; slabK_ has checked Gi and Ge
     layers_.sigmaHeart =
         verificationUtils::uniformTensor
@@ -497,7 +510,6 @@ void manufacturedLeadFieldECGVerifier::solveDirect
 {
     const leadFieldConductor& lfc = leadFieldPtr_->conductor();
     const passiveConductor& conductor = lfc.conductor();
-    const labelList& heartToBase = conductor.heartCellToBaseCell();
     const dictionary& solverDict = phi.mesh().solverDict("phiE");
     const tmp<volScalarField> tb(conductor.heartSource(Vm));
     volScalarField& heartPhi = heartPhi_.ref();
@@ -521,12 +533,7 @@ void manufacturedLeadFieldECGVerifier::solveDirect
         phiPrev = phiI;
 
         // The heart companion takes the base values before each assembly
-        scalarField& heartPhiI = heartPhi.primitiveFieldRef();
-        forAll(heartToBase, heartCellI)
-        {
-            heartPhiI[heartCellI] = phi[heartToBase[heartCellI]];
-        }
-        heartPhi.correctBoundaryConditions();
+        conductor.fillHeart(phi, heartPhi);
 
         tmp<fvScalarMatrix> tEqn(conductor.assemble(phi, heartPhi, &tb()));
         conductor.applyReference

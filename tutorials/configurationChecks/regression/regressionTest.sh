@@ -32,7 +32,8 @@ set -u
 # dictionary configuration on a small base case. A "pass" check must run to
 # completion and write exactly the files listed in
 # regression/manifests/<name>; a "fail:<text>" check must stop with a FOAM
-# FATAL error whose message contains <text>. Then ./comparisons checks that
+# FATAL error whose message contains <text>, in cardiacFoam or in the case
+# preparation (Allprepare). Then ./comparisons checks that
 # options change (or leave unchanged) the results they should.
 #
 # Usage: regression/regressionTest.sh [--update-manifests] [check ...]
@@ -144,6 +145,11 @@ runCheck()
         cd "${runDir}"
         ./Allprepare > log.Allprepare 2>&1
     ) || {
+        if [[ "${expect}" == fail:* ]]; then
+            # The preparation's applications write their own logs
+            expectFatal "${name}" "${expect}" "${runDir}"/log.*
+            return
+        fi
         echo "FAIL: ${name}: case preparation failed"
         regressionDumpLog "${runDir}/log.Allprepare"
         return 1
@@ -207,8 +213,12 @@ DICT
             regressionDumpLog "${runDir}/log.cardiacFoam"
             return 1
         fi
-        local logs=(log.cardiacFoam)
+        local logs=(log.cardiacFoam) log
         (( nProcs > 1 )) && logs+=(log.decomposePar log.reconstructPar log.redistributeRestartState)
+        # Lead fields built in the case preparation, serial and parallel
+        for log in "${runDir}"/log.buildLeadFields*; do
+            [[ -f "${log}" ]] && logs+=("${log##*/}")
+        done
 
         # Post-processing utility run on the result, from post/<script>
         if [[ -n "${post}" ]]; then
@@ -247,25 +257,36 @@ DICT
         return 0
     fi
 
-    local text="${expect#fail:}"
-    text="${text//\~/ }"
     if (( rc == 0 )); then
         echo "FAIL: ${name}: cardiacFoam succeeded, expected a fatal error"
         return 1
     fi
-    if ! grep -aq 'FOAM FATAL' "${runDir}/log.cardiacFoam"; then
-        echo "FAIL: ${name}: cardiacFoam failed without a FOAM FATAL error"
-        regressionDumpLog "${runDir}/log.cardiacFoam"
+    expectFatal "${name}" "${expect}" "${runDir}/log.cardiacFoam"
+}
+
+# expectFatal <name> <fail:text> <log>...: one of the logs holds a FOAM
+# FATAL error mentioning text
+expectFatal()
+{
+    local name="$1" expect="$2"
+    shift 2
+    local text="${expect#fail:}" log
+    text="${text//\~/ }"
+    if ! grep -aqs 'FOAM FATAL' "$@"; then
+        echo "FAIL: ${name}: failed without a FOAM FATAL error"
+        for log in "$@"; do regressionDumpLog "${log}"; done
         return 1
     fi
-    if ! tr -d '\000' < "${runDir}/log.cardiacFoam" \
-        | sed -n '/FOAM FATAL/,$p' | grep -qF -- "${text}"; then
-        echo "FAIL: ${name}: fatal error does not mention '${text}'"
-        regressionDumpLog "${runDir}/log.cardiacFoam"
-        return 1
-    fi
-    echo "PASS: ${name} (fails as expected, mentions '${text}')"
-    return 0
+    for log in "$@"; do
+        if tr -d '\000' < "${log}" \
+            | sed -n '/FOAM FATAL/,$p' | grep -qF -- "${text}"; then
+            echo "PASS: ${name} (fails as expected, mentions '${text}')"
+            return 0
+        fi
+    done
+    echo "FAIL: ${name}: fatal error does not mention '${text}'"
+    for log in "$@"; do regressionDumpLog "${log}"; done
+    return 1
 }
 
 echo "============================================================"

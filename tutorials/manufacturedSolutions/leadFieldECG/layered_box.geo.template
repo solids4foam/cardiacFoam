@@ -7,10 +7,13 @@ SetFactory("OpenCASCADE");
 
 DefineConstant[
     lc = { 0.1, Name "lc" },
-    seed = { 1, Name "seed" },
-    xLeft = { -0.5, Name "xLeft" },
-    xRight = { 1.5, Name "xRight" }
+    seed = { 1, Name "seed" }
 ];
+
+// Layer interfaces, as in system/topoSetDict.layered and the verifier's
+// layerInterfaces
+xLeft = -0.5;
+xRight = 1.5;
 
 eps = 1e-7;
 

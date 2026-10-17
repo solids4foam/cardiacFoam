@@ -1,0 +1,11 @@
+#!/bin/bash
+# Mesh the sheared heart+torso box, add the "myocardium" and "bath"
+# cellZones, set the torso conductivity field and build the lead fields of
+# the leadFieldECG domain
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication blockMesh || exit 1
+runApplication topoSet || exit 1
+runApplication setTorsoOrganConductivityField || exit 1
+runApplication buildLeadFields || exit 1

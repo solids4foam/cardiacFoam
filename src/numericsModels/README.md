@@ -14,6 +14,7 @@ The discretisation pieces the tissue solvers share: how a sealed heart wall and 
 | `interface/exposedPhiETrace` | value of the extracellular potential on a heart-bath face from two-sided flux continuity, and its use as the heart's boundary trace |
 | `interface/interfaceGradient` | cell gradient of a potential whose normal derivative jumps across the heart-bath interface |
 | `pureNeumann/compatibilityProjection` | removes the discrete imbalance of a pure-Neumann potential equation before its reference cell is pinned |
+| `probedOperator/probedOperator` | a linear cell-to-cell operator stored as a sparse matrix by graph-coloured probing of the function that applies it, with its transpose |
 | `diffusion/conormalStabilisation` | term added to a tensor Laplacian that makes the face-conormal magnitude its implicit coefficient, so the correctors converge when the conductivity is oblique to the faces; zero at convergence |
 
 ## Folders
@@ -23,7 +24,8 @@ src/numericsModels/
 ├── sealedWall/
 ├── interface/
 ├── pureNeumann/
-└── diffusion/
+├── diffusion/
+└── probedOperator/
 ```
 
 ## What this does not own

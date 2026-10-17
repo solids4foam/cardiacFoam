@@ -27,6 +27,7 @@ License
 #include "PstreamReduceOps.H"
 #include "labelIOList.H"
 #include "fvMatrices.H"
+#include "fvGeometryScheme.H"
 #include "fixedValueFvPatchFields.H"
 #include "fixedGradientFvPatchFields.H"
 #include "zeroGradientFvPatchFields.H"
@@ -42,9 +43,15 @@ word solverTypeOf(const dictionary& electroCoeffs)
 {
     const word& coeffDictName = electroCoeffs.dictName();
 
-    return coeffDictName.endsWith("Coeffs")
-        ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
-        : coeffDictName;
+    if (!coeffDictName.endsWith("Coeffs"))
+    {
+        FatalIOErrorInFunction(electroCoeffs)
+            << "Expected the <myocardiumSolver>Coeffs dictionary, got '"
+            << coeffDictName << "'."
+            << exit(FatalIOError);
+    }
+
+    return word(coeffDictName.substr(0, coeffDictName.size() - 6));
 }
 
 
@@ -139,6 +146,47 @@ bool compare(const dictionary& built, const dictionary& current, Ostream& os)
 }
 
 
+// The fvSchemes entries that can resolve a scheme of phiE: default,
+// patterns and keys containing phiE, of the laplacian, snGrad, gradient and
+// interpolation schemes. Keys are written as words.
+dictionary phiESchemes(const fvMesh& mesh)
+{
+    dictionary schemes;
+    for
+    (
+        const word& group
+      : {
+            "laplacianSchemes", "snGradSchemes", "gradSchemes",
+            "interpolationSchemes"
+        }
+    )
+    {
+        dictionary entries;
+        const dictionary* groupDict = mesh.schemesDict().findDict(group);
+        if (groupDict)
+        {
+            for (const entry& e : *groupDict)
+            {
+                const keyType& key = e.keyword();
+                if
+                (
+                    e.isStream()
+                 && (
+                        key == "default" || key.isPattern()
+                     || key.find("phiE") != std::string::npos
+                    )
+                )
+                {
+                    entries.add(word::validate(key), e.stream());
+                }
+            }
+        }
+        schemes.add(group, entries);
+    }
+    return schemes;
+}
+
+
 // Wall-gradient states of a potential, unless the forward's potential of
 // the same name on this mesh has published them.
 void publishIfAbsent(const volScalarField& psi, const bool seal)
@@ -163,6 +211,13 @@ leadFieldConductor::leadFieldConductor
 :
     baseMesh_(baseMesh),
     solverType_(solverTypeOf(electroCoeffs)),
+    bathHeartPhiETrace_
+    (
+        electroCoeffs.getOrDefault<word>
+        (
+            "bathHeartPhiETrace", "zeroGradient"
+        )
+    ),
     ownSubsetPtr_(),
     subsetPtr_(nullptr),
     GiPtr_(),
@@ -235,6 +290,13 @@ leadFieldConductor::leadFieldConductor
 :
     baseMesh_(heartSubset.baseMesh()),
     solverType_(solverTypeOf(electroCoeffs)),
+    bathHeartPhiETrace_
+    (
+        electroCoeffs.getOrDefault<word>
+        (
+            "bathHeartPhiETrace", "zeroGradient"
+        )
+    ),
     ownSubsetPtr_(),
     subsetPtr_(&heartSubset),
     GiPtr_(),
@@ -282,14 +344,27 @@ void leadFieldConductor::checkMyocardium
     (
         solverType_ != "bidomainSolver"
      && solverType_ != "monodomainSolver"
-     && solverType_ != "eikonalSolver"
     )
     {
         FatalIOErrorInFunction(electroCoeffs)
             << "ECG domain '" << ecgDomainName << "' needs a lead-field "
-            << "conductor, which is defined for bidomainSolver, "
-            << "monodomainSolver and eikonalSolver; myocardiumSolver is '"
-            << solverType_ << "'."
+            << "conductor, which is defined for bidomainSolver and "
+            << "monodomainSolver; myocardiumSolver is '" << solverType_
+            << "'. eikonalSolver is not supported."
+            << exit(FatalIOError);
+    }
+
+    if
+    (
+        solverType_ == "bidomainSolver"
+     && bathHeartPhiETrace_ != "zeroGradient"
+    )
+    {
+        FatalIOErrorInFunction(electroCoeffs)
+            << "ECG domain '" << ecgDomainName << "': lead fields are built "
+            << "with the zeroGradient heart phiE companion; "
+            << "bathHeartPhiETrace " << bathHeartPhiETrace_ << " is not "
+            << "supported."
             << exit(FatalIOError);
     }
 
@@ -635,6 +710,7 @@ dictionary leadFieldConductor::signature() const
 
     dictionary sig;
 
+    sig.add("operator", word("adjoint"));
     sig.add("nBaseCells", returnReduce(baseMesh_.nCells(), sumOp<label>()));
     sig.add("nHeartCells", returnReduce(heartMesh().nCells(), sumOp<label>()));
     sig.add("sumBaseVolume", gSum(baseMesh_.V().field()));
@@ -651,9 +727,8 @@ dictionary leadFieldConductor::signature() const
     );
 
     // Zone ids looked up once: the myocardium zone, then the torso zones.
-    // The passiveConductor constructor has already made a missing torso
-    // zone fatal (the single validation point), so only the myocardium
-    // zone can be absent here.
+    // Torso zones exist (checked by passiveConductor); only the myocardium
+    // zone can be absent.
     wordList zoneNames(1, myocardiumZone_);
     zoneNames.append(torsoCellZones_);
 
@@ -706,6 +781,14 @@ dictionary leadFieldConductor::signature() const
     reduce(sumTorso, sumOp<scalar>());
     sig.add("sumTorsoConductivity", sumTorso);
 
+    sig.add("myocardiumSolver", solverType_);
+    if (solverType_ == "bidomainSolver")
+    {
+        sig.add("bathHeartPhiETrace", bathHeartPhiETrace_);
+    }
+    sig.add("geometryScheme", baseMesh_.geometry().type());
+    sig.add("baseSchemes", phiESchemes(baseMesh_));
+    sig.add("heartSchemes", phiESchemes(heartMesh()));
     sig.add
     (
         "interfaceConductivityInterpolation",
@@ -836,6 +919,44 @@ tmp<volScalarField> leadFieldConductor::forwardPotential() const
     }
 
     publishIfAbsent(phiE, false);
+
+    return tphiE;
+}
+
+
+tmp<volScalarField> leadFieldConductor::leadFieldPotential() const
+{
+    const fvMesh& mesh = baseMesh_;
+
+    wordList types
+    (
+        mesh.boundary().size(), zeroGradientFvPatchScalarField::typeName
+    );
+    for (const word& patch : groundPatches_)
+    {
+        types[mesh.boundaryMesh().findPatchID(patch)] =
+            fixedValueFvPatchScalarField::typeName;
+    }
+
+    tmp<volScalarField> tphiE
+    (
+        new volScalarField
+        (
+            IOobject
+            (
+                "phiE", mesh.time().timeName(), mesh,
+                IOobject::NO_READ, IOobject::NO_WRITE, IOobject::NO_REGISTER
+            ),
+            mesh,
+            dimensionedScalar
+            (
+                dimless/(conductorPtr_->sigmaTotal().dimensions()*dimLength),
+                Zero
+            ),
+            types
+        )
+    );
+    publishIfAbsent(tphiE(), false);
 
     return tphiE;
 }

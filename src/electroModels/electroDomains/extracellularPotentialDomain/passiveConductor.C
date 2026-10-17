@@ -821,6 +821,21 @@ tmp<fvScalarMatrix> passiveConductor::assemble
 }
 
 
+void passiveConductor::fillHeart
+(
+    const volScalarField& psi,
+    volScalarField& heartPsi
+) const
+{
+    scalarField& heartPsiI = heartPsi.primitiveFieldRef();
+    forAll(heartCellToBaseCell_, heartCellI)
+    {
+        heartPsiI[heartCellI] = psi[heartCellToBaseCell_[heartCellI]];
+    }
+    heartPsi.correctBoundaryConditions();
+}
+
+
 void passiveConductor::applyReference
 (
     fvScalarMatrix& eqn,

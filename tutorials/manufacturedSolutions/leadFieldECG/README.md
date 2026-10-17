@@ -3,8 +3,10 @@
 Verification of the lead-field ECG (`ecgSolver leadFieldECG` with the lead
 fields of `buildLeadFields`). The case checks two things:
 
-- that the lead-field channel is the reciprocal of the forward
-  passive-conductor solve of the same conductor; and
+- that the lead-field channel equals the converged forward
+  passive-conductor solve of the same conductor; the lead field is the
+  discrete adjoint `A^-T e` of the finite-volume operator `A`, so the two
+  agree to the fixed-point tolerance on hexahedra and tetrahedra; and
 - that both converge to an exact torso potential.
 
 The myocardium is a monodomain or a bidomain solver on the cellZone
@@ -148,8 +150,12 @@ slab's `2 k S` for any `sigma_1`, `sigma_2`.
 The verifier (`reference layered`, `layerInterfaces (-0.5 1.5)`) takes
 `alpha` from the surface currents and the layer conductivities from the
 torso cells. It stops with a fatal error when a torso cell crosses a layer
-interface, when a layer has more than one conductivity, or when the surface
-currents are not along `x` or carry a net current. The pin and the
+interface, when a layer has more than one conductivity, when the surface
+currents are not along `x` or carry a net current, or when a current is
+combined with the bidomain myocardium. With a current the heart slope
+`alpha/(Gi + Ge)_xx` at the walls carries the intracellular flux
+`alpha Gi_xx/(Gi + Ge)_xx`, which the sealed monodomain `Vm` admits and
+the insulated bidomain intracellular potential does not. The pin and the
 electrodes are those of the slab: `torsoLeftFar` lies in the pinned outer
 layer, `torsoLeft` and `nearLeft` in the inner left layer, `nearRight` in
 the inner right layer and `torsoRight` in the outer right layer. With
@@ -171,8 +177,8 @@ centroid values differ.
     or `layered`.
 - schemes:
   - gradient `leastSquares`;
-  - laplacian and snGrad `corrected`, `limited 0.5` or `orthogonal`
-    (`-snGrad`).
+  - laplacian and snGrad `corrected` or `orthogonal` (`-snGrad`); the
+    lead-field build refuses nonlinear schemes such as `limited`.
 - linear solvers, absolute tolerance `1e-15`:
   - `phiE|phiEFinal`: `PCG`/`DIC`, `relTol 0`, for the direct solves and the
     bidomain heart potential;
@@ -223,13 +229,13 @@ removes `local/`, `0/`, the mesh and the lead fields.
 |---|---|---|
 | `parallel` | `decomposePar` (2 subdomains, scotch); `buildLeadFields` and `cardiacFoam` in parallel | serial |
 | `-problem slab\|layered` | exact passive solution | slab |
-| `-alpha x` | surface current of `layered` (`-alpha` on `xMin`, `alpha` on `xMax`; 0: insulated) | 0.01 |
+| `-alpha x` | surface current of `layered` (`-alpha` on `xMin`, `alpha` on `xMax`; 0: insulated); a current needs the monodomain myocardium | 0.01 |
 | `-mesh hex\|tet` | blockMesh boxes or gmsh tetrahedra | hex |
 | `-N n` | cells per unit length; tet: element size `1/n` | 10 |
 | `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
 | `-myocardium monodomain\|bidomain` | myocardium solver | monodomain |
 | `-conductivity anisotropic\|isotropic\|unequal` | heart conductivities | anisotropic |
-| `-snGrad corrected\|limited\|orthogonal` | laplacian and snGrad correction | corrected |
+| `-snGrad corrected\|orthogonal` | laplacian and snGrad correction | corrected |
 | `-dt x` | time step | 0.01 |
 | `-endTime x` | end time | 0.05 |
 
@@ -250,12 +256,17 @@ Outputs in `postProcessing/`:
   - `localisation` (`exactPoint - exactCentroid`).
 - `1D_<cells>_cells.dat`: the myocardium verifier's `Vm` errors.
 
-The regression runs the defaults (hex, `N = 10`, monodomain) in parallel on
-two ranks. It checks:
+The regression runs the defaults (hex, `N = 10`, monodomain) and
+`-problem layered` on the same mesh, each in parallel on two ranks. For each
+it checks:
 
 - the reciprocity gap `leadField-direct_relative`, which must be within
   `1e-9` of 0;
-- the static rows against the exact potential.
+- the static rows against the exact potential
+  (`regression/leadFieldECG.reference`,
+  `regression/leadFieldECGLayered.reference`). In the layered run the
+  current crosses the torso layer interface (left electrodes, exact to
+  round-off) and both heart walls (right electrodes, the slab's error).
 
 ```bash
 ./regression/regressionTest.sh
@@ -270,5 +281,5 @@ the tables.
 | study | question |
 |---|---|
 | [leadFieldConvergence](setup/studies/leadFieldConvergence/README.md) | order of the lead field and of the direct solve against the exact slab potential at the torso electrodes, on hexahedra and tetrahedra, with Ge proportional to Gi and with unequal anisotropy ratios |
-| [leadFieldReciprocity](setup/studies/leadFieldReciprocity/README.md) | gap between the lead field and the direct forward solve, on hexahedra and on tetrahedra with and without the explicit face terms (non-orthogonal correction, tensor cross-diffusion) |
+| [leadFieldReciprocity](setup/studies/leadFieldReciprocity/README.md) | gap between the lead field and the direct forward solve, on hexahedra and tetrahedra, monodomain and bidomain, serial and parallel |
 | [leadFieldOrganJump](setup/studies/leadFieldOrganJump/README.md) | order of the lead field and of the direct solve with torso layers of different conductivity and a current across them, and the independence of the insulated ECG from the layer conductivities |

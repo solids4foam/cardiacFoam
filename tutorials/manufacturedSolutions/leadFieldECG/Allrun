@@ -21,7 +21,8 @@ Options (parameters are written to local/ and included by the dictionaries):
                                        x = 1.5) and the surface currents
                                        -alpha on xMin and alpha on xMax
   -alpha x                  current of -problem layered (default 0.01); 0 leaves
-                            the outer boundary insulated
+                            the outer boundary insulated; a current needs
+                            -myocardium monodomain
   -mesh hex|tet             blockMesh box (default) or gmsh tetrahedra
                             (three_domain_box.geo.template, layered_box.geo.template)
   -N n                      cells per unit length (default 10; even for
@@ -36,9 +37,9 @@ Options (parameters are written to local/ and included by the dictionaries):
                               isotropic    the xx values in every direction
                               unequal      the anisotropic xx values; Ge/Gi
                                            is 1 along y and 0.1 along z
-  -snGrad corrected|limited|orthogonal
+  -snGrad corrected|orthogonal
                             non-orthogonal correction of the laplacian and snGrad
-                            schemes (default corrected; limited is limited 0.5)
+                            schemes (default corrected)
   -dt x                     time step (default 0.01)
   -endTime x                end time (default 0.05)
 
@@ -129,7 +130,7 @@ do
             ;;
         -snGrad)
             needValue "$@"; snGrad="$2"; shift
-            oneOf -snGrad "$snGrad" corrected limited orthogonal
+            oneOf -snGrad "$snGrad" corrected orthogonal
             ;;
         -dt)
             needValue "$@"; dt="$2"; shift
@@ -153,6 +154,14 @@ done
 if [ -n "$alpha" ] && [ "$problem" != layered ]
 then
     echo "${0##*/}: -alpha applies to -problem layered only" 1>&2
+    usage
+fi
+
+if [ "$problem" = layered ] && [ "$myocardium" = bidomain ] \
+    && awk -v a="${alpha:-0.01}" 'BEGIN { exit !(a + 0 != 0) }'
+then
+    echo "${0##*/}: -problem layered with a current is monodomain only;" \
+        "use -alpha 0 with -myocardium bidomain" 1>&2
     usage
 fi
 
@@ -237,16 +246,8 @@ bidomainGe      ( 0.046165469 0 0 0.121585420 0 0.0030396355 );
 EOF
 fi
 
-case "$snGrad" in
-    limited)
-        correction="limited 0.5"
-        ;;
-    *)
-        correction="$snGrad"
-        ;;
-esac
-echo "default         Gauss linear $correction;" > local/laplacian
-echo "default         $correction;" > local/snGrad
+echo "default         Gauss linear $snGrad;" > local/laplacian
+echo "default         $snGrad;" > local/snGrad
 
 cat > local/time <<EOF
 endTime         $endTime;

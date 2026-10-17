@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+
+// Torso -1 <= x <= 0 and heart 0 <= x <= 1, sheared in y and z along x, so
+// that faces are non-orthogonal; the heart touches the patch xMax and the
+// side patches. With a simple (2 1 1) decomposition the heart wall x = 0 is
+// the processor boundary.
+
+vertices
+(
+    (-1 0    0   ) (1 0.5  0.3 ) (1 1.0  0.3 ) (-1 0.5  0   )
+    (-1 0    0.5 ) (1 0.5  0.8 ) (1 1.0  0.8 ) (-1 0.5  0.5 )
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (16 5 5) simpleGrading (1 1 1)
+);
+
+boundary
+(
+    xMin
+    {
+        type patch;
+        faces ((0 4 7 3));
+    }
+    xMax
+    {
+        type patch;
+        faces ((1 2 6 5));
+    }
+    sides
+    {
+        type patch;
+        faces
+        (
+            (0 1 5 4)
+            (3 7 6 2)
+            (0 3 2 1)
+            (4 5 6 7)
+        );
+    }
+);
+
+// ************************************************************************* //
