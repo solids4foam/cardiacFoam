@@ -24,7 +24,7 @@ The levels are not nested; orders use the realised `h`.
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`<gradient>_<conductivity>_<formulation>_N<n>`, the names that
+`<gradient>_<conductivity>_<formulation>[_sine]_N<n>`, the names that
 `../summarize.py` reads. From this folder:
 
 ```bash
@@ -35,9 +35,13 @@ do
              "leastSquares rotated explicit" "leastSquares rotated advectionDiffusion"
     do
         set -- $c
-        run=results/$1_$2_$3_N$n
-        rsync -a --exclude setup ../../../ $run/
-        $run/Allrun parallel -mesh tet -N $n -gradient $1 -conductivity $2 -formulation $3
+        for t in singleEvent sine
+        do
+            run=results/$1_$2_$3_N$n
+            [ $t = sine ] && run=results/$1_$2_$3_sine_N$n
+            rsync -a --exclude setup ../../../ $run/
+            $run/Allrun parallel -mesh tet -N $n -gradient $1 -conductivity $2 -formulation $3 -template $t
+        done
     done
 done
 python3 ../summarize.py results
@@ -48,8 +52,8 @@ The omnidriver spec for this study is `sweep_tet_generic.json`.
 ## Measured behaviour
 
 Results of the last run of this study (`results/`): activation-time L2 and
-Linf, the largest L2 error over E1-E5 of the ECG, and the outer iterations to
-the residual tolerance `1e-8`.
+Linf, the largest L2 error over E1-E5 of the ECG with `-template sine`, and
+the outer iterations to the residual tolerance `1e-8`.
 
 | gradient | conductivity | formulation | N | h | psi L2 | order | psi Linf | order | ECG max L2 | order | outer iterations |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -77,6 +81,33 @@ differ by at most 4 %. With `Gauss linear` the activation time stalls near
 gradients, without a stable pairwise order on this non-nested family, and
 under `Gauss linear` it keeps decreasing while the field it is computed from
 has stalled.
+
+With the single-event template the activation time is the same, and the
+largest L2 error over E1-E5 of the ECG is:
+
+| gradient | conductivity | formulation | N | ECG max L2 | order |
+|---|---|---|---|---|---|
+| GaussLinear | axis | explicit | 10 | 3.4933e-04 | |
+| | | | 20 | 2.8349e-04 | 0.31 |
+| | | | 30 | 3.2797e-04 | -0.35 |
+| | | | 40 | 3.2441e-04 | 0.04 |
+| leastSquares | axis | explicit | 10 | 2.7274e-04 | |
+| | | | 20 | 1.1155e-04 | 1.35 |
+| | | | 30 | 6.6450e-05 | 1.25 |
+| | | | 40 | 4.8864e-05 | 1.11 |
+| leastSquares | rotated | explicit | 10 | 2.1296e-04 | |
+| | | | 20 | 8.3085e-05 | 1.42 |
+| | | | 30 | 4.8243e-05 | 1.31 |
+| | | | 40 | 3.6291e-05 | 1.03 |
+| leastSquares | rotated | advectionDiffusion | 10 | 2.3475e-04 | |
+| | | | 20 | 7.2249e-05 | 1.78 |
+| | | | 30 | 4.1792e-05 | 1.32 |
+| | | | 40 | 3.2227e-05 | 0.94 |
+
+Under `Gauss linear` the single-event ECG stalls with the field; under
+`leastSquares` it decreases with the field. The sine ECG converges at orders
+2 to 3 while the activation time it is computed from stalls; its integral
+cancels.
 
 Reconstruction of the exact gradient (`gradReconActivationTime`, L2 split as
 in [errorLocalisation](../errorLocalisation/README.md)):

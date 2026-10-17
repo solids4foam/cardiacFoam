@@ -3,7 +3,8 @@
 Spatial convergence on Cartesian hexahedra (`Allrun`, `-mesh hex`) with the
 case defaults (rotated conductivity, advection-diffusion formulation,
 `leastSquares`): the activation time in 1D, 2D and 3D, and the 3D
-eikonal-driven ECG at E1-E5 against its reference integral.
+eikonal-driven ECG at E1-E5 against its reference integral, with the
+single-event template (the default) and with `-template sine`.
 
 ## Ladder
 
@@ -17,7 +18,7 @@ eikonal-driven ECG at E1-E5 against its reference integral.
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`hex_<d>D_N<n>`, the names that `../summarize.py` reads. From this folder:
+`hex_<d>D[_sine]_N<n>`, the names that `../summarize.py` reads. From this folder:
 
 ```bash
 mkdir -p results
@@ -30,6 +31,8 @@ do
         rsync -a --exclude setup ../../../ results/hex_${d}D_N$n/
         results/hex_${d}D_N$n/Allrun parallel -dim $d -N $n
     done
+    rsync -a --exclude setup ../../../ results/hex_3D_sine_N$n/
+    results/hex_3D_sine_N$n/Allrun parallel -N $n -template sine
 done
 python3 ../summarize.py results
 ```
@@ -62,7 +65,16 @@ The reconstruction of the exact gradient (`gradReconActivationTime`) converges
 at 1.92, 1.96, 1.98 in 3D, its boundary part at about 2.4.
 
 3D ECG, E1-E5 (largest and mean over the electrodes of each electrode's Linf
-error over time):
+error over time), single-event template:
+
+| N | max | order | mean | order |
+|---|---|---|---|---|
+| 10 | 3.5456e-04 | | 2.4071e-04 | |
+| 20 | 8.6414e-05 | 2.04 | 5.9661e-05 | 2.01 |
+| 40 | 2.1246e-05 | 2.02 | 1.4869e-05 | 2.00 |
+| 80 | 5.2023e-06 | 2.03 | 3.7425e-06 | 1.99 |
+
+`-template sine`:
 
 | N | max | order | mean | order |
 |---|---|---|---|---|
@@ -71,10 +83,13 @@ error over time):
 | 40 | 3.6381e-05 | 7.08 | 2.6979e-05 | 6.20 |
 | 80 | 7.8317e-06 | 2.22 | 6.2339e-06 | 2.11 |
 
-The template `U(t - psi)` completes about nineteen periods across the cube
+The sine `U(t - psi)` completes about nineteen periods across the cube
 (`psi` runs from 1 to `e^3`), which `N = 10` and `N = 20` do not resolve: the
 `N = 10` error is of the order of the signal, and the first two orders are
 pre-asymptotic. The finest pair is near second order.
+
+The single event converges at second order from `N = 10`; the sine's first
+two orders are pre-asymptotic.
 
 ## Outputs
 

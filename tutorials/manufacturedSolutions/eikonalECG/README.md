@@ -66,7 +66,10 @@ about 19 times across the activation range, so its ECG integrand changes sign
 many times over the cube and the integral cancels. The integrand is also
 spatially under-resolved on coarse meshes, so its quadrature error falls
 faster than the discretisation order there, and the ECG can appear to converge
-while the activation field does not.
+while the activation field does not. The studies
+([cartesianConvergence](setup/studies/cartesianConvergence/README.md),
+[tetConvergence](setup/studies/tetConvergence/README.md)) measure both
+templates.
 
 ### Stack
 
