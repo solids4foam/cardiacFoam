@@ -61,7 +61,8 @@ class ecgDomain
     word domainName_;
     word solverType_;
 
-    //- Output stream for pseudoECG.dat, torsoECG.dat or eikonalECG.dat
+    //- Output stream for pseudoECG.dat, torsoECG.dat, eikonalECG.dat or
+    //  leadFieldECG.dat
     autoPtr<OFstream> outputPtr_;
     //- Runtime-selected ECG evaluation kernel
     autoPtr<ecgSolver> solverPtr_;
@@ -126,6 +127,11 @@ public:
         virtual const labelUList* subsetCellMapPtr() const override
         {
             return stateProvider_.subsetCellMapPtr();
+        }
+
+        virtual const fvMeshSubset* meshSubsetPtr() const override
+        {
+            return stateProvider_.meshSubsetPtr();
         }
 
         const volScalarField& Vm() const;

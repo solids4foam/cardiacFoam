@@ -7,6 +7,7 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `monodomainPseudoECG` : spatial manufactured-solution verification for the monodomain solver with pseudo-ECG output
 - `bidomain` : spatial manufactured-solution verification for the bidomain solver
 - `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
+- [`leadFieldECG`](leadFieldECG/README.md) : lead-field ECG against a direct forward solve of the same conductor (reciprocity) and against the exact potential of the insulated slab and of the layered torso with a current across it, monodomain or bidomain myocardium, on hexahedra or gmsh tetrahedra
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
 - `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
 - `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification

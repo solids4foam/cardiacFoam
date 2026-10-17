@@ -33,6 +33,25 @@ solvers
         relTol          0.0;
         maxIter         5000;
     }
+
+    // buildLeadFields
+    leadField
+    {
+        solver          PCG;
+        preconditioner
+        {
+            preconditioner  GAMG;
+            smoother        DICGaussSeidel;
+        }
+        tolerance       1e-15;
+        relTol          0.01;
+    }
+
+    leadFieldFinal
+    {
+        $leadField;
+        relTol          0;
+    }
 }
 
 PIMPLE

@@ -35,6 +35,8 @@ Author
 namespace Foam
 {
 
+class fvMeshSubset;
+
 class electroStateProvider
 {
 public:
@@ -57,6 +59,12 @@ public:
     }
 
     virtual const labelUList* subsetCellMapPtr() const
+    {
+        return nullptr;
+    }
+
+    //- Optional subset that built this provider's mesh from the base mesh.
+    virtual const fvMeshSubset* meshSubsetPtr() const
     {
         return nullptr;
     }

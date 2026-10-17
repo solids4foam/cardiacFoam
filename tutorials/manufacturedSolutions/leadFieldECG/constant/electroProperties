@@ -1,0 +1,169 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Myocardium on the cellZone myocardium of the heart+torso mesh; the torso
+// is the cellZone bath. Allrun writes the solver, the conductivities and the
+// reference into local/.
+
+myocardiumSolver monodomainSolver;
+
+// Conductivities (S/m). The monodomain conductivity equals
+// Gi (Gi+Ge)^-1 Ge of its ECG domain; the bidomain Gi and Ge are those of
+// manufacturedSolutions/bidomain. Both pairs give Gi_xx/(Gi_xx+Ge_xx) =
+// 1/sqrt(2).
+monodomainG     ( 0.111453302 0 0 0.121585420 0 0.030396355 );
+monodomainGi    ( 0.380525375260 0 0 0.415118589951 0 0.103779647488 );
+monodomainGe    ( 0.157618771260 0 0 0.171947749951 0 0.0429869374877 );
+bidomainGi      ( 0.111453302 0 0 0.121585420 0 0.030396355 );
+bidomainGe      ( 0.046165469 0 0 0.050362330 0 0.012590582 );
+
+#includeIfPresent "<case>/local/myocardium"
+#includeIfPresent "<case>/local/conductivity"
+
+// The torso conductor of the lead field: insulated outer boundary, pinned in
+// the left torso slab (inside one cell at every level). -problem layered
+// sets the layer cellZones and the surface currents in local/torso.
+leadFieldTorso
+{
+    bathCellZones   ( bath );
+    bathConductivityField bodyAndOrgansConductivity;
+    interfaceConductivityInterpolation distanceWeightedHarmonic;
+    phiERefPoint    ( -0.9013 0.0437 0.0437 );
+    phiEReferenceValue 0;
+    #includeIfPresent "<case>/local/torso"
+}
+
+// Torso electrodes: two in the left slab and one in the right, and one in
+// each slab next to the heart; none lies on a hexahedral face at
+// N = 10, 20, 40, 80
+leadFieldElectrodes
+{
+    torsoLeft       ( -0.4567 0.4137 0.5871 );
+    torsoLeftFar    ( -0.8713 0.2311 0.7129 );
+    torsoRight      ( 1.5433 0.6173 0.3311 );
+    nearLeft        ( -0.0213 0.4521 0.5317 );
+    nearRight       ( 1.0187 0.3719 0.4613 );
+}
+
+leadFieldVerifier
+{
+    type            manufacturedLeadFieldECGVerifier;
+    reference       slab;
+    #includeIfPresent "<case>/local/reference"
+}
+
+monodomainSolverCoeffs
+{
+    sealedHeartBoundary false;
+    cellZone        myocardium;
+    conductivitySource uniform;
+    conductivity    [ -1 -3 3 0 0 2 0 ] $:monodomainG;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    ionicModel      monodomainFDAManufactured;
+    timeCouplingScheme godunov;
+    outputVariables
+    {
+        ionic
+        {
+            export          ( u1 u2 u3 );
+            debug           ( V u1 u2 u3 Iion );
+        }
+    }
+    verificationModel
+    {
+        type            manufacturedFDAMonodomainVerifier;
+    }
+    dimension       "1D";
+    solutionAlgorithm implicit;
+    solver          RKF45;
+    maxSteps        1000000000;
+    externalStimulus
+    {
+        stimulusLocationMin ( 0 0 0.0055 );
+        stimulusLocationMax ( 0.0015 0.0015 0.007 );
+        stimulusDuration [ 0 0 1 0 0 0 0 ] 0;
+        stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
+        stimulusStartTime 0;
+    }
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver       leadFieldECG;
+            conductivitySource uniform;
+            conductivityIntracellular [ -1 -3 3 0 0 2 0 ] $:monodomainGi;
+            conductivityExtracellular [ -1 -3 3 0 0 2 0 ] $:monodomainGe;
+            torso           { $:leadFieldTorso; }
+            electrodePositions { $:leadFieldElectrodes; }
+            verificationModel { $:leadFieldVerifier; }
+        }
+    }
+}
+
+bidomainSolverCoeffs
+{
+    sealedHeartBoundary false;
+    cellZone        myocardium;
+    conductivitySource uniform;
+    conductivityIntracellular [ -1 -3 3 0 0 2 0 ] $:bidomainGi;
+    conductivityExtracellular [ -1 -3 3 0 0 2 0 ] $:bidomainGe;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    ionicModel      bidomainFDAManufactured;
+    timeCouplingScheme godunov;
+    outputVariables
+    {
+        ionic
+        {
+            export          ( u1 u2 u3 );
+            debug           ( V u1 u2 u3 Iion );
+        }
+    }
+    verificationModel
+    {
+        type            manufacturedFDABidomainVerifier;
+    }
+    dimension       "1D";
+    solutionAlgorithm implicit;
+    solver          RKF45;
+    maxSteps        1000000000;
+    // Heart potential pin (inside one cell at every level)
+    phiERefPoint    ( 0.1137 0.0437 0.0437 );
+    phiEReferenceValue 0;
+    externalStimulus
+    {
+        stimulusLocationMin ( 0 0 0.0055 );
+        stimulusLocationMax ( 0.0015 0.0015 0.007 );
+        stimulusDuration [ 0 0 1 0 0 0 0 ] 0;
+        stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
+        stimulusStartTime 0;
+    }
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver       leadFieldECG;
+            torso           { $:leadFieldTorso; }
+            electrodePositions { $:leadFieldElectrodes; }
+            verificationModel { $:leadFieldVerifier; }
+        }
+    }
+}
+
+
+// ************************************************************************* //

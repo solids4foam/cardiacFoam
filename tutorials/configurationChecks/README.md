@@ -42,7 +42,11 @@ reproduces the pseudo-ECG written by the solver; these use
 | `regression/manifests` | files written by each `pass` check |
 
 Invalid configurations are mostly a valid variant plus a one-entry
-`foamDictionary` edit, given in the `checks` file.
+`foamDictionary` edit, given in the `checks` file. Edits are applied after
+the case preparation, so a variant's own `Allprepare` (for example the
+`buildLeadFields` step of the lead-field variants) prepares the unedited
+configuration. A variant's `Allprepare.parallel`, if present, runs after
+`decomposePar` in `np=N` checks.
 
 ## Running
 

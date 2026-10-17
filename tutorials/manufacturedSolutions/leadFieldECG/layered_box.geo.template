@@ -1,0 +1,54 @@
+// Conformal tetrahedral layered box [-1,2] x [0,1] x [0,1]: torso layers
+// [-1,xLeft] and [xLeft,0], heart [0,1], torso layers [1,xRight] and
+// [xRight,2]; Delaunay tetrahedra of size lc. Set lc and seed with
+// gmsh -setnumber lc <value> -setnumber seed <value>.
+
+SetFactory("OpenCASCADE");
+
+DefineConstant[
+    lc = { 0.1, Name "lc" },
+    seed = { 1, Name "seed" },
+    xLeft = { -0.5, Name "xLeft" },
+    xRight = { 1.5, Name "xRight" }
+];
+
+eps = 1e-7;
+
+Box(1) = {-1, 0, 0, xLeft + 1, 1, 1};
+Box(2) = {xLeft, 0, 0, -xLeft, 1, 1};
+Box(3) = { 0, 0, 0, 1, 1, 1};
+Box(4) = { 1, 0, 0, xRight - 1, 1, 1};
+Box(5) = {xRight, 0, 0, 2 - xRight, 1, 1};
+
+// Fragment all volumes together so the planes x = xLeft, 0, 1 and xRight
+// share their points and triangles. They are not Physical Surfaces:
+// gmshToFoam must import them as internal faces, not boundary patches.
+BooleanFragments{ Volume{1, 2, 3, 4, 5}; Delete; }{}
+
+outerLeft[] = Volume In BoundingBox{-1-eps, -eps, -eps, xLeft+eps, 1+eps, 1+eps};
+innerLeft[] = Volume In BoundingBox{xLeft-eps, -eps, -eps, 0+eps, 1+eps, 1+eps};
+heart[] = Volume In BoundingBox{0-eps, -eps, -eps, 1+eps, 1+eps, 1+eps};
+innerRight[] = Volume In BoundingBox{1-eps, -eps, -eps, xRight+eps, 1+eps, 1+eps};
+outerRight[] = Volume In BoundingBox{xRight-eps, -eps, -eps, 2+eps, 1+eps, 1+eps};
+
+Physical Volume("myocardium") = {heart[]};
+Physical Volume("torsoInner") = {innerLeft[], innerRight[]};
+Physical Volume("torsoOuter") = {outerLeft[], outerRight[]};
+
+xMin[] = Surface In BoundingBox{-1-eps, -eps, -eps, -1+eps, 1+eps, 1+eps};
+xMax[] = Surface In BoundingBox{2-eps, -eps, -eps, 2+eps, 1+eps, 1+eps};
+yMin[] = Surface In BoundingBox{-1-eps, -eps, -eps, 2+eps, eps, 1+eps};
+yMax[] = Surface In BoundingBox{-1-eps, 1-eps, -eps, 2+eps, 1+eps, 1+eps};
+zMin[] = Surface In BoundingBox{-1-eps, -eps, -eps, 2+eps, 1+eps, eps};
+zMax[] = Surface In BoundingBox{-1-eps, -eps, 1-eps, 2+eps, 1+eps, 1+eps};
+
+Physical Surface("xMin") = {xMin[]};
+Physical Surface("xMax") = {xMax[]};
+Physical Surface("sides") = {yMin[], yMax[], zMin[], zMax[]};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.Algorithm3D = 1;      // Delaunay: near-uniform, isotropic tets
+Mesh.Optimize = 1;
+Mesh.RandomSeed = seed;
+Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format

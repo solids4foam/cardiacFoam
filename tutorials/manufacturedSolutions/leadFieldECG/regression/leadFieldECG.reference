@@ -1,0 +1,15 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# error <row> <L1|L2|Linf> <expected> <tolerance>: rows of
+# postProcessing/manufacturedLeadFieldECGSummary_ECG.dat (norms over the
+# samples).
+# Reciprocity gap on Vm_h (relative to the largest |direct|) and on the exact
+# Vm (absolute, exact potentials up to 1.45): zero to 1e-9.
+error    leadField-direct_relative                  Linf  0               1e-9
+error    leadFieldStatic-directStatic               Linf  0               1.4e-9
+# Lead field and direct solve on the exact Vm against the exact potential
+error    leadFieldStatic-exactCentroid_torsoLeftFar Linf  0               1e-9
+error    leadFieldStatic-exactCentroid_nearLeft     Linf  0               1e-9
+error    leadFieldStatic-exactCentroid_torsoRight   L2    0.0176705555    1.8e-07
+error    leadFieldStatic-exactCentroid_nearRight    L2    0.0176705555    1.8e-07
+error    directStatic-exactCentroid_torsoRight      L2    0.0176705555    1.8e-07
+error    directStatic-exactCentroid_nearRight       L2    0.0176705555    1.8e-07

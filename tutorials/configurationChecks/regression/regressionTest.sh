@@ -85,9 +85,11 @@ isSelected()
     return 1
 }
 
-# Apply "path=value" (set) and "path!" (remove) edits to electroProperties.
-# The run options "np=N", "post=<script>" and "skip=<version>" are handled
-# by runCheck and skipped here.
+# Apply "path=value" (set) and "path!" (remove) edits to electroProperties,
+# after the case preparation, so that a preparation step such as
+# buildLeadFields sees the variant's own dictionary. The run options "np=N",
+# "post=<script>" and "skip=<version>" are handled by runCheck and skipped
+# here.
 applyEdits()
 {
     local edit
@@ -96,13 +98,13 @@ applyEdits()
             || "${edit}" == skip=* ]]; then
             continue
         elif [[ "${edit}" == *'!' ]]; then
-            foamDictionary constant/electroProperties \
+            foamDictionary -precision 17 constant/electroProperties \
                 -entry "${edit%!}" -remove > /dev/null
         else
             # A value cannot hold a space in the checks file, so it is
             # written as ~, as in fail:<text>
             local value="${edit#*=}"
-            foamDictionary constant/electroProperties \
+            foamDictionary -precision 17 constant/electroProperties \
                 -entry "${edit%%=*}" -set "${value//\~/ }" > /dev/null
         fi
     done
@@ -140,7 +142,6 @@ runCheck()
 
     (
         cd "${runDir}"
-        applyEdits "$@"
         ./Allprepare > log.Allprepare 2>&1
     ) || {
         echo "FAIL: ${name}: case preparation failed"
@@ -171,6 +172,11 @@ DICT
             set +eu
             cd "${runDir}"
             runApplication decomposePar > /dev/null || exit 1
+            # A case's Allprepare.parallel prepares the decomposed case
+            if [[ -x Allprepare.parallel ]]; then
+                ./Allprepare.parallel > log.Allprepare.parallel 2>&1 || exit 5
+            fi
+            applyEdits "$@"
             runParallel cardiacFoam > /dev/null || exit 2
             runApplication reconstructPar > /dev/null || exit 3
             runApplication redistributeRestartState > /dev/null || exit 4
@@ -182,8 +188,17 @@ DICT
             regressionDumpLog "${runDir}/log.redistributeRestartState"
             return 1
         fi
+        if (( rc == 5 )); then
+            echo "FAIL: ${name}: Allprepare.parallel failed"
+            regressionDumpLog "${runDir}/log.Allprepare.parallel"
+            return 1
+        fi
     else
-        (cd "${runDir}" && cardiacFoam > log.cardiacFoam 2>&1) || rc=$?
+        (
+            cd "${runDir}" || exit 1
+            applyEdits "$@"
+            cardiacFoam > log.cardiacFoam 2>&1
+        ) || rc=$?
     fi
 
     if [[ "${expect}" == pass ]]; then

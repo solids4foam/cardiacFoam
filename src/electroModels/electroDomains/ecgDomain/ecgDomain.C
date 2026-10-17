@@ -49,6 +49,11 @@ word outputFileName(const word& solverType)
         return word("eikonalECG.dat");
     }
 
+    if (solverType == "leadFieldECG")
+    {
+        return word("leadFieldECG.dat");
+    }
+
     return
         solverType == "torsoECG"
       ? word("torsoECG.dat")
@@ -256,6 +261,10 @@ ecgDomain::ecgDomain
     else if (solverType_ == "torsoECG")
     {
         (void)phiE();
+    }
+    else if (solverType_ == "leadFieldECG")
+    {
+        (void)Vm();
     }
 
     readElectrodes(dict);

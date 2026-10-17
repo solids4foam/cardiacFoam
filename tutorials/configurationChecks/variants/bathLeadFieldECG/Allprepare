@@ -1,0 +1,10 @@
+#!/bin/bash
+# Mesh the 1-D bath-myocardium-bath column as base/bath does, then build the
+# lead fields of the leadFieldECG domain
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication blockMesh || exit 1
+runApplication topoSet || exit 1
+runApplication setTorsoOrganConductivityField || exit 1
+runApplication buildLeadFields || exit 1
