@@ -189,7 +189,7 @@ bool manufacturedEikonalECGVerifier::read(const dictionary& dict)
 
     if (cfg.found("dimension"))
     {
-        const word dimensionName(cfg.lookup("dimension"));
+        const word dimensionName(cfg.get<word>("dimension"));
         label requestedDimension = 0;
 
         if (dimensionName == "1D")
@@ -223,7 +223,7 @@ bool manufacturedEikonalECGVerifier::read(const dictionary& dict)
         }
     }
 
-    k_ = cfg.getOrDefault<vector>("k", manufacturedEikonalK(dimension_));
+    k_ = cfg.lookupOrDefault<vector>("k", manufacturedEikonalK(dimension_));
     eikonalECG_templates::readManufacturedTemplate
     (
         cfg, sineTemplate_, templateDuration_, templateRise_
@@ -233,7 +233,7 @@ bool manufacturedEikonalECGVerifier::read(const dictionary& dict)
 
     if (cfg.found("checkQuadratureOrders"))
     {
-        cfg.lookup("checkQuadratureOrders") >> checkQuadratureOrders_;
+        checkQuadratureOrders_ = cfg.get<List<label>>("checkQuadratureOrders");
     }
     else
     {

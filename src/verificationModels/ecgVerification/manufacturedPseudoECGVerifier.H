@@ -22,7 +22,7 @@ Description
     Pseudo-ECG manufactured verifier.
 
 Author
-    Simao Nieto de Castro. All rights reserved.
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedPseudoECGVerifier_H

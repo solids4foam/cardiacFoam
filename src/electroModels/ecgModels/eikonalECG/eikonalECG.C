@@ -64,7 +64,12 @@ eikonalECG::eikonalECG(const dictionary& dict)
     word verifierTypeModern = word::null;
     if (dict.found("verificationModel"))
     {
-        verifierTypeModern = dict.subDict("verificationModel").lookupOrDefault<word>("type", "none");
+        verifierTypeModern =
+            dict.subDict("verificationModel").lookupOrDefault<word>
+            (
+                "type",
+                "none"
+            );
     }
 
     if
@@ -355,7 +360,10 @@ const dictionary* eikonalECG::findHeterogeneityDict
 
     if (!hetDictPtr && electroProperties.found("myocardiumSolver"))
     {
-        const word myocardiumSolver(electroProperties.lookup("myocardiumSolver"));
+        const word myocardiumSolver
+        (
+            electroProperties.get<word>("myocardiumSolver")
+        );
         const dictionary* solverDictPtr =
             electroProperties.findDict(myocardiumSolver + "Coeffs");
 
@@ -414,7 +422,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    const word mode(hetDict.lookup("mode"));
+    const word mode(hetDict.get<word>("mode"));
 
     const bool cellZoneRegionsSupported =
         mode == "cellZoneRegions" && personalizedTemplatesEnabled_;
@@ -506,7 +514,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    const word transitionMode(hetDict.lookup("transitionMode"));
+    const word transitionMode(hetDict.get<word>("transitionMode"));
 
     word smoothing;
     scalar transitionWidth = 0.0;
@@ -523,7 +531,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
         }
 
         transitionWidth = hetDict.get<scalar>("transitionWidth");
-        smoothing = word(hetDict.lookup("smoothing"));
+        smoothing = hetDict.get<word>("smoothing");
     }
     else if (transitionMode != "hard")
     {
@@ -547,7 +555,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    const word fieldName(hetDict.lookup("field"));
+    const word fieldName(hetDict.get<word>("field"));
     autoPtr<volScalarField> tReadPtr;
     const volScalarField* tPtr = mesh.cfindObject<volScalarField>(fieldName);
 
@@ -660,7 +668,7 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    const word mode(hetDict.lookup("mode"));
+    const word mode(hetDict.get<word>("mode"));
 
     if (mode != "namedRegions" && mode != "cellZoneRegions")
     {
@@ -788,8 +796,8 @@ void eikonalECG::solve
 
     if (useManufacturedTemplate_)
     {
-        Info<< "eikonalECG: using fixed manufactured eikonal ECG "
-            << "template because no template dictionary was supplied."
+        Info<< "eikonalECG: using the manufactured eikonal ECG template "
+            << "selected by the ECG verificationModel."
             << nl << endl;
     }
 }

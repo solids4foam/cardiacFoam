@@ -66,9 +66,9 @@ manufacturedEikonalVerifier::manufacturedEikonalVerifier
     const dictionary& cfg = electroProperties.subDict("verificationModel");
     writeErrorField_ =
         cfg.lookupOrDefault<Switch>("writeErrorField", false);
-    k_ = cfg.getOrDefault<vector>("k", k_);
+    k_ = cfg.lookupOrDefault<vector>("k", k_);
     productionPatches_ =
-        cfg.getOrDefault<wordRes>("productionPatches", wordRes());
+        cfg.lookupOrDefault<wordRes>("productionPatches", wordRes());
 
     validateManufacturedEikonalUnitDomain(mesh_, dimension_);
     const vector Mk

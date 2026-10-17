@@ -19,18 +19,9 @@ Namespace
     Foam::eikonalECG_templates
 
 Description
-    Standalone generator for personalized eikonalECG action-potential
-    templates. eikonalECG reconstructs a pseudo-ECG as
-    Vm(x,t) = U(t - psi(x)), where U is one of several fixed, compiled-in
-    templates (endo/mid/epi) stored in tissueTemplates.H, or one of N
-    dynamically-generated ones. This component generates templates at
-    runtime by pacing single cells of a real ionicModel with a case's own
-    ionic parameterisation (heterogeneity constants and S1 stimulus
-    protocol): N anchors (one per named region) for ionicHeterogeneity.mode
-    namedRegions.
-
-    This file does not wire the generated templates into eikonalECG; it is
-    an independent, separately testable component.
+    Generates personalised eikonalECG action-potential templates, one per
+    named ionic-heterogeneity region, by pacing single cells of the case's
+    ionicModel with its heterogeneity constants and S1 protocol.
 
 SourceFiles
     eikonalTemplateGenerator.C

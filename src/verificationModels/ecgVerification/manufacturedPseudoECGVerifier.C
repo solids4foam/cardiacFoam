@@ -394,7 +394,7 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
 
     if (cfg.found("dimension"))
     {
-        const word dimensionName(cfg.lookup("dimension"));
+        const word dimensionName(cfg.get<word>("dimension"));
 
         if (dimensionName == "1D")
         {
@@ -434,7 +434,7 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
 
     if (cfg.found("checkQuadratureOrders"))
     {
-        cfg.lookup("checkQuadratureOrders") >> checkQuadratureOrders_;
+        checkQuadratureOrders_ = cfg.get<List<label>>("checkQuadratureOrders");
     }
     else
     {

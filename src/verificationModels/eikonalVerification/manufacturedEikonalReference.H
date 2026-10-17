@@ -22,7 +22,7 @@ Description
     Fixed manufactured references for eikonal activation and eikonal ECG.
 
 Author
-    Simao Nieto de Castro. All rights reserved.
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedEikonalReference_H

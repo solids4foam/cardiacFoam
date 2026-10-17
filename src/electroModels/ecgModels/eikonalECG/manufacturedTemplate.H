@@ -16,19 +16,9 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Description
-    Manufactured voltage template U(s), s = t - psi, of eikonalECG and
-    manufacturedEikonalECGVerifier, selected by the verificationModel entry
-    "template":
-
-        singleEvent (default):
-            U = Su(s) (1 - Su(s - templateDuration)), Su = (1 + tanh(s/w))/2,
-            w such that Su rises from 10 % to 90 % within templateRise.
-        sine:
-            U = sin(2 pi s).
-
-    The default duration exceeds the range of psi = exp(x + y + z), so
-    U'(t - psi) keeps one sign over the domain; the sine's does not, and the
-    ECG integral cancels.
+    Manufactured voltage template U(s), s = t - psi, shared by eikonalECG and
+    manufacturedEikonalECGVerifier: one action-potential-like event (default)
+    or sin(2 pi s), selected by the verificationModel entry "template".
 
 Author
     Simao Nieto de Castro, UCD.
@@ -54,10 +44,10 @@ inline void readManufacturedTemplate
 )
 {
     sine =
-        verificationDict.getOrDefault<word>("template", "singleEvent")
+        verificationDict.lookupOrDefault<word>("template", "singleEvent")
      == "sine";
-    duration = verificationDict.getOrDefault<scalar>("templateDuration", 64);
-    rise = verificationDict.getOrDefault<scalar>("templateRise", 4);
+    duration = verificationDict.lookupOrDefault<scalar>("templateDuration", 64);
+    rise = verificationDict.lookupOrDefault<scalar>("templateRise", 4);
 }
 
 

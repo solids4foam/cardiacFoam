@@ -22,7 +22,7 @@ Description
     Manufactured verifier for eikonal template-surrogate ECG.
 
 Author
-    Simao Nieto de Castro. All rights reserved.
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedEikonalECGVerifier_H

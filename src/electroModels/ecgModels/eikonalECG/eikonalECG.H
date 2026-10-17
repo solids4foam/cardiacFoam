@@ -22,7 +22,7 @@ Description
     Template-voltage surrogate ECG solver for eikonal activation-time fields.
 
 Author
-    Simao Nieto de Castro. All rights reserved.
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef eikonalECG_H
