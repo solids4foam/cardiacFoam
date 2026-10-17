@@ -1,0 +1,23 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
+runApplication -s algebra buildLeadFields -checkReconstruction
+cp 0/leadField_bipolar leadFieldSerial.dat
+runParallel -s leadfields buildLeadFields
+runApplication -s leadfields reconstructPar -withZero -time 0 -fields '(leadField_bipolar leadField_V1)'
+python3 - <<'CHECK'
+from pathlib import Path
+import re
+
+def vectors(path):
+    s=Path(path).read_text().split('internalField',1)[1].split('boundaryField',1)[0]
+    return [tuple(map(float,v.split())) for v in re.findall(r'[(]([^()]+)[)]',s)]
+a=vectors('leadFieldSerial.dat'); b=vectors('0/leadField_bipolar')
+assert len(a)==len(b)==60
+for x,y in zip(a,b):
+    assert all(abs(i-j)<1e-8 for i,j in zip(x,y)),(x,y)
+print('PASS: parallel reciprocal construction matches serial')
+CHECK
+rm leadFieldSerial.dat
+cp log.buildLeadFields.leadfields log.leadFieldParallelBuild

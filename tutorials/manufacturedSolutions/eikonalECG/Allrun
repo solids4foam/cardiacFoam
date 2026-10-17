@@ -29,6 +29,7 @@ Options (parameters are written to local/ and included by the dictionaries):
                             cell-gradient reconstruction (default leastSquares)
   -tolerance x              outer fixed-point residual tolerance (default 1e-8)
   -electrodes five|all      ECG at E1-E5 (default) or at E1-E5 and R1-R156
+  -leadFieldECG yes|no      add reciprocal ECG with independent references (default no)
   -errorField               write the cellwise activation-time error and the cell
                             centres to the final time
 
@@ -48,6 +49,7 @@ gradient=leastSquares
 tolerance=
 electrodes=five
 errorField=false
+leadFieldECG=no
 
 needValue()
 {
@@ -124,6 +126,10 @@ do
             needValue "$@"; electrodes="$2"; shift
             oneOf -electrodes "$electrodes" five all
             ;;
+        -leadFieldECG)
+            needValue "$@"; leadFieldECG="$2"; shift
+            oneOf -leadFieldECG "$leadFieldECG" yes no
+            ;;
         -errorField)
             errorField=true
             ;;
@@ -158,10 +164,20 @@ then
     done
 fi
 
+if [ "$leadFieldECG" = yes ] && [ "$dim" != 3 ]
+then
+    echo "${0##*/}: -leadFieldECG yes requires -dim 3" >&2
+    exit 2
+fi
+
 rm -rf local
 mkdir local
 
 echo "N $N;" > local/mesh
+if [ "$leadFieldECG" = yes ]
+then
+    cp setup/leadFieldObserver local/leadFieldObserver
+fi
 
 if [ "$conductivity" = axis ]
 then
@@ -216,6 +232,10 @@ else
     runApplication gmshToFoam local/box.msh
 fi
 runApplication checkMesh
+if [ "$leadFieldECG" = yes ]
+then
+    runApplication setManufacturedLeadFields -eikonal
+fi
 
 if $parallel
 then

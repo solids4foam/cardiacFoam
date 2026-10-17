@@ -73,6 +73,17 @@ public:
             const wordList& electrodeNames
         );
 
+        //- Append a restarted trace only after validating its layout and times.
+        //  At time zero creates a fresh trace, like openTimeSeries.
+        static autoPtr<OFstream> openRestartTimeSeries
+        (
+            const fileName& outDir,
+            const word& filename,
+            const wordList& channelNames,
+            scalar restartTime,
+            const word& restartTimeName = word::null
+        );
+
         //- Append one data row: time followed by all values
         static void writeRow
         (

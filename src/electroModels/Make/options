@@ -51,6 +51,7 @@ EXE_INC = \
     -IecgModels \
     -IecgModels/eikonalECG \
     -IecgModels/torsoECG \
+    -IecgModels/leadFieldECG \
     -IelectroCouplers \
     -IelectroCouplers/pvjCoupler \
     -IelectroCouplers/pvjCoupler/eikonal \

@@ -1,0 +1,8 @@
+name = "replayLeadFieldECG"
+category = "post-processing"
+description = "Compare lead-field and converged passive torso recordings on stored voltage snapshots"
+purpose = "Exercise reciprocal and production forward recording on one frozen cardiac voltage source."
+inputs = ["stored support-mesh Vm fields", "constant/passiveECGProperties", "constant/leadFieldProperties", "static conductor mesh and sensitivities"]
+outputs = ["postProcessing/matchedLeadFieldECG.dat", "postProcessing/matchedLeadFieldECGSummary.dat", "postProcessing/matchedTorsoPotentials.dat"]
+requires_mesh = true
+example = "replayLeadFieldECG -case ./case -time 0.005:0.04"

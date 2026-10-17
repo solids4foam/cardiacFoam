@@ -1,0 +1,8 @@
+name = "checkLeadFieldRecovery"
+category = "verification"
+description = "Compare passive lead-field recording and production torso recovery on prescribed heart voltage"
+purpose = "Verify passive lead-field recording against production extracellular recovery on a prescribed voltage column."
+inputs = ["constant/electroProperties with bidomain source", "constant/leadFieldProperties", "static conductor mesh and sensitivities"]
+outputs = ["postProcessing/leadFieldRecoveryCheck.dat"]
+requires_mesh = true
+example = "checkLeadFieldRecovery -case ./case"

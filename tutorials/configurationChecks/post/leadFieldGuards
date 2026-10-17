@@ -1,0 +1,132 @@
+#!/bin/bash
+# Runs only in the configuration harness's isolated runs/<check> copy.
+cd "${0%/*}" || exit 1
+set -e
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
+backup=$(mktemp -d "${TMPDIR:-/tmp}/lead-field-guards.XXXXXX")
+trap 'rm -rf "$backup"' EXIT
+cp constant/leadFieldProperties "$backup/properties"
+cp constant/electroProperties "$backup/electro"
+cp system/controlDict "$backup/control"
+cp 0/leadField_bipolar "$backup/field"
+cp 0/leadFieldMeshSignature "$backup/signature"
+cp 0/bodyAndOrgansConductivity "$backup/body"
+cp postProcessing/leadFieldECG.dat "$backup/trace"
+cp constant/leadFieldMetadata "$backup/metadata"
+cp -a constant/polyMesh "$backup/polyMesh"
+cp -a 0 "$backup/initial"
+: > log.leadFieldGuards
+python3 - <<'CHECK'
+from pathlib import Path
+import re
+text=Path('0.00336323/Vm').read_text().split('internalField',1)[1].split('boundaryField',1)[0]
+match=re.search(r'nonuniform\s+List<scalar>\s+60\s*\((.*?)\)\s*;',text,re.S)
+assert match,'Expected the 60-cell conductor Vm export'
+v=list(map(float,match.group(1).split()))
+rows=[list(map(float,r.split())) for r in Path('postProcessing/leadFieldECG.dat').read_text().splitlines() if r and not r.startswith('#')]
+expected=0.5*(v[39]-v[20])
+assert abs(rows[-1][1]-expected)<1e-10,(rows[-1],expected)
+assert abs(rows[-1][2]-expected)<1e-10,(rows[-1],expected)
+print('PASS: independent 1D source/lead-field ECG relation')
+CHECK
+expectFatal()
+{
+    local label="$1" text="$2"
+    if cardiacFoam > "expectedFailure.$label.txt" 2>&1; then
+        echo "Expected failure: $label"; exit 1
+    fi
+    if ! grep -q 'FOAM FATAL' "expectedFailure.$label.txt" || ! grep -qF "$text" "expectedFailure.$label.txt"; then
+        tail -40 "expectedFailure.$label.txt"; exit 1
+    fi
+    echo "PASS: $label" >> log.leadFieldGuards
+}
+expectBuilderFatal()
+{
+    local label="$1" text="$2"
+    if buildLeadFields > "expectedFailure.$label.txt" 2>&1; then
+        echo "Expected preprocessing failure: $label"; exit 1
+    fi
+    grep -q 'FOAM FATAL' "expectedFailure.$label.txt"
+    grep -qF "$text" "expectedFailure.$label.txt"
+    ! grep -q 'Solving for' "expectedFailure.$label.txt"
+    cmp "$backup/body" 0/bodyAndOrgansConductivity
+    cmp "$backup/field" 0/leadField_bipolar
+    cmp "$backup/metadata" constant/leadFieldMetadata
+    echo "PASS: $label rejected before any solve or input overwrite" >> log.leadFieldGuards
+}
+foamDictionary constant/leadFieldProperties -entry leadFields/V1 -set leadField_bipolar >/dev/null
+expectBuilderFatal duplicateBuilder 'Duplicate lead-field output name'
+# Supply otherwise-consistent external metadata so runtime rejection exercises
+# the filename contract rather than merely the preprocessing-property mismatch.
+foamDictionary constant/leadFieldMetadata -entry inputProperties/leadFields/V1 -set leadField_bipolar >/dev/null
+foamDictionary constant/leadFieldMetadata -entry leadFields/V1 -set leadField_bipolar >/dev/null
+expectFatal duplicateImport 'Duplicate lead-field output name'
+cp "$backup/properties" constant/leadFieldProperties
+cp "$backup/metadata" constant/leadFieldMetadata
+foamDictionary constant/leadFieldProperties -entry leadFields/bipolar -set bodyAndOrgansConductivity >/dev/null
+expectBuilderFatal reservedBuilder 'Reserved lead-field output name'
+expectFatal reservedImport 'Reserved lead-field output name'
+cp "$backup/properties" constant/leadFieldProperties
+# Boundary semantics change without a coordinate/cell geometry change.
+python3 - <<'CHECK'
+from pathlib import Path
+import re
+p=Path('constant/polyMesh/boundary')
+s,n=re.subn(r'(xMin\s*\{\s*type\s+)patch;',r'\1wall;',p.read_text())
+assert n==1,n
+p.write_text(s)
+CHECK
+expectFatal staleBoundary 'provenance mismatch'
+cp "$backup/polyMesh/boundary" constant/polyMesh/boundary
+# Splitting a heart-heart face into coincident baffles preserves each cell's
+# point/face geometry but changes its electrical connectivity.
+runApplication -s baffle topoSet -dict system/topoSetBaffleDict
+runApplication createBaffles -overwrite
+expectFatal staleAdjacency 'provenance mismatch'
+rm -rf constant/polyMesh 0
+cp -a "$backup/polyMesh" constant/polyMesh
+cp -a "$backup/initial" 0
+foamDictionary constant/leadFieldProperties -entry conductivityExtracellular -remove >/dev/null
+expectFatal missingGe conductivityExtracellular
+cp "$backup/properties" constant/leadFieldProperties
+foamDictionary constant/leadFieldProperties -entry electrodePositions/E1 -set '(-0.74 0.05 0.05)' >/dev/null
+expectFatal staleElectrode 'preprocessing inputs'
+cp "$backup/properties" constant/leadFieldProperties
+foamDictionary 0/bodyAndOrgansConductivity -entry internalField -set 'uniform 0.42' >/dev/null
+expectFatal staleBody 'provenance mismatch'
+cp "$backup/body" 0/bodyAndOrgansConductivity
+foamDictionary 0/leadFieldMeshSignature -entry internalField -set 'uniform (0 0 0)' >/dev/null
+expectFatal staleMesh 'provenance mismatch'
+cp "$backup/signature" 0/leadFieldMeshSignature
+foamDictionary 0/leadField_bipolar -entry dimensions -set '[0 -1 0 0 0 0 0]' >/dev/null
+expectFatal badDimensions 'wrong dimensions'
+cp "$backup/field" 0/leadField_bipolar
+# Export before restart to exercise the standalone heart observation workflow.
+runApplication subsetMesh -overwrite -patch xMin -zone myocardium
+foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/cellZone -remove >/dev/null
+foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/importMode -set heartOnly >/dev/null
+# Independent ECG schedule, including samples between normal case write times.
+foamDictionary constant/electroProperties -entry monodomainSolverCoeffs/ecgDomains/ECG/sampling \
+    -set '{ start 0; end 0.006; deltaT 0.001; }' >/dev/null
+cardiacFoam > log.guard.sampling 2>&1
+rows=$(awk '!/^#/ && NF {n++} END {print n+0}' postProcessing/leadFieldECG.dat)
+[[ "$rows" == 4 ]] || { echo "Expected 4 scheduled samples, got $rows"; exit 1; }
+cp postProcessing/leadFieldECG.dat "$backup/sampled"
+foamDictionary system/controlDict -entry startFrom -set latestTime >/dev/null
+foamDictionary system/controlDict -entry endTime -set 0.004484304 >/dev/null
+cardiacFoam > log.guard.restart 2>&1
+python3 - "$backup/sampled" postProcessing/leadFieldECG.dat <<'CHECK'
+import sys
+from pathlib import Path
+old=Path(sys.argv[1]).read_bytes(); new=Path(sys.argv[2]).read_bytes()
+assert new.startswith(old), 'Restart replaced earlier samples'
+times=[float(x.split()[0]) for x in new.decode().splitlines() if x and not x.startswith('#')]
+assert len(times)>4 and all(b>a for a,b in zip(times,times[1:])), 'Restart time sequence invalid'
+CHECK
+foamDictionary system/controlDict -entry startFrom -set startTime >/dev/null
+foamDictionary system/controlDict -entry startTime -set 0.00336323 >/dev/null
+expectFatal olderRestart 'later than the restart time'
+cp "$backup/control" system/controlDict
+cp "$backup/electro" constant/electroProperties
+cp "$backup/trace" postProcessing/leadFieldECG.dat
+printf 'PASS: sampling and checked restart append\nEnd\n' >> log.leadFieldGuards

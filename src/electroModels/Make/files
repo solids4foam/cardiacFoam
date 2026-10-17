@@ -36,7 +36,11 @@ myocardiumModels/singleCellSolver/singleCellSolver.C
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
 ecgModels/eikonalECG/eikonalECG.C
 ecgModels/eikonalECG/eikonalTemplateGenerator.C
+ecgModels/eikonalECG/eikonalTemplateSource.C
+ecgModels/eikonalLeadFieldECG/eikonalLeadFieldECG.C
 ecgModels/torsoECG/torsoECG.C
+ecgModels/leadFieldECG/leadFieldData.C
+ecgModels/leadFieldECG/leadFieldECG.C
 
 /* Conduction system models */
 conductionSystemModels/monodomain1DSolver/monodomain1DSolver.C

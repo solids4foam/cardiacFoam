@@ -5,6 +5,8 @@ This folder groups the manufactured-solution verification cases by model scope.
 ## Cases
 
 - `monodomainPseudoECG` : spatial manufactured-solution verification for the monodomain solver with pseudo-ECG output
+- [monodomainLeadFieldECG](monodomainLeadFieldECG/README.md) : monodomain weighted-vector ECG functional with an independent analytical reference
+- [bidomainLeadFieldECG](bidomainLeadFieldECG/README.md) : bidomain weighted-vector ECG functional with the same analytical reference
 - `bidomain` : spatial manufactured-solution verification for the bidomain solver
 - `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver

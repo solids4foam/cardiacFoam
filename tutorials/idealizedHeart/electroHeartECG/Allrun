@@ -1,0 +1,84 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
+
+variant=monodomain
+parallelRun=false
+prepareOnly=false
+replayOnly=false
+runEndTime=0.04
+runWriteInterval=0.005
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        monodomain|bidomain) variant="$1" ;;
+        parallel) parallelRun=true ;;
+        prepareOnly) prepareOnly=true ;;
+        replayOnly) replayOnly=true ;;
+        -endTime|-writeInterval)
+            option="$1"
+            [ "$#" -ge 2 ] || { echo "$option requires a value." >&2; exit 2; }
+            awk -v value="$2" 'BEGIN { exit !(value ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && value > 0) }' \
+                || { echo "$option requires a positive number." >&2; exit 2; }
+            if [ "$option" = -endTime ]; then runEndTime="$2"; else runWriteInterval="$2"; fi
+            shift
+            ;;
+        *) echo "Usage: ./Allrun [monodomain|bidomain] [parallel] [prepareOnly|replayOnly] [-endTime t] [-writeInterval t]" >&2; exit 2 ;;
+    esac
+    shift
+done
+if $prepareOnly && $replayOnly; then
+    echo "prepareOnly and replayOnly are mutually exclusive." >&2
+    exit 2
+fi
+if $replayOnly; then
+    python3 setup/checkMatchedECG.py --capture-source
+    runApplication -o replayLeadFieldECG -noZero
+    python3 setup/checkMatchedECG.py
+    exit
+fi
+if ! $prepareOnly; then
+    awk -v finish="$runEndTime" -v interval="$runWriteInterval" 'BEGIN { exit !(interval <= finish) }' \
+        || { echo "writeInterval must not exceed endTime for a recording run." >&2; exit 2; }
+fi
+if [ -e log.cardiacFoam ]; then
+    echo "A source-run log exists; preserve results and use ./Allclean before a fresh run." >&2
+    exit 1
+fi
+
+geometry=../mesh/heartTorso
+for file in "$geometry/constant/polyMesh/points" "$geometry/0/ConductivityIntracellular" ../mesh/constant/purkinjeGraph; do
+    if [ ! -f "$file" ] || head -c 200 "$file" | grep -q 'git-lfs.github.com'; then
+        echo "Missing hydrated shared input: $file. Run git lfs pull." >&2
+        exit 1
+    fi
+done
+ln -sf "electroProperties.$variant" constant/electroProperties
+mkdir -p local
+printf 'endTime %s;\nwriteInterval %s;\n' "$runEndTime" "$runWriteInterval" > local/runControls
+if [ ! -d constant/polyMesh ]; then
+    cp -a "$geometry/constant/polyMesh" constant/polyMesh
+fi
+mkdir -p 0
+cp "$geometry"/0/* 0/
+cp ../mesh/constant/purkinjeGraph constant/purkinjeGraph
+runApplication checkMesh
+runApplication -s gradientCheck buildLeadFields -checkMyocardialGradient
+runApplication buildLeadFields
+if [ ! -f constant/leadFieldMetadata ]; then
+    echo "Lead-field construction did not produce provenance; inspect its log." >&2
+    exit 1
+fi
+if $prepareOnly; then
+    exit
+fi
+if $parallelRun; then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+else
+    runApplication cardiacFoam
+fi
+python3 setup/checkMatchedECG.py --capture-source
+runApplication replayLeadFieldECG -noZero
+python3 setup/checkMatchedECG.py --online

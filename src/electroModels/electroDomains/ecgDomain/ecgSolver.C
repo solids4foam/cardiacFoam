@@ -20,6 +20,7 @@ License
 #include "ecgSolver.H"
 #include "addToRunTimeSelectionTable.H"
 #include "dictionary.H"
+#include "ecgDomain.H"
 
 namespace Foam
 {
@@ -49,6 +50,16 @@ autoPtr<ecgSolver> ecgSolver::New(const dictionary& dict)
     }
 
     return autoPtr<ecgSolver>(ctorPtr(dict));
+}
+
+wordList ecgSolver::channelNames(const ecgDomain& domain) const
+{
+    return domain.electrodeNames();
+}
+
+List<vector> ecgSolver::channelPositions(const ecgDomain& domain) const
+{
+    return domain.electrodePositions();
 }
 
 } // End namespace Foam

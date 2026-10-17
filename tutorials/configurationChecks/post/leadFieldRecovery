@@ -1,0 +1,11 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+. "$WM_PROJECT_DIR/bin/tools/RunFunctions"
+if [[ -d processor0 ]]; then
+    runParallel checkLeadFieldRecovery
+else
+    runApplication checkLeadFieldRecovery
+fi
+
+cp log.checkLeadFieldRecovery log.leadFieldRecovery

@@ -35,7 +35,7 @@ Author
 #include "dictionary.H"
 #include "overrideTypeName.H"
 #include "volFields.H"
-#include "eikonalTemplateGenerator.H"
+#include "eikonalTemplateSource.H"
 
 namespace Foam
 {
@@ -44,61 +44,17 @@ class eikonalECG
 :
     public ecgSolver
 {
-    Switch useManufacturedTemplate_;
-
+    eikonalTemplateSource templates_;
     scalar startTime_;
     scalar endTime_;
     scalar deltaT_;
     scalar sigmaE_;
-
     scalarField lastValues_;
     autoPtr<OFstream> outputPtr_;
-
-    // Optimization: precomputed transfer vectors for pseudo-ECG
+    bool sampled_;
     bool leadVectorsCalculated_;
     List<List<vector>> leadVectors_;
-
-    //- Index-aligned: regionWeights_[i] is the per-cell weight for
-    //  personalizedTemplates_[i] (personalized path) or for the i'th of
-    //  the 3 fixed compiled tissueTemplates.H curves, in
-    //  [endo, mid, epi] order (compiled/no-personalization path). Sized
-    //  and populated by calculateTransmuralWeights().
-    bool weightsCalculated_;
-    List<scalarField> regionWeights_;
-
-    //- See the "personalizedTemplates" sub-dictionary, README.md.
-    bool personalizedTemplatesEnabled_;
-    bool personalizedTemplatesGenerated_;
-    dictionary personalizedTemplatesDict_;
-    List<eikonalECG_templates::DynamicTemplate> personalizedTemplates_;
-
-    scalar manufacturedTemplateDerivative(scalar localTime) const;
-
-    //- Shared so calculateTransmuralWeights() and
-    //  generatePersonalizedTemplates() always agree on which dict is active.
-    const dictionary* findHeterogeneityDict
-    (
-        const dictionary& electroProperties
-    ) const;
-
     void calculateLeadVectors(const ecgDomain& domain);
-    void calculateTransmuralWeights(const ecgDomain& domain);
-
-    void generatePersonalizedTemplates(const ecgDomain& domain);
-
-    //- Analytic dVm/dx = -dU/ds(t-tau) * dTau/dx, reusing tau's own gradient
-    //  instead of numerically re-differentiating the reconstructed Vm field.
-    //  Differentiating U(t-tau) via a mesh stencil applied to its sampled
-    //  values loses an order of accuracy relative to this chain rule, because
-    //  it re-derives a gradient from an already nonlinear-transformed field
-    //  rather than reusing tau's own smooth, well-resolved gradient.
-    void reconstructGradVm
-    (
-        scalar sampleTime,
-        const volScalarField& activationTime,
-        const volVectorField& gradActivationTime,
-        volVectorField& gradVm
-    ) const;
 
     void calculatePseudoECG
     (

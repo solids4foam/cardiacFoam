@@ -113,3 +113,22 @@ bathWithoutCellZone                    bath  bathBidomain                fail:su
 unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
 bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ  skip=v2312
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension
+
+# Passive lead-field preprocessing and downstream mono/bidomain projection.
+monodomainLeadFieldECG leadFieldColumn monodomainLeadFieldECG pass skip=v2312
+bidomainLeadFieldECG leadFieldColumn bidomainLeadFieldECG pass skip=v2312
+monodomainLeadFieldECGParallel leadFieldColumn monodomainLeadFieldECG pass np=2 skip=v2312
+bidomainLeadFieldECGParallel leadFieldColumn bidomainLeadFieldECG pass np=2 skip=v2312
+monodomainLeadFieldECGField leadFieldColumn monodomainLeadFieldECGField pass skip=v2312
+monodomainLeadFieldECGLegacy leadFieldColumn monodomainLeadFieldECGLegacy pass skip=v2312
+monodomainLeadFieldBaseline leadFieldColumn monodomainLeadFieldECG pass monodomainSolverCoeffs/ecgDomains! skip=v2312
+bidomainLeadFieldBaseline leadFieldColumn bidomainLeadFieldECG pass bidomainSolverCoeffs/ecgDomains! skip=v2312
+monodomainLeadFieldGuards leadFieldColumn monodomainLeadFieldECG pass post=leadFieldGuards skip=v2312
+leadFieldECGWithEikonal slab eikonalECG fail:leadFieldECG eikonalSolverCoeffs/ecgDomains/ECG/ecgSolver=leadFieldECG
+monodomainLeadFieldHeartOnly leadFieldColumn monodomainLeadFieldECG pass post=leadFieldHeartOnly skip=v2312
+monodomainLeadFieldParallelBuild leadFieldColumn monodomainLeadFieldECG pass np=2 post=leadFieldParallelBuild skip=v2312
+
+bidomainLeadFieldRecovery leadFieldColumn bidomainLeadFieldECG pass post=leadFieldRecovery skip=v2312
+bidomainLeadFieldRecoveryParallel leadFieldColumn bidomainLeadFieldECG pass np=2 post=leadFieldRecovery skip=v2312
+
+monodomainLeadFieldRestartRounding leadFieldColumn monodomainLeadFieldECG pass post=leadFieldRestartRounding skip=v2312

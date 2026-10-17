@@ -51,3 +51,14 @@ and tree with `CARDIAC_REGRESSION_SCOPE=full`) and `pathos/conductionBlock`
 (`lbbb` and `rbbb`) are wired into `tutorials/Alltest-regression`; both
 share a `../mesh/`-relative sibling-mesh copy-in step that
 `Alltest-regression` handles once per sweep (see the comment there).
+
+## `electroHeartECG/`
+
+[Matched ECG application control](electroHeartECG/README.md) on the shared
+`mesh/heartTorso` bundle: monodomain/bidomain source variants, six Wilson
+lead fields, concurrent pseudo-ECG, and passive forward replay of saved Vm.
+The geometry includes blood, lungs and a chest-wall layer and is reusable by
+the separate coupled bath-bidomain workflow. Its recording-contract checker
+reports measured forward/reciprocal differences; it is not an exact-reference
+conductor validation. The larger application case is opt-in and is not added
+to the default lightweight regression sweep.

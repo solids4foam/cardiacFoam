@@ -408,84 +408,17 @@ void configureECGDomains
             ecgDomainBySolverType.insert(ecgSolverType, domainName);
         }
 
-        const electroStateProvider* stateProviderPtr = nullptr;
-
-        if (ecgSolverType == "pseudoECG")
-        {
-            stateProviderPtr = &myocardiumStateProvider;
-        }
-        else if (ecgSolverType == "eikonalECG")
-        {
-            const word solverType(myocardiumSolverType(electroProperties));
-
-            if (solverType != "eikonalSolver")
-            {
-                FatalErrorInFunction
-                    << "ECG domain '" << domainName
-                    << "' selects ecgSolver eikonalECG, but "
-                    << "myocardiumSolver is '" << solverType
-                    << "'. eikonalECG requires myocardiumSolver "
-                    << "eikonalSolver because it reconstructs Vm from "
-                    << "the activation-time field."
-                    << exit(FatalError);
-            }
-
-            stateProviderPtr = &myocardiumStateProvider;
-        }
-        else if (ecgSolverType == "torsoECG")
-        {
-            const word solverType(myocardiumSolverType(electroProperties));
-
-            if (solverType != "bidomainSolver")
-            {
-                FatalErrorInFunction
-                    << "ECG domain '" << domainName
-                    << "' selects ecgSolver torsoECG, but "
-                    << "myocardiumSolver is '" << solverType
-                    << "'. torsoECG requires myocardiumSolver "
-                    << "bidomainSolver because it samples the "
-                    << "extracellular potential phiE."
-                    << exit(FatalError);
-            }
-
-            if (!potentialStateProviderPtr)
-            {
-                FatalErrorInFunction
-                    << "ECG domain '" << domainName
-                    << "' selects ecgSolver torsoECG, but no "
-                    << "bathPotentialDomain is configured inside "
-                    << "bidomainSolverCoeffs. Add:" << nl
-                    << "bidomainSolverCoeffs" << nl
-                    << "{" << nl
-                    << "    bathPotentialDomain" << nl
-                    << "    {" << nl
-                    << "        bathCellZones (...);" << nl
-                    << "        ..." << nl
-                    << "    }" << nl
-                    << "}" << exit(FatalError);
-            }
-
-            stateProviderPtr = potentialStateProviderPtr;
-        }
-        else
-        {
-            FatalErrorInFunction
-                << "ECG domain '" << domainName
-                << "' selects ecgSolver '" << ecgSolverType
-                << "', but provider routing is only defined for "
-                << "pseudoECG, eikonalECG, and torsoECG."
-                << exit(FatalError);
-        }
-
-        ecgDomain* domainPtr =
-            new ecgDomain
-            (
-                *stateProviderPtr,
-                domainDict,
-                domainName,
-                sharedElectrodePositionsPtr,
-                bathPotentialDomainPtr
-            );
+        autoPtr<ecgDomain> domain = ecgDomain::New
+        (
+            myocardiumStateProvider,
+            potentialStateProviderPtr,
+            myocardiumSolverType(electroProperties),
+            domainDict,
+            domainName,
+            sharedElectrodePositionsPtr,
+            bathPotentialDomainPtr
+        );
+        ecgDomain* domainPtr = domain.ptr();
 
         ecgDomainsByName.insert(domainName, domainPtr);
         system.appendECGDomain(domainPtr);

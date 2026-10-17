@@ -1,0 +1,13 @@
+LeadField
+{
+    ecgSolver eikonalLeadFieldECG;
+    templateType manufactured;
+    sampling { start 0; end 2; deltaT 0.01; }
+    verificationModel
+    {
+        type manufacturedEikonalLeadFieldECGVerifier;
+        scales (1 -1);
+        referenceQuadratureOrder 96;
+        checkQuadratureOrder 64;
+    }
+}

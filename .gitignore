@@ -325,3 +325,26 @@ docs/issues/
 
 # configuration checks: one run directory per check
 tutorials/configurationChecks/runs
+
+# Generated ECG sensitivity fields and provenance (recreated by tutorial Allrun).
+**/0/leadField*
+**/0/leadPotential_*
+**/0/grad(leadPotential_*)
+**/constant/leadFieldMetadata
+
+# Generated parameter includes for the lead-field manufactured runners
+tutorials/manufacturedSolutions/*LeadFieldECG/local/
+
+# Local development history and staged simulation evidence; maintained inputs,
+# numerical regression references and current public guides are versioned.
+/docs/LEAD_FIELD_ECG_DEVELOPMENT.md
+/docs/LEAD_FIELD_ECG_METHODS.md
+/docs/LEAD_FIELD_ECG_PAPER_VERIFICATION_PLAN.md
+/docs/LEAD_FIELD_ECG_VALIDATION.md
+/docs/validation/
+
+/docs/LEAD_FIELD_ECG_INTEGRATION_VALIDATION.md
+
+# Private maintained-case copy and output link for the eikonal dual variant.
+/tutorials/manufacturedSolutions/eikonalLeadFieldECG/localCase/
+/tutorials/manufacturedSolutions/eikonalLeadFieldECG/postProcessing

@@ -1,0 +1,41 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version 2.0;
+    format ascii;
+    class dictionary;
+    object leadFieldProperties;
+}
+
+conductivitySource field;
+fieldInstance "0";
+cellZone myocardium;
+myocardialGradientStencil pointFallback;
+bathConductivityField bodyAndOrgansConductivity;
+phiERefPoint (0.0174906176 0.174255908 0.197011104);
+maximumElectrodeDistance 0.015;
+maxCorrectors 200;
+correctionTolerance 1e-10;
+#include "electrodes"
+leads
+{
+    V1 { E1 1; RA -0.333333333333333333; LA -0.333333333333333333; LL -0.333333333333333333; }
+    V2 { E2 1; RA -0.333333333333333333; LA -0.333333333333333333; LL -0.333333333333333333; }
+    V3 { E3 1; RA -0.333333333333333333; LA -0.333333333333333333; LL -0.333333333333333333; }
+    V4 { E4 1; RA -0.333333333333333333; LA -0.333333333333333333; LL -0.333333333333333333; }
+    V5 { E5 1; RA -0.333333333333333333; LA -0.333333333333333333; LL -0.333333333333333333; }
+    V6 { E6 1; RA -0.333333333333333333; LA -0.333333333333333333; LL -0.333333333333333333; }
+}
+leadFields
+{
+    V1 leadField_V1;
+    V2 leadField_V2;
+    V3 leadField_V3;
+    V4 leadField_V4;
+    V5 leadField_V5;
+    V6 leadField_V6;
+}

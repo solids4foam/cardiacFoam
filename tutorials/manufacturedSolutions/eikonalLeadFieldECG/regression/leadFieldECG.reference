@@ -1,0 +1,4 @@
+# Independent surface-voltage reference, not another numerical observer.
+final postProcessing/manufacturedEikonalLeadFieldECG_LeadField.dat positive_error 0 0.01
+final postProcessing/manufacturedEikonalLeadFieldECG_LeadField.dat negative_error 0 0.01
+final postProcessing/manufacturedEikonalLeadFieldECG_LeadField.dat positive_quadratureDelta 0 1e-12

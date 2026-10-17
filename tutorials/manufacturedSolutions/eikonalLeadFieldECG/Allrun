@@ -1,0 +1,14 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+. "$WM_PROJECT_DIR/bin/tools/RunFunctions"
+[ ! -e localCase ] || { echo "Run ./Allclean first" >&2; exit 1; }
+# Reuse the maintained eikonal cube; all generated includes stay in this copy.
+mkdir localCase
+for input in 0 constant system setup Allrun Allclean box.geo.template
+do
+    cp -R "../eikonalECG/$input" localCase/
+done
+(cd localCase && ./Allrun -N 40 "$@" -leadFieldECG yes)
+ln -s localCase/postProcessing postProcessing
+ln -s localCase/log.cardiacFoam log.cardiacFoam

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+cd "${0%/*}" || exit 1
+
+# Enable extended globbing
+shopt -s extglob
+
+# Delete everything that contains a number except "0"
+rm -rf !("0"|*[^0-9]*)
+rm -rf 0.*
+
+rm -rf processor*
+
+rm -f log.*
+
+rm -rf constant/polyMesh
+rm -rf postProcessing
+
+rm -f 0/leadField_* 0/leadFieldGi 0/leadFieldGe 0/leadFieldMeshSignature 0/leadFieldTopologySignature 0/leadFieldHeartConnectivitySignature 0/leadFieldHeartRegion 0/leadFieldBodyConductivity constant/leadFieldMetadata
+
+rm -rf local

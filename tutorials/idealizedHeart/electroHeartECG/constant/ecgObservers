@@ -1,0 +1,10 @@
+ecgDomains
+{
+    LeadField { ecgSolver leadFieldECG; }
+    Pseudo
+    {
+        ecgSolver pseudoECG;
+        sigmaExtracellular 0.2;
+        #include "electrodes"
+    }
+}

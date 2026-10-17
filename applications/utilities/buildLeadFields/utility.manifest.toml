@@ -1,0 +1,13 @@
+name = "buildLeadFields"
+description = "Build static conductivity-weighted ECG lead fields on a passive conductor mesh."
+category = "pre-processing"
+purpose = "Build static conductivity-weighted ECG lead fields on a passive conductor mesh."
+inputs = ["constant/leadFieldProperties", "constant/polyMesh", "0/ConductivityIntracellular and 0/ConductivityExtracellular or explicit dictionary tensors", "0/bodyAndOrgansConductivity for a mixed conductor"]
+outputs = ["0/leadField_*", "0/leadFieldGi", "0/leadFieldGe", "0/leadFieldMeshSignature", "constant/leadFieldMetadata"]
+requires_mesh = true
+example = "buildLeadFields -case ./case"
+
+[[flags]]
+name = "-checkReconstruction"
+description = "Verify affine normal-matrix solves with repeated rotated eigenpairs and rank-one/two/three stencils."
+takes_value = false

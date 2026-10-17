@@ -1,0 +1,5 @@
+# Independent FDA cosine-product integral; tolerance includes coarse-grid gradient error.
+final postProcessing/manufacturedLeadFieldECG_ECG.dat positive_error 0 0.2
+final postProcessing/manufacturedLeadFieldECG_ECG.dat negative_error 0 0.2
+final postProcessing/manufacturedLeadFieldECG_ECG.dat positive_exact -5.503282184778 1e-7
+final postProcessing/manufacturedLeadFieldECG_ECG.dat negative_exact 5.503282184778 1e-7

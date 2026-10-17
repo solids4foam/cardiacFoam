@@ -82,6 +82,8 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
 
     const fvMesh& phiEMesh = phiEPtr->mesh();
     const List<vector>& electrodes = domain.electrodePositions();
+    // Construct cell centres collectively before electrode ownership branches.
+    const vectorField& centres = phiEMesh.C().primitiveField();
 
     electrodeCells_.setSize(electrodes.size(), -1);
 
@@ -114,7 +116,7 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
                 localDistanceSqr =
                     Foam::magSqr
                     (
-                        phiEMesh.C().primitiveField()[localCandidate]
+                        centres[localCandidate]
                       - electrodes[electrodeI]
                     );
             }

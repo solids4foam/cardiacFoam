@@ -36,10 +36,13 @@ fails when this column and that discovery disagree.
 | `electromechanicsProtocols/springSupportedSlab` | Show spring (Robin) supports in electromechanics: slab shortening from isometric to free as the end-spring stiffness drops | `electroMechanicalModel` with monodomain electrophysiology and `solidSpringDashpot` end supports | full only | `Alltest-regression` (expected skip in lightweight mode) | end displacement and end force (`solidForces`), `Ta` and `Vm` probes |
 | `manufacturedSolutions/monodomainPseudoECG` | Verify monodomain fields and pseudo-ECG against manufactured solutions | `monodomainFDAManufactured` plus pseudo-ECG verification | lightweight or full | `Alltest-regression` | manufactured error summaries and pseudo-ECG series under `postProcessing/` |
 | `manufacturedSolutions/monodomainPseudoECG/sphericalShell` | Verify the monodomain on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a cubed-sphere or gmsh-tetrahedra mesh | `monodomainFDAManufactured` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellMonodomainVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
+| `manufacturedSolutions/monodomainLeadFieldECG` | Monodomain lead-field functional verification | FDA manufactured voltage | lightweight or full | `Alltest-regression` | lead-field trace and analytical functional errors |
+| `manufacturedSolutions/bidomainLeadFieldECG` | Bidomain lead-field functional verification | FDA manufactured voltage | lightweight or full | `Alltest-regression` | lead-field trace and analytical functional errors |
 | `manufacturedSolutions/bidomain` | Verify spatial bidomain convergence | `bidomainFDAManufactured` | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
 | `manufacturedSolutions/bidomain/sphericalShell` | Verify the heart-only bidomain on a spherical heart shell with sealed curved walls, unequal rotated full conductivity tensors and a cubed-sphere or gmsh-tetrahedra mesh | `monodomainFDAManufactured` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellBidomainVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
 | `manufacturedSolutions/bathBidomain` | Verify the bidomain with a bath: heart and bath fields and the heart-bath interface | `bathBidomainFDAManufactured` | lightweight or full | `Alltest-regression` | manufactured error summaries and interface metrics |
 | `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
+| `manufacturedSolutions/eikonalLeadFieldECG` | Verify template-based reciprocal and pseudo ECG together | Existing manufactured eikonal cube, uniform template and prescribed sensitivities | lightweight or full | `Alltest-regression` | independent surface-integral errors, template/source checks and dual traces |
 | `manufacturedSolutions/eikonalECG/sphericalShell` | Verify the eikonal solver on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a cubed-sphere or gmsh-tetrahedra mesh | `eikonalSolver` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellEikonalVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured activation-time error summaries under `postProcessing/` |
 | `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | `Alltest-regression` | 3-D and graph error summaries and coupling diagnostics under `postProcessing/` and `verification/` |
 | `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `Alltest-regression` (expected skip in lightweight mode) | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
@@ -123,3 +126,11 @@ One case does not meet the time bound: `idealizedHeart/electroMechHeart`.
 Its ionic model is integrated over the 123k-cell heart and its solid solved
 every step, and its stimulus starts at 2 ms, so even the 10 ms the regression
 runs (the tutorial runs 20 ms) take 9 to 15 minutes on a 14-core workstation.
+
+### Idealized heart/torso ECG application control
+
+[idealizedHeart/electroHeartECG](idealizedHeart/electroHeartECG/README.md)
+reuses the supplied heart–lung–torso geometry for monodomain/bidomain source
+runs, Wilson lead fields and frozen-source forward recording. Run it explicitly;
+it is outside the default lightweight regression sweep. Its contract checker
+retains the measured difference between the two recording discretisations.

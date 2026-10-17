@@ -217,7 +217,7 @@ domain, gated on whether `bathPotentialDomain` is present in
 `electroProperties`. It builds no couplings. It requires the myocardium
 domain to already be configured (`system.hasMyocardium()`). It runs before
 `configureECGDomains(...)`: the potential domain it builds is one of the
-state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
+state providers `ecgDomain::New(...)` can route a `torsoECG` domain to.
 
 Conduction (PVJ) couplings are built inside `configureConductionDomains(...)`
 from a top-level `domainCouplings` block; each entry resolves against the
@@ -231,7 +231,7 @@ Current rules:
 - At most one conduction network domain: the root stimulus starts a single
   network, and its outputs (`purkinjeNetwork.dat`, ...) have fixed names
 - Any number of ECG domains. The output file is named after the `ecgSolver`
-  (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`), not the domain, so two
+  (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`, `leadFieldECG.dat`), not the domain, so two
   domains with the same `ecgSolver` write the same file; that is a warning
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
 - `bathPotentialDomain` is optional; when present it is read from
@@ -261,7 +261,7 @@ separate dictionary containers.
 ### ECG (single pass)
 
 Build every entry in `ecgDomains`. Each domain's `ecgSolver` (`pseudoECG`,
-`eikonalECG`, or `torsoECG`) determines which `electroStateProvider` it reads
+`eikonalECG`, `torsoECG`, or `leadFieldECG`) determines which `electroStateProvider` it reads
 from; `torsoECG` requires the bath potential domain from the previous step.
 
 ---
@@ -426,6 +426,11 @@ When extending `core`:
 - Coupler folders own exchange laws
 
 New solver-family branching belongs in a domain-layer factory, not in the builder.
+ECG provider routing is implemented in `ecgDomain::New`; the builder supplies
+myocardial/potential providers and the configured primary family. `leadFieldECG`
+reads myocardial Vm for mono/bidomain and does not construct a potential domain.
+ECG channel metadata defaults to electrode metadata; lead-field channels instead
+name the stored voltage combinations. Shared output is written by the master.
 
 ---
 

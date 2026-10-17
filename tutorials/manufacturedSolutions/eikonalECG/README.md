@@ -81,6 +81,7 @@ Every option writes a file in `local/`, which the dictionaries include;
 | `-gradient leastSquares\|GaussLinear` | cell-gradient reconstruction | leastSquares |
 | `-tolerance x` | outer fixed-point residual tolerance | `1e-8` |
 | `-electrodes five\|all` | ECG at E1-E5, or at E1-E5 and the 156 random electrodes R1-R156 | five |
+| `-leadFieldECG yes\|no` | add simultaneous reciprocal ECG with synthetic sensitivities and independent references (3D only; use `N >= 40`) | no |
 | `-errorField` | write `activationTimeError` and the cell centres to the final time | off |
 
 E1-E5 lie outside the cube; R1-R156 are the electrodes of
@@ -120,3 +121,12 @@ tables.
 
 - [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
   rotated conductivity, with a pinned stimulus ball.
+
+## Reciprocal recording variant
+
+Use `./Allrun -N 40 -leadFieldECG yes` to add `eikonalLeadFieldECG` with the
+same manufactured template and sampling interval. The maintained
+[eikonalLeadFieldECG variant](../eikonalLeadFieldECG/README.md) runs this
+configuration in a private copy and adds independent functional, template
+and input-guard checks. These prescribed sensitivities exercise the
+observation path; they do not represent an anatomical torso.
