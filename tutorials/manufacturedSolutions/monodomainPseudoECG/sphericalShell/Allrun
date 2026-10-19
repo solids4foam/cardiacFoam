@@ -22,6 +22,10 @@ Options (parameters are written to local/ and included by the dictionaries):
                             leastSquares control
   -dt x                     time step
   -endTime x                end time (default 0.2)
+  -ecg                      also run the pseudo-ECG (electrodes E1-E5) and its
+                            manufactured shell reference (domain shell)
+  -electrodes file          with -ecg: extra electrodes, "name (x y z);" lines with
+                            |x| > 1, copied to local/electrodes
 
 Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
@@ -36,6 +40,8 @@ seed=1
 wallGradient=sealed
 dt=
 endTime=0.2
+ecg=false
+electrodes=
 
 needValue()
 {
@@ -100,6 +106,13 @@ do
             needValue "$@"; endTime="$2"; shift
             positiveNumber -endTime "$endTime"
             ;;
+        -ecg)
+            ecg=true
+            ;;
+        -electrodes)
+            needValue "$@"; electrodes="$2"; shift
+            [ -f "$electrodes" ] || { echo "${0##*/}: no electrode file $electrodes" 1>&2; usage; }
+            ;;
         -h|-help|--help)
             usage
             ;;
@@ -115,6 +128,12 @@ if [ -e log.gmsh ] || [ -e log.blockMesh ]
 then
     echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
     exit 1
+fi
+
+if [ -n "$electrodes" ] && ! $ecg
+then
+    echo "${0##*/}: -electrodes needs -ecg" 1>&2
+    usage
 fi
 
 if [ "$mesh" = hex ] && [ $((N % 4)) -ne 0 ]
@@ -136,6 +155,12 @@ mkdir local
 
 echo "N $N;" > local/mesh
 echo "N $N;" > local/verification
+
+if $ecg
+then
+    echo "ecg yes;" > local/ecg
+    [ -z "$electrodes" ] || cp "$electrodes" local/electrodes
+fi
 
 # The stock control overrides the gradient entries of system/fvSchemes
 if [ "$wallGradient" = stock ]

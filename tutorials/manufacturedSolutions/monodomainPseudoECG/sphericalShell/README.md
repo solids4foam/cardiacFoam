@@ -6,8 +6,9 @@ sealed curved boundaries approximated by planar faces, a rotated anisotropic
 conductivity with all six tensor components that turns through the wall, and
 a solution whose conormal flux vanishes on both spheres. The case checks the
 sealed-wall operators (wall-cell gradient, face flux at a sealed wall) with a
-field whose normal and tangential gradients do not vanish on the walls; it
-does not check the pseudo-ECG, a stimulus or a wall that carries current.
+field whose normal and tangential gradients do not vanish on the walls; with
+`-ecg` it also checks the pseudo-ECG of that field. It does not check a
+stimulus or a wall that carries current.
 
 Origin: this work.
 
@@ -32,6 +33,8 @@ ionic closure (`u1`, `u2`, `u3`). The generator is
 - verifier: `manufacturedShellMonodomainVerifier`
 - conductivity: `conductivitySource field`; `0/Conductivity` written by
   `setManufacturedFields`
+- pseudo-ECG (`-ecg` only): `pseudoECG` with `manufacturedPseudoECGVerifier`,
+  `domain shell`
 - walls: `sealedHeartBoundary true`
 - gradient: `sealedWallLeastSquares` for `grad(Vm)` and `grad(Vm.component(0))`
   (`system/fvSchemes`): wall cells take no value from the sealed walls;
@@ -71,12 +74,50 @@ or `gmshToFoam` is missing or gmsh reports an error.
 | `-wallGradient sealed\|stock` | `sealedWallLeastSquares` or the stock `leastSquares` for `grad(Vm)` | sealed |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
 | `-endTime x` | end time | 0.2 |
+| `-ecg` | the pseudo-ECG at E1-E5 and its shell reference (writes `local/ecg`) | off |
+| `-electrodes file` | with `-ecg`: extra `name (x y z);` electrodes, `\|x\| > 1` (copied to `local/electrodes`) | none |
 
 `postProcessing/3D_<hex|tet>_<N>_cells.dat` holds the error summary
 (`field L1 L2 Linf`), with the header lines `# h`, `# time` and
 `# cellsPerDirection` and the `Vm`, `u1`, `u2`, bulk, boundary and gradient
 rows of
 [Bulk, boundary and gradient rows](../../README.md#bulk-boundary-and-gradient-rows).
+
+## Pseudo-ECG (`-ecg`)
+
+The `ecgDomains` block of `constant/electroProperties` is read only when
+`local/ecg` sets `ecg yes;`. The verifier's reference at electrode `e` is
+
+```text
+sqrt(1 + t) int_{r1 < |x| < r2} (G grad F) . (x - e) / |x - e|^3 dV
+```
+
+the integrand of the cube case and of the `pseudoECG` sum, with `F`, `grad F`,
+`G`, `r1` and `r2` from `manufacturedShellMonodomainReference.H` (no
+`sigmaExtracellular`, as in the cube case). Order `q` is a spherical tensor
+rule: `q` Gauss-Legendre nodes in `r` (Jacobian `r^2`), `q` in `mu = cos(theta)`
+and `2q` trapezoid nodes in `phi`; the reference is `q = 96`, checked against
+`q = 6 12 24 48` (`deltaQuadrature` columns). The verifier stops if an
+electrode lies on or inside `|x| = 1`, or if the ECG conductivity is not `G`.
+`cardiacFoam` prints the spatial integral of each electrode to 17 digits.
+
+| electrode | position | `\|e\|` |
+|---|---|---|
+| E1 | (0.4, -0.8, 0.8) | 1.2 |
+| E2 | (0.6, 1.2, 0.4) | 1.4 |
+| E3 | (-0.96, 0, -1.28) | 1.6 |
+| E4 | (-0.6, 1.2, -1.2) | 1.8 |
+| E5 | (1.2, -0.96, -1.28) | 2.0 |
+
+Outputs: `postProcessing/pseudoECG.dat`,
+`postProcessing/manufacturedPseudoECG_ECG.dat` (per sample: numeric, `refQ<q>`,
+`errQ<q>`, `deltaQuadratureQ<q>_Q96`) and
+`postProcessing/manufacturedPseudoECGSummary_ECG.dat` (L1, L2, Linf over the
+samples). The field outputs are the same with and without `-ecg`.
+
+```bash
+./Allrun -mesh tet -N 10 -wallGradient stock -ecg
+```
 
 Regression (the case defaults: hex cubed sphere, `N = 12`, `T = 0.2`, parallel
 on four ranks; no gmsh needed): the `Vm`, `u1` and `u2` errors and the bulk,

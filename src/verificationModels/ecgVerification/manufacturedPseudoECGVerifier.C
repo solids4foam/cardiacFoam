@@ -20,14 +20,82 @@ License
 #include "manufacturedPseudoECGVerifier.H"
 
 #include "DynamicList.H"
+#include <sstream>
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ecgModelIO.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
+#include "monodomainVerification/manufacturedShellMonodomainReference.H"
 
 namespace Foam
 {
+
+namespace
+{
+
+//- Spatial pseudo-ECG reference of the sealed-shell field at every electrode,
+//  int_{r1<|x|<r2} (G grad F).(x - e)/|x - e|^3 dV, with q Gauss-Legendre
+//  nodes in r (Jacobian r^2) and in mu = cos(theta), and 2q trapezoid nodes
+//  in phi (spectrally convergent for the smooth periodic integrand)
+List<scalar> shellPseudoECGSpatialReference
+(
+    const List<vector>& electrodePositions,
+    const label quadratureOrder
+)
+{
+    const shellMonodomainMMS::Params p(shellMonodomainMMS::defaultParams());
+
+    List<scalar> nodes, weights;
+    pseudoECGManufacturedQuadratureRule(quadratureOrder, nodes, weights);
+
+    const label nPhi = 2*quadratureOrder;
+    const scalar dPhi = constant::mathematical::twoPi/scalar(nPhi);
+    const scalar rHalf = 0.5*(p.r2 - p.r1);
+    const scalar rMid = 0.5*(p.r2 + p.r1);
+
+    List<scalar> values(electrodePositions.size(), scalar(0));
+
+    forAll(nodes, i)
+    {
+        const scalar r = rMid + rHalf*nodes[i];
+        const scalar wr = rHalf*weights[i]*r*r;
+
+        forAll(nodes, j)
+        {
+            const scalar mu = nodes[j];
+            const scalar sinTheta = Foam::sqrt(max(scalar(0), 1 - mu*mu));
+            const scalar wrmu = wr*weights[j]*dPhi;
+
+            for (label k = 0; k < nPhi; ++k)
+            {
+                const scalar phi = scalar(k)*dPhi;
+                const point pt
+                (
+                    r*sinTheta*Foam::cos(phi),
+                    r*sinTheta*Foam::sin(phi),
+                    r*mu
+                );
+                const vector GGradF
+                (
+                    shellMonodomainMMS::G(pt, p) & shellMonodomainMMS::gradF(pt, p)
+                );
+
+                forAll(electrodePositions, electrodeI)
+                {
+                    const vector d(pt - electrodePositions[electrodeI]);
+                    const scalar dMag = mag(d);
+                    values[electrodeI] += wrmu*(GGradF & d)/(dMag*dMag*dMag);
+                }
+            }
+        }
+    }
+
+    return values;
+}
+
+} // End anonymous namespace
+
 
 defineTypeNameAndDebug(manufacturedPseudoECGVerifier, 0);
 addToRunTimeSelectionTable
@@ -52,6 +120,7 @@ manufacturedPseudoECGVerifier::manufacturedPseudoECGVerifier
     enabled_(false),
     dimension_(max(label(1), min(mesh_.nGeometricD(), label(3)))),
     anisotropic_(false),
+    domain_("cube"),
     referenceQuadratureOrder_(96),
     checkQuadratureOrders_(),
     referenceSpatialValues_(electrodePositions_.size(), scalar(0)),
@@ -255,6 +324,91 @@ void manufacturedPseudoECGVerifier::rebuildReferenceCache
 }
 
 
+void manufacturedPseudoECGVerifier::checkShellElectrodes() const
+{
+    const scalar r2 = shellMonodomainMMS::defaultParams().r2;
+
+    forAll(electrodePositions_, electrodeI)
+    {
+        if (mag(electrodePositions_[electrodeI]) <= r2*(1 + 1e-6))
+        {
+            FatalErrorInFunction
+                << "Manufactured pseudo-ECG 'domain shell' needs every "
+                   "electrode outside the outer sphere |x| = " << r2
+                << " so the kernel is smooth on the shell; electrode "
+                << electrodeNames_[electrodeI] << " at "
+                << electrodePositions_[electrodeI] << " has |x| = "
+                << mag(electrodePositions_[electrodeI]) << "."
+                << exit(FatalError);
+        }
+    }
+}
+
+
+void manufacturedPseudoECGVerifier::checkShellConductivity
+(
+    const tensorField& conductivity
+) const
+{
+    const shellMonodomainMMS::Params p(shellMonodomainMMS::defaultParams());
+    const vectorField& C = mesh_.C().primitiveField();
+    scalar worst = 0;
+
+    forAll(conductivity, cellI)
+    {
+        const tensor G(shellMonodomainMMS::G(C[cellI], p) & tensor(I));
+        worst = max(worst, mag(conductivity[cellI] - G)/mag(G));
+    }
+    reduce(worst, maxOp<scalar>());
+
+    if (worst > 1e-9)
+    {
+        FatalErrorInFunction
+            << "Manufactured pseudo-ECG 'domain shell' integrates the shell "
+               "conductivity G, but the ECG conductivity differs from G by a "
+               "relative " << worst << "; write it with setManufacturedFields."
+            << exit(FatalError);
+    }
+}
+
+
+void manufacturedPseudoECGVerifier::rebuildShellReferenceCache()
+{
+    checkShellElectrodes();
+
+    checkSpatialValues_.setSize(checkQuadratureOrders_.size());
+
+    forAll(checkQuadratureOrders_, checkI)
+    {
+        checkSpatialValues_[checkI] = shellPseudoECGSpatialReference
+        (
+            electrodePositions_, checkQuadratureOrders_[checkI]
+        );
+    }
+
+    referenceSpatialValues_ = shellPseudoECGSpatialReference
+    (
+        electrodePositions_, referenceQuadratureOrder_
+    );
+
+    // The spatial integral to full precision, for cross-checks; the
+    // reference at time t is sqrt(1 + t) times it
+    forAll(electrodePositions_, electrodeI)
+    {
+        std::ostringstream value;
+        value.precision(17);
+        value << referenceSpatialValues_[electrodeI];
+
+        Info<< "Manufactured shell pseudo-ECG spatial reference (qRef="
+            << referenceQuadratureOrder_ << ") "
+            << electrodeNames_[electrodeI] << " " << value.str().c_str()
+            << endl;
+    }
+
+    spatialCacheValid_ = true;
+}
+
+
 void manufacturedPseudoECGVerifier::updateStatistics
 (
     const List<scalar>& numericValues,
@@ -324,6 +478,10 @@ void manufacturedPseudoECGVerifier::writeSummary()
     os << "Manufactured pseudo-ECG summary\n";
     os << "samples " << sampleCount_ << "\n";
     os << "dimension " << dimension_ << "D\n";
+    if (domain_ == "shell")
+    {
+        os << "domain shell\n";
+    }
     os << "qChecks";
     forAll(checkQuadratureOrders_, checkI)
     {
@@ -376,12 +534,14 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
     const Switch wasEnabled = enabled_;
     const label previousDimension = dimension_;
     const Switch previousAnisotropic = anisotropic_;
+    const word previousDomain = domain_;
     const label previousReferenceQuadratureOrder = referenceQuadratureOrder_;
     const List<label> previousCheckQuadratureOrders = checkQuadratureOrders_;
 
     enabled_ = false;
     dimension_ = max(label(1), min(mesh_.nGeometricD(), label(3)));
     anisotropic_ = false;
+    domain_ = "cube";
     referenceQuadratureOrder_ = 96;
     checkQuadratureOrders_.setSize(4);
     checkQuadratureOrders_[0] = 6;
@@ -427,6 +587,30 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
                "field has no 1D/2D variant), but dimension resolved to "
             << dimension_ << "D."
             << exit(FatalError);
+    }
+
+    domain_ = cfg.lookupOrDefault<word>("domain", "cube");
+
+    if (domain_ != "cube" && domain_ != "shell")
+    {
+        FatalErrorInFunction
+            << "Unsupported manufactured pseudo-ECG domain '" << domain_
+            << "'. Expected cube or shell." << exit(FatalError);
+    }
+
+    if (domain_ == "shell")
+    {
+        if (anisotropic_ || dimension_ != 3)
+        {
+            FatalErrorInFunction
+                << "Manufactured pseudo-ECG 'domain shell' is the 3D "
+                   "sealed-shell field; it takes neither 'anisotropic yes' "
+                   "nor a dimension other than 3D (resolved " << dimension_
+                << "D, anisotropic " << anisotropic_ << ")."
+                << exit(FatalError);
+        }
+
+        checkShellElectrodes();
     }
 
     referenceQuadratureOrder_ =
@@ -501,6 +685,7 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
         enabled_ != wasEnabled
      || dimension_ != previousDimension
      || anisotropic_ != previousAnisotropic
+     || domain_ != previousDomain
      || referenceQuadratureOrder_ != previousReferenceQuadratureOrder
      || checkQuadratureOrders_ != previousCheckQuadratureOrders;
 
@@ -540,7 +725,12 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
             Info << checkQuadratureOrders_[checkI];
         }
         Info << "), dimension=" << dimension_
-             << ", anisotropic=" << anisotropic_ << "." << endl;
+             << ", anisotropic=" << anisotropic_;
+        if (domain_ == "shell")
+        {
+            Info << ", domain=shell";
+        }
+        Info << "." << endl;
     }
     else
     {
@@ -561,22 +751,35 @@ void manufacturedPseudoECGVerifier::record(const List<scalar>& numericValues)
     const tensorField& conductivityField =
         requireConductivity().primitiveField();
 
-    if (conductivityField.empty())
+    if (domain_ == "shell")
     {
-        return;
+        // G(x) is fixed: check the ECG conductivity once, build once
+        if (!spatialCacheValid_)
+        {
+            checkShellConductivity(conductivityField);
+            rebuildShellReferenceCache();
+        }
+    }
+    else
+    {
+        if (conductivityField.empty())
+        {
+            return;
+        }
+
+        const tensor referenceConductivity = conductivityField[0];
+
+        if
+        (
+            !spatialCacheValid_
+         || Foam::magSqr(referenceConductivity - cachedConductivity_) > SMALL
+        )
+        {
+            rebuildReferenceCache(referenceConductivity);
+        }
     }
 
     const scalar timeValue = mesh_.time().value();
-    const tensor referenceConductivity = conductivityField[0];
-
-    if
-    (
-        !spatialCacheValid_
-     || Foam::magSqr(referenceConductivity - cachedConductivity_) > SMALL
-    )
-    {
-        rebuildReferenceCache(referenceConductivity);
-    }
 
     const scalar timeFactor = pseudoECGManufacturedTimeFactor(timeValue);
     List<List<scalar>> checkReferenceValues(checkQuadratureOrders_.size());

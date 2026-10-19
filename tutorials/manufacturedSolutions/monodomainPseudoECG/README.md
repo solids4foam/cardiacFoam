@@ -43,7 +43,8 @@ reference integral of the same field.
 - field verifier: `manufacturedFDAMonodomainVerifier` or
   `manufacturedAnisotropicMonodomainVerifier` (`-field`)
 - pseudo-ECG: `pseudoECG` with `manufacturedPseudoECGVerifier`, its reference
-  matched to the field (`anisotropic yes` for the anisotropic field); 3D only
+  matched to the field (`anisotropic yes` for the anisotropic field; `domain
+  cube`, the default, where `sphericalShell/` uses `domain shell`); 3D only
 - gradient: `leastSquares` or `Gauss linear` (`-gradient`)
 
 ## Mesh

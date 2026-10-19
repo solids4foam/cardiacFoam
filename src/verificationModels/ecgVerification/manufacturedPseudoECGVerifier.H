@@ -21,6 +21,15 @@ Class
 Description
     Pseudo-ECG manufactured verifier.
 
+    domain cube (default): the manufactured field on the unit cube with the
+    uniform conductivity of the first cell, tensor-product Gauss-Legendre.
+
+    domain shell: the sealed spherical-shell field of
+    manufacturedShellMonodomainReference.H on r1 < |x| < r2 with its
+    conductivity G(x), spherical tensor rule of order q: q Gauss-Legendre
+    nodes in r (Jacobian r^2), q in mu = cos(theta), 2q trapezoid nodes in
+    phi. Electrodes must lie outside the outer sphere.
+
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
@@ -45,6 +54,7 @@ class manufacturedPseudoECGVerifier
     Switch enabled_;
     label dimension_;
     Switch anisotropic_;
+    word domain_;
     label referenceQuadratureOrder_;
     List<label> checkQuadratureOrders_;
 
@@ -70,6 +80,14 @@ class manufacturedPseudoECGVerifier
     void initialiseOutput();
     void invalidateReferenceCache();
     void rebuildReferenceCache(const tensor& referenceConductivity);
+
+    //- Shell domain: electrodes outside the outer sphere
+    void checkShellElectrodes() const;
+
+    //- Shell domain: the conductivity must be G at every cell centre
+    void checkShellConductivity(const tensorField& conductivity) const;
+
+    void rebuildShellReferenceCache();
 
     void updateStatistics
     (
