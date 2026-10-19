@@ -79,7 +79,8 @@ templates.
 - outer fixed point: `nOuterCorrectors 8000`, relaxation 0.9, residual
   tolerance `1e-8` (`-tolerance`)
 - field verifier: `manufacturedEikonalVerifier`
-- ECG: `eikonalECG` with `manufacturedEikonalECGVerifier`
+- ECG: `eikonalECG` with `manufacturedEikonalECGVerifier` (`domain cube`,
+  the default, where `sphericalShell/` uses `domain shell`)
 - gradient: `leastSquares` or `Gauss linear` (`-gradient`)
 
 ## Mesh
@@ -152,4 +153,5 @@ tables.
 ## Variants
 
 - [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
-  rotated conductivity, with a pinned stimulus ball.
+  rotated conductivity, with a pinned stimulus ball; `-ecg` adds the ECG of
+  the shell field.

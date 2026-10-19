@@ -7,9 +7,9 @@ conductivity with all six tensor components that turns through the wall, and
 an activation time whose conormal flux vanishes on both spheres and whose
 wavefronts collide on the walls. The case checks the sealed-wall operators and
 the outer iteration of the eikonal solver on a field with non-zero normal and
-tangential gradients on the walls; it does not check the ECG, a stimulus
-region (the verifier pins the cells near the stimulus point) or a time
-dependence.
+tangential gradients on the walls; with `-ecg` it also checks the eikonal
+ECG of that field. It does not check a stimulus region (the verifier pins the
+cells near the stimulus point) or a time dependence of the activation time.
 
 Origin: this work.
 
@@ -48,6 +48,8 @@ differentiable; the generator lists them
   `limitedGrad cellMDLimited leastSquares 1` (`system/fvSchemes`);
   `-formulation explicit` evaluates the metric from the cell gradient instead
 - verifier: `manufacturedShellEikonalVerifier`
+- ECG (`-ecg` only): `eikonalECG` with `manufacturedEikonalECGVerifier`,
+  `domain shell`
 - conductivity: `conductivitySource field`; `0/Conductivity` written by
   `setManufacturedFields`
 - walls: `sealedHeartBoundary true`
@@ -101,6 +103,8 @@ with `run ./Allclean first` if a mesh log exists, and, for `-mesh tet`, when
 | `-iterations n` | at most `n` outer iterations | 8000, stopped by the residual control |
 | `-exactStart` | start the iteration from the exact field outside the pinned cells (`initialiseExact`); with `-iterations 1` the field after one linearised solve from the exact one | off |
 | `-pinnedRadius x` | radius of the ball of pinned cells | 0.15, the header's `rPin` |
+| `-ecg` | the eikonal ECG at E1-E5 and its shell reference (writes `local/ecg`) | off |
+| `-template singleEvent\|sine` | with `-ecg`: the manufactured ECG template and its sampling (writes `local/ecgTemplate` for `sine`) | singleEvent |
 
 `postProcessing/3D_<hex|tet>_<N>_cells.dat` holds the error summary
 (`field L1 L2 Linf`), with the header lines `# h`, `# cellsPerDirection`,
@@ -109,6 +113,73 @@ and gradient rows of
 [Bulk, boundary and gradient rows](../../README.md#bulk-boundary-and-gradient-rows).
 The outer residual history is the `Initial residual` of the
 `activationTime` solves in `log.cardiacFoam`.
+
+## ECG (`-ecg`)
+
+The `ecgDomains` block of `constant/electroProperties` is read only when
+`local/ecg` sets `ecg yes;`. `eikonalECG` reconstructs
+`Vm = U(t - psi)` from the computed activation time and sums
+`G grad Vm . (x - e)/|x - e|^3 V` over the cells, with
+`grad Vm = -U'(t - psi) grad psi` and `grad psi` the cell gradient of
+`fvSchemes` (so `-wallGradient` reaches the ECG). The verifier's reference at
+electrode `e` and sample time `t` is the same functional of the exact field,
+
+```text
+int_{r1 < |x| < r2} -U'(t - psi) (G grad psi) . (x - e)/|x - e|^3 dV
+```
+
+with `psi`, `grad psi`, `G`, `r1` and `r2` from
+`manufacturedShellEikonalReference.H` and `c0` from `eikonalSolverCoeffs`
+(no `sigmaExtracellular`, as in the cube case). The integrand does not
+separate in space and time, so the verifier evaluates `psi` and the kernel
+`-w (G grad psi) . (x - e)/|x - e|^3` once at the nodes of each order and
+forms every sample as the sum of the kernel times `U'(t - psi)`; in parallel
+the radial nodes are shared out among the ranks.
+
+Order `q` is a spherical tensor rule: `q` Gauss-Legendre nodes in `r`
+(Jacobian `r^2`), `q` in `mu = cos(theta)` and `2q` trapezoid nodes in `phi`.
+The smoothed distance of `psi` has a near-conical tip at the stimulus point
+(width `0.05/sqrt(lambda)`, 0.002 to 0.008, with `lambda` the eigenvalues of
+`M(xs)^-1`), so the rule converges algebraically rather than spectrally:
+
+| template | reference | checks | error of the reference (relative to the trace maximum) |
+|---|---|---|---|
+| singleEvent | `q = 128` | `24 48 96` | at most `1.3e-5`, at `t = 0` when the front is at the stimulus point |
+| sine | `q = 192` | `48 96 128` | at most `6e-4`: `U'` repeats about 28 times across the activation range |
+
+The errors were measured against an independent evaluation (a smooth cut-off
+of radius `0.15` around the stimulus point, the inner part in coordinates
+centred there with the radius mapped so the smoothed distance is
+`0.05 cosh v`, the outer part with this rule at `q = 384`). The singleEvent
+reference costs about 40 s and 0.3 GB, the sine reference about 30 s and
+1.2 GB, in serial; the `deltaQuadrature` columns compare the checks with the
+reference. The verifier stops if an electrode lies on or inside `|x| = 1`,
+or if `chi`, `Cm` or the ECG conductivity are not those of the header.
+
+The template, its parameters and the sampling are those of the
+[cube case](../README.md#single-event-template): `templateDuration 64`,
+`templateRise 4`, sampled from `-6` to `92` by `0.25` (singleEvent), or
+`sin(2 pi s)` from `0` to `2` by `0.01` (sine). On the shell `psi` runs from
+0.05 to 28.07, so the single event no longer ends inside the window
+everywhere: the last-activated points are still repolarising at `t = 92`.
+
+| electrode | position | `\|e\|` |
+|---|---|---|
+| E1 | (0.4, -0.8, 0.8) | 1.2 |
+| E2 | (0.6, 1.2, 0.4) | 1.4 |
+| E3 | (-0.96, 0, -1.28) | 1.6 |
+| E4 | (-0.6, 1.2, -1.2) | 1.8 |
+| E5 | (1.2, -0.96, -1.28) | 2.0 |
+
+Outputs: `postProcessing/eikonalECG.dat`,
+`postProcessing/manufacturedEikonalECG_ECG.dat` (per sample: numeric,
+`refQ<q>`, `errQ<q>`, `deltaQuadratureQ<q>_Q<qRef>`) and
+`postProcessing/manufacturedEikonalECGSummary_ECG.dat` (L1, L2, Linf over the
+samples). The field outputs are the same with and without `-ecg`.
+
+```bash
+./Allrun -mesh tet -N 10 -wallGradient stock -ecg -template singleEvent
+```
 
 ## Outer iteration
 
