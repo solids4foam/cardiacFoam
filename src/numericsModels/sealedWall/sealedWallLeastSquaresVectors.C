@@ -197,10 +197,8 @@ void Foam::sealedWallLeastSquaresVectors::calcVectors()
             FatalErrorInFunction
                 << "Rank-deficient wall-cell stencil for " << name()
                 << " on mesh " << mesh.name() << ": cell " << celli
-                << " at " << mesh.C()[celli] << " has normal-matrix "
-                << "eigenvalues " << eVals << "; the cells it reaches "
-                << "through non-sealed stencil entries do not span the "
-                << "solution directions." << exit(FatalError);
+                << " at " << mesh.C()[celli] << ", normal-matrix "
+                << "eigenvalues " << eVals << exit(FatalError);
         }
 
         if (i == 0 || eVals.x()/eVals.z() < minRatio)

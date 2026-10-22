@@ -240,8 +240,9 @@ void evaluateMetric
             FatalErrorInFunction
                 << "Non-finite grad(activationTime) & "
                 << "(M & grad(activationTime)) = " << Q << " at "
-                << location << " " << i << ", centre " << centres[i] << ": grad(activationTime) = " << g[i]
-                << ", M = " << M[i] << exit(FatalError);
+                << location << " " << i << ", centre " << centres[i]
+                << ": grad(activationTime) = " << g[i] << ", M = " << M[i]
+                << exit(FatalError);
         }
 
         if (Q < 0)
@@ -253,10 +254,9 @@ void evaluateMetric
             {
                 FatalErrorInFunction
                     << "grad(activationTime) & (M & grad(activationTime)) = "
-                    << Q << " is negative beyond its rounding error " << bound
-                    << " at " << location << " " << i << ", centre "
-                    << centres[i] << ": M = " << M[i]
-                    << " is not positive definite." << exit(FatalError);
+                    << Q << " < -" << bound << " (rounding bound) at "
+                    << location << " " << i << ", centre " << centres[i]
+                    << ": M = " << M[i] << exit(FatalError);
             }
 
             Q = 0;
