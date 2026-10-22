@@ -24,7 +24,10 @@ Author
 #include "centredCPCCellToCellStencilObject.H"
 #include "volFields.H"
 #include "bitSet.H"
-#include "mathematicalConstants.H"
+
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -32,30 +35,64 @@ namespace Foam
 {
     defineTypeNameAndDebug(sealedWallLeastSquaresVectors, 0);
 
-    // Smallest-to-largest eigenvalue ratio of a positive semi-definite tensor, exact for repeated eigenvalues
-    static scalar eigenValueRatio(const symmTensor& t)
+    // Eigenvalues of a symmetric tensor in ascending order by cyclic Jacobi
+    // rotations (Golub and Van Loan, Matrix Computations, 4th ed., Alg. 8.5.2
+    // and 8.5.3), repeated until every off-diagonal entry is zero. A rotation
+    // changes the two diagonal entries by -+t a_pq; an entry whose rotation
+    // would leave both unchanged in floating point is set to zero instead.
+    static vector symmEigenValues(const symmTensor& T)
     {
-        const scalar q = tr(t)/3;
-        if (q <= VSMALL)
+        scalar a[3][3] =
         {
-            return 0;
+            {T.xx(), T.xy(), T.xz()},
+            {T.xy(), T.yy(), T.yz()},
+            {T.xz(), T.yz(), T.zz()}
+        };
+
+        while (a[0][1] != 0 || a[0][2] != 0 || a[1][2] != 0)
+        {
+            for (label p = 0; p < 2; ++p)
+            {
+                for (label q = p + 1; q < 3; ++q)
+                {
+                    if (a[p][q] == 0)
+                    {
+                        continue;
+                    }
+
+                    const scalar tau = (a[q][q] - a[p][p])/(2*a[p][q]);
+                    const scalar t =
+                        (tau >= 0 ? 1 : -1)
+                       /(mag(tau) + std::hypot(scalar(1), tau));
+                    const scalar c = 1/std::hypot(scalar(1), t);
+                    const scalar s = t*c;
+
+                    const scalar app = a[p][p] - t*a[p][q];
+                    const scalar aqq = a[q][q] + t*a[p][q];
+
+                    if (app == a[p][p] && aqq == a[q][q])
+                    {
+                        a[p][q] = a[q][p] = 0;
+                        continue;
+                    }
+
+                    a[p][p] = app;
+                    a[q][q] = aqq;
+                    a[p][q] = a[q][p] = 0;
+
+                    const label r = 3 - p - q;
+                    const scalar arp = a[r][p];
+                    const scalar arq = a[r][q];
+                    a[r][p] = a[p][r] = c*arp - s*arq;
+                    a[r][q] = a[q][r] = s*arp + c*arq;
+                }
+            }
         }
 
-        const scalar p2 =
-            sqr(t.xx() - q) + sqr(t.yy() - q) + sqr(t.zz() - q)
-          + 2*(sqr(t.xy()) + sqr(t.xz()) + sqr(t.yz()));
-        if (p2 <= SMALL*sqr(q))
-        {
-            return 1;
-        }
+        vector eVals(a[0][0], a[1][1], a[2][2]);
+        std::sort(eVals.begin(), eVals.end());
 
-        const scalar p = sqrt(p2/6);
-        const scalar r = max(scalar(-1), min(scalar(1), det((t - q*I)/p)/2));
-        const scalar phi = acos(r)/3;
-        const scalar eMax = q + 2*p*cos(phi);
-        const scalar eMin = q + 2*p*cos(phi + constant::mathematical::twoPi/3);
-
-        return eMin/max(eMax, VSMALL);
+        return eVals;
     }
 }
 
@@ -124,7 +161,13 @@ void Foam::sealedWallLeastSquaresVectors::calcVectors()
     const symmTensor dd0(sqr((Vector<label>::one - mesh.geometricD())/2));
 
     vectors_.setSize(wallCells_.size());
-    scalar minRatio = GREAT;
+
+    // A wall-cell normal matrix is numerically rank deficient when its
+    // smallest eigenvalue is within the rounding error of its largest
+    const scalar rankTol = 3*std::numeric_limits<scalar>::epsilon();
+
+    scalar minRatio = 1;
+    point minRatioCentre(Zero);
 
     forAll(wallCells_, i)
     {
@@ -147,7 +190,24 @@ void Foam::sealedWallLeastSquaresVectors::calcVectors()
             lsv[j] = w*d;
         }
 
-        minRatio = min(minRatio, eigenValueRatio(dd));
+        const vector eVals(symmEigenValues(dd));
+
+        if (eVals.x() <= rankTol*eVals.z())
+        {
+            FatalErrorInFunction
+                << "Rank-deficient wall-cell stencil for " << name()
+                << " on mesh " << mesh.name() << ": cell " << celli
+                << " at " << mesh.C()[celli] << " has normal-matrix "
+                << "eigenvalues " << eVals << "; the cells it reaches "
+                << "through non-sealed stencil entries do not span the "
+                << "solution directions." << exit(FatalError);
+        }
+
+        if (i == 0 || eVals.x()/eVals.z() < minRatio)
+        {
+            minRatio = eVals.x()/eVals.z();
+            minRatioCentre = mesh.C()[celli];
+        }
 
         const symmTensor ddInv(inv(dd) - dd0);
         for (label j = 1; j < lsv.size(); ++j)
@@ -157,20 +217,30 @@ void Foam::sealedWallLeastSquaresVectors::calcVectors()
         }
     }
 
-    reduce(minRatio, minOp<scalar>());
+    const label nWallCells = returnReduce(wallCells_.size(), sumOp<label>());
+    const scalar globalMinRatio = returnReduce(minRatio, minOp<scalar>());
+    const label minRatioProc =
+        returnReduce
+        (
+            wallCells_.size() && minRatio == globalMinRatio
+          ? Pstream::myProcNo()
+          : Pstream::nProcs(),
+            minOp<label>()
+        );
+    if (Pstream::myProcNo() != minRatioProc)
+    {
+        minRatioCentre = Zero;
+    }
+    reduce(minRatioCentre, sumOp<point>());
 
     Info<< "sealedWallLeastSquares: " << name() << " on mesh " << mesh.name()
-        << ", " << returnReduce(wallCells_.size(), sumOp<label>())
-        << " wall cells, smallest eigenvalue ratio " << minRatio << endl;
-
-    // Smallest-to-largest eigenvalue ratio of a usable wall-cell stencil
-    if (minRatio < 1e-3)
+        << ", " << nWallCells << " wall cells";
+    if (nWallCells)
     {
-        FatalErrorInFunction
-            << "Rank-deficient wall-cell stencil for " << name()
-            << " on mesh " << mesh.name() << ": eigenvalue ratio "
-            << minRatio << exit(FatalError);
+        Info<< ", smallest eigenvalue ratio " << globalMinRatio
+            << " at cell centre " << minRatioCentre;
     }
+    Info<< endl;
 }
 
 
