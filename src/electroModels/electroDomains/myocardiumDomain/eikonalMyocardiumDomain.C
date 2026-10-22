@@ -27,6 +27,7 @@ License
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
+#include "regionSplit.H"
 
 #include <cmath>
 #include <limits>
@@ -199,6 +200,54 @@ void collectActivationConstraints
 
     constrainedCells = cells;
     constrainedValues = values;
+}
+
+
+// Warns of connected mesh regions with no constrained cell and no
+// fixed-value boundary face.
+void warnUnconstrainedRegions
+(
+    const volScalarField& activationTime,
+    const labelUList& constrainedCells
+)
+{
+    const fvMesh& mesh = activationTime.mesh();
+    const regionSplit regions(mesh);
+
+    labelList constrained(regions.nRegions(), Zero);
+
+    for (const label cellI : constrainedCells)
+    {
+        constrained[regions[cellI]] = 1;
+    }
+
+    for (const fvPatchScalarField& patchField : activationTime.boundaryField())
+    {
+        if (!patchField.patch().coupled() && patchField.fixesValue())
+        {
+            for (const label cellI : patchField.patch().faceCells())
+            {
+                constrained[regions[cellI]] = 1;
+            }
+        }
+    }
+
+    Pstream::listCombineReduce(constrained, maxEqOp<label>());
+
+    label nUnconstrained = 0;
+    for (const label c : constrained)
+    {
+        nUnconstrained += (c == 0);
+    }
+
+    if (nUnconstrained)
+    {
+        WarningInFunction
+            << nUnconstrained << " of " << regions.nRegions()
+            << " connected regions of mesh '" << mesh.name() << "' have no "
+            << "constrained activationTime cell or fixed-value boundary face"
+            << endl;
+    }
 }
 
 
@@ -592,6 +641,8 @@ void eikonalMyocardiumDomain::advance
         constrainedCells,
         constrainedValues
     );
+
+    warnUnconstrainedRegions(activationTime_, constrainedCells);
 
     if (useGraphPrePopulation_) preInitialiseFromSeeds(constrainedCells, constrainedValues);
 
