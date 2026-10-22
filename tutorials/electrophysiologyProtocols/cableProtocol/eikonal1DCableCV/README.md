@@ -96,30 +96,15 @@ The decomposition is defined in `system/decomposeParDict`.
 To extract CV from a manual run, call `python3 setup/extract_cv.py` separately.
 The script is under `setup/` for post-processing workflows.
 
-## Driver convergence entry
+## omnidriver entry
 
-This folder does not currently have a dedicated registered driver entry. The
-similarly named `cable1DCVConvergence` entry is registered, but the current
-registry resolves it to the *monodomain* cable case, not this eikonal folder:
+This case is the `cable1DEikonalCV` record; its `dx` axis (metres) rewrites the
+block mesh:
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam --repo . plan --strict \
+    --entry cable1DEikonalCV --scratch-dir <scratch>
 ```
-
-Use `Allrun` above for this eikonal case until a dedicated driver factory is
-added.
-
-The default sweep config is stored in:
-
-```text
-setup/driver_config.json
-```
-
-That workflow mutates `blockMeshDict`, `controlDict`, and `electroProperties`
-per sweep case, runs in parallel by default, exports one CV summary per case,
-and then writes per-ionic-model convergence CSVs plus convergence plots under
-model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
-`outputsCVConvergence/TWorld/`.
 
 ## Main calibration knob
 

@@ -81,7 +81,8 @@ Omnidriver-managed (from the repository root; a record stages into a scratch
 directory you supply, never into this tree):
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam --repo . plan --strict \
+    --entry niederer2011 --scratch-dir <scratch>
 ```
 
 omnidriver reads this case as it is: `niederer2011` is a pointer at this

@@ -47,7 +47,7 @@ done
 python3 ../summarize.py results
 ```
 
-The closest omnidriver spec for this study is `sweep_temporal_convergence.json`: omnidriver cannot yet remove `ecgDomains`, which these 1D and 2D runs need.
+The closest omnidriver spec for this study is `sweep_temporal_convergence.json`: the record removes `ecgDomains` for these 1D and 2D runs, which have no ECG.
 
 The extended `sbdf2`/`backward` ladders add `-dt 0.00078125` and
 `-dt 0.000390625`, `-dim 1 -N 1280` and `-dim 3 -N 80` with the same command.

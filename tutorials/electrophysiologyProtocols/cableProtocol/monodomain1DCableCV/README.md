@@ -30,7 +30,7 @@ The intended workflow is:
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/
+tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -122,7 +122,7 @@ This case is also exposed as the `cable1DRestitution` tutorial record
 
 ```bash
 omnidriver --plugin cardiacfoam plan --strict --entry cable1DRestitution \
-    --config <config.json> --cases-root <tutorials root> --scratch-dir <scratch>
+    --cases-root <tutorials root> --scratch-dir <scratch>
 ```
 
 The S1-S2 schedule (drive train plus an optional premature beat, in either a
