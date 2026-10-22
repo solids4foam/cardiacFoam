@@ -28,6 +28,9 @@ License
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
 
+#include <cmath>
+#include <limits>
+
 namespace Foam
 {
 
@@ -198,6 +201,108 @@ void collectActivationConstraints
     constrainedValues = values;
 }
 
+
+// Fills one field of the metric G = sqrt(Q), Q = g & (M & g), and of the
+// direction a = (M & g)/G, given w = M & g.
+//
+// Q is non-negative for positive-definite M. Evaluated in floating point
+// (the matrix-vector product w, then the inner product g & w) it differs from
+// the exact value by at most gamma_6 (|g| & (|M| & |g|)), with
+// gamma_k = k u/(1 - k u) and u the unit roundoff (Higham, Accuracy and
+// Stability of Numerical Algorithms, 2nd ed., Sec. 3.1 and 3.5). A negative Q
+// within that bound is rounding of a zero or vanishing Q and is set to zero;
+// a negative Q beyond it means M is not positive definite, and a non-finite Q
+// means g or M is not finite: both are fatal.
+//
+// a = w/G where Q > 0 and a = 0 where Q = 0, so a & g = G everywhere. For
+// symmetric positive-definite M, |a| = |M^1/2 (M^1/2 g)|/|M^1/2 g|
+// <= sqrt(lambda_max(M)).
+void evaluateMetric
+(
+    const vectorField& g,
+    const tensorField& M,
+    const vectorField& w,
+    scalarField& G,
+    vectorField& a,
+    const word& location,
+    const vectorField& centres
+)
+{
+    const scalar u = 0.5*std::numeric_limits<scalar>::epsilon();
+    const scalar gamma6 = 6*u/(1 - 6*u);
+
+    forAll(g, i)
+    {
+        scalar Q = g[i] & w[i];
+
+        if (!std::isfinite(Q))
+        {
+            FatalErrorInFunction
+                << "Non-finite grad(activationTime) & "
+                << "(M & grad(activationTime)) = " << Q << " at "
+                << location << " " << i << ", centre " << centres[i] << ": grad(activationTime) = " << g[i]
+                << ", M = " << M[i] << exit(FatalError);
+        }
+
+        if (Q < 0)
+        {
+            const vector magG(cmptMag(g[i]));
+            const scalar bound = gamma6*(magG & (cmptMag(M[i]) & magG));
+
+            if (-Q > bound)
+            {
+                FatalErrorInFunction
+                    << "grad(activationTime) & (M & grad(activationTime)) = "
+                    << Q << " is negative beyond its rounding error " << bound
+                    << " at " << location << " " << i << ", centre "
+                    << centres[i] << ": M = " << M[i]
+                    << " is not positive definite." << exit(FatalError);
+            }
+
+            Q = 0;
+        }
+
+        G[i] = Foam::sqrt(Q);
+        a[i] = (Q > 0 ? w[i]/G[i] : vector::zero);
+    }
+}
+
+
+void evaluateMetric
+(
+    const volVectorField& g,
+    const volTensorField& M,
+    const volVectorField& w,
+    volScalarField& G,
+    volVectorField& a
+)
+{
+    evaluateMetric
+    (
+        g.primitiveField(),
+        M.primitiveField(),
+        w.primitiveField(),
+        G.primitiveFieldRef(),
+        a.primitiveFieldRef(),
+        "cell",
+        g.mesh().C().primitiveField()
+    );
+
+    forAll(G.boundaryField(), patchI)
+    {
+        evaluateMetric
+        (
+            g.boundaryField()[patchI],
+            M.boundaryField()[patchI],
+            w.boundaryField()[patchI],
+            G.boundaryFieldRef()[patchI],
+            a.boundaryFieldRef()[patchI],
+            "face of patch " + G.mesh().boundary()[patchI].name(),
+            G.mesh().C().boundaryField()[patchI]
+        );
+    }
+}
+
 } // End anonymous namespace
 
 
@@ -287,21 +392,21 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     conductivity_(initialiseConductivity()),
     M_("M", conductivity_/(chi_*Cm_)),
     w_("w", M_ & gradActivationTime_),
-    G_
-    (
-        "G",
-        sqrt
-        (
-            max
-            (
-                gradActivationTime_ & w_,
-                dimensionedScalar("zero", dimTime, 0.0)
-            )
-          + dimensionedScalar("smallG", dimTime, SMALL)
-        )
-    ),
+    G_("G", sqrt(gradActivationTime_ & w_)),
     c0_("c0", electroProperties),
-    a_("a", w_/G_),
+    a_
+    (
+        IOobject
+        (
+            "a",
+            mesh().time().timeName(),
+            mesh(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh(),
+        dimensionedVector("a", w_.dimensions()/G_.dimensions(), Zero)
+    ),
     u_("u", c0_*a_),
     phiU_("phiU", (fvc::interpolate(u_) & mesh().Sf())),
     divPhiU_("divPhiU", fvc::div(phiU_)),
@@ -491,7 +596,6 @@ void eikonalMyocardiumDomain::advance
     if (useGraphPrePopulation_) preInitialiseFromSeeds(constrainedCells, constrainedValues);
 
     const dimensionedScalar one("one", dimless, 1.0);
-    const dimensionedScalar smallG("smallG", dimTime, SMALL);
 
     tmp<volScalarField> tSmms;
     if (verificationModelPtr_.valid() && verificationModelPtr_->enabled())
@@ -523,14 +627,10 @@ void eikonalMyocardiumDomain::advance
     {
         gradActivationTime_ = fvc::grad(activationTime_);
         w_ = M_ & gradActivationTime_;
-        // Guard against negative dot product: M is positive-definite so
-        // dot(grad, M*grad) >= 0 analytically, but NaN/Inf from a stalled
-        // inner solve or degenerate mesh cells can violate this numerically.
-        G_ = sqrt(max(gradActivationTime_ & w_, dimensionedScalar("zero", dimTime, 0.0)) + smallG);
+        evaluateMetric(gradActivationTime_, M_, w_, G_, a_);
 
         if (eikonalAdvectionDiffusionApproach_)
         {
-            a_ = w_/G_;
             u_ = c0_*a_;
             phiU_ = (fvc::interpolate(u_) & mesh().Sf());
             divPhiU_ = fvc::div(phiU_);
