@@ -1,25 +1,29 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
-summary  cells       20    0
-summary  finalTime   0.2   1e-6
-error    Vm          L1    0.000250658  1e-6
-error    Vm          L2    0.000341438  1e-6
-error    Vm          Linf  0.000980434  1e-6
-error    phiE        L1    0.0814546    1e-6
-error    phiE        L2    0.0814549    1e-6
-error    phiE        Linf  0.082142     1e-6
-error    phiE_gauge  L1    0.000176522  1e-6
-error    phiE_gauge  L2    0.000240418  1e-6
-error    phiE_gauge  Linf  0.000687473  1e-6
-error    phiI        L1    0.0814503    1e-6
-error    phiI        L2    0.0814503    1e-6
-error    phiI        Linf  0.081723     1e-6
-error    phiI_gauge  L1    7.41954e-05  1e-6
-error    phiI_gauge  L2    0.000101084  1e-6
-error    phiI_gauge  Linf  0.000292962  1e-6
-error    u1          L1    3.22463e-05  1e-6
-error    u1          L2    4.47365e-05  1e-6
-error    u1          Linf  0.000158851  1e-6
-error    u2          L1    1.40427e-05  1e-6
-error    u2          L2    1.92251e-05  1e-6
-error    u2          Linf  5.62394e-05  1e-6
+summary  cells      20   0
+summary  finalTime  0.2  1e-9
+error    Vm                   L1    0.000201904   2e-09
+error    Vm                   L2    0.000275256   2.8e-09
+error    Vm                   Linf  0.000821665   8.2e-09
+error    phiE_gauge           L1    0.00014258    1.4e-09
+error    phiE_gauge           L2    0.000194171   1.9e-09
+error    phiE_gauge           Linf  0.000574152   5.7e-09
+error    phiI_gauge           L1    5.96947e-05   6e-10
+error    phiI_gauge           L2    8.13774e-05   8.1e-10
+error    phiI_gauge           Linf  0.000247513   2.5e-09
+error    u1                   L1    1.36219e-05   1.4e-10
+error    u1                   L2    1.8572e-05    1.9e-10
+error    u1                   Linf  5.8876e-05    5.9e-10
+error    u2                   L1    5.89699e-06   5.9e-11
+error    u2                   L2    8.09887e-06   8.1e-11
+error    u2                   Linf  2.6424e-05    2.6e-10
+error    phiE                 L2    0.0813826     8.1e-07
+error    phiI                 L2    0.0813906     8.1e-07
+error    Vm_boundary          L2    0.000190136   1.9e-09
+error    gradVm_boundary      L2    0.169465      1.7e-06
+error    gradReconVm          L2    0.139063      1.4e-06
+error    phiE_gauge_boundary  L2    0.000134104   1.3e-09
+error    gradPhiE_boundary    L2    0.119831      1.2e-06
+error    gradReconPhiE        L2    0.0983324     9.8e-07
+error    phiI_gauge_boundary  L2    5.61466e-05   5.6e-10
+error    gradReconPhiI        L2    0.0407306     4.1e-07

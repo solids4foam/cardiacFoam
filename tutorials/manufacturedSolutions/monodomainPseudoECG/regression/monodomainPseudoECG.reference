@@ -1,19 +1,22 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
 # final <file> <column> <expected> <tolerance>
-summary  cells                         20        0
-summary  finalTime                     0.200028  1e-9
-error    Vm                            L1        0.000293945    1e-7
-error    Vm                            L2        0.0003914      1e-7
-error    Vm                            Linf      0.00148244     1e-7
-error    u1                            L1        4.09866e-05    1e-7
-error    u1                            L2        5.70471e-05    1e-7
-error    u1                            Linf      0.000252586    1e-7
-error    u2                            L1        1.69077e-05    1e-8
-error    u2                            L2        2.27228e-05    1e-8
-error    u2                            Linf      8.81125e-05    1e-7
-final    postProcessing/pseudoECG.dat  E1        0.0074106238   1e-8
-final    postProcessing/pseudoECG.dat  E2        0.0074106271   1e-8
-final    postProcessing/pseudoECG.dat  E3        0.017480815    1e-7
-final    postProcessing/pseudoECG.dat  E4        0.012227997    1e-7
-final    postProcessing/pseudoECG.dat  E5        0.00069783531  1e-7
+summary  cells      20   0
+summary  finalTime  0.2  1e-9
+error    Vm                     L1    0.000276373    2.8e-09
+error    Vm                     L2    0.00035144     3.5e-09
+error    Vm                     Linf  0.00116429     1.2e-08
+error    u1                     L1    3.7477e-05     3.7e-10
+error    u1                     L2    4.67744e-05    4.7e-10
+error    u1                     Linf  0.00011597     1.2e-09
+error    u2                     L1    1.5927e-05     1.6e-10
+error    u2                     L2    2.00206e-05    2e-10
+error    u2                     Linf  5.2907e-05     5.3e-10
+error    Vm_boundary            L2    0.00016065     1.6e-09
+error    gradVm_boundary        L2    0.0379854      3.8e-07
+error    gradReconVm            L2    0.0258329      2.6e-07
+final    postProcessing/pseudoECG.dat  E1   0.00740829295    7.4e-08
+final    postProcessing/pseudoECG.dat  E2   0.00740829123    7.4e-08
+final    postProcessing/pseudoECG.dat  E3   0.0174750881     1.7e-07
+final    postProcessing/pseudoECG.dat  E4   0.0122237986     1.2e-07
+final    postProcessing/pseudoECG.dat  E5   0.000697770608   7e-09

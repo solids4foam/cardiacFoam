@@ -32,7 +32,6 @@ SourceFiles
 #include "eikonalSolver1D.H"
 #include "conductionSystemDomain.H"
 #include "addToRunTimeSelectionTable.H"
-#include "DynamicList.H"
 #include "Switch.H"
 #include <queue>
 #include <utility>
@@ -136,20 +135,6 @@ void eikonalSolver1D::advance
     }
 
     const scalar c0 = purkinjeCV_.value();
-    const label  N  = G.nNodes;
-
-    // Build undirected adjacency list: adj[node] = list of (neighbour, edgeIdx).
-    // Stored as parallel lists to stay compatible with OpenFOAM's labelList.
-    List<DynamicList<label>> adjNode(N);
-    List<DynamicList<label>> adjEdge(N);
-
-    forAll(G.edgeNodeA, eI)
-    {
-        label a = G.edgeNodeA[eI];
-        label b = G.edgeNodeB[eI];
-        adjNode[a].append(b);  adjEdge[a].append(eI);
-        adjNode[b].append(a);  adjEdge[b].append(eI);
-    }
 
     // Min-heap: (Tact_value, nodeID).
     // std::greater gives smallest Tact at the top.
@@ -174,10 +159,10 @@ void eikonalSolver1D::advance
         // Stale entry: a shorter path to i was already processed.
         if (t_curr > Tact[i]) continue;
 
-        forAll(adjNode[i], nbrI)
+        for (label k = G.adjOffsets[i]; k < G.adjOffsets[i + 1]; ++k)
         {
-            label  j     = adjNode[i][nbrI];
-            label  eI    = adjEdge[i][nbrI];
+            label  j     = G.adjNeighbours[k];
+            label  eI    = G.adjEdges[k];
             scalar t_new = Tact[i] + G.edgeLengths[eI] / c0;
 
             if (Tact[j] < 0 || t_new < Tact[j])

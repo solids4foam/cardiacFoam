@@ -9,5 +9,6 @@ wclean genericWriter
 wclean ionicModels
 wclean verificationModels
 wclean activeTensionModels
+wclean numericsModels
 wclean electroModels
 wclean electroMechanicalModels

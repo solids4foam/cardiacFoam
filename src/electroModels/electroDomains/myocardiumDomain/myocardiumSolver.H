@@ -36,6 +36,7 @@ Author
 #include "fvMesh.H"
 #include "fvMeshSubset.H"
 #include "electroVolumeFieldDomain.H"
+#include "electroVerificationModel.H"
 
 namespace Foam
 {
@@ -86,6 +87,9 @@ public:
 
     virtual const volTensorField* conductivityPtr() const = 0;
 
+    //- True when no current crosses the heart boundary
+    virtual bool sealedHeartBoundary() const = 0;
+
     virtual const volTensorField* intracellularConductivityPtr() const
     {
         return conductivityPtr();
@@ -105,6 +109,10 @@ public:
     );
 
     virtual void unbindExternalPhiE();
+
+    //- Verification model whose manufactured sources the solver adds
+    virtual void bindVerifier(const electroVerificationModel* verifier)
+    {}
 
     virtual void solveDiffusionExplicit
     (
@@ -129,6 +137,21 @@ public:
         pimpleControl& pimple
     );
 };
+
+
+//- NO_READ on a cellZone sub-mesh, otherwise READ_IF_PRESENT
+IOobject::readOption myocardiumFieldReadOption
+(
+    const fvMeshSubset* meshSubsetPtr
+);
+
+//- Gather a sub-mesh field (and its old time) from support-mesh files; false if none
+bool readMappedCellField
+(
+    volScalarField& subField,
+    const fvMesh& supportMesh,
+    const labelUList& cellMap
+);
 
 } // End namespace Foam
 

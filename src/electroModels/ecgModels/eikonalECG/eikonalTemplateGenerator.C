@@ -146,7 +146,7 @@ void namedRegionAnchors
             << exit(FatalError);
     }
 
-    const word transitionMode(heterogeneityDict.lookup("transitionMode"));
+    const word transitionMode(heterogeneityDict.get<word>("transitionMode"));
 
     scalar transitionWidth = 0.0;
 
@@ -270,7 +270,7 @@ List<DynamicTemplate> generatePersonalizedTemplates
             << exit(FatalError);
     }
 
-    const word mode(heterogeneityDict.lookup("mode"));
+    const word mode(heterogeneityDict.get<word>("mode"));
 
     scalarField tPoints;
     wordList anchorNames;

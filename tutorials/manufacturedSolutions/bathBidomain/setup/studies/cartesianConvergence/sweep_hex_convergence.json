@@ -1,143 +1,16 @@
 {
   "base": {
     "entry": "manufacturedBathBidomain",
-    "case_dir_name": "manufacturedSolutions/bathBidomain",
-    "setup_dir_name": "setup",
-    "postprocess_strict_artifacts": false,
-    "run_in_parallel": true,
-    "ecg_enabled": false,
-    "bath_predictor_corrector": true,
-    "fda_bath_variant": "groundElectrode",
-    "archive_dir_name": "setup/studies/cartesianConvergence/results/sweepCases"
+    "cases_root": "tutorials",
+    "parallel": true
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "dimensions": [
-        [
-          "1D"
-        ],
-        [
-          "1D"
-        ],
-        [
-          "1D"
-        ],
-        [
-          "1D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "3D"
-        ],
-        [
-          "3D"
-        ],
-        [
-          "3D"
-        ],
-        [
-          "3D"
-        ]
-      ],
-      "number_cells": [
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ]
-      ],
-      "dt_values": [
-        [
-          0.00892857
-        ],
-        [
-          0.00224215
-        ],
-        [
-          0.000560538
-        ],
-        [
-          0.000140174
-        ],
-        [
-          0.00892857
-        ],
-        [
-          0.00224215
-        ],
-        [
-          0.000560538
-        ],
-        [
-          0.000140174
-        ],
-        [
-          0.00892857
-        ],
-        [
-          0.00224215
-        ],
-        [
-          0.000560538
-        ],
-        [
-          0.000140174
-        ]
-      ]
-    },
-    "dependent": [
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "dimensions",
-          "number_cells",
-          "dt_values"
-        ]
-      }
-    ]
+      "dimension": ["1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D"],
+      "numberCells": [10, 10, 10, 20, 20, 20, 40, 40, 40, 80, 80, 80],
+      "system/controlDict:deltaT": [0.00892857, 0.00892857, 0.00892857, 0.00224215, 0.00224215, 0.00224215, 0.000560538, 0.000560538, 0.000560538, 0.000140174, 0.000140174, 0.000140174],
+      "caseId": ["predictor_1D_N10", "predictor_2D_N10", "predictor_3D_N10", "predictor_1D_N20", "predictor_2D_N20", "predictor_3D_N20", "predictor_1D_N40", "predictor_2D_N40", "predictor_3D_N40", "predictor_1D_N80", "predictor_2D_N80", "predictor_3D_N80"]
+    }
   }
 }

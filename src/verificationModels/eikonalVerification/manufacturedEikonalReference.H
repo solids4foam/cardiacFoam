@@ -22,7 +22,7 @@ Description
     Fixed manufactured references for eikonal activation and eikonal ECG.
 
 Author
-    Simao Nieto de Castro. All rights reserved.
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedEikonalReference_H
@@ -30,6 +30,7 @@ Author
 
 #include "PstreamReduceOps.H"
 #include "fvMesh.H"
+#include "manufacturedTemplate.H"
 #include "mathematicalConstants.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "tensorField.H"
@@ -43,20 +44,6 @@ inline vector manufacturedEikonalK(const label dimension)
     if (dimension == 1) return vector(1.0, 0.0, 0.0);
     if (dimension == 2) return vector(1.0, 1.0, 0.0);
     return vector(1.0, 1.0, 1.0);
-}
-
-
-inline scalar manufacturedEikonalTemplateValue(const scalar s)
-{
-    return Foam::sin(2.0*constant::mathematical::pi*s);
-}
-
-
-inline scalar manufacturedEikonalTemplateDerivative(const scalar s)
-{
-    return
-        2.0*constant::mathematical::pi
-       *Foam::cos(2.0*constant::mathematical::pi*s);
 }
 
 
@@ -231,7 +218,10 @@ inline scalar manufacturedEikonalECGIntegrand
     const vector& electrodePosition,
     const tensor& conductivity,
     const vector& k,
-    const label dimension
+    const label dimension,
+    const bool sineTemplate,
+    const scalar templateDuration,
+    const scalar templateRise
 )
 {
     const vector p(x, y, z);
@@ -239,7 +229,10 @@ inline scalar manufacturedEikonalECGIntegrand
     const vector gradTau = manufacturedEikonalGradTau(p, k);
 
     const scalar dU =
-        manufacturedEikonalTemplateDerivative(time - tau);
+        eikonalECG_templates::evaluateManufacturedTemplateDerivative
+        (
+            time - tau, sineTemplate, templateDuration, templateRise
+        );
     const vector sigmaGradVm = conductivity & (-dU*gradTau);
 
     const scalar dx = x - electrodePosition.x();
@@ -295,6 +288,9 @@ inline scalar computeManufacturedEikonalECGReference
     const tensor& conductivity,
     const vector& k,
     const label dimension,
+    const bool sineTemplate,
+    const scalar templateDuration,
+    const scalar templateRise,
     const UList<scalar>& nodes,
     const UList<scalar>& weights
 )
@@ -310,7 +306,8 @@ inline scalar computeManufacturedEikonalECGReference
             value += weights[i]*manufacturedEikonalECGIntegrand
             (
                 x, 0.0, 0.0, time, electrodePosition, conductivity,
-                k, dimension
+                k, dimension, sineTemplate, templateDuration,
+                templateRise
             );
         }
 
@@ -329,7 +326,8 @@ inline scalar computeManufacturedEikonalECGReference
                    *manufacturedEikonalECGIntegrand
                     (
                         x, y, 0.0, time, electrodePosition, conductivity,
-                        k, dimension
+                        k, dimension, sineTemplate, templateDuration,
+                        templateRise
                     );
             }
         }
@@ -350,7 +348,8 @@ inline scalar computeManufacturedEikonalECGReference
                    *manufacturedEikonalECGIntegrand
                     (
                         x, y, z, time, electrodePosition, conductivity,
-                        k, dimension
+                        k, dimension, sineTemplate, templateDuration,
+                        templateRise
                     );
             }
         }

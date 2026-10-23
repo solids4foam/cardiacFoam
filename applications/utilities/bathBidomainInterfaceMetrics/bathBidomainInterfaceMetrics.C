@@ -31,6 +31,7 @@ Description
 #include "HashSet.H"
 #include "fvMeshSubset.H"
 #include "extracellularFaceConductivity.H"
+#include "sealedWallPolicy.H"
 #include "conductivityFieldIO.H"
 
 using namespace Foam;
@@ -233,6 +234,7 @@ int main(int argc, char* argv[])
         ),
         mesh
     );
+    sealedWallPolicy::publish(phiE, false);
     Info<< "Reading sigmaTotal" << nl;
     volTensorField sigmaTotal
     (

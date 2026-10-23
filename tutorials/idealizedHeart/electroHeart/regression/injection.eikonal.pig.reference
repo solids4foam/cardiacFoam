@@ -9,6 +9,6 @@
 # the delay is geometric only.
 #
 probe  postProcessing/injectionProbe/0/activationTime  1      2  0.00621733    1e-4
-probe  postProcessing/eikonalECG.dat                   0.025  5  0.003668100   2e-4
-probe  postProcessing/eikonalECG.dat                   0.035  3  -0.004851966  2e-4
-probe  postProcessing/eikonalECG.dat                   0.04   7  0.005573608   2e-4
+probe  postProcessing/eikonalECG.dat                   0.025  5  0.00271449131   2e-4
+probe  postProcessing/eikonalECG.dat                   0.035  3  0.00413200258  2e-4
+probe  postProcessing/eikonalECG.dat                   0.04   7  0.0046223192   2e-4

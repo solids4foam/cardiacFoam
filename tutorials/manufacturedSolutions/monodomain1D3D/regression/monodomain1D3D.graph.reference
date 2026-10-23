@@ -1,0 +1,12 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# error <field> <norm> <expected> <tolerance>: Purkinje graph errors, read from
+# postProcessing/graph_1D_21_nodes.dat
+error    Vm1D                   L1    3.463e-05     3.5e-10
+error    Vm1D                   L2    4.46313e-05   4.5e-10
+error    Vm1D                   Linf  8.65586e-05   8.7e-10
+error    u1                     L1    5.7265e-05    5.7e-10
+error    u1                     L2    6.48372e-05   6.5e-10
+error    u1                     Linf  0.000108823   1.1e-09
+error    u2                     L1    1.81845e-05   1.8e-10
+error    u2                     L2    2.18547e-05   2.2e-10
+error    u2                     Linf  4.52151e-05   4.5e-10

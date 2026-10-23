@@ -1,110 +1,19 @@
 {
   "base": {
     "entry": "manufacturedBathBidomain",
-    "case_dir_name": "manufacturedSolutions/bathBidomain",
-    "setup_dir_name": "setup",
-    "dimensions": [
-      "3D"
-    ],
-    "solver_types": [
-      "implicit"
-    ],
-    "piecewise_sweep": true,
-    "mesh_family": "tet",
-    "numerics_profile": "bath_bidomain_tet",
-    "end_time": 0.02,
-    "run_in_parallel": true,
-    "ecg_enabled": false,
-    "fda_bath_variant": "groundElectrode",
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/coupling/results/sweepCases",
-    "electro_property_overrides": {
-      "bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation": "distanceWeightedHarmonic"
-    }
+    "cases_root": "tutorials",
+    "parallel": true,
+    "mesh": "tet",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "bath_predictor_corrector": [
-        false,
-        true,
-        false,
-        true,
-        false,
-        true,
-        false,
-        true
-      ],
-      "number_cells": [
-        [
-          10
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          80
-        ]
-      ],
-      "dt_values": [
-        [
-          0.00892857
-        ],
-        [
-          0.00892857
-        ],
-        [
-          0.00224215
-        ],
-        [
-          0.00224215
-        ],
-        [
-          0.000560538
-        ],
-        [
-          0.000560538
-        ],
-        [
-          0.0001401345
-        ],
-        [
-          0.0001401345
-        ]
-      ]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": [
-          "number_cells",
-          "bath_predictor_corrector"
-        ]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "number_cells",
-          "bath_predictor_corrector"
-        ]
-      }
-    ]
+      "constant/electroProperties:bidomainSolverCoeffs.bathPredictorCorrector": [true, false, true, false, true, false, true, false],
+      "tetNumberCells": [10, 10, 20, 20, 40, 40, 80, 80],
+      "system/controlDict:deltaT": [0.00892857, 0.00892857, 0.00224215, 0.00224215, 0.000560538, 0.000560538, 0.000140174, 0.000140174],
+      "caseId": ["predictor_tet_N10", "baseline_tet_N10", "predictor_tet_N20", "baseline_tet_N20", "predictor_tet_N40", "baseline_tet_N40", "predictor_tet_N80", "baseline_tet_N80"]
+    }
   }
 }

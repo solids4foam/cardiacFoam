@@ -54,6 +54,9 @@ class bidomainSolver
     bool hasPhiEReferencePoint_;
     const volScalarField* externalPhiEBasePtr_;
     const labelUList* externalPhiECellMapPtr_;
+    const fvMeshSubset* meshSubsetPtr_;
+    word bathHeartPhiETrace_;
+    const electroVerificationModel* verifierPtr_;
 
     tmp<volTensorField> initialiseConductivityTensor
     (
@@ -99,6 +102,11 @@ public:
         return &phiI_;
     }
 
+    virtual bool sealedHeartBoundary() const override
+    {
+        return sealedHeartBoundary_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return &Gi_;
@@ -141,6 +149,11 @@ public:
     ) override;
 
     virtual void unbindExternalPhiE() override;
+
+    virtual void bindVerifier(const electroVerificationModel* verifier) override
+    {
+        verifierPtr_ = verifier;
+    }
 
     virtual void solveDiffusionExplicit
     (

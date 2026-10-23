@@ -1,42 +1,18 @@
 {
   "base": {
     "entry": "manufacturedBathBidomain",
-    "case_dir_name": "manufacturedSolutions/bathBidomain",
-    "setup_dir_name": "setup",
-    "dimensions": ["3D"],
-    "solver_types": ["implicit"],
-    "piecewise_sweep": false,
-    "mesh_family": "tet",
-    "numerics_profile": "bath_bidomain_tet",
-    "phi_tolerance": 1e-15,
-    "end_time": 0.02,
-    "run_in_parallel": true,
-    "ecg_enabled": false,
-    "bath_predictor_corrector": true,
-    "fda_bath_variant": "groundElectrode",
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/tetTemporalControl/results/sweepCases",
-    "electro_property_overrides": {
-      "bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation": "distanceWeightedHarmonic"
-    }
+    "cases_root": "tutorials",
+    "parallel": true,
+    "mesh": "tet",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "number_cells": [[40], [80]],
-      "dt_values": [[0.000280269], [0.00007006725]]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": ["number_cells", "dt_values"]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["number_cells", "dt_values"]
-      }
-    ]
+      "tetNumberCells": [40, 40, 80, 80],
+      "system/controlDict:deltaT": [0.000560538, 0.000280269, 0.0001401345, 7.006725e-05],
+      "caseId": ["tet_N40_dt0.000560538", "tet_N40_dt0.000280269", "tet_N80_dt0.0001401345", "tet_N80_dt7.006725e-05"]
+    }
   }
 }

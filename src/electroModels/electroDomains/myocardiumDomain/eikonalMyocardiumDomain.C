@@ -26,7 +26,11 @@ License
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
+#include "sealedWallPolicy.H"
+#include "regionSplit.H"
+
+#include <cmath>
+#include <limits>
 
 namespace Foam
 {
@@ -62,6 +66,16 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
         supportMesh.cellZones()[zoneId],
         myocardiumExposedFacesPatch(supportMesh, electroProperties)
     );
+#if OPENFOAM < 2406
+    // OpenFOAM before 2406 copies the base fvSchemes and fvSolution onto the
+    // sub-mesh without parsing them, so read them for the scheme and solver
+    // lookups to resolve.
+    fvMesh& subMesh = subsetPtr->subMesh();
+    subMesh.fvSchemes::readOpt(IOobject::MUST_READ);
+    subMesh.fvSchemes::read();
+    subMesh.fvSolution::readOpt(IOobject::MUST_READ);
+    subMesh.fvSolution::read();
+#endif
     return subsetPtr;
 }
 
@@ -81,23 +95,14 @@ const fvMesh& resolveMyocardiumMesh
 }
 
 
-// NOTE: a free function here used to re-derive "is verification enabled?"
-// from type + enabled, in parallel with eikonalVerificationModel::New, which
-// answers the same question by returning nullptr. The boundary types keyed
-// off that duplicate rather than off the verifier that actually got built.
-// The single source of truth is now verificationModelPtr_ itself.
-
-
 // activationTime's boundary conditions come from 0/activationTime like any
-// other field's. They used to be chosen here from the verification settings
-// and handed to the field constructor, which hid them from the case: nothing
-// in the case directory said whether the run used zeroGradient or fixedValue.
+// other field's.
 //
 // Manufactured-solution runs need Dirichlet boundaries -- applyConstraints
 // writes the exact solution onto each patch face, and a zeroGradient patch
 // would extrapolate those values away from the interior on the next
 // evaluate(), silently invalidating the verification while still reporting
-// error norms. checkVerificationBoundaryTypes below enforces that instead.
+// error norms. checkVerificationBoundaryTypes below enforces that.
 void checkVerificationBoundaryTypes
 (
     const volScalarField& activationTime,
@@ -197,6 +202,156 @@ void collectActivationConstraints
     constrainedValues = values;
 }
 
+
+// Warns of connected mesh regions with no constrained cell and no
+// fixed-value boundary face.
+void warnUnconstrainedRegions
+(
+    const volScalarField& activationTime,
+    const labelUList& constrainedCells
+)
+{
+    const fvMesh& mesh = activationTime.mesh();
+    const regionSplit regions(mesh);
+
+    labelList constrained(regions.nRegions(), Zero);
+
+    for (const label cellI : constrainedCells)
+    {
+        constrained[regions[cellI]] = 1;
+    }
+
+    for (const fvPatchScalarField& patchField : activationTime.boundaryField())
+    {
+        if (!patchField.patch().coupled() && patchField.fixesValue())
+        {
+            for (const label cellI : patchField.patch().faceCells())
+            {
+                constrained[regions[cellI]] = 1;
+            }
+        }
+    }
+
+    Pstream::listCombineReduce(constrained, maxEqOp<label>());
+
+    label nUnconstrained = 0;
+    for (const label c : constrained)
+    {
+        nUnconstrained += (c == 0);
+    }
+
+    if (nUnconstrained)
+    {
+        WarningInFunction
+            << nUnconstrained << " of " << regions.nRegions()
+            << " connected regions of mesh '" << mesh.name() << "' have no "
+            << "constrained activationTime cell or fixed-value boundary face"
+            << endl;
+    }
+}
+
+
+// Fills one field of the metric G = sqrt(Q), Q = g & (M & g), and of the
+// direction a = (M & g)/G, given w = M & g.
+//
+// Q is non-negative for positive-definite M. Evaluated in floating point
+// (the matrix-vector product w, then the inner product g & w) it differs from
+// the exact value by at most gamma_6 (|g| & (|M| & |g|)), with
+// gamma_k = k u/(1 - k u) and u the unit roundoff (Higham, Accuracy and
+// Stability of Numerical Algorithms, 2nd ed., Sec. 3.1 and 3.5). A negative Q
+// within that bound is rounding of a zero or vanishing Q and is set to zero;
+// a negative Q beyond it means M is not positive definite, and a non-finite Q
+// means g or M is not finite: both are fatal.
+//
+// a = w/G where Q > 0 and a = 0 where Q = 0, so a & g = G everywhere. For
+// symmetric positive-definite M, |a| = |M^1/2 (M^1/2 g)|/|M^1/2 g|
+// <= sqrt(lambda_max(M)).
+void evaluateMetric
+(
+    const vectorField& g,
+    const tensorField& M,
+    const vectorField& w,
+    scalarField& G,
+    vectorField& a,
+    const word& location,
+    const vectorField& centres
+)
+{
+    const scalar u = 0.5*std::numeric_limits<scalar>::epsilon();
+    const scalar gamma6 = 6*u/(1 - 6*u);
+
+    forAll(g, i)
+    {
+        scalar Q = g[i] & w[i];
+
+        if (!std::isfinite(Q))
+        {
+            FatalErrorInFunction
+                << "Non-finite grad(activationTime) & "
+                << "(M & grad(activationTime)) = " << Q << " at "
+                << location << " " << i << ", centre " << centres[i]
+                << ": grad(activationTime) = " << g[i] << ", M = " << M[i]
+                << exit(FatalError);
+        }
+
+        if (Q < 0)
+        {
+            const vector magG(cmptMag(g[i]));
+            const scalar bound = gamma6*(magG & (cmptMag(M[i]) & magG));
+
+            if (-Q > bound)
+            {
+                FatalErrorInFunction
+                    << "grad(activationTime) & (M & grad(activationTime)) = "
+                    << Q << " < -" << bound << " (rounding bound) at "
+                    << location << " " << i << ", centre " << centres[i]
+                    << ": M = " << M[i] << exit(FatalError);
+            }
+
+            Q = 0;
+        }
+
+        G[i] = Foam::sqrt(Q);
+        a[i] = (Q > 0 ? w[i]/G[i] : vector::zero);
+    }
+}
+
+
+void evaluateMetric
+(
+    const volVectorField& g,
+    const volTensorField& M,
+    const volVectorField& w,
+    volScalarField& G,
+    volVectorField& a
+)
+{
+    evaluateMetric
+    (
+        g.primitiveField(),
+        M.primitiveField(),
+        w.primitiveField(),
+        G.primitiveFieldRef(),
+        a.primitiveFieldRef(),
+        "cell",
+        g.mesh().C().primitiveField()
+    );
+
+    forAll(G.boundaryField(), patchI)
+    {
+        evaluateMetric
+        (
+            g.boundaryField()[patchI],
+            M.boundaryField()[patchI],
+            w.boundaryField()[patchI],
+            G.boundaryFieldRef()[patchI],
+            a.boundaryFieldRef()[patchI],
+            "face of patch " + G.mesh().boundary()[patchI].name(),
+            G.mesh().C().boundaryField()[patchI]
+        );
+    }
+}
+
 } // End anonymous namespace
 
 
@@ -286,21 +441,21 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     conductivity_(initialiseConductivity()),
     M_("M", conductivity_/(chi_*Cm_)),
     w_("w", M_ & gradActivationTime_),
-    G_
-    (
-        "G",
-        sqrt
-        (
-            max
-            (
-                gradActivationTime_ & w_,
-                dimensionedScalar("zero", dimTime, 0.0)
-            )
-          + dimensionedScalar("smallG", dimTime, SMALL)
-        )
-    ),
+    G_("G", sqrt(gradActivationTime_ & w_)),
     c0_("c0", electroProperties),
-    a_("a", w_/G_),
+    a_
+    (
+        IOobject
+        (
+            "a",
+            mesh().time().timeName(),
+            mesh(),
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh(),
+        dimensionedVector("a", w_.dimensions()/G_.dimensions(), Zero)
+    ),
     u_("u", c0_*a_),
     phiU_("phiU", (fvc::interpolate(u_) & mesh().Sf())),
     divPhiU_("divPhiU", fvc::div(phiU_)),
@@ -318,45 +473,7 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     ),
     verificationModelPtr_()
 {
-    const wordList wallTypes
-    (
-        conormalWallPatchTypes
-        (
-            mesh(),
-            electroProperties.get<word>("sealedWallTrace")
-        )
-    );
-    volScalarField::Boundary& activationBf = activationTime_.boundaryFieldRef();
-    boolList replaced(activationBf.size(), false);
-    forAll(activationBf, patchI)
-    {
-        if
-        (
-            isA<zeroGradientFvPatchScalarField>(activationBf[patchI])
-         && wallTypes[patchI] != activationBf[patchI].type()
-        )
-        {
-            activationBf.set
-            (
-                patchI,
-                fvPatchScalarField::New
-                (
-                    wallTypes[patchI],
-                    mesh().boundary()[patchI],
-                    activationTime_
-                )
-            );
-            replaced[patchI] = true;
-        }
-    }
-    setConormalWallConductivity(activationTime_, conductivity_.name(), word::null);
-    forAll(activationBf, patchI)
-    {
-        if (replaced[patchI])
-        {
-            activationBf[patchI].evaluate();
-        }
-    }
+    sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
     const boundBox bb
     (
@@ -525,10 +642,11 @@ void eikonalMyocardiumDomain::advance
         constrainedValues
     );
 
+    warnUnconstrainedRegions(activationTime_, constrainedCells);
+
     if (useGraphPrePopulation_) preInitialiseFromSeeds(constrainedCells, constrainedValues);
 
     const dimensionedScalar one("one", dimless, 1.0);
-    const dimensionedScalar smallG("smallG", dimTime, SMALL);
 
     tmp<volScalarField> tSmms;
     if (verificationModelPtr_.valid() && verificationModelPtr_->enabled())
@@ -560,14 +678,10 @@ void eikonalMyocardiumDomain::advance
     {
         gradActivationTime_ = fvc::grad(activationTime_);
         w_ = M_ & gradActivationTime_;
-        // Guard against negative dot product: M is positive-definite so
-        // dot(grad, M*grad) >= 0 analytically, but NaN/Inf from a stalled
-        // inner solve or degenerate mesh cells can violate this numerically.
-        G_ = sqrt(max(gradActivationTime_ & w_, dimensionedScalar("zero", dimTime, 0.0)) + smallG);
+        evaluateMetric(gradActivationTime_, M_, w_, G_, a_);
 
         if (eikonalAdvectionDiffusionApproach_)
         {
-            a_ = w_/G_;
             u_ = c0_*a_;
             phiU_ = (fvc::interpolate(u_) & mesh().Sf());
             divPhiU_ = fvc::div(phiU_);
@@ -584,18 +698,10 @@ void eikonalMyocardiumDomain::advance
                 )
               + fvm::div(phiU_, activationTime_)
               + fvm::SuSp(-divPhiU_, activationTime_)
-             == one
-              + fvc::div(phiU_, activationTime_)
-              - divPhiU_*activationTime_
-              - c0_*G_
-              + Smms
+             == one + Smms
             );
 
-            // Under-relax the nonlinear outer loop: G, phiU and divPhiU are
-            // lagged (recomputed from psi each outer iteration), so without
-            // relaxation the deferred-correction fixed point is not contractive
-            // and the outer residual drifts upwards.  relax() also boosts
-            // diagonal dominance, which stabilises the unpreconditioned solve.
+            // c0 |grad psi|_M = u & grad psi with u lagged; a bounded div scheme keeps the transport monotone
             activationEqn.relax();
             activationEqn.setValues(constrainedCells, constrainedValues);
             activationEqn.solve("asymmetric_" + activationTime_.name());

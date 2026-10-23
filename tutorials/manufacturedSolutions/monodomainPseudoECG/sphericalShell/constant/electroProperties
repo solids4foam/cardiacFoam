@@ -1,0 +1,96 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver monodomainSolver;
+
+monodomainSolverCoeffs
+{
+    conductivitySource field;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    ionicModel      monodomainFDAManufactured;
+    timeCouplingScheme godunov;
+    sealedHeartBoundary true;
+    outputVariables
+    {
+        ionic
+        {
+            export          ( u1 u2 u3 );
+            debug           ( V u1 u2 u3 Iion );
+        }
+    }
+    verificationModel
+    {
+        type    manufacturedShellMonodomainVerifier;
+        N       12;
+        #includeIfPresent "<case>/local/verification"
+    }
+    dimension    "3D";
+    solutionAlgorithm    implicit;
+    solver          RKF45;
+    maxSteps        1000000000;
+    externalStimulus
+    {
+        stimulusLocationMin ( 0 0 0.0055 );
+        stimulusLocationMax ( 0.0015 0.0015 0.007 );
+        stimulusDuration [ 0 0 1 0 0 0 0 ] 0;
+        stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
+        stimulusStartTime 0;
+    }
+
+    // Pseudo-ECG of the shell field, off unless Allrun -ecg writes "ecg yes;"
+    // to local/ecg. The reference integrates (G grad F).(x - e)/|x - e|^3
+    // over the shell with a spherical Gauss rule; electrodes lie outside the
+    // outer sphere |x| = 1.
+    ecg     no;
+    #includeIfPresent "<case>/local/ecg"
+    #ifeq $ecg yes
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver    pseudoECG;
+            verificationModel
+            {
+                type    manufacturedPseudoECGVerifier;
+                enabled    yes;
+                domain    shell;
+                dimension    "3D";
+                referenceQuadratureOrder    96;
+                checkQuadratureOrders    (6 12 24 48);
+                #includeIfPresent "<case>/local/ecgVerification"
+            }
+            electrodePositions
+            {
+                // Five directions, |e| = 1.2, 1.4, 1.6, 1.8, 2.0
+                E1    (0.4 -0.8 0.8);
+                E2    (0.6 1.2 0.4);
+                E3    (-0.96 0 -1.28);
+                E4    (-0.6 1.2 -1.2);
+                E5    (1.2 -0.96 -1.28);
+
+                // More electrodes: Allrun -electrodes <file> copies the file
+                // here ("name (x y z);" lines, |x| > 1)
+                #includeIfPresent "<case>/local/electrodes"
+            }
+        }
+    }
+    #endif
+}
+
+
+// ************************************************************************* //

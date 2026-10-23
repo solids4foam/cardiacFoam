@@ -20,7 +20,7 @@ License
 #include "myocardiumDomain.H"
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
-#include "conormalZeroFluxFvPatchScalarField.H"
+#include "sealedWallPolicy.H"
 
 namespace Foam
 {
@@ -56,6 +56,16 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
         supportMesh.cellZones()[zoneId],
         myocardiumExposedFacesPatch(supportMesh, electroProperties)
     );
+#if OPENFOAM < 2406
+    // OpenFOAM before 2406 copies the base fvSchemes and fvSolution onto the
+    // sub-mesh without parsing them, so read them for the scheme and solver
+    // lookups to resolve.
+    fvMesh& subMesh = subsetPtr->subMesh();
+    subMesh.fvSchemes::readOpt(IOobject::MUST_READ);
+    subMesh.fvSchemes::read();
+    subMesh.fvSolution::readOpt(IOobject::MUST_READ);
+    subMesh.fvSolution::read();
+#endif
     return subsetPtr;
 }
 
@@ -208,16 +218,12 @@ myocardiumDomain::myocardiumDomain
             "Vm",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -0.084),
-        conormalWallPatchTypes
-        (
-            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            electroProperties.get<word>("sealedWallTrace")
-        )
+        "zeroGradient"
     ),
     gradVm_
     (
@@ -226,7 +232,7 @@ myocardiumDomain::myocardiumDomain
             "grad(" + Vm_.name() + ")",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::NO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -239,7 +245,7 @@ myocardiumDomain::myocardiumDomain
             "externalStimulusCurrent",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -340,7 +346,7 @@ myocardiumDomain::myocardiumDomain
             "activationTime",
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
             resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            IOobject::READ_IF_PRESENT,
+            myocardiumFieldReadOption(meshSubsetPtr_.get()),
             IOobject::AUTO_WRITE
         ),
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
@@ -378,14 +384,18 @@ myocardiumDomain::myocardiumDomain
     ),
     setDeltaT_(true)
 {
-    setConormalWallConductivity
-    (
-        Vm_,
-        diffusionSolverPtr_->intracellularConductivityPtr()->name(),
-        diffusionSolverPtr_->phiEPtr()
-      ? diffusionSolverPtr_->phiEPtr()->name()
-      : word::null
-    );
+    sealedWallPolicy::publish(Vm_, diffusionSolverPtr_->sealedHeartBoundary());
+
+    if (meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh())
+    {
+        const labelUList& cellMap = meshSubsetPtr_->cellMap();
+
+        readMappedCellField(Vm_, supportMesh_, cellMap);
+        readMappedCellField(sourceField_, supportMesh_, cellMap);
+        readMappedCellField(activationTime_, supportMesh_, cellMap);
+
+        VmPrev_ = Vm_;
+    }
 
     if (timeCouplingScheme_ != "godunov" && timeCouplingScheme_ != "sbdf2")
     {
@@ -429,6 +439,7 @@ myocardiumDomain::myocardiumDomain
     {
         verificationModelPtr_->bindSourceField(sourceField_);
     }
+    diffusionSolverPtr_->bindVerifier(verificationModelPtr_);
 
     initialiseProcessing();
 }
@@ -765,10 +776,7 @@ void myocardiumDomain::solveDiffusionStep
 }
 
 
-// Called twice per step by the bath-PDE predictor/corrector (the outer
-// Vm(phiE^n) -> phiE^n+1 -> Vm(phiE^n+1) sweep owned by the advance scheme).
-// Each call here is only the inner, single-stage non-orthogonal reassembly
-// for that one Vm solve; it does not itself predict or correct anything.
+// One Vm solve per bath outer PIMPLE pass of the advance scheme.
 void myocardiumDomain::solveDiffusionStepOnce
 (
     scalar t0,
@@ -939,6 +947,12 @@ void myocardiumDomain::write()
         const labelUList& cellMap = meshSubsetPtr_->cellMap();
 
         writeMappedCellField(Vm_, supportMesh_, cellMap);
+
+        if (Vm_.nOldTimes())
+        {
+            writeMappedCellField(Vm_.oldTime(), supportMesh_, cellMap);
+        }
+
         writeMappedCellField(sourceField_, supportMesh_, cellMap);
         writeMappedCellField(implicitSourceCoeff_, supportMesh_, cellMap);
         writeMappedCellField(Iion_, supportMesh_, cellMap);

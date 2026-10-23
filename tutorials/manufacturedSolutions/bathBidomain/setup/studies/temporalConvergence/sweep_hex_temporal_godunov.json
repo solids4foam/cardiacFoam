@@ -1,37 +1,18 @@
 {
   "base": {
     "entry": "manufacturedBathBidomain",
-    "case_dir_name": "manufacturedSolutions/bathBidomain",
-    "setup_dir_name": "setup",
-    "solver_types": ["implicit"],
-    "piecewise_sweep": false,
-    "mesh_family": "hex",
-    "end_time": 0.02,
-    "run_in_parallel": true,
-    "ecg_enabled": false,
-    "bath_predictor_corrector": true,
-    "fda_bath_variant": "groundElectrode",
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/temporalConvergence/results/sweepCases"
+    "cases_root": "tutorials",
+    "parallel": true,
+    "numberCells": 640,
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "dimensions": [["1D"], ["1D"], ["1D"], ["1D"], ["2D"], ["2D"], ["2D"], ["2D"]],
-      "number_cells": [[640], [640], [640], [640], [640], [640], [640], [640]],
-      "dt_values": [[0.001121075], [0.000560538], [0.000280269], [0.0001401345], [0.001121075], [0.000560538], [0.000280269], [0.0001401345]]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": ["dimensions", "number_cells", "dt_values"]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": ["dimensions", "number_cells", "dt_values"]
-      }
-    ]
+      "dimension": ["1D", "1D", "1D", "1D", "2D", "2D", "2D", "2D"],
+      "system/controlDict:deltaT": [0.001121075, 0.000560538, 0.000280269, 0.0001401345, 0.001121075, 0.000560538, 0.000280269, 0.0001401345],
+      "caseId": ["1D_dt0.001121075", "1D_dt0.000560538", "1D_dt0.000280269", "1D_dt0.0001401345", "2D_dt0.001121075", "2D_dt0.000560538", "2D_dt0.000280269", "2D_dt0.0001401345"]
+    }
   }
 }

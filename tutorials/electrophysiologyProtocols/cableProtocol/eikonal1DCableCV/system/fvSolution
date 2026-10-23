@@ -28,23 +28,32 @@ solvers
     asymmetric_activationTime
     {
         solver          PBiCGStab;
-        preconditioner  none;
-        tolerance       1e-6;
-        relTol          0.001;
+        preconditioner  DILU;
+        tolerance       1e-11;
+        relTol          0;
         maxIter         1000;
     }
 }
 
 PIMPLE
 {
-    nOuterCorrectors    50;
+    nOuterCorrectors    2000;
+
+    residualControl
+    {
+        activationTime
+        {
+            relTol          0;
+            tolerance       1e-8;
+        }
+    }
 }
 
 relaxationFactors
 {
     equations
     {
-        activationTime    0.1;
+        "activationTime.*"    0.7;
     }
     fields
     {

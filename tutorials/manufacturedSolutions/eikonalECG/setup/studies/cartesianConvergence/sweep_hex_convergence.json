@@ -1,102 +1,15 @@
 {
   "base": {
     "entry": "manufacturedEikonalECG",
-    "case_dir_name": "manufacturedSolutions/eikonalECG",
-    "setup_dir_name": "setup",
-    "cases_root": "tutorials",
-    "postprocess_strict_artifacts": false,
-    "run_in_parallel": true,
-    "archive_dir_name": "setup/studies/cartesianConvergence/results/sweepCases"
+    "cases_root": "tutorials"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "dimensions": [
-        [
-          "1D"
-        ],
-        [
-          "1D"
-        ],
-        [
-          "1D"
-        ],
-        [
-          "1D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "2D"
-        ],
-        [
-          "3D"
-        ],
-        [
-          "3D"
-        ],
-        [
-          "3D"
-        ],
-        [
-          "3D"
-        ]
-      ],
-      "number_cells": [
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ],
-        [
-          10
-        ],
-        [
-          20
-        ],
-        [
-          40
-        ],
-        [
-          80
-        ]
-      ]
-    },
-    "dependent": [
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "dimensions",
-          "number_cells"
-        ]
-      }
-    ]
+      "dimension": ["1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D"],
+      "numberCells": [10, 10, 10, 20, 20, 20, 40, 40, 40, 80, 80, 80],
+      "parallel": [false, true, true, false, true, true, false, true, true, false, true, true],
+      "caseId": ["hex_1D_N10", "hex_2D_N10", "hex_3D_N10", "hex_1D_N20", "hex_2D_N20", "hex_3D_N20", "hex_1D_N40", "hex_2D_N40", "hex_3D_N40", "hex_1D_N80", "hex_2D_N80", "hex_3D_N80"]
+    }
   }
 }

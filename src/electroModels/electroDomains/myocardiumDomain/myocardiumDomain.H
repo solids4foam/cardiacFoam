@@ -215,6 +215,11 @@ public:
         return diffusionSolverPtr_->phiEPtr();
     }
 
+    virtual electroVerificationModel* verificationModel() const override
+    {
+        return verificationModelPtr_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return diffusionSolverPtr_->conductivityPtr();

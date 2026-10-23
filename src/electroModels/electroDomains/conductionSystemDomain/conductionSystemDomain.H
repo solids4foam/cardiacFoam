@@ -91,6 +91,10 @@ class conductionSystemDomain
     scalarField terminalCurrent_;
     scalarField terminalSource_;
 
+    //- Junction conductance per unit network volume at each terminal [S/m^3].
+    scalarField terminalJunctionCoeffs_;
+    scalarField terminalTissueVm_;
+
     //- Tissue activation times observed at the terminals this step (-1 = none).
     scalarField terminalActivationObservations_;
 
@@ -194,6 +198,31 @@ public:
         const scalarField& terminalSource
     ) override;
 
+    virtual void setTerminalConductances
+    (
+        const scalarField& conductance
+    ) override;
+
+    virtual void setTerminalTissueVm(const scalarField& tissueVm) override;
+
+    //- Purkinje fibre radius [m] from purkinjeFibreRadius; 20 um, the
+    //  order of a Purkinje cell's radius, when absent.
+    scalar purkinjeFibreRadius() const;
+
+    //- Network volume behind each terminal [m^3]: pi*purkinjeFibreRadius^2
+    //  times the node's control length.
+    scalarField terminalVolumes() const;
+
+    const scalarField& terminalJunctionCoeffs() const
+    {
+        return terminalJunctionCoeffs_;
+    }
+
+    const scalarField& terminalTissueVm() const
+    {
+        return terminalTissueVm_;
+    }
+
     virtual const scalarField* terminalResistances() const override
     {
         if (graph_.pvjResistances.empty())
@@ -264,6 +293,12 @@ public:
     scalar chi() const
     {
         return chi_;
+    }
+
+    //- purkinjeGraphModelCoeffs as the case gives them.
+    const dictionary& coeffsDict() const
+    {
+        return coeffsDict_;
     }
 
     scalar Cm() const

@@ -57,10 +57,8 @@ epicardium — the opposite of this mesh's `tm` convention.
 `ionicHeterogeneity` reads `field t;` with `regions` tiling `[0,1]` at the
 standard thresholds `endocardialCells { range (0 0.3); }` / `mCells
 { range (0.3 0.7); }` / `epicardialCells { range (0.7 1); }` and a smooth
-`transitionWidth 0.1;`/`transitionMode blend;` (all three variants — a hard
-cutoff destabilizes `eikonal`'s gradient-dependent advection term, and the
-smooth transition is the more physiologically realistic choice for
-`monodomain`/`hybrid` anyway).
+`transitionWidth 0.1;`/`transitionMode blend;` (all three variants; the
+smooth transition is the more physiologically realistic choice).
 
 `monodomain`'s and `hybrid`'s `ionicHeterogeneity` additionally compose a `gradientAxes.apicobasal`
 axis for an apex-to-base APD gradient: `apicobasal` is used directly
@@ -106,7 +104,7 @@ reads it via `graphFile purkinjeGraph;`, root node 0.
 All three variants conduct along the tree at ~3.3 m/s: `hybrid`'s
 `restitutionEikonalSolver1D` at its calibrated restitution maximum (3.33
 m/s), `eikonal`'s `eikonalSolver1D` via `purkinjeCV 3.33`, and
-`monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` (measured
+`monodomain`'s `monodomain1DSolver` via `purkinjeConductivity 0.4` S/m (measured
 3.16 m/s at 0.35, 5.8 m/s at 1.5 and ~8.7 m/s at 10.0).
 
 Two trees are available, chosen by `Allrun`'s `human`/`pig` argument and
@@ -156,20 +154,34 @@ All three variants share the same positions.
 ## The `eikonal` variant's numerical stability
 
 `eikonal`'s 3D solve (`eikonalMyocardiumDomain`,
-`eikonalAdvectionDiffusionApproach true`) is a deferred-correction
-nonlinear scheme, only marginally stable — it needs both of:
+`eikonalAdvectionDiffusionApproach true`) writes the metric term as a
+convection term, $c_0|\nabla\psi|_M = \mathbf u\cdot\nabla\psi$ with
+$\mathbf u = c_0 M\nabla\psi/|\nabla\psi|_M$, and solves it with a bounded
+reconstruction (`system/fvSchemes`: `div(phiU,activationTime) Gauss
+linearUpwind limitedGrad`, `limitedGrad cellMDLimited leastSquares 1`).
+`grad(activationTime)` sets the direction of $\mathbf u$ and is the
+activation gradient of the eikonal ECG.
 
-- `system/fvSolution`'s `PIMPLE.nOuterCorrectors` at **50**, not higher.
-  Counter-intuitively, more outer iterations make it *worse*: the scheme's
-  fixed point isn't strictly contractive, so the error compounds rather
-  than converging (measured directly: 1000 iterations diverged to
-  `~1e12`, 5000 iterations to `~1e96`; 50 iterations is clean).
-- The smooth `transitionWidth 0.1`/`transitionMode blend` heterogeneity
-  above, not a hard cutoff — a discontinuity there destabilizes the
-  gradient-dependent advection velocity the scheme builds from
-  `grad(activationTime)`.
-- `system/fvSchemes`'s `grad(activationTime)` overridden to `Gauss
-  linear` (not the shared `leastSquares` default `monodomain` needs).
+The outer loop runs until the initial residual of `activationTime` is below
+1e-5 (`system/fvSolution`, relaxation 0.7 on every outer iteration). This
+mesh at `c0 29.7` sits at the Péclet threshold described below: the residual
+levels off near 5e-6 on four ranks (below 1e-6 in serial), with the same
+activation field, so the tolerance is set above that level.
+
+The cell Péclet number $Pe_h = h\,v/m$ (cell size over the diffusion length
+$m/v$, with $m$ the metric component and $v$ the conduction speed across the
+fibre) sets how far the residual falls. Above $Pe_h \approx 9$–13, that is
+for $c_0 h \gtrsim 75$–110 mm s$^{-1/2}$ with this case's conductivities,
+the field stays bounded and stops changing but the residual stalls at a
+plateau (about 5e-5 at `c0 60` on this mesh). On such meshes set the
+`activationTime` tolerance above the plateau.
+
+`c0 29.7` gives 0.56 m/s along the fibre and 0.25 m/s across
+($c_0\sqrt{\sigma/(\chi C_m)}$), within measured human ventricular values.
+
+The Purkinje junction radius (`pvjRadius`) seeds a ball of activation, and
+the curvature of the front leaving it delays activation, so the radius acts
+as the junction delay. Keep it fixed when comparing meshes.
 
 ## Execution
 
@@ -181,7 +193,7 @@ nonlinear scheme, only marginally stable — it needs both of:
 ./Allrun hybrid pig   # any variant on the pig Purkinje tree
 ```
 
-`python3 plot_pseudo_ecg.py --case-dir . --monodomain` (`--eikonal` for the
+`python3 setup/plot_pseudo_ecg.py --case-dir . --monodomain` (`--eikonal` for the
 `eikonal` variant) plots the pseudo-ECG of a finished run.
 
 The regression runs `monodomain` on the human tree by default; with
@@ -189,9 +201,9 @@ The regression runs `monodomain` on the human tree by default; with
 (`regression/injection.<variant>.reference` for human,
 `injection.<variant>.pig.reference` for pig).
 
-`constant/electroProperties` and `system/controlDict` are symlinks to
+`constant/electroProperties` is a symlink to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
-`controlDict` differs per variant but all share `endTime 0.04`: the
+`system/controlDict` is shared by the variants (`endTime 0.04`): the
 regression probe activates at 28.9 ms (`monodomain`) and 30.1 ms (`hybrid`)
 on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per

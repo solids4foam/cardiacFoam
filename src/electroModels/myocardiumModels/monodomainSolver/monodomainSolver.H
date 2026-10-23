@@ -63,6 +63,11 @@ public:
         const dictionary& electroProperties
     );
 
+    virtual bool sealedHeartBoundary() const override
+    {
+        return sealedHeartBoundary_;
+    }
+
     virtual const volTensorField* conductivityPtr() const override
     {
         return &conductivity_;

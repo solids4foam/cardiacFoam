@@ -160,6 +160,12 @@ public:
             << exit(FatalError);
     }
 
+    //- Verification model of this domain, or nullptr.
+    virtual electroVerificationModel* verificationModel() const
+    {
+        return nullptr;
+    }
+
     virtual scalar suggestExplicitDeltaT(scalar maxCo) const = 0;
 
     virtual bool shouldPostProcess() const = 0;

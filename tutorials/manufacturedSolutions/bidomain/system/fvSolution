@@ -31,21 +31,15 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+
+        #includeIfPresent "<case>/local/phiTolerance"
     }
 }
 
 PIMPLE
 {
-    nOuterCorrectors     2;
-
-    // residualControl
-    // {
-    //     Vm
-    //     {
-    //         relTol          0.0;
-    //         tolerance       1e-10;
-    //     }
-    // }
+    nOuterCorrectors         2;
+    nNonOrthogonalCorrectors 0;
 }
 
 

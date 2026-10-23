@@ -96,30 +96,15 @@ The decomposition is defined in `system/decomposeParDict`.
 To extract CV from a manual run, call `python3 setup/extract_cv.py` separately.
 The script is under `setup/` for post-processing workflows.
 
-## Driver convergence entry
+## omnidriver entry
 
-This folder does not currently have a dedicated registered driver entry. The
-similarly named `cable1DCVConvergence` entry is registered, but the current
-registry resolves it to the *monodomain* cable case, not this eikonal folder:
+This case is the `cable1DEikonalCV` record; its `dx` axis (metres) rewrites the
+block mesh:
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam --repo . plan --strict \
+    --entry cable1DEikonalCV --scratch-dir <scratch>
 ```
-
-Use `Allrun` above for this eikonal case until a dedicated driver factory is
-added.
-
-The default sweep config is stored in:
-
-```text
-setup/driver_config.json
-```
-
-That workflow mutates `blockMeshDict`, `controlDict`, and `electroProperties`
-per sweep case, runs in parallel by default, exports one CV summary per case,
-and then writes per-ionic-model convergence CSVs plus convergence plots under
-model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
-`outputsCVConvergence/TWorld/`.
 
 ## Main calibration knob
 
@@ -142,7 +127,10 @@ so keep those fixed while calibrating conductivity.
 - field writes in time directories (`Vm`, `activationTime`, ...)
 - probe traces in `postProcessing/cableProbes/`
 - CV summary in `postProcessing/cv_summary.txt`
-- sweep artifacts grouped by ionic model inside `outputsCVConvergence/<ionicModel>/`
+- `setup/table_summary.py` walks a sweep's own `<output_dir>/cases/case_NNNN/
+  postProcessing/*_cv_summary.json` (one per case) and writes
+  `cable1DCVConvergence_summary.csv`/`.html` plus dx/dt convergence plots at
+  the sweep's own output_dir
 
 ## Typical use
 

@@ -20,8 +20,15 @@ License
 #include "extracellularPotentialDomain.H"
 #include "extracellularFaceConductivity.H"
 #include "myocardiumDomainInterface.H"
+#include "electroVerificationModel.H"
+#include "insulatedFaceConductivity.H"
+#include "sealedWallPolicy.H"
+#include "compatibilityProjection.H"
+#include "exposedPhiETrace.H"
+#include "interfaceGradient.H"
 #include "addToRunTimeSelectionTable.H"
 #include "PstreamReduceOps.H"
+#include "OStringStream.H"
 #include "dimVoltage.H"
 #include "fixedGradientFvPatchFields.H"
 #include "fixedValueFvPatchFields.H"
@@ -205,18 +212,25 @@ extracellularPotentialDomain::extracellularPotentialDomain
     nNonOrthogonalCorrectors_
     (
         resolveNonOrthogonalCorrectors(baseMesh)
-    )
+    ),
+    sealedHeartBoundary_
+    (
+        dict.parent().get<Switch>("sealedHeartBoundary")
+    ),
+    manufacturedEvaluationTime_(baseMesh.time().value())
 {
     if
     (
         interfaceConductivityInterpolation_ != "unweightedHarmonic"
      && interfaceConductivityInterpolation_ != "distanceWeightedHarmonic"
+     && interfaceConductivityInterpolation_ != "conormalHarmonic"
     )
     {
         FatalErrorInFunction
             << "Unknown interfaceConductivityInterpolation '"
             << interfaceConductivityInterpolation_ << "'. Valid values are "
-            << "unweightedHarmonic and distanceWeightedHarmonic."
+            << "unweightedHarmonic, distanceWeightedHarmonic and "
+            << "conormalHarmonic."
             << exit(FatalError);
     }
     if (const dictionary* currentDict = dict.findDict("surfaceCurrentPatches"))
@@ -252,7 +266,42 @@ extracellularPotentialDomain::extracellularPotentialDomain
             potentialPatchTypes(baseMesh_, dict)
         )
     );
+    {
+        const wordList expectedTypes(potentialPatchTypes(baseMesh_, dict));
+        const auto& bf = phiEPtr_().boundaryField();
+        OStringStream mismatches;
+        label nMismatched = 0;
+
+        forAll(bf, patchI)
+        {
+            const polyPatch& pp = baseMesh_.boundaryMesh()[patchI];
+            if (polyPatch::constraintType(pp.type()))
+            {
+                continue;
+            }
+            if (bf[patchI].type() != expectedTypes[patchI])
+            {
+                mismatches
+                    << ' ' << pp.name() << " (" << bf[patchI].type()
+                    << ", expected " << expectedTypes[patchI] << ')';
+                ++nMismatched;
+            }
+        }
+
+        if (nMismatched)
+        {
+            FatalErrorInFunction
+                << "The global phiE patch types differ from those set by "
+                << "groundPatches, surfaceCurrentPatches and the zeroGradient "
+                << "default:" << mismatches.str().c_str()
+                << ". A phiE file in the start time directory sets them; "
+                << "remove it or give these patches the expected types."
+                << exit(FatalError);
+        }
+    }
+
     applyGroundPatchValues(phiEPtr_(), dict);
+    sealedWallPolicy::publish(phiEPtr_(), false);
 
     {
         const auto& bf = phiEPtr_().boundaryField();
@@ -324,6 +373,70 @@ extracellularPotentialDomain::extracellularPotentialDomain
             "zeroGradient"
         )
     );
+
+    if (const electroVerificationModel* model = verifier())
+    {
+        if
+        (
+            hasDirichletPatch_
+         && model->requiresPhiECompatibilityProjection()
+        )
+        {
+            WarningInFunction
+                << "The phiE compatibility projection is ignored because a "
+                << "fixedValue patch determines the constant."
+                << endl;
+        }
+
+        if (model->requiresInterfaceFluxDiagnostic())
+        {
+            if (!baseMesh_.fluxRequired(phiEPtr_().name()))
+            {
+                FatalErrorInFunction
+                    << "The interface-flux diagnostic needs phiE in the "
+                    << "fluxRequired sub-dictionary of fvSchemes."
+                    << exit(FatalError);
+            }
+
+            interfaceFluxPtr_.reset
+            (
+                new surfaceScalarField
+                (
+                    IOobject
+                    (
+                        "phiEInterfaceFlux",
+                        baseMesh_.time().timeName(),
+                        baseMesh_,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
+                    baseMesh_,
+                    dimensionedScalar(dimCurrent, Zero)
+                )
+            );
+            interfaceFluxPtr_().setOriented();
+
+            interfaceGradientPtr_.reset
+            (
+                new volVectorField
+                (
+                    IOobject
+                    (
+                        "phiEInterfaceGradient",
+                        baseMesh_.time().timeName(),
+                        baseMesh_,
+                        IOobject::NO_READ,
+                        IOobject::NO_WRITE
+                    ),
+                    baseMesh_,
+                    dimensionedVector
+                    (
+                        phiEPtr_().dimensions()/dimLength, Zero
+                    )
+                )
+            );
+        }
+    }
 
     buildHeartScatterMap();
     assembleConductivities();
@@ -473,7 +586,11 @@ void extracellularPotentialDomain::assembleConductivities()
         IOobject
         (
             bathConductivityFieldName_,
-            baseMesh_.time().timeName(),
+            baseMesh_.time().findInstance
+            (
+                baseMesh_.dbDir(),
+                bathConductivityFieldName_
+            ),
             baseMesh_,
             IOobject::MUST_READ,
             IOobject::NO_WRITE
@@ -613,6 +730,17 @@ void extracellularPotentialDomain::buildSigmaExtracellularSurface()
                 ownSigmaE, neiSigmaE
             );
         }
+        else if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+        {
+            SefI[faceI] = extracellularFaceConductivity::conormalHarmonic
+            (
+                ownSigmaE,
+                neiSigmaE,
+                m.Sf()[faceI]/m.magSf()[faceI],
+                1.0 - weights[faceI],
+                weights[faceI]
+            );
+        }
         else
         {
             SefI[faceI] =
@@ -650,6 +778,7 @@ void extracellularPotentialDomain::buildSigmaExtracellularSurface()
             Field<tensor>& Sefp = Sef.boundaryFieldRef()[patchI];
             const scalarField& patchWeights =
                 m.weights().boundaryField()[patchI];
+            const vectorField patchNf(m.boundary()[patchI].nf());
 
             forAll(Sefp, faceI)
             {
@@ -678,6 +807,22 @@ void extracellularPotentialDomain::buildSigmaExtracellularSurface()
                         extracellularFaceConductivity::unweightedHarmonic
                         (
                             pSigmaE, nSigmaE
+                        );
+                }
+                else if
+                (
+                    interfaceConductivityInterpolation_
+                 == "conormalHarmonic"
+                )
+                {
+                    Sefp[faceI] =
+                        extracellularFaceConductivity::conormalHarmonic
+                        (
+                            pSigmaE,
+                            nSigmaE,
+                            patchNf[faceI],
+                            1.0 - patchWeights[faceI],
+                            patchWeights[faceI]
                         );
                 }
                 else
@@ -755,6 +900,72 @@ void extracellularPotentialDomain::scatterHeartVm()
     VmGlobalPtr_().correctBoundaryConditions();
 }
 
+const electroVerificationModel* extracellularPotentialDomain::verifier() const
+{
+    return heartDomain_.verificationModel();
+}
+
+
+void extracellularPotentialDomain::storeInterfaceFlux
+(
+    const surfaceScalarField& F
+)
+{
+    surfaceScalarField& flux = interfaceFluxPtr_();
+    flux = dimensionedScalar(flux.dimensions(), Zero);
+
+    const volTensorField& sigmaI = sigmaIglobalPtr_();
+    const labelUList& owner = baseMesh_.owner();
+    const labelUList& neighbour = baseMesh_.neighbour();
+    auto isHeart = [](const tensor& g) { return magSqr(g) > SMALL; };
+
+    forAll(owner, faceI)
+    {
+        if
+        (
+            isHeart(sigmaI[owner[faceI]])
+         != isHeart(sigmaI[neighbour[faceI]])
+        )
+        {
+            flux[faceI] = F[faceI];
+        }
+    }
+
+    forAll(flux.boundaryField(), patchI)
+    {
+        if (!baseMesh_.boundary()[patchI].coupled())
+        {
+            continue;
+        }
+
+        const tensorField sigmaIP
+        (
+            sigmaI.boundaryField()[patchI].patchInternalField()
+        );
+        const tensorField sigmaIN
+        (
+            sigmaI.boundaryField()[patchI].patchNeighbourField()
+        );
+        const scalarField& Fp = F.boundaryField()[patchI];
+        scalarField& pFlux = flux.boundaryFieldRef()[patchI];
+
+        forAll(pFlux, faceI)
+        {
+            if (isHeart(sigmaIP[faceI]) != isHeart(sigmaIN[faceI]))
+            {
+                pFlux[faceI] = Fp[faceI];
+            }
+        }
+    }
+}
+
+
+void extracellularPotentialDomain::prepareTimeStep(scalar t0, scalar dt)
+{
+    manufacturedEvaluationTime_ = t0 + dt;
+}
+
+
 void extracellularPotentialDomain::solvePhiEOnce()
 {
     forAll(surfaceCurrentPatchNames_, patchI)
@@ -827,15 +1038,20 @@ void extracellularPotentialDomain::solvePhiEOnce()
             << exit(FatalError);
     }
 
-    scalarField& heartPhiEI = heartPhiEPtr->primitiveFieldRef();
-    const scalarField& globalPhiEI = phiEPtr_().primitiveField();
-    forAll(heartCellToBaseCell_, heartCellI)
-    {
-        heartPhiEI[heartCellI] = globalPhiEI[heartCellToBaseCell_[heartCellI]];
-    }
-    heartPhiEPtr->correctBoundaryConditions();
+    setExposedPhiETrace
+    (
+        *heartPhiEPtr, phiEPtr_(), heartCellToBaseCell_,
+        *heartDomain_.subsetFaceMapPtr(),
+        *heartDomain_.extracellularConductivityPtr(),
+        sigmaTotalPtr_()
+    );
 
-    tmp<volScalarField> tHeartRhs = -fvc::laplacian(*GiPtr, *VmPtr);
+    tmp<volScalarField> tHeartRhs =
+        -fvc::laplacian
+        (
+            insulatedFaceConductivity(*GiPtr, *VmPtr, sealedHeartBoundary_),
+            *VmPtr
+        );
     const volScalarField& heartRhs = tHeartRhs();
 
     volScalarField rhsGlobal
@@ -864,16 +1080,86 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     rhsGlobal.correctBoundaryConditions();
 
-    fvScalarMatrix phiEqn
-    (
-        fvm::laplacian(sigmaExtracellularfPtr_(), phiEPtr_())
-     == rhsGlobal
-    );
+    if (const electroVerificationModel* model = verifier())
+    {
+        model->addManufacturedPhiESource
+        (
+            rhsGlobal,
+            manufacturedEvaluationTime_
+        );
+    }
+
+    const bool storeFlux =
+        verifier() && verifier()->requiresInterfaceFluxDiagnostic();
+    tmp<surfaceScalarField> tCrossFlux;
+
+    tmp<fvScalarMatrix> tphiEqn;
+    if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+    {
+        const surfaceTensorField& Sef = sigmaExtracellularfPtr_();
+        const surfaceVectorField& Sf = baseMesh_.Sf();
+        const surfaceScalarField gammaNN
+        (
+            (Sf & Sef & Sf)/sqr(baseMesh_.magSf())
+        );
+        const surfaceVectorField SfGammaCorr((Sf & Sef) - gammaNN*Sf);
+        const volTensorField sigmaE(sigmaTotalPtr_() - sigmaIglobalPtr_());
+        tmp<volVectorField> tgrad(fvc::grad(phiEPtr_()));
+        for (label iter = 0; iter < 2; ++iter)
+        {
+            tgrad = interfaceGradient
+            (
+                phiEPtr_(), sigmaE, sigmaIglobalPtr_(), tgrad()
+            );
+        }
+        tphiEqn =
+        (
+            fvm::laplacian(gammaNN, phiEPtr_())
+          + fvc::div(SfGammaCorr & linearInterpolate(tgrad()))
+         == rhsGlobal
+        );
+
+        // Non-orthogonal correction of fvm::laplacian rebuilt from the jump-aware gradient
+        const surfaceScalarField nonOrthGradCorr
+        (
+            gammaNN*baseMesh_.magSf()
+           *(
+                baseMesh_.nonOrthCorrectionVectors()
+              & linearInterpolate(tgrad() - fvc::grad(phiEPtr_()))
+            )
+        );
+        tphiEqn.ref() += fvc::div(nonOrthGradCorr);
+
+        if (storeFlux)
+        {
+            tCrossFlux = SfGammaCorr & linearInterpolate(tgrad());
+            tCrossFlux.ref() += nonOrthGradCorr;
+            interfaceGradientPtr_() = tgrad();
+        }
+    }
+    else
+    {
+        tphiEqn =
+        (
+            fvm::laplacian(sigmaExtracellularfPtr_(), phiEPtr_())
+         == rhsGlobal
+        );
+
+        if (storeFlux)
+        {
+            interfaceGradientPtr_() = fvc::grad(phiEPtr_());
+        }
+    }
+    fvScalarMatrix& phiEqn = tphiEqn.ref();
 
     {
         fvScalarMatrix heartPhiEqn
         (
-            fvm::laplacian(*GiPtr, *heartPhiEPtr)
+            fvm::laplacian
+            (
+                insulatedFaceConductivity(*GiPtr, *VmPtr, sealedHeartBoundary_),
+                *heartPhiEPtr
+            )
         );
         const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
         if (!heartFaceMapPtr)
@@ -939,6 +1225,16 @@ void extracellularPotentialDomain::solvePhiEOnce()
         }
     }
 
+    if
+    (
+        !hasDirichletPatch_
+     && verifier()
+     && verifier()->requiresPhiECompatibilityProjection()
+    )
+    {
+        projectCompatibility(phiEqn);
+    }
+
     // Only pin a reference cell when the BC inventory leaves the system
     // singular (pure Neumann). When any phiE patch is fixedValue the
     // Dirichlet patch already determines the constant; an extra pin would
@@ -955,6 +1251,16 @@ void extracellularPotentialDomain::solvePhiEOnce()
     }
 
     solve(phiEqn);
+
+    if (storeFlux)
+    {
+        tmp<surfaceScalarField> tF(phiEqn.flux());
+        if (tCrossFlux)
+        {
+            tF.ref() += tCrossFlux();
+        }
+        storeInterfaceFlux(tF());
+    }
 }
 
 

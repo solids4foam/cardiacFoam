@@ -11,7 +11,7 @@ in the tissue.
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/rotorInstability/
+tutorials/electrophysiologyProtocols/rotorInstability/
 ├── constant/
 │   ├── electroProperties
 │   └── polyMesh/ (generated)

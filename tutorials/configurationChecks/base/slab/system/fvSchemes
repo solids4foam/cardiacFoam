@@ -21,12 +21,13 @@ ddtSchemes
 gradSchemes
 {
     default         leastSquares;
+    limitedGrad     cellMDLimited leastSquares 1;
 }
 
 divSchemes
 {
     default         none;
-    div(phiU,activationTime)    Gauss linear;
+    div(phiU,activationTime)    Gauss linearUpwind limitedGrad;
     div((conductivityIntracellular&grad(Vm)))   Gauss linear;
     div((conductivityIntracellular&grad(phiE))) Gauss linear;
 }

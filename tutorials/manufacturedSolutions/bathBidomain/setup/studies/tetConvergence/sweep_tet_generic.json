@@ -1,55 +1,16 @@
 {
   "base": {
     "entry": "manufacturedBathBidomain",
-    "case_dir_name": "manufacturedSolutions/bathBidomain",
-    "setup_dir_name": "setup",
-    "dimensions": [
-      "3D"
-    ],
-    "solver_types": [
-      "implicit"
-    ],
-    "piecewise_sweep": true,
-    "mesh_family": "tet",
-    "numerics_profile": "bath_bidomain_tet",
-    "end_time": 0.02,
-    "run_in_parallel": true,
-    "ecg_enabled": false,
-    "bath_predictor_corrector": true,
-    "postprocess_strict_artifacts": false,
-    "archive_dir_name": "setup/studies/tetConvergence/results/sweepCases"
+    "cases_root": "tutorials",
+    "parallel": true,
+    "mesh": "tet"
   },
   "sweep": {
     "mode": "zip",
     "independent": {
-      "number_cells": [
-        [
-          80
-        ]
-      ],
-      "dt_values": [
-        [
-          0.000140135
-        ]
-      ]
-    },
-    "dependent": [
-      {
-        "name": "caseId",
-        "derive": "case_id_template",
-        "of": [
-          "number_cells",
-          "dt_values"
-        ]
-      },
-      {
-        "name": "output_dir_name",
-        "derive": "output_dir_name_template",
-        "of": [
-          "number_cells",
-          "dt_values"
-        ]
-      }
-    ]
+      "tetNumberCells": [10, 20, 40, 80],
+      "system/controlDict:deltaT": [0.00892857, 0.00224215, 0.000560538, 0.000140174],
+      "caseId": ["predictor_tet_N10", "predictor_tet_N20", "predictor_tet_N40", "predictor_tet_N80"]
+    }
   }
 }

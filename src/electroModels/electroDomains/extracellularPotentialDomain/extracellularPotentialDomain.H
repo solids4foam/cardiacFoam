@@ -31,6 +31,7 @@ Author
 
 #include "volFields.H"
 #include "surfaceFields.H"
+#include "fvMatricesFwd.H"
 #include "fvMesh.H"
 #include "fvMeshSubset.H"
 #include "dictionary.H"
@@ -98,6 +99,16 @@ class extracellularPotentialDomain
     //  PIMPLE/nNonOrthogonalCorrectors and used consistently for phiE and Vm.
     //  Zero means one equation solve.
     label nNonOrthogonalCorrectors_;
+    Switch sealedHeartBoundary_;
+
+    //- Time at which manufactured data are evaluated
+    scalar manufacturedEvaluationTime_;
+
+    //- Face flux of the phiE equation on heart-bath faces (A, along Sf, extracellular part)
+    autoPtr<surfaceScalarField> interfaceFluxPtr_;
+
+    //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
+    autoPtr<volVectorField> interfaceGradientPtr_;
 
     // Build the heart-cell -> base-cell map from the heart subset.
     void buildHeartScatterMap();
@@ -115,6 +126,12 @@ class extracellularPotentialDomain
     //- Assemble and solve the global phiE equation once.
     void solvePhiEOnce();
 
+    //- Verification model bound to the heart domain, or nullptr.
+    const electroVerificationModel* verifier() const;
+
+    //- Copy the heart-bath face values of F into phiEInterfaceFlux.
+    void storeInterfaceFlux(const surfaceScalarField& F);
+
 public:
 
     OverrideTypeName("extracellularPotentialDomain");
@@ -131,6 +148,7 @@ public:
     // electroDomainInterface
     virtual const Time& time() const override { return baseMesh_.time(); }
     virtual void advance(scalar t0, scalar dt) override;
+    virtual void prepareTimeStep(scalar t0, scalar dt) override;
     virtual void write() override;
 
     // electroStateProvider — exposes the global phiE.

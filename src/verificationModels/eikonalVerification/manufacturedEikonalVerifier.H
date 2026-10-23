@@ -22,7 +22,7 @@ Description
     Manufactured planar-wave verifier for eikonal activation time.
 
 Author
-    Simao Nieto de Castro. All rights reserved.
+    Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
 #ifndef manufacturedEikonalVerifier_H

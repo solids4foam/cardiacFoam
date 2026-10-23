@@ -1,17 +1,52 @@
 # tetTemporalControl - bidomain
 
-## Purpose
+The [tetConvergence](../tetConvergence/README.md) ladder refines the time
+step with the mesh (`dt ~ h^2`) under first-order `godunov` coupling, so its
+slopes are space-time slopes. This control keeps the mesh and halves the time
+step at the two finest levels; a change much smaller than the change between
+successive levels shows that the tetrahedral errors are spatial.
 
-The primary generic-Delaunay `sbdf2` ladders use `dt ~ h^2`. This four-case
-control holds mesh, field equations, gradient reconstruction, linear and ODE
-controls, and end time fixed while halving `dt` at `N=40` and `N=80` for both
-gradient reconstructions. It tests whether the observed tet field separation is
-spatially dominated over the accepted levels.
+## Ladder
+
+| N | dt | dt/2 |
+|---|---|---|
+| 40 | 0.000560538 | 0.000280269 |
+| 80 | 0.000140174 | 7.0087e-05 |
+
+for both gradient reconstructions, with the other settings of
+tetConvergence.
 
 ## Execution
 
-Spec: `tutorials/manufacturedSolutions/bidomain/setup/studies/tetTemporalControl/sweep_tet_dt_half.json`.
+Each run is a copy of the case in `results/` (ignored by git), named
+`<gradient>_tet_N<n>_dt<dt>`, the names that `../summarize.py` reads. From
+this folder:
 
 ```bash
-[omnidriver command to run]
+mkdir -p results
+for spec in "40 0.000560538 0.000280269" "80 0.000140174 7.0087e-05"
+do
+    set -- $spec; n=$1
+    for dt in $2 $3
+    do
+        for g in leastSquares GaussLinear
+        do
+            r=results/${g}_tet_N${n}_dt$dt
+            rsync -a --exclude setup ../../../ $r/
+            $r/Allrun parallel -mesh tet -gradient $g -N $n -dt $dt
+        done
+    done
+done
+python3 ../summarize.py results
 ```
+
+The omnidriver spec for this study is `sweep_tet_dt_half.json`.
+
+## Measured behaviour
+
+No results yet.
+
+## Outputs
+
+Run copies, meshes and results stay outside the repository (`results/` is
+ignored).

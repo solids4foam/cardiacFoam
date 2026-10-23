@@ -47,9 +47,9 @@ solvers
     asymmetric_activationTime
     {
         solver          PBiCGStab;
-        preconditioner  none;
-        tolerance       1e-6;
-        relTol          0.001;
+        preconditioner  DILU;
+        tolerance       1e-9;
+        relTol          0.01;
         maxIter         1000;
     }
 }
@@ -57,7 +57,7 @@ solvers
 // PIMPLE settings for eikonalElectroActivationFoam
 PIMPLE
 {
-    nOuterCorrectors    50;
+    nOuterCorrectors    2000;
 
     residualControl
     {
@@ -65,6 +65,11 @@ PIMPLE
         {
             relTol          0.0;
             tolerance       1e-6;
+        }
+        activationTime
+        {
+            relTol          0.0;
+            tolerance       1e-5;
         }
     }
 }
@@ -74,7 +79,7 @@ relaxationFactors
     equations
     {
         psi             0.9;
-        activationTime  0.3;
+        "activationTime.*"  0.7;
     }
     fields
     {

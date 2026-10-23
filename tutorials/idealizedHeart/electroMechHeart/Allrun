@@ -42,6 +42,7 @@ parallelRun=false
 for arg in "$@"; do
     case "$arg" in
         parallel) parallelRun=true ;;
+        *) echo "Unknown argument '$arg'. Use parallel." ; exit 1 ;;
     esac
 done
 

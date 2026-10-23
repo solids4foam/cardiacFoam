@@ -1,15 +1,23 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
-# final <file> <column> <expected> <tolerance>; probe <file> <time> <column> <expected> <tolerance>
-# (mesh: 20^3 = 8000 cells — set in system/blockMeshDict.3D)
-error  activationTime                 L1    0.000646791     1.2e-04
-error  activationTime                 L2    0.000899515     1.6e-04
-error  activationTime                 Linf  0.00321518      1e-03
-final  postProcessing/eikonalECG.dat  E1    -0.00370689608  5e-05
-final  postProcessing/eikonalECG.dat  E2    0.000187342736  5e-05
-final  postProcessing/eikonalECG.dat  E3    -0.00423693123  5e-05
-final  postProcessing/eikonalECG.dat  E4    0.00130822873   5e-05
-final  postProcessing/eikonalECG.dat  E5    -0.000353351363 5e-05
-probe  postProcessing/eikonalECG.dat  0.5   E1              0.00370689608   5e-05
-probe  postProcessing/eikonalECG.dat  0.5   E3              0.00423693123   5e-05
-probe  postProcessing/eikonalECG.dat  1.5   E4              -0.00130822873  5e-05
+# probe <file> <time> <column> <expected> <tolerance>
+summary  cells  8000  0
+error    activationTime                   L1    0.000415519    4.2e-09
+error    activationTime                   L2    0.0007325      7.3e-09
+error    activationTime                   Linf  0.00413436     4.1e-08
+error    activationTime_bulk              L2    0.000451092    4.5e-09
+error    activationTime_boundary          L2    0.000577123    5.8e-09
+error    gradActivationTime               L2    0.0163757      1.6e-07
+error    gradActivationTime_boundary      L2    0.0155716      1.6e-07
+error    gradReconActivationTime          L2    0.00391763     3.9e-08
+error    gradReconActivationTime_boundary L2    0.00201083     2e-08
+probe    postProcessing/eikonalECG.dat  10  E1  -0.014755943     1.5e-07
+probe    postProcessing/eikonalECG.dat  10  E2  0.0162687229     1.6e-07
+probe    postProcessing/eikonalECG.dat  10  E3  -0.00773222261   7.7e-08
+probe    postProcessing/eikonalECG.dat  10  E4  0.0272131276     2.7e-07
+probe    postProcessing/eikonalECG.dat  10  E5  0.0143652434     1.4e-07
+probe    postProcessing/eikonalECG.dat  75  E1  0.0105053212     1.1e-07
+probe    postProcessing/eikonalECG.dat  75  E2  -0.0104885818    1e-07
+probe    postProcessing/eikonalECG.dat  75  E3  0.00990647434    9.9e-08
+probe    postProcessing/eikonalECG.dat  75  E4  -0.0179150061    1.8e-07
+probe    postProcessing/eikonalECG.dat  75  E5  -0.00940401899   9.4e-08

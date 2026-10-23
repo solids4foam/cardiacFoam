@@ -87,6 +87,10 @@ public:
     ) const
     {}
 
+    //- Write the state a restart needs beyond the domain's own fields.
+    virtual void write()
+    {}
+
     virtual bool writesGraphVm() const
     {
         return false;

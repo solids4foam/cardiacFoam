@@ -6,7 +6,7 @@ A surrogate ECG for eikonal runs. Instead of solving for the voltage, it shifts 
 
 - `eikonalECG`: the surrogate ECG model.
 - Action-potential templates for endocardial, mid-myocardial and epicardial cells (`tissueTemplates.H`), and templates generated from a chosen ionic model for each tissue region.
-- A manufactured-template mode, used to verify the ECG calculation.
+- A manufactured-template mode, used to verify the ECG calculation: one action-potential-like event by default, or `template sine;` (`manufacturedTemplate.H`).
 
 It writes `postProcessing/eikonalECG.dat`, with one column per electrode, sampled on its own output time grid rather than at every solver step.
 
