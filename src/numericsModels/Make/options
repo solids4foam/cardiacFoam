@@ -1,0 +1,11 @@
+EXE_INC = \
+    -IsealedWall \
+    -Iinterface \
+    -IpureNeumann \
+    -Idiffusion \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude
+
+LIB_LIBS = \
+    -lfiniteVolume \
+    -lmeshTools

@@ -10,53 +10,34 @@ import re
 import traceback
 from pathlib import Path
 
-# Vm is the solver's membrane potential in volts, not millivolts. The 0 V
-# activation threshold and the relative repolarization levels are unit
-# agnostic; every other absolute level below is derived from the trace's own
-# amplitude so a model written in millivolts classifies identically.
+# Vm is in volts. Only the 0 V threshold and relative levels are unit-agnostic;
+# every other absolute level is derived from the trace's own amplitude.
 VOLTAGE_UNIT = "V"
 ACTIVATION_THRESHOLD_V = 0.0
 
-# A threshold crossing only counts as a new activation once the trace has
-# fallen back to this fraction of its own amplitude above the trace minimum.
-# This replaces a former flat 50 ms debounce, which was wide enough to swallow
-# a spontaneous beat arriving within 50 ms of a stimulated one. The remaining
-# debounce exists only to reject numerical chatter on a single upstroke.
+# A crossing counts as a new activation only after the trace falls back to this
+# fraction of its amplitude above the minimum; the debounce rejects chatter on one upstroke.
 ACTIVATION_RESET_FRACTION = 0.25
 ACTIVATION_DEBOUNCE_S = 0.002
 
-# Stimulus-to-activation association window, evaluated per probe as
+# Stimulus-to-activation association window per probe:
 #     latency allowance + (probe distance from the first probe) / CV floor
-# The CV floor sits ~2x below the slowest conduction velocity this protocol
-# has measured (2.03 m/s), so genuinely decremental capture is still
-# associated with its stimulus while an unforced beat arriving tens of
-# milliseconds later is not. A flat 50 ms window previously bound the measured
-# automaticity beat (t = 5.203520 s) to an S2 stimulus 49.4 ms earlier.
-#
-# The latency allowance covers stimulus-to-upstroke delay, which lengthens for
-# a premature beat near refractoriness -- the regime the boundary sweep exists
-# to probe. Both constants are bounded above by that same 49.4 ms collision:
-# at these values the widest probe window is 31 ms, a 1.6x margin.
+# The CV floor sits ~2x below the slowest measured conduction velocity (2.03 m/s),
+# so decremental capture is still associated while a later unforced beat is not.
 STIMULUS_LATENCY_ALLOWANCE_S = 0.015
 ASSOCIATION_CV_FLOOR_M_PER_S = 1.0
 
 PEAK_SEARCH_WINDOW_S = 0.10
 
-# The probe whose measured repolarization90 defines the DI90 axis, and the
-# probe pair whose separation defines the reported conduction velocity. They
-# are deliberately different: repolarization90 varies by ~10 ms along this
-# cable, so the DI90 axis is a proximal quantity while CV is a central-segment
-# quantity, and a summary that does not say so is ambiguous.
+# The DI90 axis uses a proximal probe and CV a central segment, because
+# repolarization90 varies by ~10 ms along the cable.
 REFERENCE_PROBE_INDEX = 0
 CENTRAL_SEGMENT_PROBES = (1, 3)
 
-# Tolerance on reproducing the conditioning reference used to schedule S2.
-# Ten probe samples at the 1e-5 s probe write interval.
+# Tolerance on reproducing the conditioning reference: ten probe samples at the 1e-5 s write interval.
 REFERENCE_REPOLARIZATION_TOLERANCE_S = 1.0e-4
 
 REPOLARIZATION_PERCENTS = (50, 70, 90)
-
-PROTOCOL_METADATA = ".cardiacfoam_protocol.json"
 
 
 def parse_probe_file(path: Path) -> tuple[list[tuple[float, float, float]], list[float], list[list[float]]]:
@@ -94,10 +75,8 @@ def interpolate_crossing(t0: float, y0: float, t1: float, y1: float, level: floa
 def activation_reset_level(values: list[float]) -> float:
     """Absolute level the trace must fall below before re-arming activation.
 
-    Derived from the trace's own amplitude so the rule is independent of
-    whether Vm is expressed in volts or millivolts. Clamped to the activation
-    threshold so a trace that never recovers that far still re-arms on a
-    plain sub-threshold excursion rather than detecting only one beat.
+    Derived from the trace's amplitude (unit-independent) and clamped to the
+    activation threshold so a trace that never recovers that far still re-arms.
     """
     low = min(values)
     high = max(values)
@@ -205,10 +184,7 @@ def associate_stimuli(
             "association_window_s": window_s,
             "captured": selected is not None,
             "activation_time_s": None if selected is None else activations[selected],
-            # How many activations fell inside the window, and how much room
-            # was left between the chosen one and the window's far edge. More
-            # than one candidate means the window could not tell a stimulated
-            # beat from something else arriving in the same interval.
+            # More than one candidate means the window cannot tell a stimulated beat from an unforced one.
             "candidate_count": len(candidates),
             "association_margin_s": (
                 None if selected is None
@@ -232,9 +208,40 @@ def compute_segment_cv(positions: list[tuple[float, float, float]], activation_t
     return segments
 
 
-def load_protocol_metadata(case_dir: Path) -> dict | None:
-    path = case_dir / PROTOCOL_METADATA
-    return json.loads(path.read_text(encoding="ascii")) if path.is_file() else None
+def _read_stimulus_start_time_list(case_dir: Path) -> list[float]:
+    """The case's schedule, read from ``constant/electroProperties``."""
+    path = case_dir / "constant" / "electroProperties"
+    text = path.read_text(encoding="ascii")
+    match = re.search(r"stimulusStartTimeList\s*\(([^)]*)\)", text)
+    if match is None:
+        raise ValueError(f"{path} has no externalStimulus.stimulusStartTimeList entry")
+    tokens = match.group(1).split()
+    return [float(token) for token in tokens]
+
+
+def build_protocol(
+    case_dir: Path, *, n_s1: int, n_s2: int, reference_repolarization90_s: float | None,
+) -> dict:
+    """Where the S1/S2 split falls in the case's ``stimulusStartTimeList``.
+
+    ``n_s1``/``n_s2`` are the resolved ``s1s2SpatialProtocol`` study values
+    passed as ``--n-s1``/``--n-s2``.
+    """
+    times = _read_stimulus_start_time_list(case_dir)
+    s1_times = times[:n_s1]
+    s2_times = times[n_s1:n_s1 + n_s2]
+    requested_di90_s = None
+    if reference_repolarization90_s is not None and s2_times:
+        requested_di90_s = s2_times[0] - reference_repolarization90_s
+    return {
+        "n_s1": n_s1,
+        "n_s2": n_s2,
+        "s1_stimulus_times_s": s1_times,
+        "s2_stimulus_times_s": s2_times,
+        "stimulus_times_s": times,
+        "reference_repolarization90_s": reference_repolarization90_s,
+        "requested_di90_s": requested_di90_s,
+    }
 
 
 def event_for_activation(events: list[dict], activation_time: float | None) -> dict | None:
@@ -342,8 +349,7 @@ def _summarize_s2(summary: dict, protocol: dict, apd_events: list[list[dict]]) -
       competing_spontaneous_wave -- S2 propagated, but an unforced beat followed
       captured_and_propagated    -- S2 propagated cleanly
     The two spontaneous_* booleans stay independent of the status so a
-    partial-block case that also shows an unforced beat does not lose either
-    fact to the single status field.
+    partial-block case with an unforced beat loses neither fact.
     """
     first_s2 = float(protocol["s2_stimulus_times_s"][0])
     spontaneous_before = any(
@@ -549,12 +555,22 @@ def _write_restitution_csv(path: Path, summary: dict, case_id: str | None) -> No
             )
 
 
-def write_summary_files(*, case_dir: Path, output_dir: Path | None = None, case_id: str | None = None) -> dict:
+def write_summary_files(
+    *, case_dir: Path, output_dir: Path | None = None, case_id: str | None = None,
+    n_s1: int | None = None, n_s2: int | None = None,
+    reference_repolarization90_s: float | None = None,
+) -> dict:
     probe_files = list((case_dir / "postProcessing" / "cableProbes").glob("*/Vm"))
     if not probe_files:
         raise FileNotFoundError(f"No Vm probe files found in {case_dir}/postProcessing/cableProbes/")
     target_probe = max(probe_files, key=lambda path: float(path.parent.name))
-    protocol = load_protocol_metadata(case_dir)
+    protocol = (
+        None if n_s1 is None or n_s2 is None
+        else build_protocol(
+            case_dir, n_s1=n_s1, n_s2=n_s2,
+            reference_repolarization90_s=reference_repolarization90_s,
+        )
+    )
     try:
         summary = build_summary(target_probe, protocol)
     except Exception as exc:  # noqa: BLE001 - a failed case must still leave a row
@@ -609,13 +625,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--case-dir", default=".")
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--case-id", default=None)
+    parser.add_argument(
+        "--case-id", default=None,
+        help="Defaults to the case directory's own name.",
+    )
+    parser.add_argument(
+        "--n-s1", type=int, default=None,
+        help="How many of constant/electroProperties's own stimulusStartTimeList entries are S1.",
+    )
+    parser.add_argument(
+        "--n-s2", type=int, default=None,
+        help="How many of the remaining entries are S2 (0: no S2 in this run).",
+    )
+    parser.add_argument("--reference-repolarization90-s", type=float, default=None)
     args = parser.parse_args()
     case_dir = Path(args.case_dir).resolve()
-    case_id = args.case_id
-    if case_id is None:
-        sentinel = case_dir / ".driverfoam_case_id"
-        if not sentinel.exists():
-            raise SystemExit(f"--case-id not supplied and sentinel {sentinel} not found")
-        case_id = sentinel.read_text(encoding="ascii").strip()
-    write_summary_files(case_dir=case_dir, output_dir=Path(args.output_dir).resolve(), case_id=case_id)
+    case_id = args.case_id if args.case_id is not None else case_dir.name
+    write_summary_files(
+        case_dir=case_dir, output_dir=Path(args.output_dir).resolve(), case_id=case_id,
+        n_s1=args.n_s1, n_s2=args.n_s2,
+        reference_repolarization90_s=args.reference_repolarization90_s,
+    )

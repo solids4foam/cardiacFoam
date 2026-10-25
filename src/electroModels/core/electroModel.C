@@ -378,7 +378,7 @@ void Foam::electroModel::end()
     domainSystem_.endConductionCouplings();
     domainSystem_.endConductionDomains();
 
-    this->IOobject::rename(this->IOobject::name()+".withDefaultValues");
+    this->regIOobject::rename(this->IOobject::name()+".withDefaultValues");
     this->regIOobject::write();
 }
 // ************************************************************************* //

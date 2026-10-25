@@ -27,7 +27,6 @@ myocardiumSolver bidomainSolver;
 bidomainSolverCoeffs
 {
     sealedHeartBoundary false;
-    sealedWallTrace     zeroGradient;
     conductivitySource uniform;
     cellZone        myocardium;
     bathPredictorCorrector yes;

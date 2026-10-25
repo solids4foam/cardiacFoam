@@ -23,6 +23,7 @@ License
 #include "IOdictionary.H"
 #include "PstreamReduceOps.H"
 #include "ionicVariableCompatibility.H"
+#include "mathematicalConstants.H"
 
 namespace Foam
 {
@@ -55,7 +56,7 @@ void initialiseGraphStateField
     const scalarField& defaultValues
 )
 {
-    if (field.filePath().empty())
+    if (!purkinjeModelIO::readGlobalField(field))
     {
         field = defaultValues;
         return;
@@ -66,50 +67,6 @@ void initialiseGraphStateField
         FatalErrorInFunction
             << field.name() << " size " << field.size()
             << " does not match graph size " << defaultValues.size()
-            << exit(FatalError);
-    }
-}
-
-
-void writeGraphStateField(scalarGlobalIOField& field)
-{
-    bool writeGood = true;
-    const Time& runTime = field.time();
-
-    field.instance() = runTime.timeName();
-
-    if (Pstream::master())
-    {
-        const fileName outputPath
-        (
-            runTime.globalPath()/field.instance()/field.name()
-        );
-
-        mkDir(outputPath.path());
-        OFstream os
-        (
-            outputPath,
-            IOstreamOption
-            (
-                runTime.writeFormat(),
-                runTime.writeCompression()
-            )
-        );
-
-        writeGood = os.good() && field.writeHeader(os) && field.writeData(os);
-
-        if (writeGood)
-        {
-            IOobject::writeEndDivider(os);
-        }
-    }
-
-    reduce(writeGood, andOp<bool>());
-
-    if (!writeGood)
-    {
-        FatalErrorInFunction
-            << "Failed writing " << field.name()
             << exit(FatalError);
     }
 }
@@ -178,8 +135,8 @@ void conductionSystemDomain::readGraphFile(const dictionary& dict)
 
     graph_.edgeConductances *= purkinjeConductivity;
 
-    Info<< "Purkinje edge conductance multiplier: "
-        << purkinjeConductivity << nl << endl;
+    Info<< "Purkinje conductivity: " << purkinjeConductivity
+        << " S/m, times each edge's graph conductance" << nl << endl;
 
     rootNode_ = graphDict.get<label>("rootNode");
     terminalNodes_ = labelList(graphDict.lookup("pvjNodes"));
@@ -284,6 +241,25 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
             initialDeltaT,
             false
         );
+
+        ionicModelPtr_->setRestartStateName
+        (
+            IOobject::groupName
+            (
+                ionicModelPtr_->restartStateName(),
+                Vm1D_.group()
+            )
+        );
+
+        // The network's nodes are not mesh cells: its ionic state is one
+        // file in the case root, of which this processor holds its block
+        restartStateIO::Block block;
+        block.global = true;
+        block.start = localStartNode_;
+        block.nGlobal = N;
+        ionicModelPtr_->setRestartStateBlock(block);
+
+        ionicModelPtr_->readRestartState(supportMesh_);
     }
 
     const scalar vmRest =
@@ -324,6 +300,8 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
 
     terminalCurrent_.setSize(terminalNodes_.size(), 0.0);
     terminalSource_.setSize(terminalNodes_.size(), 0.0);
+    terminalJunctionCoeffs_.setSize(terminalNodes_.size(), 0.0);
+    terminalTissueVm_.setSize(terminalNodes_.size(), 0.0);
     terminalActivationObservations_.setSize(terminalNodes_.size(), -1.0);
 
     if (ionicModelPtr_.valid())
@@ -465,8 +443,20 @@ void conductionSystemDomain::openOutputFile()
     (
         outDir,
         "purkinjeNetwork.dat",
-        colNames
+        colNames,
+        time().value()
     );
+
+    if (time().value() > 0)
+    {
+        purkinjeModelIO::readVTKSeries
+        (
+            outDir/"purkinjeNetworkVTK"/"purkinjeNetwork.vtk.series",
+            time().value(),
+            pvdTimes_,
+            pvdFiles_
+        );
+    }
 
     ionicOutputPtrs_.setSize(ionicExport_.size());
     forAll(ionicExport_, i)
@@ -485,7 +475,8 @@ void conductionSystemDomain::openOutputFile()
             (
                 outDir,
                 "purkinjeNetwork_" + var + ".dat",
-                ionicColNames
+                ionicColNames,
+                time().value()
             ).ptr()
         );
     }
@@ -555,6 +546,8 @@ conductionSystemDomain::conductionSystemDomain
     nLocalNodes_(0),
     terminalCurrent_(),
     terminalSource_(),
+    terminalJunctionCoeffs_(),
+    terminalTissueVm_(),
     outputPtr_(),
     exportVars_(),
     debugVars_(),
@@ -622,11 +615,6 @@ void conductionSystemDomain::assembleAppliedCurrent
         }
 
         appliedCurrent[rootNode_] += rootIntensity_;
-    }
-
-    forAll(terminalNodes_, i)
-    {
-        appliedCurrent[terminalNodes_[i]] -= terminalCurrent_[i];
     }
 }
 
@@ -731,6 +719,49 @@ void conductionSystemDomain::setTerminalCoupling
 }
 
 
+void conductionSystemDomain::setTerminalConductances
+(
+    const scalarField& conductance
+)
+{
+    terminalJunctionCoeffs_ = conductance/terminalVolumes();
+}
+
+
+void conductionSystemDomain::setTerminalTissueVm(const scalarField& tissueVm)
+{
+    terminalTissueVm_ = tissueVm;
+}
+
+
+scalar conductionSystemDomain::purkinjeFibreRadius() const
+{
+    return coeffsDict_.lookupOrDefault<scalar>("purkinjeFibreRadius", 2e-5);
+}
+
+
+scalarField conductionSystemDomain::terminalVolumes() const
+{
+    const scalar area = constant::mathematical::pi*sqr(purkinjeFibreRadius());
+
+    // The control length of monodomain1DSolver: half of each incident edge.
+    scalarField controlLength(graph_.nNodes, Zero);
+    forAll(graph_.edgeNodeA, edgeI)
+    {
+        controlLength[graph_.edgeNodeA[edgeI]] += 0.5*graph_.edgeLengths[edgeI];
+        controlLength[graph_.edgeNodeB[edgeI]] += 0.5*graph_.edgeLengths[edgeI];
+    }
+
+    scalarField volumes(terminalNodes_.size());
+    forAll(terminalNodes_, i)
+    {
+        volumes[i] = area*controlLength[terminalNodes_[i]];
+    }
+
+    return volumes;
+}
+
+
 void conductionSystemDomain::end()
 {
     if (verificationModelPtr_.valid())
@@ -756,10 +787,16 @@ void conductionSystemDomain::write()
 
     if (ionicModelPtr_.valid())
     {
-        writeGraphStateField(Vm1D_);
-        writeGraphStateField(Iion1D_);
+        purkinjeModelIO::writeGlobalField(Vm1D_);
+        purkinjeModelIO::writeGlobalField(Iion1D_);
+
+        if (ionicModelPtr_->supportsRestartState())
+        {
+            ionicModelPtr_->writeRestartState(supportMesh_);
+        }
     }
-    writeGraphStateField(activationTime_);
+    purkinjeModelIO::writeGlobalField(activationTime_);
+    solverPtr_->write();
 
     DynamicList<scalar> values;
     for (const word& var : exportVars_)

@@ -1171,7 +1171,13 @@ public:
             prepareIOAccess(wordList(), false);
             ensureIOSynchronized();
 
-            if (!restartStateIO::readStates(mesh, type(), nStates_, ioStates_))
+            const bool loaded = restartStateIO::readStates
+            (
+                mesh, type(), restartStateName(), nStates_, ioStates_,
+                restartStateBlock()
+            );
+
+            if (!loaded)
             {
                 return false;
             }
@@ -1187,7 +1193,11 @@ public:
             prepareIOAccess(wordList(), false);
             markIODirty();
             ensureIOSynchronized();
-            restartStateIO::writeStates(mesh, type(), nStates_, ioStates_);
+            restartStateIO::writeStates
+            (
+                mesh, type(), restartStateName(), nStates_, ioStates_,
+                restartStateBlock()
+            );
         }
 
         virtual void refreshRestartState(const fvMesh& mesh) override

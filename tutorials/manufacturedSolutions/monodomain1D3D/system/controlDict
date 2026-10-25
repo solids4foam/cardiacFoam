@@ -23,9 +23,9 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         0.200028;
+endTime         0.1;
 
-deltaT          0.000140174;
+deltaT          0.0022222222222222222;
 
 writeControl    runTime;
 
@@ -46,6 +46,9 @@ timePrecision   6;
 runTimeModifiable false;
 
 libs            ( "libverificationModels.so" );
+
+
+#includeIfPresent "<case>/local/time"
 
 
 // ************************************************************************* //

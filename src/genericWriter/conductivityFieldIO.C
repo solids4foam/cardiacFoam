@@ -37,9 +37,11 @@ tmp<volTensorField> mapToSolverMesh
     const word& internalName
 )
 {
+    tmp<volTensorField> tmapped;
+
     if (&solverMesh == &supportMesh)
     {
-        return tmp<volTensorField>
+        tmapped = tmp<volTensorField>
         (
             new volTensorField
             (
@@ -55,19 +57,25 @@ tmp<volTensorField> mapToSolverMesh
             )
         );
     }
-
-    if (!meshSubsetPtr || !meshSubsetPtr->hasSubMesh())
+    else
     {
-        FatalErrorInFunction
-            << "Conductivity field '" << supportField.name()
-            << "' was read on support mesh '" << supportMesh.name()
-            << "', but solver mesh '" << solverMesh.name()
-            << "' is different and no fvMeshSubset mapping was supplied."
-            << exit(FatalError);
+        if (!meshSubsetPtr || !meshSubsetPtr->hasSubMesh())
+        {
+            FatalErrorInFunction
+                << "Conductivity field '" << supportField.name()
+                << "' was read on support mesh '" << supportMesh.name()
+                << "', but solver mesh '" << solverMesh.name()
+                << "' is different and no fvMeshSubset mapping was supplied."
+                << exit(FatalError);
+        }
+
+        tmapped = meshSubsetPtr->interpolate(supportField);
+        tmapped.ref().rename(internalName);
     }
 
-    tmp<volTensorField> tmapped(meshSubsetPtr->interpolate(supportField));
-    tmapped.ref().rename(internalName);
+    // Coupled patches take the neighbour cell values; decomposePar writes owner values on processorCyclic faces
+    tmapped.ref().correctBoundaryConditions();
+
     return tmapped;
 }
 

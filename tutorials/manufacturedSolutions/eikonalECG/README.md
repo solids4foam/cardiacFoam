@@ -1,141 +1,157 @@
-# manufacturedSolutions/eikonalECG tutorial
+# eikonalECG
 
-Manufactured-solution verification for the eikonal activation-time solve and its template ECG calculation.
+Eikonal-diffusion manufactured solution on the unit cube, on Cartesian
+hexahedra (`-mesh hex`, default) or gmsh Delaunay tetrahedra (`-mesh tet`),
+with the eikonal-driven ECG checked against its reference integral. The exact
+activation time is imposed on every face and on the cells whose centre has
+the smallest x, y or z (on hexahedra the first cell layer), so the case checks
+the interior discretisation (the metric term, the corrected Laplacian, the
+cell-gradient reconstruction, the outer fixed point) and the template ECG; it
+does not check a wall treatment, the zero-gradient outer boundary of ordinary
+runs or the placement of internal seeds. Sealed curved walls are checked by
+[sphericalShell](sphericalShell/README.md).
 
-Origin: this work, for both the activation-time and the eikonal-driven ECG problems.
+Origin: this work, for both the activation-time and the eikonal-driven ECG
+problems.
 
-## Overview
+## Problem
+
+```text
+-div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in [0,1]^d
+psi = psi_ex    on every face and on the cells of smallest centre x, y or z
+```
+
+`psi_ex = exp(k . x)` with `k = (1,0,0)`, `(1,1,0)`, `(1,1,1)` in 1D, 2D,
+3D, `M = G/(chi Cm)`, `chi = 3`, `Cm = 2`, `c0 = 1`, and
+`S = psi_ex (c0 sqrt(K) - K) - 1`, `K = k . M k`. `G` is
+
+- rotated (`-conductivity rotated`, default): the full tensor `(0.106875
+  -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782)`
+- axis (`-conductivity axis`): `diag(0.111453302, 0.121585420, 0.030396355)`
+
+The ECG is the lead-field integral of the template `Vm = U(t - psi)` at
+external electrodes:
+
+```text
+phi(x_e, t) = int G grad Vm . (x - x_e)/|x - x_e|^3 dx,   grad Vm = -U'(t - psi) grad psi
+```
+
+The solver evaluates it with the reconstructed `grad psi` of the computed
+field; the reference is a Gauss-Legendre order-48 quadrature of the exact
+integrand.
+
+### Single-event template
+
+`template singleEvent;` in the ECG `verificationModel` (the default) is one
+action-potential-like event,
+`U = Su(s) (1 - Su(s - templateDuration))`, `Su = (1 + tanh(s/w))/2`, where
+`w` makes `Su` rise from 10 % to 90 % within `templateRise`. Their defaults,
+`64` and `4`, are set from the activation range `S = e^3 - 1 = 19.1`:
+
+- `templateDuration` (about `S/0.3`) exceeds the range, so upstroke and
+  repolarisation never meet in one sample and `U'(t - psi)` keeps one sign
+  across the cube;
+- `templateRise` (about `0.2 S`) keeps the upstroke near one cell wide at
+  `x = y = z = 1`, where `|grad psi|` is twenty times its value at the origin,
+  on the coarsest mesh.
+
+The sampling window, `-6` to `92` by `0.25`, covers the whole event at every
+point.
+
+### Sine template
+
+`template sine;` (`-template sine`) selects the periodic template
+`U(s) = sin(2 pi s)`, sampled from `0` to `2` by `0.01`. The sine repeats
+about 19 times across the activation range, so its ECG integrand changes sign
+many times over the cube and the integral cancels. The integrand is also
+spatially under-resolved on coarse meshes, so its quadrature error falls
+faster than the discretisation order there, and the ECG can appear to converge
+while the activation field does not. The studies
+([cartesianConvergence](setup/studies/cartesianConvergence/README.md),
+[tetConvergence](setup/studies/tetConvergence/README.md)) measure both
+templates.
 
 ### Stack
 
-- myocardium solver: `eikonalSolver`
-- field verification: `manufacturedEikonalVerifier` from `libverificationModels`
-- ECG verification: `manufacturedEikonalECGVerifier` from `libverificationModels`
-- shared analytical oracle: `verificationModels`
+- myocardium solver: `eikonalSolver`, the metric term `c0 |grad psi|_M` as
+  the bounded convection term `u . grad psi` (`div(phiU,activationTime) Gauss
+  linearUpwind limitedGrad`) or evaluated explicitly (`-formulation`)
+- outer fixed point: `nOuterCorrectors 8000`, relaxation 0.9, residual
+  tolerance `1e-8` (`-tolerance`)
+- field verifier: `manufacturedEikonalVerifier`
+- ECG: `eikonalECG` with `manufacturedEikonalECGVerifier` (`domain cube`,
+  the default, where `sphericalShell/` uses `domain shell`)
+- gradient: `leastSquares` or `Gauss linear` (`-gradient`)
 
-### Purpose
+## Mesh
 
-This case verifies:
-
-- activation-time (`psi`) convergence against an analytical oracle
-  ($\tau(x) = \exp(k \cdot x)$), compared point-by-point at each cell centre
-  (no quadrature needed -- the manufactured solution is exact there)
-- the eikonal template ECG, `Vm(x,t) = U(t - psi(x))`, sampled internally and
-  written to `postProcessing/eikonalECG.dat`, checked against a
-  Gauss-Legendre quadrature reference (`referenceQuadratureOrder = 48`) of
-  the manufactured volume integral
-
-### Key Configuration
-
-- solver-side behavior: `eikonalSolverCoeffs` (`constant/electroProperties`)
-- analytical oracle: `verificationModels`
-- field verifier: `verificationModels/eikonalVerification`
-- ECG verifier: `verificationModels/ecgVerification`
-
-Typical outputs include:
-
-- `postProcessing/manufacturedEikonalActivationTime.dat`
-- `postProcessing/eikonalECG.dat`
-- `postProcessing/manufacturedEikonalECG.dat`
-- `postProcessing/manufacturedEikonalECGSummary.dat`
-
-## Variants & Extensions
-
-### Insulated-Wall Case
-
-[`insulatedWall/`](insulatedWall/README.md) is a separate case that leaves the faces `x = 0, 1` to the solver's insulated-wall treatment (`productionPatches`) instead of prescribing the exact activation time there, with `k` chosen so that `n.M.grad(psi) = 0` on those faces. It has its own regression and tetrahedral study.
-
-### Tetrahedral (unstructured) Mesh Variant
-
-`setup/studies/tetConvergence/` is an activatable overlay of this same case
-on a genuinely unstructured mesh: identical `constant/` and `system/` dicts,
-except the mesh generator changes and `setup/studies/tetConvergence/fvSolution`
-is swapped in for the duration of a tet run and restored on exit.
-`box.geo.template` and its `fvSolution` overlay live in
-`setup/studies/tetConvergence/`, next to the study that drives them.
-
-#### Tet Convergence
-
-`setup/studies/tetConvergence/box.geo.template` is a unit-cube gmsh
-(OpenCASCADE, Delaunay) template with a characteristic-length placeholder
-`__LC__`, instantiated per resolution by the omnidriver tutorial
-(`manufactured_eikonal_ecg.py`'s `render_tet_geo`). Every tet study in this
-tutorial (`tetConvergence/sweep_tet_generic.json`, `errorLocalisation/`,
-`gradientVerification/`, `gradient_reconstruction/`) renders from this single
-shared template. All six boundary
-faces lie on the axis-aligned planes `x,y,z in {0,1}`, where the manufactured
-cosine field has zero normal derivative, so the solver's default
-zeroGradient (no-flux) boundary stays compatible with the exact solution.
-
-#### Solved-Field Bulk/Boundary Error Decomposition
-
-`setup/studies/errorLocalisation/` sweeps the tet `N` ladder with
-`writeErrorField` enabled to separate the solved field's boundary-adjacent
-error from its interior (bulk) error.
-
-#### Gradient-Operator Studies
-
-`gradientReconstructionOrder` (`applications/test/gradientReconstructionOrder/`)
-exercises the gradient reconstruction operator alone against an exact
-analytic field. It is driven as a `gradient_reconstruction=True` workflow_dag
-step, appended after the case's solve (see `manufactured_eikonal_ecg.py`'s
-`_workflow_dag_for`) -- a real omnidriver sweep, not bash, the same as every
-other study here. `setup/studies/gradientVerification/` covers the full
-gaussLinear-vs-leastSquares comparison; `setup/studies/gradient_reconstruction/`
-restricts that same matrix to the registered `eikonal_gradient_tet`
-experiment's leastSquares-only subset. See each folder's `README.md` for the
-exact commands.
+- `-mesh hex` (`system/blockMeshDict.<d>D`): `N` cells per unit length along
+  each of the `d` directions.
+- `-mesh tet` (`box.geo.template`, 3D): Delaunay tetrahedra of size `1/N` from
+  `gmsh -setnumber lc 1/N -setnumber seed <seed>`, imported with `gmshToFoam`.
 
 ## Usage
 
-### Omnidriver-Managed Sweeps
+```bash
+./Allrun [parallel] [options]
+./Allclean
+```
 
-Run this verification suite through omnidriver. The study manifests below are
-the supported execution paths, superseding the historic direct OpenFOAM
-commands and the retired `reproduce_verification.sh` wrapper.
+Every option writes a file in `local/`, which the dictionaries include;
+`Allclean` removes `local/` and the mesh. `Allrun` stops with
+`run ./Allclean first` if a mesh log exists.
 
-Cartesian spatial convergence (1D/2D/3D). Spec: `setup/studies/cartesianConvergence/sweep_hex_convergence.json`.
+| option | effect | default |
+|---|---|---|
+| `parallel` | `decomposePar` (6 subdomains, scotch), parallel `cardiacFoam`, `reconstructPar -latestTime` | serial |
+| `-mesh hex\|tet` | blockMesh box or gmsh tetrahedra (3D) | hex |
+| `-dim 1\|2\|3` | dimension of the hex box; the ECG runs in 3D only | 3 |
+| `-N n` | cells per unit length; tet: element size `1/n` | 20 |
+| `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
+| `-conductivity rotated\|axis` | conductivity tensor | rotated |
+| `-formulation advectionDiffusion\|explicit` | metric term as a bounded convection term or explicit | advectionDiffusion |
+| `-gradient leastSquares\|GaussLinear` | cell-gradient reconstruction | leastSquares |
+| `-tolerance x` | outer fixed-point residual tolerance | `1e-8` |
+| `-electrodes five\|all` | ECG at E1-E5, or at E1-E5 and the 156 random electrodes R1-R156 | five |
+| `-template singleEvent\|sine` | manufactured ECG template and its sampling | singleEvent |
+| `-errorField` | write `activationTimeError` and the cell centres to the final time | off |
 
-    [omnidriver command to run]
+E1-E5 lie outside the cube; R1-R156 are the electrodes of
+[monodomainPseudoECG](../monodomainPseudoECG/README.md). The ECG runs in 3D
+only.
 
-Tet convergence. Spec: `setup/studies/tetConvergence/sweep_tet_generic.json`.
+`postProcessing/manufacturedEikonalActivationTime.dat` holds the
+activation-time errors and the bulk, boundary and gradient rows of
+[Bulk, boundary and gradient rows](../README.md#bulk-boundary-and-gradient-rows);
+in 3D, `postProcessing/eikonalECG.dat` holds the electrode traces,
+`postProcessing/manufacturedEikonalECG_ECG.dat` the traces with their
+references, and `postProcessing/manufacturedEikonalECGSummary_ECG.dat` the L1,
+L2 and Linf error over time of every electrode.
 
-    [omnidriver command to run]
+Regression (the defaults: 3D hex, rotated conductivity, `N = 20`, parallel on
+six ranks): the activation-time errors with their bulk, boundary and gradient
+rows, the ECG errors of E1-E5 and their trace values at `t = 10`, on the
+upstroke, and `t = 75`, on repolarisation.
 
-Nonlinear stopping-criterion control (least-squares tet cases; axis and both
-rotated configurations, N=10/20/40/80). Spec: `setup/studies/nonlinearControl/sweep_tet_outer_tolerance.json`.
+```bash
+./regression/regressionTest.sh
+```
 
-    [omnidriver command to run]
+## Studies
 
-Bulk/boundary error decomposition. Spec: `setup/studies/errorLocalisation/sweep_tet_error_localisation.json`.
+`setup/studies/` holds one study per question, each run in copies of the case
+with the commands in its README; `setup/studies/summarize.py` prints the
+tables.
 
-    [omnidriver command to run]
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/errorLocalisation/aggregate_bulk_boundary.py
+| study | question |
+|---|---|
+| [cartesianConvergence](setup/studies/cartesianConvergence/README.md) | spatial order of the activation time on hexahedra, 1D/2D/3D, and of the 3D ECG |
+| [tetConvergence](setup/studies/tetConvergence/README.md) | spatial order on tetrahedra: `leastSquares` against `Gauss linear`, axis against rotated conductivity, the two formulations; isolated gradient reconstruction |
+| [nonlinearControl](setup/studies/nonlinearControl/README.md) | share of the outer stopping tolerance in the tetrahedral errors |
+| [errorLocalisation](setup/studies/errorLocalisation/README.md) | bulk and boundary-adjacent parts of the tetrahedral activation error, both gradients |
 
-Isolated gradient-operator reconstruction (registered `eikonal_gradient_tet` table, leastSquares only). Spec: `setup/studies/gradient_reconstruction/sweep_gradient_tet.json`.
+## Variants
 
-    [omnidriver command to run]
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradient_reconstruction/aggregate_gradient_reconstruction.py
-
-Full gaussLinear-vs-leastSquares gradient-operator comparison (not a registered table). Spec: `setup/studies/gradientVerification/sweep_gradient_tet.json`.
-
-    [omnidriver command to run]
-    python3 tutorials/manufacturedSolutions/eikonalECG/setup/studies/gradientVerification/aggregate_gradient_verification.py
-
-## Effective mesh spacing and observed order
-
-For an unstructured unit-cube tet mesh, use the realised cell-count scale
-`h_eff = nCells^(-1/3)`. `setup/studies/tetConvergence/summarize_tet.py`
-therefore computes the observed order from consecutive realised scales,
-`p = log(e_coarse/e_fine) / log(h_coarse/h_fine)`, and reports each actual
-refinement ratio next to the requested N, realised cell count, maximum
-non-orthogonality, and maximum skewness. Do not assume a factor-of-two ratio
-from the nominal Gmsh length parameter alone.
-
-## Error Calculation and Quadrature
-
-It is important to clarify how the errors are evaluated for the different fields in this verification suite:
-
-1. **Activation Times ($\tau$)**: This error uses a direct, point-by-point comparison rather than quadrature integration. Because the manufactured activation time is a simple analytical function $\tau(x) = \exp(k \cdot x)$, it can be evaluated exactly at any point. To calculate the error, the solver performs a point-by-point comparison between the numerical activation time solved at each OpenFOAM mesh cell's center and the exact analytical mathematical formula evaluated at that identical cell center point.
-
-2. **The ECG Computation (Where Quadrature is Used)**: Unlike the activation time, the ECG signal is defined mathematically as a volume integral over the entire domain. To get the "exact" baseline reference to compare OpenFOAM against, we calculate the integral of the manufactured analytical gradient field. Because this specific multidimensional integral does not have a simple closed-form algebraic solution, the exact "analytical" reference integral is computed using a highly accurate Gauss-Legendre Quadrature ($q=48$). The integrand is analytic on the cube; its only singularity is at the electrode, so convergence slows as an electrode approaches the surface. The ECG error is the comparison between OpenFOAM's numerical mesh integration (which simply sums up the cell values $\times$ cell volumes) against this near-perfect reference integral computed using the Gauss-Legendre quadrature.
+- [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
+  rotated conductivity, with a pinned stimulus ball; `-ecg` adds the ECG of
+  the shell field.

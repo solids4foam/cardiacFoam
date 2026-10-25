@@ -31,8 +31,12 @@ Author
 #include "PstreamReduceOps.H"
 #include "Tuple2.H"
 #include "fvMesh.H"
+#include "fvcGrad.H"
+#include "syncTools.H"
 #include "volFields.H"
 #include "wordList.H"
+
+#include <cctype>
 
 namespace Foam
 {
@@ -256,10 +260,9 @@ inline Tuple2<Tuple2<scalar, scalar>, scalar> computeNorms
 //
 //      L2_total^2 = L2_bulk^2 + L2_boundary^2
 //
-//  This is deliberately the same convention as the standalone
-//  gradientReconstructionOrder utility, so that a solved-field decomposition
-//  and a reconstruction-only decomposition can be compared level by level on
-//  the same mesh ladder.
+//  The same split is reported for the field and gradient errors of the other
+//  manufactured verifiers (bulkBoundaryRows), so solved-field and
+//  reconstruction-only errors can be compared level by level on one ladder.
 //
 //  Returns Tuple2< Tuple2<L2_bulk, L2_boundary>, L2_total >.
 template<class FieldType1, class FieldType2>
@@ -352,6 +355,371 @@ inline Tuple2<Tuple2<scalar, scalar>, scalar> computeBoundaryBulkNorms
         Tuple2<scalar, scalar>(bulkL2, boundL2),
         totalL2
     );
+}
+
+
+//- Cells owning a face on a non-empty, non-coupled patch of the mesh.
+//
+//  Processor, cyclic and empty patches never mark a cell, so the set does not
+//  depend on the decomposition. On a cellZone sub-mesh the exposed-faces patch
+//  is a physical patch, so its cells are the wall cells.
+inline boolList boundaryAdjacentCells(const fvMesh& mesh)
+{
+    boolList isBoundary(mesh.nCells(), false);
+
+    for (const polyPatch& pp : mesh.boundaryMesh())
+    {
+        if (pp.empty() || pp.type() == "empty" || pp.coupled())
+        {
+            continue;
+        }
+
+        for (const label cellI : pp.faceCells())
+        {
+            isBoundary[cellI] = true;
+        }
+    }
+
+    return isBoundary;
+}
+
+
+//- Volume-weighted L1, L2 and Linf of the error over the masked cells, each
+//  normalised by the total volume of the mesh.
+//
+//  The parts of a partition of the cells therefore add up: L1 = sum of the part
+//  L1 values and L2^2 = sum of the part L2^2 values. Linf is the maximum over
+//  the masked cells. Returns Tuple2< Tuple2<L1, L2>, Linf >.
+template<class FieldType1, class FieldType2>
+inline Tuple2<Tuple2<scalar, scalar>, scalar> computeMaskedNorms
+(
+    const fvMesh& mesh,
+    const FieldType1& numeric,
+    const FieldType2& exact,
+    const boolList& mask
+)
+{
+    if
+    (
+        numeric.size() != exact.size()
+     || numeric.size() != mesh.nCells()
+     || mask.size() != mesh.nCells()
+    )
+    {
+        FatalErrorInFunction
+            << "Cannot compute masked manufactured norms: size mismatch "
+            << "(numeric=" << numeric.size() << ", exact=" << exact.size()
+            << ", mask=" << mask.size() << ", mesh cells="
+            << mesh.nCells() << ")."
+            << exit(FatalError);
+    }
+
+    const scalarField& volumes = mesh.V();
+    scalar weightedAbs = 0.0;
+    scalar weightedSq = 0.0;
+    scalar totalVolume = 0.0;
+    scalar maxAbs = 0.0;
+
+    forAll(numeric, i)
+    {
+        totalVolume += volumes[i];
+
+        if (mask[i])
+        {
+            const scalar diff = Foam::mag(numeric[i] - exact[i]);
+            weightedAbs += volumes[i]*diff;
+            weightedSq += volumes[i]*diff*diff;
+            maxAbs = max(maxAbs, diff);
+        }
+    }
+
+    reduce(weightedAbs, sumOp<scalar>());
+    reduce(weightedSq, sumOp<scalar>());
+    reduce(totalVolume, sumOp<scalar>());
+    reduce(maxAbs, maxOp<scalar>());
+
+    if (totalVolume <= VSMALL)
+    {
+        return Tuple2<Tuple2<scalar, scalar>, scalar>
+        (
+            Tuple2<scalar, scalar>(0.0, 0.0),
+            maxAbs
+        );
+    }
+
+    return Tuple2<Tuple2<scalar, scalar>, scalar>
+    (
+        Tuple2<scalar, scalar>
+        (
+            weightedAbs/totalVolume,
+            Foam::sqrt(weightedSq/totalVolume)
+        ),
+        maxAbs
+    );
+}
+
+
+//- Cell gradient of an exact field, through the scheme named
+//  grad(<fieldName>): exact values in the cells and on the faces of every
+//  non-coupled patch, coupled patches evaluated from the neighbouring cells.
+//
+//  The field is unregistered and has calculated patches, so the result is the
+//  reconstruction operator alone, with no boundary condition of the solved field
+//  and no solve. exactAt(point) returns the exact value at a cell or face centre.
+template<class ExactFn>
+inline tmp<volVectorField> exactFieldGradient
+(
+    const fvMesh& mesh,
+    const word& fieldName,
+    const ExactFn& exactAt
+)
+{
+    volScalarField q
+    (
+        IOobject
+        (
+            "exactForGradient(" + fieldName + ")",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            IOobject::NO_REGISTER
+        ),
+        mesh,
+        dimensionedScalar(dimless, Zero),
+        "calculated"
+    );
+
+    const vectorField& C = mesh.C().primitiveField();
+    scalarField& qI = q.primitiveFieldRef();
+    forAll(C, cellI)
+    {
+        qI[cellI] = exactAt(C[cellI]);
+    }
+
+    forAll(mesh.boundary(), patchI)
+    {
+        const fvPatch& fp = mesh.boundary()[patchI];
+        if (fp.coupled() || fp.size() == 0)
+        {
+            continue;
+        }
+
+        const vectorField& Cf = fp.Cf();
+        scalarField values(Cf.size());
+        forAll(Cf, faceI)
+        {
+            values[faceI] = exactAt(Cf[faceI]);
+        }
+        q.boundaryFieldRef()[patchI] == values;
+    }
+
+    q.correctBoundaryConditions();
+
+    return fvc::grad(q, "grad(" + fieldName + ")");
+}
+
+
+//- Exact gradient by a fourth-order central difference of a closed-form
+//  value function, for references that provide values only.
+//
+//  With step 1e-4 the truncation error is below 1e-12 for the smooth
+//  manufactured fields; valueAt must use one smooth formula around the point.
+template<class ValueFn>
+inline vector centralDifferenceGradient(const ValueFn& valueAt, const point& p)
+{
+    const scalar h = 1e-4;
+    vector g(Zero);
+
+    for (direction d = 0; d < vector::nComponents; ++d)
+    {
+        vector e(Zero);
+        e[d] = h;
+        g[d] =
+        (
+            valueAt(p - 2*e) - 8*valueAt(p - e)
+          + 8*valueAt(p + e) - valueAt(p + 2*e)
+        )/(12*h);
+    }
+
+    return g;
+}
+
+
+//- Write one "name L1 L2 Linf" row.
+inline void writeNormRow
+(
+    Ostream& os,
+    const word& name,
+    const Tuple2<Tuple2<scalar, scalar>, scalar>& norms
+)
+{
+    os  << name << ' ' << norms.first().first() << ' '
+        << norms.first().second() << ' ' << norms.second() << nl;
+}
+
+
+//- Rows for one field, computed on every rank: <name>_bulk and <name>_boundary
+//  from the field error; grad<Name>, grad<Name>_bulk and grad<Name>_boundary from
+//  the solved-field gradient error; the same three gradRecon rows from the
+//  exact-field gradient error. Every part is normalised by the total volume of
+//  the mesh, so total^2 = bulk^2 + boundary^2 in L2. gradStem names the
+//  gradient rows when they differ from the field rows (gauge-shifted fields).
+inline List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>>
+bulkBoundaryRows
+(
+    const fvMesh& mesh,
+    const word& name,
+    const scalarField& numeric,
+    const scalarField& exact,
+    const vectorField& gradNumeric,
+    const vectorField& gradRecon,
+    const vectorField& gradExact,
+    const word& gradStem = word::null
+)
+{
+    const boolList boundary = boundaryAdjacentCells(mesh);
+    boolList bulk(boundary.size());
+    forAll(bulk, i)
+    {
+        bulk[i] = !boundary[i];
+    }
+
+    word cap(gradStem.empty() ? name : gradStem);
+    cap[0] = char(std::toupper(cap[0]));
+
+    return List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>>
+    ({
+        {name + "_bulk", computeMaskedNorms(mesh, numeric, exact, bulk)},
+        {name + "_boundary", computeMaskedNorms(mesh, numeric, exact, boundary)},
+        {"grad" + cap, computeNorms(mesh, gradNumeric, gradExact)},
+        {"grad" + cap + "_bulk", computeMaskedNorms(mesh, gradNumeric, gradExact, bulk)},
+        {"grad" + cap + "_boundary", computeMaskedNorms(mesh, gradNumeric, gradExact, boundary)},
+        {"gradRecon" + cap, computeNorms(mesh, gradRecon, gradExact)},
+        {"gradRecon" + cap + "_bulk", computeMaskedNorms(mesh, gradRecon, gradExact, bulk)},
+        {"gradRecon" + cap + "_boundary", computeMaskedNorms(mesh, gradRecon, gradExact, boundary)}
+    });
+}
+
+
+//- Cells sharing a face, internal or across a processor boundary, with a cell
+//  on the other side of the heart-bath interface.
+inline boolList interfaceBandCells(const fvMesh& mesh, const boolList& isHeart)
+{
+    boolList band(mesh.nCells(), false);
+    const labelUList& own = mesh.owner();
+    const labelUList& nei = mesh.neighbour();
+
+    forAll(nei, faceI)
+    {
+        if (isHeart[own[faceI]] != isHeart[nei[faceI]])
+        {
+            band[own[faceI]] = true;
+            band[nei[faceI]] = true;
+        }
+    }
+
+    boolList nbrIsHeart;
+    syncTools::swapBoundaryCellList(mesh, isHeart, nbrIsHeart);
+    for (const polyPatch& pp : mesh.boundaryMesh())
+    {
+        if (!pp.coupled())
+        {
+            continue;
+        }
+
+        const labelUList& faceCells = pp.faceCells();
+        const label start = pp.start() - mesh.nInternalFaces();
+        forAll(faceCells, i)
+        {
+            if (isHeart[faceCells[i]] != nbrIsHeart[start + i])
+            {
+                band[faceCells[i]] = true;
+            }
+        }
+    }
+
+    return band;
+}
+
+
+//- Rows for a potential on the heart-and-bath mesh, computed on every rank. The
+//  cells are split into the interface band (rows <name>_interface), the outer
+//  boundary (boundary-adjacent cells outside the band) and the bulk, each
+//  normalised by the total volume.
+//  The exact field has a normal-derivative jump across the interface, so the
+//  reconstruction-only rows exclude the interface band.
+inline List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>>
+globalPotentialRows
+(
+    const fvMesh& mesh,
+    const boolList& isHeart,
+    const word& name,
+    const scalarField& numeric,
+    const scalarField& exact,
+    const vectorField& gradNumeric,
+    const vectorField& gradRecon,
+    const vectorField& gradExact
+)
+{
+    const boolList band = interfaceBandCells(mesh, isHeart);
+    const boolList adjacent = boundaryAdjacentCells(mesh);
+    boolList boundary(band.size());
+    boolList bulk(band.size());
+    forAll(band, i)
+    {
+        boundary[i] = adjacent[i] && !band[i];
+        bulk[i] = !adjacent[i] && !band[i];
+    }
+
+    word cap(name);
+    cap[0] = char(std::toupper(cap[0]));
+
+    return List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>>
+    ({
+        {name + "_bulk", computeMaskedNorms(mesh, numeric, exact, bulk)},
+        {name + "_boundary", computeMaskedNorms(mesh, numeric, exact, boundary)},
+        {name + "_interface", computeMaskedNorms(mesh, numeric, exact, band)},
+        {"grad" + cap, computeNorms(mesh, gradNumeric, gradExact)},
+        {"grad" + cap + "_bulk", computeMaskedNorms(mesh, gradNumeric, gradExact, bulk)},
+        {"grad" + cap + "_boundary", computeMaskedNorms(mesh, gradNumeric, gradExact, boundary)},
+        {"grad" + cap + "_interface", computeMaskedNorms(mesh, gradNumeric, gradExact, band)},
+        {"gradRecon" + cap + "_bulk", computeMaskedNorms(mesh, gradRecon, gradExact, bulk)},
+        {"gradRecon" + cap + "_boundary", computeMaskedNorms(mesh, gradRecon, gradExact, boundary)}
+    });
+}
+
+
+//- The gradient the extracellular-potential operator consumes: the jump-aware
+//  phiEInterfaceGradient when the bath domain publishes it, else fvc::grad.
+inline tmp<volVectorField> consumedPhiEGradient(const volScalarField& phiE)
+{
+    const fvMesh& mesh = phiE.mesh();
+    if (mesh.foundObject<volVectorField>("phiEInterfaceGradient"))
+    {
+        return tmp<volVectorField>::New
+        (
+            mesh.lookupObject<volVectorField>("phiEInterfaceGradient")
+        );
+    }
+    return fvc::grad(phiE);
+}
+
+
+//- "tet" when every cell has four faces, "hex" when every cell has six,
+//  "mixed" otherwise, over all ranks.
+inline word meshCellKind(const fvMesh& mesh)
+{
+    bool allTet = true;
+    bool allHex = true;
+    for (const cell& c : mesh.cells())
+    {
+        allTet = allTet && c.size() == 4;
+        allHex = allHex && c.size() == 6;
+    }
+    reduce(allTet, andOp<bool>());
+    reduce(allHex, andOp<bool>());
+    return allTet ? "tet" : (allHex ? "hex" : "mixed");
 }
 
 

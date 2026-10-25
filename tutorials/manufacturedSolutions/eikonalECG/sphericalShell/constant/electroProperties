@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivitySource field;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    c0              [ 0 0 -0.5 0 0 0 0 ] 1;
+    sealedHeartBoundary true;
+    eikonalAdvectionDiffusionApproach true;
+    #includeIfPresent "<case>/local/formulation"
+    useGraphPrePopulation true;
+    // Outside the shell: the verifier pins the cells near its stimulus point
+    stimulusLocationMin ( 10 10 10 );
+    stimulusLocationMax ( 11 11 11 );
+    verificationModel
+    {
+        type    manufacturedShellEikonalVerifier;
+        N       12;
+        #includeIfPresent "<case>/local/verification"
+    }
+
+    // Eikonal-driven ECG of the shell field, off unless Allrun -ecg writes
+    // "ecg yes;" to local/ecg. The template, its parameters and its sampling
+    // are those of the cube case (../constant/electroProperties); -template
+    // sine writes local/ecgTemplate. The reference integrates
+    // -U'(t - psi)(G grad psi).(x - e)/|x - e|^3 over the shell with a
+    // spherical Gauss rule; electrodes lie outside the outer sphere |x| = 1.
+    ecg     no;
+    #includeIfPresent "<case>/local/ecg"
+    #ifeq $ecg yes
+    ecgDomains
+    {
+        ECG
+        {
+            ecgSolver    eikonalECG;
+            sampling
+            {
+                start           -6;
+                end             92;
+                deltaT          0.25;
+            }
+            verificationModel
+            {
+                type    manufacturedEikonalECGVerifier;
+                enabled    yes;
+                domain    shell;
+                dimension    "3D";
+                template    singleEvent;
+                referenceQuadratureOrder    128;
+                checkQuadratureOrders    (24 48 96);
+                #includeIfPresent "<case>/local/ecgVerification"
+            }
+            electrodePositions
+            {
+                // Five directions, |e| = 1.2, 1.4, 1.6, 1.8, 2.0, as in
+                // monodomainPseudoECG/sphericalShell
+                E1    (0.4 -0.8 0.8);
+                E2    (0.6 1.2 0.4);
+                E3    (-0.96 0 -1.28);
+                E4    (-0.6 1.2 -1.2);
+                E5    (1.2 -0.96 -1.28);
+            }
+            #includeIfPresent "<case>/local/ecgTemplate"
+        }
+    }
+    #endif
+}
+
+
+// ************************************************************************* //

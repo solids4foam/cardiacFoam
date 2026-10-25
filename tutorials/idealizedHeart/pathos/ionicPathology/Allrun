@@ -16,6 +16,7 @@ for arg in "$@"; do
     case "$arg" in
         ischemia|brugada) variant="$arg" ;;
         parallel)         parallelRun=true ;;
+        *) echo "Unknown argument '$arg'. Use ischemia or brugada, and/or parallel." ; exit 1 ;;
     esac
 done
 

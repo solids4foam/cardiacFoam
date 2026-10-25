@@ -1,31 +1,19 @@
-// Niederer et al. (2011) slab as an unstructured tetrahedral mesh.
+// Niederer et al. (2011) slab as an unstructured tetrahedral mesh: 20 x 3 x 7 mm,
+// fibres along x, the same geometry as the structured-hex case's blockMeshDict.
 //
-// Geometry is identical to this same tutorial's structured-hex case
-// (../../../system/blockMeshDict): a 20 x 3 x 7 mm slab, fibres along the
-// long (x) axis. The only difference between this case and the hex one is
-// HOW the mesh is built -- here gmsh generates near-uniform isotropic tets
-// at characteristic length lc, converted with gmshToFoam. Everything
-// downstream (conductivity, stimulus, ionic model, schemes, probes,
-// reference activation times) is reused unchanged.
+// lc is a DefineConstant in metres, set per resolution with
+// `gmsh -setnumber lc <value>`; the default is the coarsest level of the
+// {0.5, 0.2, 0.1} mm ladder.
 //
-// The characteristic length placeholder __LC__ is substituted by
-// niederer_2011.py's _apply_case (lc = the nominal dx in metres, from
-// setup/studies/tetConvergence/sweep_tet_generic.json's dx sweep) to build
-// the refinement ladder {0.5, 0.2, 0.1} mm, mirroring the published
-// Niederer dx sweep.
+// Built directly in metres: gmshToFoam imports coordinates verbatim, so the hex
+// case's blockMesh "scale 0.001" is folded into the dimensions.
 //
-// The box is built directly in METRES: gmshToFoam imports coordinates
-// verbatim (no scale factor is applied), and cardiacFoam works in SI, so the
-// hex case's blockMesh "scale 0.001" is folded into the dimensions here.
-//
-// A single physical surface ("walls") wraps all six faces. cardiacFoam
-// creates Vm with a uniform zeroGradient (no-flux) boundary regardless of
-// patch name -- the same insulated-slab boundary condition the hex case and
-// the benchmark use -- so one patch is sufficient.
+// One physical surface ("walls") suffices: cardiacFoam applies a uniform
+// zeroGradient to Vm regardless of patch name.
 
 SetFactory("OpenCASCADE");
 
-lc = __LC__;
+DefineConstant[ lc = { 0.0005, Name "lc" } ];
 
 // 20 mm (x, fibre axis) x 3 mm (y) x 7 mm (z)
 Box(1) = {0, 0, 0, 0.020, 0.003, 0.007};

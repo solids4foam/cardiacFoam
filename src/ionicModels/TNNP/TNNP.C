@@ -113,36 +113,20 @@ const char* const* Foam::TNNP::ioAlgebraicNames() const
 
 bool Foam::TNNP::readRestartState(const fvMesh& mesh)
 {
-    const fileName statePath = restartStateIO::path(mesh, "TNNPState");
-
-    if (!isFile(statePath))
+    if
+    (
+        !restartStateIO::readStates
+        (
+            mesh,
+            "TNNP",
+            restartStateName(),
+            NUM_STATES,
+            STATES_,
+            restartStateBlock()
+        )
+    )
     {
         return false;
-    }
-
-    std::ifstream is(statePath.c_str(), std::ios::binary);
-    if (!is)
-    {
-        FatalErrorInFunction
-            << "Cannot read restart state file " << statePath
-            << exit(FatalError);
-    }
-    restartStateIO::validateHeader
-    (
-        "TNNP", NUM_STATES, STATES_.size(), is, statePath
-    );
-
-    forAll(STATES_, integrationPtI)
-    {
-        forAll(STATES_[integrationPtI], stateI)
-        {
-            STATES_[integrationPtI][stateI] =
-                restartStateIO::readScalar(is, statePath);
-            restartStateIO::checkValue
-            (
-                STATES_[integrationPtI][stateI], statePath
-            );
-        }
     }
 
     const scalar t = mesh.time().value()*1000.0;
@@ -177,33 +161,15 @@ bool Foam::TNNP::readRestartState(const fvMesh& mesh)
 
 void Foam::TNNP::writeRestartState(const fvMesh& mesh) const
 {
-    const fileName statePath = restartStateIO::path(mesh, "TNNPState");
-    std::ofstream os(statePath.c_str(), std::ios::binary | std::ios::trunc);
-    if (!os)
-    {
-        FatalErrorInFunction
-            << "Cannot write restart state file " << statePath
-            << exit(FatalError);
-    }
-    restartStateIO::writeHeader
+    restartStateIO::writeStates
     (
-        "TNNP", NUM_STATES, STATES_.size(), os
+        mesh,
+        "TNNP",
+        restartStateName(),
+        NUM_STATES,
+        STATES_,
+        restartStateBlock()
     );
-
-    forAll(STATES_, integrationPtI)
-    {
-        forAll(STATES_[integrationPtI], stateI)
-        {
-            restartStateIO::checkValue
-            (
-                STATES_[integrationPtI][stateI], statePath
-            );
-            restartStateIO::writeScalar
-            (
-                os, STATES_[integrationPtI][stateI], statePath
-            );
-        }
-    }
 }
 
 

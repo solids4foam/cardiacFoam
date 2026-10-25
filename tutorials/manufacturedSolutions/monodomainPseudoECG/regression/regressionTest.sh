@@ -13,8 +13,10 @@ if [[ -z "${regressionLib}" ]]; then
 fi
 . "${regressionLib}"
 
-# Compares the summary values and error norms of the manufactured-solution
-# error summary and the final pseudo-ECG electrode values against the reference.
+# Runs the case defaults (3D anisotropic field, N 20) in parallel and compares
+# the summary values and error norms of the manufactured-solution error
+# summary, the final pseudo-ECG electrode values, and the manufactured
+# pseudo-ECG errors of E1-E5 against the references.
 
 EXPECTED_ELECTRODES=(E1 E2 E3 E4 E5)
 
@@ -55,4 +57,8 @@ ecgFile="$(regression_resolve_file postProcessing/pseudoECG.dat)" || ecgFile=""
 regression_require_output "pseudoECG trace" "${ecgFile}" '^#.*time'
 
 regression_compare || true
+
+# The manufactured pseudo-ECG errors against the reference integral
+REGRESSION_SUMMARY_FILE="${ecgSummary}"
+regression_compare regression/monodomainPseudoECG.ecg.reference || true
 regression_finish

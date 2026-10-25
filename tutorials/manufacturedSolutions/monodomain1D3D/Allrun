@@ -2,10 +2,185 @@
 cd "${0%/*}" || exit 1
 set -e
 
+# Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
-N_CELLS="${N_CELLS:-80}"
-sed "s/NCELLS/${N_CELLS}/g" system/blockMeshDict.3D > system/blockMeshDict.3D.active
-runApplication blockMesh -dict system/blockMeshDict.3D.active
-rm -f system/blockMeshDict.3D.active
-runApplication cardiacFoam
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
+
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
+                            (-domain coupled only)
+  -N n                      cells per unit length of the 3D cube (default 20)
+  -graph nodes003|nodes011|nodes021|nodes041|nodes081|nodes161
+                            Purkinje graph constant/purkinjeGraph.<graph>; default the
+                            graph whose edge length is 1/N (nodes<N+1>)
+  -domain coupled|graph     coupled: cardiacFoam on the coupled 1D-3D problem (default);
+                            graph: runPurkinjeGraph on the graph alone, no junction
+  -coupling unidirectional|bidirectional
+                            PVJ couplingMode (default unidirectional)
+  -pvj explicit|implicit    PVJ pvjCouplingScheme, tissue-side assembly (default explicit)
+  -rPvj x                   junction resistance (default 1)
+  -dt x                     time step
+  -endTime x                end time (default 0.1)
+
+Without -dt the time step is endTime/ceil(endTime/(0.008971136*(10/N)^2)).
+USAGE
+    exit 2
+}
+
+parallel=false
+N=20
+graph=
+domain=coupled
+coupling=unidirectional
+pvj=explicit
+rPvj=1
+dt=
+endTime=0.1
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
+    esac
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -graph)
+            needValue "$@"; graph="$2"; shift
+            oneOf -graph "$graph" nodes003 nodes011 nodes021 nodes041 nodes081 nodes161
+            ;;
+        -domain)
+            needValue "$@"; domain="$2"; shift
+            oneOf -domain "$domain" coupled graph
+            ;;
+        -coupling)
+            needValue "$@"; coupling="$2"; shift
+            oneOf -coupling "$coupling" unidirectional bidirectional
+            ;;
+        -pvj)
+            needValue "$@"; pvj="$2"; shift
+            oneOf -pvj "$pvj" explicit implicit
+            ;;
+        -rPvj)
+            needValue "$@"; rPvj="$2"; shift
+            positiveNumber -rPvj "$rPvj"
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            positiveNumber -endTime "$endTime"
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.blockMesh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
+
+if $parallel && [ "$domain" = graph ]
+then
+    echo "${0##*/}: -domain graph runs in serial only" 1>&2
+    usage
+fi
+
+# Default graph: edge length 1/N, two branches of length 1/2
+if [ -z "$graph" ]
+then
+    graph=$(printf "nodes%03d" $((N + 1)))
+fi
+if [ ! -f "constant/purkinjeGraph.$graph" ]
+then
+    echo "${0##*/}: no graph constant/purkinjeGraph.$graph for N $N; give -graph" 1>&2
+    usage
+fi
+
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/mesh
+echo "graphFile purkinjeGraph.$graph;" > local/graph
+cat > local/coupling <<EOF
+couplingMode        $coupling;
+pvjCouplingScheme   $pvj;
+rPvj                $rPvj;
+EOF
+
+# Time step proportional to h^2, ending exactly at endTime
+if [ -z "$dt" ]
+then
+    dt=$(awk -v T="$endTime" -v N="$N" 'BEGIN {
+        h = 0.008971136*(10/N)^2
+        n = int(T/h); if (n*h < T) n++
+        printf "%.17g", T/n }')
+fi
+cat > local/time <<EOF
+endTime         $endTime;
+deltaT          $dt;
+writeInterval   $endTime;
+EOF
+
+runApplication blockMesh -dict system/blockMeshDict.3D
+
+if [ "$domain" = graph ]
+then
+    runApplication runPurkinjeGraph
+elif $parallel
+then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar -latestTime
+else
+    runApplication cardiacFoam
+fi

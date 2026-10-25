@@ -1,21 +1,11 @@
-"""table_summary.py — Restitution curve summary table for restitutionCurves_s1s2Protocol.
-
-Reads per-model *_restitution.csv files from output_dir and consolidates them
-into a single restitutionCurves_summary.csv / .html.  The ionic model name is
-derived from the filename stem (e.g. TNNP_restitution.csv → ionic_model=TNNP).
-"""
+"""table_summary.py — Restitution summary table: consolidates the per-model *_restitution.csv files in output_dir into restitutionCurves_summary.csv / .html."""
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pandas as pd
 
-TUTORIALS_ROOT = Path(__file__).resolve().parents[4]
-if str(TUTORIALS_ROOT) not in sys.path:
-    sys.path.insert(0, str(TUTORIALS_ROOT))
-
-from openfoam_driver.postprocessing.table_writer import TableMetadata, TableWriter
+from omnidriver.postprocessing.table_writer import TableWriter
 
 _TUTORIAL_NAME = "restitutionCurves_s1s2Protocol"
 
@@ -48,16 +38,13 @@ def run_postprocessing(
     if not rows:
         return []
 
-    meta = TableMetadata(
-        tutorial=_TUTORIAL_NAME,
-        units={"DI_ms": "ms", "APD90_ms": "ms"},
-    )
     return TableWriter.write(
         rows,
         output_path,
         "restitutionCurves_summary",
         "Restitution curve APD90 summary",
-        meta,
+        _TUTORIAL_NAME,
+        units={"DI_ms": "ms", "APD90_ms": "ms"},
     )
 
 

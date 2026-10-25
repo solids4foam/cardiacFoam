@@ -23,6 +23,7 @@ flowchart TB
         VER["verificationModels<br/><i>built-in verification</i>"]
         AT["activeTensionModels<br/><i>mechanical response</i>"]
         ION["ionicModels<br/><i>electrical response</i>"]
+        NUM["numericsModels<br/><i>sealed-wall and interface treatments</i>"]
         CM["couplingModels<br/><i>Vm, Cai between ionic and tension</i>"]
         S4F["solids4foam<br/><i>solid mechanics</i>"]
         GW["genericWriter<br/><i>all outputs</i>"]
@@ -31,6 +32,7 @@ flowchart TB
     CORE --> VER
     CORE --> AT
     DOM --> ION
+    DOM --> NUM
     VER ~~~ CM
     AT -.->|"Ta"| S4F
     CM ~~~ GW
@@ -55,6 +57,7 @@ No library depends on one built after it, and no two libraries depend on each ot
 |---|---|
 | [`electroModels`](electroModels/README.md) | The electrophysiology part of the core, and its domains (myocardium, Purkinje, ECG, bath) with their solvers and couplers. |
 | [`electroMechanicalModels`](electroMechanicalModels/README.md) | The electromechanics part of the core: it couples the electrophysiology to a solid through the solids4foam backend. Built only in full mode. |
+| [`numericsModels`](numericsModels/README.md) | The discretisation pieces the tissue solvers share: sealed-wall and heart-bath interface treatments. It depends only on OpenFOAM's finite-volume library; the domains call it. |
 | [`verificationModels`](verificationModels/README.md) | Built-in verification. Verifiers are chosen by `type` in the case, from the same runtime-selection tables as every other model, so a manufactured-solution check runs in the normal solver, with no special build and no hardcoded paths. |
 | [`ionicModels`](ionicModels/README.md) | Cell-level models of the electrical response: 12 published ionic models, each in a scalar and a GPU-ready batched form. The myocardium and Purkinje domains each run one. |
 | [`couplingModels`](couplingModels/README.md) | The link between the two kinds of cell-level model: one header through which an active-tension model reads `Vm` or `Cai` from an ionic model without depending on it. |

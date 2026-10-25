@@ -22,13 +22,16 @@ ddtSchemes
 
 gradSchemes
 {
-    default    leastSquares;
+    default         leastSquares;
+    limitedGrad     cellMDLimited leastSquares 1;
+
+    #includeIfPresent "<case>/local/gradient"
 }
 
 divSchemes
 {
     default         none;
-    div(phiU,activationTime) Gauss linear;
+    div(phiU,activationTime) Gauss linearUpwind limitedGrad;
 }
 
 laplacianSchemes

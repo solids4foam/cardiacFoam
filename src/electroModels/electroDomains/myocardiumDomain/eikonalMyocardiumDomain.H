@@ -63,7 +63,7 @@ class eikonalMyocardiumDomain
     surfaceScalarField phiU_;
     volScalarField divPhiU_;
     const Switch eikonalAdvectionDiffusionApproach_;
-    const Switch useGraphPrePopulation_; // Test flag
+    const Switch useGraphPrePopulation_; // Initial guess by graph relaxation from the constrained cells
     const Switch sealedHeartBoundary_;
     autoPtr<eikonalVerificationModel> verificationModelPtr_;
 

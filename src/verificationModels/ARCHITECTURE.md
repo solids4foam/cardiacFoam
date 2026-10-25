@@ -37,7 +37,8 @@ input. Five of the six live in `electroModels/core/verificationModels/`; only
 
 `electroVerificationModel` is the myocardium-side base: it provides
 verification hooks that monodomain/bidomain spatial workflows call before or
-after the main solve. `ecgVerificationModel` is built around an upstream
+after the main solve, and the hooks for the global extracellular-potential
+equation: source, boundary data, compatibility projection, and interface flux. `ecgVerificationModel` is built around an upstream
 `electroStateProvider`. `couplingVerificationModel` covers bidirectional or
 unidirectional coupled workflows. `electromechanicalVerificationModel` adds
 `configured(dict)`, reporting whether a verification block is present.

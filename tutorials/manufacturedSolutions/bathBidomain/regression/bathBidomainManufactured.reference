@@ -1,22 +1,60 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
-summary  cellsPerDirection  80        0
-summary  finalTime          0.200112  1e-06
-error    Vm                 L1        1.52888e-05  1e-08
-error    Vm                 L2        1.99517e-05  1e-08
-error    Vm                 Linf      3.99158e-05  1e-07
-error    phiE               L1        0.000113666  1e-07
-error    phiE               L2        0.00013437   1e-07
-error    phiE               Linf      0.000166819  1e-07
-error    phiI               L1        4.71042e-06  1e-07
-error    phiI               L2        5.22528e-06  1e-07
-error    phiI               Linf      9.0771e-06   1e-07
-error    u1                 L1        2.81312e-05  1e-08
-error    u1                 L2        3.17462e-05  1e-08
-error    u1                 Linf      5.34953e-05  1e-07
-error    u2                 L1        7.39904e-06  1e-08
-error    u2                 L2        8.81582e-06  1e-08
-error    u2                 Linf      1.86159e-05  1e-08
-error    u3                 L1        0            1e-12
-error    u3                 L2        0            1e-12
-error    u3                 Linf      0            1e-12
+# interface|interfaceExact <column> <expected> <tolerance> (regressionTest.sh)
+summary  cellsPerDirection  20   0
+summary  finalTime          0.2  1e-9
+error    Vm                       L1    5.79142e-05    5.8e-10
+error    Vm                       L2    8.60638e-05    8.6e-10
+error    Vm                       Linf  0.000189132    1.9e-09
+error    phiE                     L1    0.00243935     2.4e-08
+error    phiE                     L2    0.00315489     3.2e-08
+error    phiE                     Linf  0.00490437     4.9e-08
+error    phiI                     L1    0.00236943     2.4e-08
+error    phiI                     L2    0.00236953     2.4e-08
+error    phiI                     Linf  0.00239166     2.4e-08
+error    u1                       L1    0.000106493    1.1e-09
+error    u1                       L2    0.000120897    1.2e-09
+error    u1                       Linf  0.000208306    2.1e-09
+error    u2                       L1    4.62662e-05    4.6e-10
+error    u2                       L2    5.15951e-05    5.2e-10
+error    u2                       Linf  7.93204e-05    7.9e-10
+error    u3                       L1    0              1e-12
+error    u3                       L2    0              1e-12
+error    u3                       Linf  0              1e-12
+error    Vm_bulk                  L2    6.82735e-05    6.8e-10
+error    Vm_boundary              L2    5.23995e-05    5.2e-10
+error    gradVm                   L2    0.0750603      7.5e-07
+error    gradVm_bulk              L2    0.00917018     9.2e-08
+error    gradVm_boundary          L2    0.074498       7.4e-07
+error    gradReconVm              L2    0.00999114     1e-07
+error    gradReconVm_bulk         L2    0.00898987     9e-08
+error    gradReconVm_boundary     L2    0.0043595      4.4e-08
+error    phiI_bulk                L2    0.00202436     2e-08
+error    phiI_boundary            L2    0.00123151     1.2e-08
+error    gradPhiI                 L2    0.00891985     8.9e-08
+error    gradPhiI_bulk            L2    0.00268565     2.7e-08
+error    gradPhiI_boundary        L2    0.00850594     8.5e-08
+error    gradReconPhiI            L2    0.00292634     2.9e-08
+error    gradReconPhiI_bulk       L2    0.00263307     2.6e-08
+error    gradReconPhiI_boundary   L2    0.00127687     1.3e-08
+error    phiE_bulk                L2    0.00269292     2.7e-08
+error    phiE_boundary            L2    0.00144948     1.4e-08
+error    phiE_interface           L2    0.000774925    7.7e-09
+error    gradPhiE                 L2    0.014757       1.5e-07
+error    gradPhiE_bulk            L2    0.00456733     4.6e-08
+error    gradPhiE_boundary        L2    0.00221174     2.2e-08
+error    gradPhiE_interface       L2    0.013857       1.4e-07
+error    gradReconPhiE_bulk       L2    0.0036701      3.7e-08
+error    gradReconPhiE_boundary   L2    0.00177751     1.8e-08
+interface      heartPhiE_L2             0.00241783     2.4e-08
+interface      bathPhiE_L2              0.00346512     3.5e-08
+interface      x0TraceJump_L2           0.00255278     2.6e-08
+interface      x1TraceJump_L2           0.0025517      2.6e-08
+interface      x0FluxJump_L2            0.000432731    4.3e-09
+interface      x1FluxJump_L2            0.000432087    4.3e-09
+interface      x0IntracellularLeak_L2   0.000432731    4.3e-09
+interface      x1IntracellularLeak_L2   0.000432086    4.3e-09
+interfaceExact x0FluxJump_L2            0.000432305    4.3e-09
+interfaceExact x1FluxJump_L2            0.000432305    4.3e-09
+interfaceExact x0AssembledFlux_L2       0.00146981     1.5e-08
+interfaceExact x1AssembledFlux_L2       0.00146981     1.5e-08
