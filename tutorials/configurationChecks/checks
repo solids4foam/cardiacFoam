@@ -114,6 +114,8 @@ purkinjeRestartParallel                slab  monodomainPurkinjeReactionDiffusion
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
 missingMyocardiumCoeffs                slab  monodomainExplicit          fail:bidomainSolverCoeffs     myocardiumSolver=bidomainSolver
+bidomainReferencePointOutside          slab  bidomain                    fail:must~lie~in~exactly~one~cell   bidomainSolverCoeffs/phiERefPoint=(1~1~1)
+bidomainReferenceValueWithoutPoint     slab  bidomain                    fail:phiEReferenceValue~is~set~but~phiERefPoint~is~not   bidomainSolverCoeffs/phiERefPoint!
 unknownIonicModel                      slab  monodomainExplicit          fail:bogusIonicModel          monodomainSolverCoeffs/ionicModel=bogusIonicModel
 unknownConductivitySource              slab  monodomainExplicit          fail:bogusSource              monodomainSolverCoeffs/conductivitySource=bogusSource
 unknownTimeCouplingScheme              slab  monodomainImplicit          fail:bogusScheme              monodomainSolverCoeffs/timeCouplingScheme=bogusScheme

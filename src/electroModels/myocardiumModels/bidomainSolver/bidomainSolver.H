@@ -127,21 +127,6 @@ public:
         return Gi_;
     }
 
-    const volTensorField& intracellularConductivity() const
-    {
-        return Gi_;
-    }
-
-    const volTensorField& extracellularConductivity() const
-    {
-        return Ge_;
-    }
-
-    const volTensorField& totalConductivity() const
-    {
-        return GiPlusGe_;
-    }
-
     virtual void bindExternalPhiE
     (
         const volScalarField& phiE,
