@@ -20,11 +20,48 @@ License
 #include "pvjMapper.H"
 
 #include "PstreamReduceOps.H"
+#include "mathematicalConstants.H"
 
 #include <cmath>
 
 namespace Foam
 {
+
+const wordList pvjMapper::kernelTypes
+({
+    "uniform",
+    "linear",
+    "gaussian",
+    "cosine"
+});
+
+
+scalar pvjMapper::kernelWeight(const word& kernelType, scalar r, scalar R)
+{
+    if (kernelType == "uniform")
+    {
+        return 1.0;
+    }
+    if (kernelType == "linear")
+    {
+        return 1.0 - r/(R + VSMALL);
+    }
+    if (kernelType == "gaussian")
+    {
+        return std::exp(-4.5*r*r/(R*R + VSMALL));
+    }
+    if (kernelType == "cosine")
+    {
+        return 0.5*(1.0 + std::cos(constant::mathematical::pi*r/(R + VSMALL)));
+    }
+
+    FatalErrorInFunction
+        << "Unknown pvjKernel '" << kernelType << "'. Valid kernels: "
+        << kernelTypes << exit(FatalError);
+
+    return 0.0;
+}
+
 
 pvjMapper::pvjMapper
 (
@@ -42,6 +79,13 @@ pvjMapper::pvjMapper
     terminalCellWeights_(terminalLocations.size()),
     sphereVolumes_(terminalLocations.size(), 0.0)
 {
+    if (!kernelTypes.found(kernelType))
+    {
+        FatalErrorInFunction
+            << "Unknown pvjKernel '" << kernelType << "'. Valid kernels: "
+            << kernelTypes << exit(FatalError);
+    }
+
     const vectorField& centres = mesh_.C();
     const scalarField& cellVolumes = mesh_.V();
 
@@ -120,15 +164,7 @@ pvjMapper::pvjMapper
             const scalar r = mag(centres[cellI] - terminalLocations_[i]);
             if (r <= radius_)
             {
-                scalar w = 1.0;
-                if (kernelType == "gaussian")
-                {
-                    w = std::exp(-4.5 * r * r / (radius_ * radius_ + VSMALL));
-                }
-                else if (kernelType == "linear")
-                {
-                    w = 1.0 - r / (radius_ + VSMALL);
-                }
+                const scalar w = kernelWeight(kernelType, r, radius_);
 
                 cellsInRadius.append(cellI);
                 cellsInRadiusWeights.append(w);

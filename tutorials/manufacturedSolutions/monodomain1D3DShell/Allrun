@@ -1,0 +1,226 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+
+# Source tutorial run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
+
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
+  -N n                      gmsh element size 1/n (default 10); the graph's edge length
+                            is 1/(2 ceil(n/2))
+  -seed n                   gmsh random seed (default 1)
+  -coupling unidirectional|bidirectional
+                            PVJ couplingMode (default bidirectional)
+  -rPvj x                   junction resistance (default 1)
+  -kernel uniform|linear|gaussian|cosine
+                            PVJ pvjKernel (default linear)
+  -radius x                 PVJ pvjRadius (default 0.2)
+  -dt x                     time step
+  -endTime x                end time (default 0.1)
+
+Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
+Needs gmsh (tested with 4.15.2) and gmshToFoam.
+USAGE
+    exit 2
+}
+
+parallel=false
+N=10
+seed=1
+coupling=bidirectional
+rPvj=1
+kernel=linear
+radius=0.2
+dt=
+endTime=0.1
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveInteger()
+{
+    case "$2" in
+        ''|*[!0-9]*|0*)
+            echo "${0##*/}: $1 takes a positive integer, not $2" 1>&2
+            usage
+            ;;
+    esac
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -N)
+            needValue "$@"; N="$2"; shift
+            positiveInteger -N "$N"
+            ;;
+        -seed)
+            needValue "$@"; seed="$2"; shift
+            positiveInteger -seed "$seed"
+            ;;
+        -coupling)
+            needValue "$@"; coupling="$2"; shift
+            oneOf -coupling "$coupling" unidirectional bidirectional
+            ;;
+        -rPvj)
+            needValue "$@"; rPvj="$2"; shift
+            positiveNumber -rPvj "$rPvj"
+            ;;
+        -kernel)
+            needValue "$@"; kernel="$2"; shift
+            oneOf -kernel "$kernel" uniform linear gaussian cosine
+            ;;
+        -radius)
+            needValue "$@"; radius="$2"; shift
+            positiveNumber -radius "$radius"
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            positiveNumber -endTime "$endTime"
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.gmsh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
+
+for tool in gmsh gmshToFoam
+do
+    command -v "$tool" > /dev/null || { echo "${0##*/}: $tool not found" 1>&2; exit 1; }
+done
+
+rm -rf local
+mkdir local
+
+echo "N $N;" > local/verification
+cat > local/coupling <<EOF
+couplingMode        $coupling;
+rPvj                $rPvj;
+pvjKernel           $kernel;
+pvjRadius           $radius;
+EOF
+echo "reference continuum;" > local/couplingVerification
+
+# Graph across the cavity on the x axis: root at the centre, one branch to
+# each endocardial terminal (-0.5 0 0) and (0.5 0 0), n edges per branch
+awk -v N="$N" 'BEGIN {
+    n = int((N + 1)/2)
+    h = 0.5/n
+    print "FoamFile"
+    print "{"
+    print "    version     2.0;"
+    print "    format      ascii;"
+    print "    class       dictionary;"
+    print "    location    \"constant\";"
+    print "    object      purkinjeGraph;"
+    print "}"
+    print ""
+    print "rootNode 0;"
+    print ""
+    printf "pvjNodes (%d %d);\n\n", n, 2*n
+    print "pvjLocations"
+    print "("
+    print "    (-0.5 0 0)"
+    print "    (0.5 0 0)"
+    print ");"
+    print ""
+    print "conductionEdges"
+    print "("
+    printf "    (0 1 %.17g 1)\n", h
+    for (i = 1; i < n; i++) printf "    (%d %d %.17g 1)\n", i, i + 1, h
+    printf "    (0 %d %.17g 1)\n", n + 1, h
+    for (i = n + 1; i < 2*n; i++) printf "    (%d %d %.17g 1)\n", i, i + 1, h
+    print ");"
+    print ""
+    print "points"
+    print "("
+    print "    (0 0 0)"
+    for (i = 1; i <= n; i++) printf "    (%.17g 0 0)\n", -i*h
+    for (i = 1; i <= n; i++) printf "    (%.17g 0 0)\n", i*h
+    print ");"
+}' > constant/purkinjeGraph
+
+# Time step proportional to h^2, ending exactly at endTime
+if [ -z "$dt" ]
+then
+    dt=$(awk -v T="$endTime" -v N="$N" 'BEGIN {
+        h = 0.00892857*(10/N)^2
+        n = int(T/h); if (n*h < T) n++
+        printf "%.17g", T/n }')
+fi
+cat > local/time <<EOF
+endTime         $endTime;
+deltaT          $dt;
+writeInterval   $endTime;
+EOF
+
+lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+runApplication gmsh -3 shell.geo.template -setnumber lc "$lc" -setnumber seed "$seed" -o local/shell.msh
+if grep -q "Error" log.gmsh
+then
+    echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
+    exit 1
+fi
+runApplication gmshToFoam local/shell.msh
+runApplication checkMesh
+if grep -q "Failed [0-9]* mesh checks" log.checkMesh
+then
+    echo "${0##*/}: checkMesh reported failed mesh checks; see log.checkMesh" 1>&2
+    exit 1
+fi
+
+# The cell-wise conductivity 0/Conductivity
+runApplication setManufacturedFields
+
+if $parallel
+then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar -latestTime
+else
+    runApplication cardiacFoam
+fi

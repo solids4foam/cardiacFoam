@@ -9,6 +9,7 @@ This folder groups the manufactured-solution verification cases by model scope.
 - `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
 - `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
+- [`monodomain1D3DShell`](monodomain1D3DShell/README.md) : 1D-3D coupling with the junction supports cut by the sealed curved endocardium of the spherical shell, on gmsh tetrahedra, against the continuum junction
 - `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
 - [`monodomainPseudoECG/sphericalShell`](monodomainPseudoECG/sphericalShell/README.md) : 3D monodomain with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient and a parallel hex regression
 - [`bidomain/sphericalShell`](bidomain/sphericalShell/README.md) : 3D heart-only bidomain with sealed curved walls crossed by two unequal rotated full conductivity tensors, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient, a compatibility-projected phiE equation and a parallel hex regression

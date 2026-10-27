@@ -110,6 +110,7 @@ monodomainSolverCoeffs
             verificationModel
             {
                 type coupled1D3DMonodomainVerifier;
+                #includeIfPresent "<case>/local/couplingVerification"
             }
 
             rPvj 1.0;
