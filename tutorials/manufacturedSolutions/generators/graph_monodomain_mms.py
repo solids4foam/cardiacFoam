@@ -21,9 +21,11 @@ cos(pi x).  That residual is kept only as a check (R_1D, residual_1D), not as
 an applied term.
 
 The only term added on the graph belongs to the coupled problem: in
-bidirectional transfer the terminal node k receives -I_pvj,k/(pi rho^2 L), with
-rho the fibre radius and L the edge length (node volume pi rho^2 L); in
-unidirectional transfer it is zero.
+bidirectional transfer the terminal node k receives -I_pvj,k/V_k, with
+V_k = pi rho^2 (1/2) sum of the lengths of the edges meeting at k, rho the
+fibre radius (each edge gives half of pi rho^2 L_e to each end node).  A
+terminal is a leaf, so V_k = pi rho^2 L_e/2.  In unidirectional transfer the
+term is zero.
 
 The graph has a root (1/2, 1/6, 1/3) and two straight branches to the terminals
 (0, 1/6, 1/3) and (1, 1/6, 1/3).  At a terminal the tissue field
@@ -124,15 +126,19 @@ def run_self_checks():
 
 
 def latex_fragments():
-    s = {n: sp.Symbol(n, real=True) for n in "V1 beta g Ik vol".split()}
+    s = {n: sp.Symbol(n, real=True) for n in "V1 beta g Ik vol sumL".split()}
     names = paper_symbol_names(s.values())
     names.update({s["V1"]: r"V_{1D}", s["g"]: r"g",
-                  s["Ik"]: r"I_{\mathrm{pvj},k}", s["vol"]: r"\pi\rho^{2}L"})
+                  s["Ik"]: r"I_{\mathrm{pvj},k}", s["vol"]: r"V_k",
+                  s["sumL"]: r"\sum_{e\ni k} L_e"})
     V1 = sp.sqrt(1 + t)*sp.cos(sp.pi*x)
     out = {
         "graph_V1D.tex": emit_latex_fragment(r"V_{1D}", V1, names),
         "graph_residual.tex": emit_latex_fragment(
             r"R_{1D}", (s["g"]*sp.pi**2 + s["beta"])*s["V1"], names),
+        "graph_node_volume.tex": emit_latex_fragment(
+            r"V_k", sp.pi*sp.Symbol("rho")**2*s["sumL"]/2,
+            {**names, sp.Symbol("rho"): r"\rho"}),
         "graph_terminal_source.tex": emit_latex_fragment(
             r"I_{\mathrm{app},1D}(\mathbf x_k)", -s["Ik"]/s["vol"], names),
         "graph_terminal_Vm.tex": emit_latex_fragment(r"V_m(\mathbf x_k)", -s["V1"]/2, names),
