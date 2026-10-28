@@ -42,10 +42,14 @@ case's `dt ~ h^2`, `endTime 0.1`, graph `nodes<N+1>`:
 - time step at `N = 32`: `dt = 0.1/(11 2^k)`, `k = 0..4`, linear, junction
   active and suppressed
 
+- `R/h` guideline: the scan again at `N = 64` (`c = 1.5, 2, 3, 4, 6, 8`),
+  where the terminal has the same position within its cell as at `N = 40`;
+  uniform, linear, cosine (and cosine at `N = 40`)
+
 Shell (`monodomain1D3DShell`), bidirectional, `R = 0.2`, `R_pvj = 1`: gmsh
-element size `1/N`, `N = 10, 14, 20, 28`, seed 1, kernels linear, cosine,
-uniform, gaussian, and linear with `R_pvj = 1e6`; `N = 14` once more on 4
-ranks.
+element size `1/N`, `N = 10, 14, 20, 28`, kernels linear, cosine, uniform,
+gaussian, and linear with `R_pvj = 1e6` on seed 1; linear, cosine and the
+suppressed control also on seeds 2 and 3; `N = 14` once more on 4 ranks.
 
 ## Execution
 
@@ -93,10 +97,25 @@ do
     run $shell shgau_N$N -N $N -kernel gaussian
     run $shell shoff_N$N -N $N -kernel linear -rPvj 1e6
 done
+for s in 2 3
+do
+    for N in 10 14 20 28
+    do
+        run $shell shlin_s${s}_N$N -N $N -seed $s -kernel linear
+        run $shell shcos_s${s}_N$N -N $N -seed $s -kernel cosine
+        run $shell shoff_s${s}_N$N -N $N -seed $s -kernel linear -rPvj 1e6
+    done
+done
 run $shell shpar_N14 parallel -N 14 -kernel linear
+for c in 1 1.5 2 3 4 6; do run $box scan_cosine_c$c -N 40 $cont -kernel cosine -radius $(awk -v c=$c 'BEGIN{printf "%.17g", c/40}'); done
+for k in uniform linear cosine
+do
+    for c in 1.5 2 3 4 6 8; do run $box scan64_${k}_c$c -N 64 $cont -kernel $k -radius $(awk -v c=$c 'BEGIN{printf "%.17g", c/64}'); done
+done
 python3 summarize.py results lin cos uni gau off disc b2_uniform b2_linear b2_gaussian \
     b4_uniform b4_linear b4_gaussian shlin shcos shuni shgau shoff
-python3 summarize.py results --scan scan_uniform scan_linear scan_gaussian
+python3 summarize.py results --scan scan_uniform scan_linear scan_gaussian scan_cosine \
+    scan64_uniform scan64_linear scan64_cosine
 python3 summarize.py results --dt dton dtoff
 ```
 
@@ -192,19 +211,50 @@ the terminal lies on cell faces, the errors are three orders smaller than at
 `N = 16`: one cell per support makes the result depend on where the terminal
 sits in its cell.
 
+### R/h guideline
+
+Junction current error relative to the current, `|I_h - I_c|/|I_c|`, at
+`N = 40` / `N = 64` (same terminal position within its cell):
+
+| R/h | uniform | linear | cosine |
+|---|---|---|---|
+| 1.5 | 12% / failed (a) | 8.3% / 7.5% | 11% / diverged |
+| 2 | 5.1% / 4.6% | 4.9% / 4.4% | 6.1% / 5.5% |
+| 3 | 1.4% / 1.2% | 2.3% / 2.0% | 3.0% / 2.6% |
+| 4 | 1.6% / 1.3% | 1.5% / 1.3% | 1.8% / 1.6% |
+| 6 | 0.74% / 0.67% | 0.68% / 0.63% | 0.90% / 0.80% |
+| 8 | - / 0.41% | - / 0.38% | - / 0.49% |
+
+(a) the order-one local error drove the FDA ionic state out of its domain
+one step before the end; the junction was not unstable.
+
+The relative current error, and likewise the graph terminal voltage error,
+is set by `R/h`: the two meshes agree to about 10%. The support-local error
+at fixed `R/h` roughly doubles from `N = 40` to `N = 64` (the shrinking
+support sharpens the source), and the far field scales with `h^2` alone
+(1.2e-4 to 4.7e-5). For the linear kernel the current error falls roughly as
+`(h/R)^1.8`: about 4.5% at `R = 2h`, 2% at `3h`, 1.3-1.5% at `4h`, 0.65% at
+`6h`, 0.4% at `8h`.
+
 ### Sealed curved wall, tetrahedra (shell)
 
-| kernel | support L2 | junction current | graph `V1D` at the terminal | deposit L1 |
-|---|---|---|---|---|
-| uniform | 1.44 +- 0.09 (1.4e-2) | 1.86 +- 0.11 (3.9e-3) | 1.21 +- 0.19 | 1.01 +- 0.10 |
-| linear | 1.90 +- 0.20 (3.7e-3) | 2.09 +- 0.33 (1.8e-3) | 1.59 +- 0.36 | 1.87 +- 0.22 |
-| gaussian | 1.66 +- 0.11 (7.3e-3) | 1.65 +- 0.09 (3.7e-3) | 1.12 +- 0.18 | 1.48 +- 0.08 |
-| cosine | 1.83 +- 0.11 (6.2e-3) | 1.83 +- 0.19 (3.1e-3) | 1.31 +- 0.12 | 1.82 +- 0.11 |
+Least-squares orders over all levels of the three seeds (linear, cosine,
+suppressed) or of seed 1 (uniform, gaussian); values at `N = 28` (mean over
+seeds); the seed-to-seed spread at `N = 28` is 1-5%.
 
-Each level is an independent gmsh mesh, so the orders scatter more than on
-the box. With the junction suppressed the support L2 converges at
-1.69 +- 0.04 and the far field at 1.50 +- 0.06: the sealed-shell
-tetrahedral operator's own orders. The mesh-integrated normalisation exceeds
-the exact one by 2.0e-2 (N = 10) to 2.8e-3 (N = 28), about second order: the
-flat facets place part of the mesh inside the true cavity sphere. On 4 ranks
-the `N = 14` run reproduces the serial one to about 1e-10.
+| kernel | support L2 | junction current | graph `V1D` at the terminal | far field |
+|---|---|---|---|---|
+| uniform | 1.44 +- 0.09 (1.4e-2) | 1.86 +- 0.11 (3.9e-3) | 1.21 +- 0.19 | 1.59 +- 0.07 |
+| linear | 1.95 +- 0.06 (3.7e-3) | 2.15 +- 0.11 (1.8e-3) | 1.61 +- 0.12 | 1.53 +- 0.02 |
+| gaussian | 1.66 +- 0.11 (7.3e-3) | 1.65 +- 0.09 (3.7e-3) | 1.12 +- 0.18 | 1.51 +- 0.06 |
+| cosine | 1.85 +- 0.05 (6.1e-3) | 1.83 +- 0.06 (3.0e-3) | 1.29 +- 0.06 | 1.52 +- 0.02 |
+| linear, junction suppressed | 1.76 +- 0.04 (2.2e-4) | - | 1.64 +- 0.08 | 1.50 +- 0.03 |
+
+With the support cut by the curved wall the linear kernel has the smallest
+errors and the highest orders; the cosine kernel loses its box order. The
+graph terminal voltage and the far field converge at the sealed-shell
+tetrahedral operator's own orders, with or without the junction. The
+mesh-integrated normalisation exceeds the exact one by 2.0e-2 (`N = 10`) to
+2.8e-3 (`N = 28`), about second order: the flat facets place part of the
+mesh inside the true cavity sphere. On 4 ranks the `N = 14` run reproduces
+the serial one to about 1e-10.
