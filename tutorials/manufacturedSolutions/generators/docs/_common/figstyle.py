@@ -338,17 +338,6 @@ def principal_frame(sigma):
     return v[..., :, 2], v[..., :, 1], v[..., :, 0]
 
 
-def frame_points(r1, r2, n_theta=3, phi=0.5 * np.pi, half_length=0.08):
-    """Sites on the cut plane azimuth=phi: three radii, each at least half_length
-    plus a margin inside both walls, n_theta polar angles each."""
-    margin = half_length + 0.03
-    radii = (r1 + margin, 0.5 * (r1 + r2), r2 - margin)
-    th = np.linspace(0.55, np.pi - 0.55, n_theta)
-    pts = [(r * np.sin(t) * np.cos(phi), r * np.sin(t) * np.sin(phi), r * np.cos(t))
-           for r in radii for t in th]
-    return np.array(pts)
-
-
 def depth_shades(n_radii, n_per_radius):
     """One colour per frame point: endocardium light to epicardium dark."""
     lo, hi = FIBRE_DEPTH
@@ -399,32 +388,84 @@ def frame_view(vectors, centre, max_angle=25.0, samples=8000, seed=1):
     return d[np.argmax(proj)], float(proj.max())
 
 
-def shell_frame_glyphs(ref, p, phi=0.5 * np.pi, length=0.18):
+def screen_basis(direction):
+    """Right and up vectors of a camera that looks along -direction with up = z."""
+    forward = -np.asarray(direction, float)
+    forward /= np.linalg.norm(forward)
+    right = np.cross(forward, (0.0, 0.0, 1.0))
+    right /= np.linalg.norm(right)
+    return right, np.cross(right, forward)
+
+
+def glyph_separation(pts, vectors, length, direction, samples=24):
+    """Smallest screen-space distance between arrows of different sites: every
+    arrow (a segment from -L/2 to +L/2 about its site) is projected along the view
+    direction and sampled; the distance is taken over all pairs of arrows that
+    belong to different sites."""
+    right, up = screen_basis(direction)
+    u = np.linspace(-0.5, 0.5, samples)
+    sets = []
+    for i, point in enumerate(pts):
+        arrows = []
+        for vec in vectors:
+            xyz = point[None, :] + u[:, None] * length * vec[i][None, :]
+            arrows.append(np.stack([xyz @ right, xyz @ up], axis=1))
+        sets.append(np.concatenate(arrows, axis=0))
+    best = np.inf
+    for i in range(len(sets)):
+        for j in range(i + 1, len(sets)):
+            diff = sets[i][:, None, :] - sets[j][None, :, :]
+            best = min(best, float(np.sqrt((diff ** 2).sum(axis=2)).min()))
+    return best
+
+
+def shell_frame_glyphs(ref, p, phi=0.5 * np.pi, length=0.16, margin=0.05,
+                       n_theta=2, n_candidates=300, seed=3):
     """Draw the frame (fibre, sheet, sheet normal) of sigma on the cut face phi as
-    arrows of equal length centred on nine sites, and carry the view direction in
-    `.direction`.  Asserted: the vectors are orthonormal, and both ends of every
-    arrow lie inside r1 < |x| < r2."""
-    pts = frame_points(p["r1"], p["r2"], phi=phi, half_length=0.5 * length)
-    sigma = ref.field("sigma", pts[:, 0], pts[:, 1], pts[:, 2])
-    fibre, sheet, normal = principal_frame(sigma)
+    arrows of equal length centred on 3 x n_theta sites (three radii, n_theta polar
+    angles each), and carry the view direction in `.direction`.  The sites are the
+    candidate, out of a seeded search, whose arrows are best separated on screen.
+    Asserted: the vectors are orthonormal; both ends of every arrow lie inside
+    r1 < |x| < r2; arrows of different sites are more than `margin` apart in the
+    image; every frame vector keeps a visible projected length."""
+    half = 0.5 * length
+    pad = half + 0.03
+    radii = (p["r1"] + pad, 0.5 * (p["r1"] + p["r2"]), p["r2"] - pad)
+    face = np.array([np.sin(phi), -np.cos(phi), 0.0])
+    along = np.array([np.cos(phi), np.sin(phi), 0.0])
+    centre = 0.94 * face + 0.34 * along + np.array([0.0, 0.0, 0.3])
+    centre /= np.linalg.norm(centre)
+    rng = np.random.default_rng(seed)
+    best = None
+    for _ in range(n_candidates):
+        theta = np.sort(rng.uniform(0.5, np.pi - 0.5, size=(3, n_theta)), axis=1)
+        pts = np.array([(r * np.sin(t) * np.cos(phi), r * np.sin(t) * np.sin(phi),
+                         r * np.cos(t)) for r, row in zip(radii, theta) for t in row])
+        sigma = ref.field("sigma", pts[:, 0], pts[:, 1], pts[:, 2])
+        fibre, sheet, normal = principal_frame(sigma)
+        direction, shortest = frame_view([fibre, sheet, normal], centre)
+        if shortest < 0.5:
+            continue
+        sep = glyph_separation(pts, (fibre, sheet, normal), length, direction)
+        if best is None or sep > best[0]:
+            best = (sep, pts, fibre, sheet, normal, direction, shortest)
+    assert best is not None, "no candidate keeps every frame vector visible"
+    sep, pts, fibre, sheet, normal, direction, shortest = best
     assert np.abs((fibre * sheet).sum(1)).max() < 1e-12
     assert np.abs((fibre * normal).sum(1)).max() < 1e-12
     assert np.abs((sheet * normal).sum(1)).max() < 1e-12
     for vec in (fibre, sheet, normal):
         for sign in (-1.0, 1.0):
-            r = np.linalg.norm(pts + sign * 0.5 * length * vec, axis=1)
+            r = np.linalg.norm(pts + sign * half * vec, axis=1)
             assert np.all(r > p["r1"]) and np.all(r < p["r2"]), "arrow leaves the wall"
-    face = np.array([np.sin(phi), -np.cos(phi), 0.0])
-    along = np.array([np.cos(phi), np.sin(phi), 0.0])
-    centre = 0.94 * face + 0.34 * along + np.array([0.0, 0.0, 0.3])
-    direction, shortest = frame_view([fibre, sheet, normal], centre / np.linalg.norm(centre))
-    draw_direction = direction
+    assert sep > margin, "glyphs overlap on screen (separation %.3f)" % sep
 
     def draw(pl):
-        add_frame_glyphs(pl, pts, [(fibre, depth_shades(3, len(pts) // 3)),
+        add_frame_glyphs(pl, pts, [(fibre, depth_shades(3, n_theta)),
                                    (sheet, SHEET), (normal, NORMAL)], length)
-    draw.direction = tuple(draw_direction)
+    draw.direction = tuple(direction)
     draw.shortest_projection = shortest
+    draw.separation = sep
     return draw
 
 
