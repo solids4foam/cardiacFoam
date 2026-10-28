@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""Pseudo-ECG reference of the manufactured monodomain fields.
+
+For the fields V_m = sqrt(1 + t) F the pseudo-ECG at an electrode e is
+
+    phi(e, t) = sqrt(1 + t) * integral over [0, 1]^d of g_d dx,
+    g_d = (r . sigma grad F) / |r|^3,   r = x - e,
+
+with F = F_d of the FDA fields (fda_monodomain_mms, sigma = diag FDA
+conductivity) or F = sin^2(pi x) sin^2(pi y) sin^2(pi z) (rotated_monodomain_mms,
+sigma = the rotated tensor).  In d < 3 only the first d coordinates enter r and
+grad F.  The integrand is 0 where |r|^2 <= 1e-300, the guard of the C++
+reference, so an electrode on a quadrature node contributes nothing and never
+produces NaN.  The integral is a tensor-product Gauss-Legendre quadrature.
+
+The emitted NumPy module holds integrand_d1, integrand_d2, integrand_d3 and
+integrand_rotated (arguments x, y, z, ex, ey, ez and the six distinct entries
+of sigma: xx xy xz yy yz zz), a numpy-only quadrature spatial_reference, and
+time_factor.
+
+Checks (--check): the integrand equals the C++ form (Cartesian sums for d = 1,
+2, 3) and vanishes at the electrode.
+
+    python pseudo_ecg_mms.py --emit
+    python pseudo_ecg_mms.py --check
+"""
+
+import argparse
+import os
+import sys
+
+import numpy as np
+import sympy as sp
+
+import fda_monodomain_mms as fda
+import rotated_monodomain_mms as rot
+from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.numpy_emit import emit_numpy_module
+from mms_common.quadrature import gauss_legendre_box
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+REFERENCE_NAME = "pseudo_ecg"
+DIMENSIONS = (1, 2, 3)
+VSMALL = sp.Float("1e-300")
+TUTORIAL_QUADRATURE_ORDER = 96
+
+x, y, z, t = fda.x, fda.y, fda.z, fda.t
+AXES = (x, y, z)
+
+_SIGMA_NAMES = "sxx sxy sxz syy syz szz".split()
+SIGMA_SYMBOLS = sp.symbols(_SIGMA_NAMES, real=True)
+ELECTRODE_SYMBOLS = sp.symbols("ex ey ez", real=True)
+
+
+def sigma_matrix(entries):
+    """Symmetric 3x3 matrix from (xx, xy, xz, yy, yz, zz)."""
+    a, b, c, d, e, f = entries
+    return sp.Matrix([[a, b, c], [b, d, e], [c, e, f]])
+
+
+SIGMA_SYMBOLIC = sigma_matrix(SIGMA_SYMBOLS)
+ELECTRODE_SYMBOLIC = sp.Matrix(ELECTRODE_SYMBOLS)
+SIGMA_FDA = sp.diag(*fda.SIGMA_DIAG)
+
+
+def grad_F(d, F=None):
+    """Gradient of F (default: the FDA F_d) as a 3-vector, zero beyond d."""
+    F = fda.fields(d)["F"] if F is None else F
+    return sp.Matrix([sp.diff(F, AXES[m]) if m < d else 0 for m in range(3)])
+
+
+def integrand(d, sigma, electrode, F=None):
+    """g_d as a sympy expression in x, y, z, with the VSMALL guard."""
+    if d not in DIMENSIONS:
+        raise ValueError("d must be 1, 2 or 3, got %r" % (d,))
+    sigma = sp.Matrix(sigma)
+    electrode = sp.Matrix(electrode)
+    flux = sigma*grad_F(d, F)
+    r = [AXES[m] - electrode[m] for m in range(d)]
+    rsq = sum(c**2 for c in r)
+    dot = sum(r[m]*flux[m] for m in range(d))
+    return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (dot/rsq**sp.Rational(3, 2), True))
+
+
+def time_factor(tt):
+    return np.sqrt(1.0 + tt)
+
+
+def spatial_reference(d, sigma, electrode, n_quad, F=None):
+    """Integral of g_d over [0, 1]^d by n_quad-point Gauss-Legendre per axis."""
+    g = sp.lambdify(AXES, integrand(d, sigma, electrode, F), "numpy")
+
+    def f(p):
+        full = [p[m] if m < d else np.zeros_like(p[0]) for m in range(3)]
+        return g(*full)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return gauss_legendre_box(f, np.zeros(d), np.ones(d), n_quad)
+
+
+def reference(d, sigma, electrode, t, n_quad, F=None):
+    """phi(e, t) = sqrt(1 + t) * spatial_reference."""
+    return float(time_factor(t)*spatial_reference(d, sigma, electrode, n_quad, F))
+
+
+def _rotated_F():
+    return rot.fields(rot.K_CASE)["F"]
+
+
+def cxx_integrand(d, sigma, electrode, F=None):
+    """The integrand written as the Cartesian component sums of the C++."""
+    g = grad_F(d, F)
+    s = sp.Matrix(sigma)
+    sg = [sum(s[i, j]*g[j] for j in range(3)) for i in range(3)]
+    dx, dy, dz = (AXES[m] - electrode[m] for m in range(3))
+    if d == 1:
+        rsq = dx**2
+        num = sg[0]*dx
+    elif d == 2:
+        rsq = dx**2 + dy**2
+        num = sg[0]*dx + sg[1]*dy
+    else:
+        rsq = dx**2 + dy**2 + dz**2
+        num = sg[0]*dx + sg[1]*dy + sg[2]*dz
+    return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (num/rsq**sp.Rational(3, 2), True))
+
+
+def _check(condition, message):
+    if not condition:
+        raise AssertionError(message)
+
+
+def run_self_checks():
+    e = ELECTRODE_SYMBOLIC
+    pts = [(0.31, 0.62, 0.17, 0.2), (0.9, 0.05, 0.44, -0.3)]
+    for d in DIMENSIONS:
+        for sigma in (SIGMA_FDA, rot.K_CASE):
+            a = integrand(d, sigma, e)
+            b = cxx_integrand(d, sigma, e)
+            for p in pts:
+                sub = {x: p[0], y: p[1], z: p[2], ELECTRODE_SYMBOLS[0]: p[3],
+                       ELECTRODE_SYMBOLS[1]: -0.7, ELECTRODE_SYMBOLS[2]: 1.4}
+                _check(abs(float(a.subs(sub)) - float(b.subs(sub))) < 1e-12,
+                       "d=%d: integrand differs from the C++ form" % d)
+        at = {x: 0.5, y: 0.5, z: 0.5, ELECTRODE_SYMBOLS[0]: 0.5,
+              ELECTRODE_SYMBOLS[1]: 0.5, ELECTRODE_SYMBOLS[2]: 0.5}
+        _check(integrand(d, SIGMA_FDA, e).subs(at) == 0, "d=%d: integrand not 0 at electrode" % d)
+
+
+# Source appended to the emitted module: a numpy-only quadrature over [0, 1]^d.
+RUNTIME = '''
+
+CASE_DIMENSION = {"d1": 1, "d2": 2, "d3": 3, "rotated": 3}
+
+
+def _sigma_entries(sigma):
+    s = numpy.asarray(sigma, dtype=float)
+    if s.shape == (3, 3):
+        return (s[0, 0], s[0, 1], s[0, 2], s[1, 1], s[1, 2], s[2, 2])
+    return tuple(float(v) for v in s)
+
+
+def time_factor(t):
+    return numpy.sqrt(1.0 + t)
+
+
+def spatial_reference(case, electrode, sigma, order):
+    """Integral of the integrand over [0, 1]^d (d from case: d1, d2, d3,
+    rotated) with `order` Gauss-Legendre points per axis.  electrode is
+    (ex, ey, ez); sigma is a 3x3 array or (xx, xy, xz, yy, yz, zz)."""
+    d = CASE_DIMENSION[case]
+    nodes, weights = numpy.polynomial.legendre.leggauss(order)
+    nodes = 0.5*(nodes + 1.0)
+    weights = 0.5*weights
+    grid = numpy.meshgrid(*([nodes]*d), indexing="ij")
+    w = numpy.ones_like(grid[0])
+    for i in range(d):
+        shape = [1]*d
+        shape[i] = order
+        w = w*weights.reshape(shape)
+    coords = list(grid) + [numpy.zeros_like(grid[0])]*(3 - d)
+    f = globals()["integrand_" + case]
+    with numpy.errstate(divide="ignore", invalid="ignore"):
+        values = f(*coords, *electrode, *_sigma_entries(sigma))
+    return float(numpy.sum(w*values))
+
+
+def reference(case, electrode, sigma, t, order):
+    return time_factor(t)*spatial_reference(case, electrode, sigma, order)
+'''
+
+
+def numpy_module():
+    functions = {}
+    args = (x, y, z) + tuple(ELECTRODE_SYMBOLS) + tuple(SIGMA_SYMBOLS)
+    for d in DIMENSIONS:
+        functions["integrand_d%d" % d] = (
+            args, integrand(d, SIGMA_SYMBOLIC, ELECTRODE_SYMBOLIC))
+    functions["integrand_rotated"] = (
+        args, integrand(3, SIGMA_SYMBOLIC, ELECTRODE_SYMBOLIC, _rotated_F()))
+    doc = ("Pseudo-ECG integrands of the manufactured monodomain fields on the unit "
+           "cube and their Gauss-Legendre reference; integrand_<case>(x, y, z, ex, ey, "
+           "ez, sxx, sxy, sxz, syy, syz, szz).  Generated by pseudo_ecg_mms.py.")
+    params = {"SIGMA_FDA": [float(v) for v in fda.SIGMA_DIAG],
+              "SIGMA_ROTATED": [float(rot.K_CASE[i, j]) for i, j in
+                                ((0, 0), (0, 1), (0, 2), (1, 1), (1, 2), (2, 2))],
+              "QUADRATURE_ORDER": TUTORIAL_QUADRATURE_ORDER, "VSMALL": 1e-300}
+    return emit_numpy_module(REFERENCE_NAME, functions, params, doc).rstrip("\n") + "\n" + RUNTIME
+
+
+def latex_fragments():
+    names_syms = {n: sp.Symbol(n, real=True) for n in ("G",)}
+    rdot = sp.Symbol("rdot", real=True)
+    rnorm = sp.Symbol("rnorm", real=True)
+    names = paper_symbol_names(names_syms.values())
+    names.update({rdot: r"\mathbf r\cdot\boldsymbol\sigma\nabla F_d",
+                  rnorm: r"\lVert\mathbf r\rVert"})
+    out = {}
+    for d in DIMENSIONS:
+        out["pseudo_ecg_gradF_d%d.tex" % d] = emit_latex_fragment(
+            r"\nabla F_%d" % d, grad_F(d)[:d, :], names)
+    out["pseudo_ecg_gradF_rotated.tex"] = emit_latex_fragment(
+        r"\nabla F", grad_F(3, _rotated_F()), names)
+    out["pseudo_ecg_integrand.tex"] = emit_latex_fragment(
+        "g_d", rdot/rnorm**3, names)
+    out["pseudo_ecg_time_factor.tex"] = emit_latex_fragment(
+        r"\sqrt{1+t}", sp.sqrt(1 + t), names)
+    return {"latex/" + k: v for k, v in out.items()}
+
+
+def render_outputs():
+    """{path relative to this folder: text} of every emitted file."""
+    out = {"reference/%s.py" % REFERENCE_NAME: numpy_module()}
+    out.update(latex_fragments())
+    return out
+
+
+def write_outputs(root=HERE):
+    outputs = render_outputs()
+    for rel, text in outputs.items():
+        path = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as fh:
+            fh.write(text)
+    return sorted(outputs)
+
+
+def outputs_match(root=HERE):
+    for rel, text in render_outputs().items():
+        path = os.path.join(root, rel)
+        if not os.path.exists(path):
+            return False
+        with open(path) as fh:
+            if fh.read() != text:
+                return False
+    return True
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    grp = ap.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--emit", action="store_true")
+    grp.add_argument("--check", action="store_true")
+    args = ap.parse_args(argv)
+    try:
+        run_self_checks()
+    except AssertionError as err:
+        print("self-check failed: %s" % err)
+        return 1
+    if args.emit:
+        for rel in write_outputs():
+            print("wrote %s" % rel)
+    else:
+        print("self-checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
