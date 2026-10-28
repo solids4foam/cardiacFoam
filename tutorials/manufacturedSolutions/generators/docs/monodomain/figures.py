@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pyvista as pv  # noqa: E402
 from matplotlib.gridspec import GridSpec  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
 
 MESH_CASES = {
     "fda_cube_hex": "FDA cube, hex",
@@ -33,18 +34,22 @@ MESH_CASES = {
     "graph_cube_tet": "Graph cube, tet",
 }
 CUBE_CENTRE = (0.5, 0.5, 0.5)
+XL = r"$x/(1\,\mathrm{m})$"
+YL = r"$y/(1\,\mathrm{m})$"
+ZL = r"$z/(1\,\mathrm{m})$"
+TL = r"$t/(1\,\mathrm{s})$"
+SLICE_TITLE = r"$x=0.3,\ y=0.2,\ z=0.4$"
 
 
-def cube_slices(settings, func, clim, offsets=(0.3, 0.2, 0.4), extra=None):
+def cube_slices(settings, func, clim, offsets=(0.3, 0.2, 0.4)):
     """Image of three orthogonal slices of func(x, y, z) on the unit cube."""
     grid = fs.cube_grid(settings.n_cube)
     grid.point_data["f"] = func(*fs.point_array(grid))
     pl = fs.plotter(settings)
-    pl.add_mesh(grid.slice_orthogonal(x=offsets[0], y=offsets[1], z=offsets[2]), scalars="f", cmap=fs.CMAP, clim=clim,
-                show_scalar_bar=False, lighting=False)
-    fs.add_box(pl)
-    if extra:
-        extra(pl)
+    pl.add_mesh(grid.slice_orthogonal(x=offsets[0], y=offsets[1], z=offsets[2]),
+                scalars="f", cmap=fs.CMAP, clim=clim, show_scalar_bar=False,
+                lighting=False)
+    fs.add_box(pl, color=fs.DOMAIN)
     fs.camera(pl, CUBE_CENTRE, 3.4)
     return fs.render(pl)
 
@@ -52,46 +57,61 @@ def cube_slices(settings, func, clim, offsets=(0.3, 0.2, 0.4), extra=None):
 def fda_cube(settings, outdir):
     ref = fs.load_reference("fda_monodomain")
     img = cube_slices(settings, lambda x, y, z: ref.F_d3(x, y, z, 0.0), (-1.0, 1.0))
-    fig = plt.figure(figsize=(7.2, 3.6))
-    gs = GridSpec(2, 2, width_ratios=[1.5, 1], figure=fig, wspace=0.12, hspace=0.9)
-    fs.panel(fig, fig.add_subplot(gs[:, 0]), img, title=r"$F_3$ on $x=0.3,\ y=0.2,\ z=0.4$",
-             label=r"$F_3(x,y,z)$", clim=(-1, 1), tag="(a)")
+    fig = plt.figure(figsize=(8.6, 4.2))
+    gs = GridSpec(2, 2, width_ratios=[1.5, 1], figure=fig, wspace=0.3, hspace=0.75)
+    fs.panel(fig, fig.add_subplot(gs[:, 0]), img, title=r"$F_3$ on " + SLICE_TITLE,
+             label=r"$F_3$", clim=(-1, 1), tag="(a)")
     x = np.linspace(0, 1, 200)
     ax = fig.add_subplot(gs[0, 1])
-    ax.plot(x, ref.F_d1(x, 0 * x, 0 * x, 0.0), color="black")
-    ax.set_xlabel(r"$x$")
-    ax.set_ylabel(r"$F_1$")
+    ax.plot(x, ref.F_d1(x, 0 * x, 0 * x, 0.0), color=fs.VM)
+    ax.set_xlabel(XL)
+    ax.set_ylabel(r"$F_1$", fontsize=14)
     ax.set_title(r"(b) $d=1$", loc="left")
     xx, yy = np.meshgrid(x, x, indexing="ij")
     ax = fig.add_subplot(gs[1, 1])
     im = ax.pcolormesh(xx, yy, ref.F_d2(xx, yy, 0 * xx, 0.0), cmap=fs.CMAP, vmin=-1,
                        vmax=1, shading="auto", rasterized=True)
     ax.set_aspect("equal")
-    ax.set_xlabel(r"$x$")
-    ax.set_ylabel(r"$y$")
+    ax.set_xlabel(XL)
+    ax.set_ylabel(YL)
     ax.set_title(r"(c) $F_2$, $d=2$", loc="left")
-    fs.colourbar_2d(fig, ax, im, r"$F_2$")
+    cb = fs.colourbar_2d(fig, ax, im, r"$F_2$")
+    cb.set_ticks([-1, 0, 1])
     fs.save(fig, outdir, "fda_cube.png", settings)
 
 
+def best_view(vectors, samples=4000, seed=0):
+    """Unit view direction (positive z) maximising the smallest projected length of
+    the given unit vectors, so that none is seen end-on."""
+    rng = np.random.default_rng(seed)
+    d = rng.normal(size=(samples, 3))
+    d[:, 2] = np.abs(d[:, 2]) + 0.2
+    d /= np.linalg.norm(d, axis=1)[:, None]
+    v = np.array(vectors)
+    proj = np.sqrt(np.maximum(0.0, 1.0 - (d @ v.T) ** 2))
+    return d[np.argmax(proj.min(axis=1))]
+
+
 def ellipsoid_glyph(pl, K):
-    """Surface {K u : |u| = 1}, its principal axes and the cube axes."""
+    """Surface {K u : |u| = 1}, its principal axes (common length) and the cube
+    axes.  Returns the eigenvalues, eigenvectors and a good view direction."""
     w, v = np.linalg.eigh(K)
     order = np.argsort(w)[::-1]
     w, v = w[order], v[:, order]
     sphere = pv.Sphere(radius=1.0, theta_resolution=60, phi_resolution=60)
     sphere.points = (K @ sphere.points.T).T / w[0]
-    pl.add_mesh(sphere, color="#d9d9d9", opacity=0.55, smooth_shading=True)
-    for i, color in zip(range(3), (fs.FIBRE, fs.SHEET, "#1b9e77")):
+    pl.add_mesh(sphere, color=fs.MESH_FACE, opacity=0.45, smooth_shading=True)
+    for i, color in zip(range(3), (fs.FIBRE, fs.SHEET, fs.NORMAL)):
         for sign in (1, -1):
-            pl.add_mesh(pv.Arrow(start=(0, 0, 0), direction=sign * v[:, i],
-                                 scale=1.15 * w[i] / w[0], tip_length=0.18,
-                                 tip_radius=0.05, shaft_radius=0.02), color=color)
-    fs.add_axes_arrows(pl, length=1.3)
-    pl.add_point_labels(np.array([[1.4, 0, 0], [0, 1.4, 0], [0, 0, 1.4]]),
+            pl.add_mesh(pv.Arrow(start=(0, 0, 0), direction=sign * v[:, i], scale=1.3,
+                                 tip_length=0.2, tip_radius=0.06, shaft_radius=0.025),
+                        color=color)
+    fs.add_axes_arrows(pl, length=0.9, color="#222222")
+    pl.add_point_labels(np.array([[1.12, 0, 0], [0, 1.12, 0], [0, 0, 1.12]]),
                         ["x", "y", "z"], font_size=26, shape=None, show_points=False,
-                        text_color="#444444")
-    return w, v
+                        text_color="#444444", font_family="arial")
+    axes = [v[:, i] for i in range(3)] + [np.eye(3)[i] for i in range(3)]
+    return w, v, best_view(axes)
 
 
 def rotated_cube(settings, outdir):
@@ -104,18 +124,20 @@ def rotated_cube(settings, outdir):
     img_v = cube_slices(settings, vm, (0.0, 1.0))
     img_s = cube_slices(settings, src, s_clim)
     pl = fs.plotter(settings)
-    w, v = ellipsoid_glyph(pl, K)
-    fs.camera(pl, (0, 0, 0), 5.5)
+    w, v, view = ellipsoid_glyph(pl, K)
+    fs.camera(pl, (0, 0, 0), 5.5, tuple(view))
     img_k = fs.render(pl)
-    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.9))
-    fs.panel(fig, axes[0], img_v, title=r"$V_m$ at $t=0$", label=r"$V_m$ (V)",
+    fig, axes = plt.subplots(1, 3, figsize=(12.6, 4.8))
+    fs.panel(fig, axes[0], img_v, title=r"$V_m$ at $t=0$", label=r"$V_m$",
              clim=(0, 1), tag="(a)")
-    fs.panel(fig, axes[1], img_k, title=r"$\boldsymbol{\sigma}$: principal axes vs. $x,y,z$",
+    fs.panel(fig, axes[1], img_k, title=r"axes of $\boldsymbol{\sigma}$ against $x,y,z$",
              tag="(b)")
     fs.legend(axes[1], [(r"$\mathbf{e}_%d$, $\lambda_%d=%.4f$" % (i + 1, i + 1, w[i]), c)
-                        for i, c in enumerate((fs.FIBRE, fs.SHEET, "#1b9e77"))], ncol=1)
-    fs.panel(fig, axes[2], img_s, title=r"source $S$ at $t=0$", label=r"$S$",
-             clim=s_clim, tag="(c)")
+                        for i, c in enumerate((fs.FIBRE, fs.SHEET, fs.NORMAL))]
+                       + [(r"cube axes $x,y,z$", "#222222")], ncol=2)
+    fs.panel(fig, axes[2], img_s, title=r"$S$ at $t=0$", label=r"$S$", clim=s_clim,
+             tag="(c)")
+    fig.suptitle("slices at " + SLICE_TITLE, y=0.03, fontsize=10)
     fs.save(fig, outdir, "rotated_cube.png", settings)
 
 
@@ -128,14 +150,16 @@ def shell_monodomain(settings, outdir):
     f_clim = fs.span(F(*fs.point_array(probe)))
     d_clim = fs.symmetric(div(*fs.point_array(probe)))
     img_v, _ = fs.shell_cutaway(settings, ref, F, f_clim)
-    img_g, _ = fs.shell_cutaway(settings, ref, F, None, fs.shell_frame_glyphs(ref, p))
+    glyph = fs.shell_frame_glyphs(ref, p)
+    img_g, _ = fs.shell_cutaway(settings, ref, F, None, glyph, glyph.direction)
     img_s, _ = fs.shell_cutaway(settings, ref, div, d_clim)
-    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.9))
-    fs.panel(fig, axes[0], img_v, title=r"$V_m$ at $t=0$, $r_1<|\mathbf{x}|<r_2$",
-             label=r"$V_m$ (V)", clim=f_clim, tag="(a)")
-    fs.panel(fig, axes[1], img_g, title=r"frame of $\boldsymbol{\sigma}$ through the wall",
+    fig, axes = plt.subplots(1, 3, figsize=(12.6, 4.6))
+    fs.panel(fig, axes[0], img_v, title=r"$V_m$ at $t=0$", label=r"$V_m$", clim=f_clim,
+             tag="(a)")
+    fs.panel(fig, axes[1], img_g, title=r"frame of $\boldsymbol{\sigma}$ in the wall",
              tag="(b)")
-    fs.legend(axes[1], [("fibre", fs.FIBRE), ("sheet", fs.SHEET)], ncol=2)
+    fs.legend(axes[1], [("fibre (light: endo, dark: epi)", fs.FIBRE),
+                        ("sheet", fs.SHEET), ("sheet normal", fs.NORMAL)], ncol=1)
     fs.panel(fig, axes[2], img_s, title=r"diffusion term of $S$ at $t=0$",
              label=r"$-\nabla\!\cdot(\boldsymbol{\sigma}\nabla F)$", clim=d_clim, tag="(c)")
     fs.save(fig, outdir, "shell_monodomain.png", settings)
@@ -144,44 +168,45 @@ def shell_monodomain(settings, outdir):
 def pseudo_ecg(settings, outdir):
     ref = fs.load_reference("pseudo_ecg")
     electrodes = fs.tutorial_electrodes("monodomainPseudoECG")
+    shell = fs.shell_electrodes("monodomainPseudoECG")
     sig_fda = np.diag(ref.PARAMS["SIGMA_FDA"])
     sig_rot = np.array(ref.PARAMS["SIGMA_ROTATED"], float)
-    order = settings.ecg_order // 2 + 4 if not settings.draft else settings.ecg_order
+    order = settings.ecg_order if settings.draft else settings.ecg_order // 2 + 4
     phi = {}
     for case, sig in (("d3", sig_fda), ("rotated", sig_rot)):
         phi[case] = np.array([ref.spatial_reference(case, sig, e, order)
                               for e in electrodes])
     e = np.array(electrodes)
-    clim = fs.span(phi["d3"])
-    pl = fs.plotter(settings)
-    fs.add_box(pl)
-    cloud = pv.PolyData(e)
-    cloud["phi"] = phi["d3"]
-    pl.add_mesh(cloud, scalars="phi", cmap=fs.CMAP, clim=clim, point_size=18,
-                render_points_as_spheres=True, show_scalar_bar=False)
-    fs.camera(pl, (0.5, 0.5, 0.5), 7.5)
-    img = fs.render(pl)
-    fig = plt.figure(figsize=(10.5, 3.6))
-    gs = GridSpec(1, 3, figure=fig, wspace=0.45, width_ratios=[1.1, 1, 1])
-    fs.panel(fig, fig.add_subplot(gs[0]), img,
-             title=r"electrodes $\mathbf{e}$ around the cube",
-             label=r"$\phi(\mathbf{e},0)$, FDA $d=3$", clim=clim, tag="(a)")
-    ax = fig.add_subplot(gs[1])
-    idx = np.arange(1, len(e) + 1)
-    ax.plot(idx, phi["d3"], ".", color="black", ms=3, label=r"FDA $d=3$")
-    ax.plot(idx, phi["rotated"], ".", color=fs.ELECTRODE, ms=3, label="rotated")
-    ax.set_xlabel("electrode index")
-    ax.set_ylabel(r"$\phi(\mathbf{e},0)$")
-    ax.set_title("(b) exact reference over the electrodes", loc="left")
-    ax.legend(frameon=False, fontsize=8)
-    ax = fig.add_subplot(gs[2])
+    fig = plt.figure(figsize=(9.6, 8.4))
+    gs = GridSpec(2, 2, figure=fig, hspace=0.12, wspace=0.28)
+    fs.cube_electrode_axes(fig.add_subplot(gs[0, 0], projection="3d", computed_zorder=False),
+                           electrodes, "(a) unit cube: %d electrodes" % len(electrodes))
+    fs.shell_electrode_axes(fig.add_subplot(gs[0, 1], projection="3d", computed_zorder=False),
+                            shell, title=r"(b) sealed shell: $\mathrm{E1}$ to $\mathrm{E5}$")
+    ax = fig.add_subplot(gs[1, 0])
+    dist = np.linalg.norm(e - 0.5, axis=1)
+    ax.semilogy(dist, np.abs(phi["d3"]), "D", color=fs.ECG, ms=4, label=r"FDA $d=3$")
+    ax.semilogy(dist, np.abs(phi["rotated"]), "D", mfc="none", color=fs.ECG, ms=4,
+                label="rotated")
+    ax.set_ylim(1e-6, 0.5)
+    ax.set_xlabel(r"$|\mathbf{e}-\mathbf{x}_c|/(1\,\mathrm{m})$")
+    ax.set_ylabel(r"$|\Phi_e(\mathbf{e},0)|$")
+    ax.set_title(r"(c) $\Phi_e$ against distance from the cube centre $\mathbf{x}_c$",
+                 loc="left", fontsize=11)
+    ax.legend(frameon=False)
+    ax = fig.add_subplot(gs[1, 1])
     t = np.linspace(0.0, 2.0, 100)
-    for k, color in zip(np.argsort(-np.abs(phi["d3"]))[:3], ("black", fs.ELECTRODE, fs.KERNEL)):
-        ax.plot(t, ref.time_factor(t) * phi["d3"][k], color=color, label=r"$\mathbf{e}_{%d}$" % (k + 1))
-    ax.set_xlabel(r"$t$ (s)")
-    ax.set_ylabel(r"$\phi(\mathbf{e},t)$")
-    ax.set_title(r"(c) $\sqrt{1+t}\,\phi(\mathbf{e},0)$, three largest", loc="left")
-    ax.legend(frameon=False, fontsize=8)
+    top = np.argsort(-np.abs(phi["d3"]))[:3]
+    for k, color, ls in zip(top, (fs.ECG, fs.ECG_LIGHT, fs.ECG_DARK), ("-", "--", ":")):
+        ax.plot(t, ref.time_factor(t) * phi["d3"][k], color=color, ls=ls,
+                label=r"$\mathbf{e}=(%.2f,\,%.2f,\,%.2f)$" % tuple(e[k]))
+    ax.set_xlabel(TL)
+    ax.set_ylabel(r"$\Phi_e(\mathbf{e},t)$")
+    ax.set_title(r"(d) $\Phi_e(\mathbf{e},t)=\sqrt{1+t}\,\Phi_e(\mathbf{e},0)$",
+                 loc="left", fontsize=11)
+    ax.margins(y=0.3)
+    ax.legend(frameon=False, fontsize=9, loc="upper center",
+              title=r"three largest $|\Phi_e(\mathbf{e},0)|$, FDA $d=3$", title_fontsize=9)
     fs.save(fig, outdir, "pseudo_ecg.png", settings)
 
 
@@ -207,20 +232,23 @@ def graph_geometry(settings, outdir):
     clim = fs.span(grid["f"])
     pl = fs.plotter(settings)
     pl.add_mesh(grid.slice(normal=(0, 0, 1), origin=(0.5, 0.5, zc)), scalars="f",
-                cmap=fs.CMAP, clim=clim, show_scalar_bar=False)
-    fs.add_box(pl)
-    tube = pv.Line(terminals[0], terminals[1]).tube(radius=0.012)
-    pl.add_mesh(tube, color=fs.GRAPH)
-    pl.add_mesh(pv.Sphere(radius=0.028, center=root), color="black")
+                cmap=fs.CMAP, clim=clim, show_scalar_bar=False, lighting=False)
+    fs.add_box(pl, color=fs.DOMAIN)
+    pl.add_mesh(pv.Line(terminals[0], terminals[1]).tube(radius=0.012), color=fs.GRAPH)
+    pl.add_mesh(pv.Sphere(radius=0.03, center=root), color="black")
     for tt, side in zip(terminals, (1, -1)):
         pl.add_mesh(pv.Sphere(radius=0.028, center=tt), color=fs.GRAPH)
         pl.add_mesh(half_ball(tt, cpl.RADIUS, side), color=fs.KERNEL, opacity=0.55)
     fs.camera(pl, CUBE_CENTRE, 3.4, (0.8, -1.3, 1.0))
     img = fs.render(pl)
-    fig, ax = plt.subplots(figsize=(5.2, 4.6))
-    fs.panel(fig, ax, img, title=r"graph (orange), kernel half-balls (purple, radius $0.11$),"
-             "\n" r"$V_m$ on $z=1/3$",
-             label=r"$V_m(x,y,1/3,0)$ (V)", clim=clim)
+    fig, ax = plt.subplots(figsize=(6.0, 5.2))
+    fs.panel(fig, ax, img, title=r"graph, kernels and $V_m$ on $z=1/3$",
+             label=r"$V_m$ at $t=0$", clim=clim)
+    fs.legend(ax, [("graph", fs.GRAPH),
+                   (r"root $(\frac{1}{2},\frac{1}{6},\frac{1}{3})$", "black", "o"),
+                   ("terminals", fs.GRAPH, "o"),
+                   (r"kernel half-balls, radius $0.11$", fs.KERNEL)],
+              ncol=1, inside="upper left")
     fs.save(fig, outdir, "graph_1d3d_geometry.png", settings)
 
 
@@ -228,34 +256,37 @@ def graph_fields(settings, outdir):
     ref = fs.load_reference("graph_monodomain")
     cpl = fs.load_reference("coupled_1d3d")
     t0, t1 = cpl.TERMINALS
-    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.6),
-                             gridspec_kw={"wspace": 0.4, "width_ratios": [1, 1, 1.15]})
+    fig, axes = plt.subplots(1, 3, figsize=(13.6, 4.6),
+                             gridspec_kw={"wspace": 0.5, "width_ratios": [1, 1, 1.15]})
     ax = axes[0]
     x = np.linspace(0, 1, 200)
-    for t, color in ((0.0, "black"), (1.0, fs.ELECTRODE)):
-        ax.plot(x, ref.V1D(x, t), color=color, label=r"$V_{1D}$, $t=%g$" % t)
-        ax.plot(x, cpl.Vm3D(x, t0[1], t0[2], t), "--", color=color,
-                label=r"$V_m(x,\frac{1}{6},\frac{1}{3})$, $t=%g$" % t)
+    for t, color in ((0.0, fs.VM), (1.0, fs.VM_LIGHT)):
+        ax.plot(x, ref.V1D(x, t), color=color)
+        ax.plot(x, cpl.Vm3D(x, t0[1], t0[2], t), "--", color=color)
     ax.axvline(0.5, color=fs.GREY, lw=0.8, ls=":")
-    ax.text(0.5, -1.55, " root", color=fs.GREY, va="bottom", fontsize=8)
-    ax.set_xlabel(r"$x$ along the graph")
-    ax.set_ylabel(r"$V$ (V)")
-    ax.set_title("(a) graph field and cube field on the graph", loc="left")
-    ax.set_ylim(-1.6, 2.4)
-    ax.legend(frameon=False, fontsize=6.5, loc="upper right", ncol=2, columnspacing=0.8)
+    ax.set_ylim(-1.7, 3.3)
+    ax.text(0.51, -1.6, "root", color=fs.GREY, va="bottom")
+    ax.set_xlabel(XL + " along the graph")
+    ax.set_ylabel(r"$V_{1D}$, $V_m$")
+    ax.set_title(r"(a) $V_{1D}$ and $V_m$ on the graph line", loc="left", fontsize=11)
+    ax.legend(handles=[
+        Line2D([0], [0], color=fs.NEUTRAL, label=r"$V_{1D}$"),
+        Line2D([0], [0], color=fs.NEUTRAL, ls="--", label=r"$V_m(x,\frac{1}{6},\frac{1}{3})$"),
+        Line2D([0], [0], color=fs.VM, label=r"$t/(1\,\mathrm{s})=0$"),
+        Line2D([0], [0], color=fs.VM_LIGHT, label=r"$t/(1\,\mathrm{s})=1$")],
+        frameon=False, fontsize=9, loc="upper center", ncol=2)
     ax = axes[1]
     r = np.linspace(0, 1.3 * cpl.RADIUS, 200)
-    ax.plot(r, np.maximum(0.0, 1.0 - r / cpl.RADIUS), color=fs.KERNEL)
+    ax.plot(r, np.maximum(0.0, 1.0 - r / cpl.RADIUS), color=fs.NEUTRAL)
     ax.axvline(cpl.RADIUS, color=fs.GREY, lw=0.8, ls=":")
-    ax.set_xlabel(r"distance $r$ from the terminal")
-    ax.set_ylabel(r"kernel weight $w_k(r)$")
-    ax.set_title("(b) linear kernel", loc="left")
+    ax.set_xlabel(r"distance from the terminal$/(1\,\mathrm{m})$")
+    ax.set_ylabel(r"kernel weight $w_k$")
+    ax.set_title("(b) linear kernel", loc="left", fontsize=11)
     ax = axes[2]
     n_quad = 6 if settings.draft else 16
     npts = 20 if settings.draft else 80
     xs = np.linspace(0, 1, npts)
-    zs = np.linspace(0, 1, npts)
-    xx, zz = np.meshgrid(xs, zs, indexing="ij")
+    xx, zz = np.meshgrid(xs, xs, indexing="ij")
     pts = np.stack([xx.ravel(), np.full(xx.size, t0[1]), zz.ravel()], axis=1)
     vals = cpl.continuum_junction_source(pts, 0.0, n=n_quad).reshape(xx.shape)
     clim = fs.symmetric(vals)
@@ -267,9 +298,9 @@ def graph_fields(settings, outdir):
         ax.plot(tt[0] + side * cpl.RADIUS * np.cos(ang), tt[2] + cpl.RADIUS * np.sin(ang),
                 color="white", lw=1)
     ax.set_aspect("equal")
-    ax.set_xlabel(r"$x$")
-    ax.set_ylabel(r"$z$")
-    ax.set_title(r"(c) junction source $S_{\mathrm{pvj}}$ on $y=1/6$, $t=0$", loc="left")
+    ax.set_xlabel(XL)
+    ax.set_ylabel(ZL)
+    ax.set_title(r"(c) $S_{\mathrm{pvj}}$ on $y=1/6$ at $t=0$", loc="left", fontsize=11)
     fs.colourbar_2d(fig, ax, im, r"$S_{\mathrm{pvj}}$")
     fs.save(fig, outdir, "graph_1d3d_fields.png", settings)
 

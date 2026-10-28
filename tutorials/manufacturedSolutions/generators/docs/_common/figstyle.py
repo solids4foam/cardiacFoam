@@ -1,10 +1,13 @@
 """Shared style and helpers of the figure scripts.
 
-One colormap (viridis) for every scalar field, one serif font with Computer
-Modern mathtext, one set of accent colours, one camera.  Fields are rendered
-with pyvista off-screen into an image and placed in a matplotlib panel, so the
-colourbars and the symbols are matplotlib mathtext.  Figures show the problem
-only: geometry, exact fields, conductivity frames and sources.
+The conventions follow the paper's figures: one sans-serif family, 12 pt labels,
+10 pt ticks, a fixed colour per quantity, light-grey geometry with a cut-away,
+dark-red rods for fibre directions, blue dots for cube electrodes and red
+triangles for named electrodes.  Scalar fields use one perceptually uniform
+colormap (viridis) with a colourbar.  Fields are rendered with pyvista
+off-screen into an image and placed in a matplotlib panel, so colourbars and
+symbols are matplotlib mathtext.  Figures show the problem only: geometry,
+exact fields, conductivity frames and sources.
 """
 
 import argparse
@@ -24,6 +27,8 @@ import pyvista as pv
 from matplotlib import cm
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.mplot3d import proj3d
 
 pv.OFF_SCREEN = True
 
@@ -32,22 +37,47 @@ GENERATORS = os.path.abspath(os.path.join(HERE, "..", ".."))
 REFERENCE_DIR = os.path.join(GENERATORS, "reference")
 
 CMAP = "viridis"
-FIBRE = "#d95f02"
-SHEET = "#e7298a"
-GRAPH = "#d95f02"
-KERNEL = "#7570b3"
-ELECTRODE = "#d95f02"
+
+# colour per quantity (line plots of the quantity)
+VM = "#1f77b4"
+VM_LIGHT = "#9ecae1"
+PSI = "#8c564b"
+PSI_LIGHT = "#c49c94"
+PSI_DARK = "#5e3a33"
+ECG = "#9467bd"
+ECG_LIGHT = "#c5b0d5"
+ECG_DARK = "#5b3f7c"
+NEUTRAL = "#7f7f7f"
+
+# geometry
+MESH_FACE = "#e3ebf3"
+MESH_EDGE = "#5d6d7e"
+FIBRE = "#c0392b"
+FIBRE_DEPTH = ((0.96, 0.72, 0.69), (0.57, 0.17, 0.13))   # endocardium light, epicardium dark
+SHEET = "#2c3e50"
+NORMAL = "#95a5a6"
+GRAPH = "#d35400"
+PIN = "#d35400"
+KERNEL = "#16a085"
+DOMAIN = "#555555"
+COHORT = "#1f77b4"
+NAMED = "#b62c35"
 GREY = "#808080"
 DPI = 300
 DRAFT_DPI = 80
 
 plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["DejaVu Serif"],
-    "mathtext.fontset": "cm",
-    "font.size": 9,
-    "axes.titlesize": 9,
-    "axes.labelsize": 9,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica", "Arial", "DejaVu Sans"],
+    "mathtext.fontset": "dejavusans",
+    "font.size": 10,
+    "axes.titlesize": 12,
+    "axes.labelsize": 12,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "legend.fontsize": 10,
+    "axes.linewidth": 0.8,
+    "lines.linewidth": 1.5,
     "figure.dpi": 100,
     "savefig.dpi": DPI,
 })
@@ -75,16 +105,87 @@ def load_reference(name):
     return module
 
 
-def tutorial_electrodes(case_dir):
-    """Electrodes of a tutorial's electroProperties; the built-in set when absent."""
-    builtin = [(-0.5, 0.5, 0.5), (1.5, 0.5, 0.5), (1.2, 0.23, 0.61),
-               (1.35, 0.74, 0.28), (1.55, 0.41, 0.83)]
-    path = os.path.join(GENERATORS, "..", case_dir, "constant", "electroProperties")
-    if not os.path.exists(path):
-        return builtin
+def read_electrodes(path):
+    """{name: position} of the electrodePositions block of an electroProperties file."""
     with open(path) as fh:
-        found = re.findall(r"^\s*([ER]\d+)\s+\(([^)]*)\);", fh.read(), re.M)
-    return [tuple(float(v) for v in xyz.split()) for _, xyz in found] or builtin
+        text = fh.read()
+    block = re.search(r"electrodePositions\s*\{(.*?)\n\s*\}", text, re.S)
+    if block is None:
+        return {}
+    body = re.sub(r"//[^\n]*", "", block.group(1))
+    return {m[1]: np.array([float(v) for v in m[2].split()])
+            for m in re.finditer(r"(\w+)\s*\(([^)]*)\)\s*;", body)}
+
+
+BUILTIN_CUBE_ELECTRODES = [(-0.5, 0.5, 0.5), (1.5, 0.5, 0.5), (1.2, 0.23, 0.61),
+                           (1.35, 0.74, 0.28), (1.55, 0.41, 0.83)]
+BUILTIN_SHELL_ELECTRODES = {
+    "E1": (0.4, -0.8, 0.8), "E2": (0.6, 1.2, 0.4), "E3": (-0.96, 0.0, -1.28),
+    "E4": (-0.6, 1.2, -1.2), "E5": (1.2, -0.96, -1.28)}
+
+
+def tutorial_electrodes(case_dir):
+    """Cube electrodes of a tutorial's electroProperties; the built-in set when absent."""
+    path = os.path.join(GENERATORS, "..", case_dir, "constant", "electroProperties")
+    found = read_electrodes(path) if os.path.exists(path) else {}
+    return [tuple(v) for v in found.values()] or list(BUILTIN_CUBE_ELECTRODES)
+
+
+def shell_electrodes(case_dir):
+    """E1-E5 of a tutorial's sphericalShell case; the built-in set when absent."""
+    path = os.path.join(GENERATORS, "..", case_dir, "sphericalShell", "constant",
+                        "electroProperties")
+    found = read_electrodes(path) if os.path.exists(path) else {}
+    return found or {k: np.array(v) for k, v in BUILTIN_SHELL_ELECTRODES.items()}
+
+
+def _tidy3d(ax, lim, azim=-58, elev=18, zoom=1.35):
+    for set_lim, (lo, hi) in zip((ax.set_xlim, ax.set_ylim, ax.set_zlim), lim):
+        set_lim(lo, hi)
+    ax.set_box_aspect((1, 1, 1), zoom=zoom)
+    ax.set_axis_off()
+    ax.view_init(elev=elev, azim=azim)
+
+
+def cube_electrode_axes(ax, electrodes, title=None):
+    """Wireframe unit cube with the electrodes as small blue dots (matplotlib 3D)."""
+    c = np.array([[x, y, z] for x in (0, 1) for y in (0, 1) for z in (0, 1)])
+    for i, a in enumerate(c):
+        for b in c[i + 1:]:
+            if np.abs(a - b).sum() == 1:
+                ax.plot(*np.array([a, b]).T, color=DOMAIN, lw=1.0, zorder=5)
+    _tidy3d(ax, [(-0.75, 1.75)] * 3)
+    ax.scatter(*np.array(electrodes).T, s=6, c=COHORT, alpha=0.7, edgecolors="none",
+               depthshade=False, zorder=10)
+    if title:
+        ax.set_title(title, loc="left")
+
+
+def shell_electrode_axes(ax, electrodes, r1=0.5, r2=1.0, title=None):
+    """Wireframe shell spheres with named electrodes as labelled red triangles."""
+    t = np.linspace(0, 2 * np.pi, 120)
+    for r, colour, lw, n in ((r2, "#bbbbbb", 0.5, 13), (r1, DOMAIN, 0.6, 9)):
+        for th in np.linspace(0, np.pi, n)[1:-1]:
+            ax.plot(r * np.sin(th) * np.cos(t), r * np.sin(th) * np.sin(t),
+                    np.full_like(t, r * np.cos(th)), color=colour, lw=lw, zorder=4)
+        for ph in np.linspace(0, np.pi, n // 2, endpoint=False):
+            ax.plot(r * np.sin(t) * np.cos(ph), r * np.sin(t) * np.sin(ph),
+                    r * np.cos(t), color=colour, lw=lw, zorder=4)
+    _tidy3d(ax, [(-1.6, 1.6)] * 3)
+    xyz = np.array(list(electrodes.values()))
+    ax.scatter(*xyz.T, s=26, marker="^", c=NAMED, edgecolors="k", linewidths=0.4,
+               depthshade=False, zorder=20)
+    ax.figure.canvas.draw()
+    to_px = lambda q: ax.transData.transform(proj3d.proj_transform(*q, ax.get_proj())[:2])
+    c2 = to_px((0, 0, 0))
+    for name, p in electrodes.items():
+        d = to_px(p) - c2
+        d = d / (np.linalg.norm(d) or 1.0)
+        x2, y2, _ = proj3d.proj_transform(*p, ax.get_proj())
+        ax.annotate(name, xy=(x2, y2), xytext=tuple(11 * d), textcoords="offset points",
+                    ha="center", va="center", fontsize=10, color=NAMED, zorder=30)
+    if title:
+        ax.set_title(title, loc="left")
 
 
 # ---------------------------------------------------------------- pyvista ----
@@ -154,22 +255,37 @@ def panel(fig, ax, img, title=None, label=None, clim=None, cmap=CMAP, tag=None):
         cb = fig.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.05,
                           pad=0.03, shrink=0.8)
         cb.set_label(label)
-        cb.ax.tick_params(labelsize=7)
+        cb.locator = MaxNLocator(5)
+        cb.update_ticks()
+        cb.ax.tick_params(labelsize=10)
     return ax
 
 
-def legend(ax, entries, ncol=3):
-    handles = [Line2D([0], [0], color=c, lw=3, label=l) for l, c in entries]
-    ax.legend(handles=handles, loc="upper center", ncol=ncol, frameon=False,
-              fontsize=8, bbox_to_anchor=(0.5, 0.0), handlelength=1.2,
-              columnspacing=1.0)
+def legend(ax, entries, ncol=3, inside=None):
+    """Legend of (label, colour[, marker]) entries; `inside` is an axes location
+    (default: below the axes).  A marker draws a dot instead of a bar."""
+    handles = []
+    for entry in entries:
+        label, color = entry[0], entry[1]
+        if len(entry) > 2:
+            handles.append(Line2D([0], [0], color=color, marker=entry[2], ls="",
+                                  ms=7, label=label))
+        else:
+            handles.append(Line2D([0], [0], color=color, lw=3, label=label))
+    if inside:
+        ax.legend(handles=handles, loc=inside, ncol=ncol, frameon=False, fontsize=9,
+                  handlelength=1.2)
+    else:
+        ax.legend(handles=handles, loc="upper center", ncol=ncol, frameon=False,
+                  fontsize=10, bbox_to_anchor=(0.5, 0.0), handlelength=1.2,
+                  columnspacing=1.0)
 
 
 def colourbar_2d(fig, ax, mappable, label):
     cb = fig.colorbar(mappable, ax=ax, orientation="vertical", fraction=0.05,
                       pad=0.04, shrink=0.8)
     cb.set_label(label)
-    cb.ax.tick_params(labelsize=7)
+    cb.ax.tick_params(labelsize=10)
     return cb
 
 
@@ -220,21 +336,30 @@ def principal_frame(sigma):
 
 def frame_points(r1, r2, n_theta=6, phi=0.5 * np.pi):
     """Points on the cut plane azimuth=phi, on three radii."""
-    radii = (1.06 * r1, 0.5 * (r1 + r2), 0.94 * r2)
+    radii = (r1 + 0.09, 0.5 * (r1 + r2), r2 - 0.09)
     th = np.linspace(0.35, np.pi - 0.35, n_theta)
     pts = [(r * np.sin(t) * np.cos(phi), r * np.sin(t) * np.sin(phi), r * np.cos(t))
            for r in radii for t in th]
     return np.array(pts)
 
 
-def add_frame_glyphs(pl, pts, fibre, sheet, length):
-    """Fibre and sheet directions as thin bars centred on pts."""
-    for vec, color in ((fibre, FIBRE), (sheet, SHEET)):
-        cloud = pv.PolyData(pts)
-        cloud["dir"] = vec
-        bar = pv.Cylinder(direction=(1, 0, 0), radius=0.09, height=1.0, resolution=12)
-        pl.add_mesh(cloud.glyph(orient="dir", scale=False, factor=length, geom=bar),
-                    color=color, lighting=False)
+def depth_shades(n_radii, n_per_radius):
+    """One colour per frame point: endocardium light to epicardium dark."""
+    lo, hi = FIBRE_DEPTH
+    shades = [tuple(v) for v in np.linspace(lo, hi, n_radii)]
+    return [c for c in shades for _ in range(n_per_radius)]
+
+
+def add_frame_glyphs(pl, pts, frame, length):
+    """The orthonormal frame at each point as three short arrows of equal length
+    centred on the point; frame is a list of (vectors (N, 3), colour or a list of
+    one colour per point)."""
+    for vec, color in frame:
+        colors = color if isinstance(color, list) else [color] * len(pts)
+        for point, d, c in zip(pts, vec, colors):
+            pl.add_mesh(pv.Arrow(start=point - 0.5 * length * d, direction=d,
+                                 scale=length, tip_length=0.35, tip_radius=0.14,
+                                 shaft_radius=0.06), color=c)
 
 
 def shell_cutaway(settings, ref, scalar, clim=None, glyphs=None, direction=(1, 1, 0.7),
@@ -245,7 +370,7 @@ def shell_cutaway(settings, ref, scalar, clim=None, glyphs=None, direction=(1, 1
     surf = shell_surface(grid, scalar(*point_array(grid)), "f")
     pl = plotter(settings)
     if clim is None:
-        pl.add_mesh(surf, color="#e0e0e0", smooth_shading=True)
+        pl.add_mesh(surf, color=MESH_FACE, smooth_shading=True)
     else:
         pl.add_mesh(surf, scalars="f", cmap=CMAP, clim=clim, show_scalar_bar=False,
                     smooth_shading=True, lighting=False)
@@ -256,12 +381,22 @@ def shell_cutaway(settings, ref, scalar, clim=None, glyphs=None, direction=(1, 1
 
 
 def shell_frame_glyphs(ref, p, phi=0.5 * np.pi):
-    pts = frame_points(p["r1"], p["r2"], phi=phi)
+    """Draw the frame (fibre, sheet, sheet normal) of sigma on the cut face phi and
+    carry a view direction (onto the cut face, turned 20 degrees
+    about the vertical and raised) in `.direction`.  The vectors are orthonormal to
+    rounding (asserted)."""
+    pts = frame_points(p["r1"], p["r2"], n_theta=4, phi=phi)
     sigma = ref.field("sigma", pts[:, 0], pts[:, 1], pts[:, 2])
-    fibre, sheet, _ = principal_frame(sigma)
+    fibre, sheet, normal = principal_frame(sigma)
+    assert np.abs((fibre * sheet).sum(1)).max() < 1e-12
+    assert np.abs((fibre * normal).sum(1)).max() < 1e-12
 
     def draw(pl):
-        add_frame_glyphs(pl, pts * 1.0, fibre, sheet, 0.2)
+        add_frame_glyphs(pl, pts, [(fibre, depth_shades(3, len(pts) // 3)),
+                                   (sheet, SHEET), (normal, NORMAL)], 0.24)
+    face = np.array([np.sin(phi), -np.cos(phi), 0.0])
+    along = np.array([np.cos(phi), np.sin(phi), 0.0])
+    draw.direction = tuple(0.94 * face + 0.34 * along + np.array([0.0, 0.0, 0.3]))
     return draw
 
 
