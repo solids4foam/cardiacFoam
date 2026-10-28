@@ -1,0 +1,6 @@
+sympy>=1.12
+numpy
+scipy
+matplotlib
+pyvista
+pytest
