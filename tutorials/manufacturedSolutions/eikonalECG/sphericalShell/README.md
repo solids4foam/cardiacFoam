@@ -102,6 +102,7 @@ with `run ./Allclean first` if a mesh log exists, and, for `-mesh tet`, when
 | `-formulation explicit\|advectionDiffusion` | `eikonalAdvectionDiffusionApproach` false or true | advectionDiffusion |
 | `-iterations n` | at most `n` outer iterations | 8000, stopped by the residual control |
 | `-exactStart` | start the iteration from the exact field outside the pinned cells (`initialiseExact`); with `-iterations 1` the field after one linearised solve from the exact one | off |
+| `-c0 x` | eikonal `c0` | 1 |
 | `-pinnedRadius x` | radius of the ball of pinned cells | 0.15, the header's `rPin` |
 | `-ecg` | the eikonal ECG at E1-E5 and its shell reference (writes `local/ecg`) | off |
 | `-template singleEvent\|sine` | with `-ecg`: the manufactured ECG template and its sampling (writes `local/ecgTemplate` for `sine`) | singleEvent |
