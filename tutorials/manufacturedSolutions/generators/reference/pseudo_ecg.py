@@ -10,8 +10,8 @@ PARAMS = {'SIGMA_FDA': [0.111453302, 0.12158542, 0.030396355], 'SIGMA_ROTATED': 
 def integrand_d1(x, y, z, ex, ey, ez, sxx, sxy, sxz, syy, syz, szz):
     _ref = numpy.zeros(numpy.broadcast(x, y, z, ex, ey, ez, sxx, sxy, sxz, syy, syz, szz).shape)
     _t0 = ex - x
-    _t1 = -_t0
-    return (numpy.select([numpy.less_equal(_t1**2, 1.0e-300),True], [0,-numpy.pi*_t1*sxx*numpy.sin(numpy.pi*x)/(_t0**2*abs(_t0))], default=numpy.nan)) + _ref
+    _t1 = abs(_t0)
+    return (numpy.select([numpy.less_equal(_t1, 1.0e-300),True], [0,numpy.pi*sxx*numpy.sin(numpy.pi*x)/(_t0*_t1)], default=numpy.nan)) + _ref
 
 
 def integrand_d2(x, y, z, ex, ey, ez, sxx, sxy, sxz, syy, syz, szz):
@@ -82,10 +82,10 @@ def time_factor(t):
     return numpy.sqrt(1.0 + t)
 
 
-def spatial_reference(case, electrode, sigma, order):
+def spatial_reference(case, sigma, electrode, order):
     """Integral of the integrand over [0, 1]^d (d from case: d1, d2, d3,
-    rotated) with `order` Gauss-Legendre points per axis.  electrode is
-    (ex, ey, ez); sigma is a 3x3 array or (xx, xy, xz, yy, yz, zz)."""
+    rotated) with `order` Gauss-Legendre points per axis.  sigma is a 3x3
+    array or (xx, xy, xz, yy, yz, zz); electrode is (ex, ey, ez)."""
     d = CASE_DIMENSION[case]
     nodes, weights = numpy.polynomial.legendre.leggauss(order)
     nodes = 0.5*(nodes + 1.0)
@@ -103,5 +103,5 @@ def spatial_reference(case, electrode, sigma, order):
     return float(numpy.sum(w*values))
 
 
-def reference(case, electrode, sigma, t, order):
-    return time_factor(t)*spatial_reference(case, electrode, sigma, order)
+def reference(case, sigma, electrode, t, order):
+    return time_factor(t)*spatial_reference(case, sigma, electrode, order)

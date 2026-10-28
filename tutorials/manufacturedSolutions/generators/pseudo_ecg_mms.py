@@ -16,7 +16,15 @@ produces NaN.  The integral is a tensor-product Gauss-Legendre quadrature.
 The emitted NumPy module holds integrand_d1, integrand_d2, integrand_d3 and
 integrand_rotated (arguments x, y, z, ex, ey, ez and the six distinct entries
 of sigma: xx xy xz yy yz zz), a numpy-only quadrature spatial_reference, and
-time_factor.
+time_factor.  Signatures, in the order of the generator functions
+spatial_reference(d, sigma, electrode, n_quad) and
+reference(d, sigma, electrode, t, n_quad):
+
+    spatial_reference(case, sigma, electrode, order)
+    reference(case, sigma, electrode, t, order)
+    time_factor(t)
+
+with case one of "d1", "d2", "d3", "rotated".
 
 Checks (--check): the integrand equals the C++ form (Cartesian sums for d = 1,
 2, 3) and vanishes at the electrode.
@@ -77,8 +85,12 @@ def integrand(d, sigma, electrode, F=None):
     electrode = sp.Matrix(electrode)
     flux = sigma*grad_F(d, F)
     r = [AXES[m] - electrode[m] for m in range(d)]
-    rsq = sum(c**2 for c in r)
     dot = sum(r[m]*flux[m] for m in range(d))
+    if d == 1:
+        # the C++ guard of d = 1 is on |dx|, not on dx^2
+        return sp.Piecewise((sp.Integer(0), sp.Abs(r[0]) <= VSMALL),
+                            (dot/sp.Abs(r[0])**3, True))
+    rsq = sum(c**2 for c in r)
     return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (dot/rsq**sp.Rational(3, 2), True))
 
 
@@ -114,9 +126,9 @@ def cxx_integrand(d, sigma, electrode, F=None):
     sg = [sum(s[i, j]*g[j] for j in range(3)) for i in range(3)]
     dx, dy, dz = (AXES[m] - electrode[m] for m in range(3))
     if d == 1:
-        rsq = dx**2
-        num = sg[0]*dx
-    elif d == 2:
+        return sp.Piecewise((sp.Integer(0), sp.Abs(dx) <= VSMALL),
+                            (sg[0]*dx/sp.Abs(dx)**3, True))
+    if d == 2:
         rsq = dx**2 + dy**2
         num = sg[0]*dx + sg[1]*dy
     else:
@@ -164,10 +176,10 @@ def time_factor(t):
     return numpy.sqrt(1.0 + t)
 
 
-def spatial_reference(case, electrode, sigma, order):
+def spatial_reference(case, sigma, electrode, order):
     """Integral of the integrand over [0, 1]^d (d from case: d1, d2, d3,
-    rotated) with `order` Gauss-Legendre points per axis.  electrode is
-    (ex, ey, ez); sigma is a 3x3 array or (xx, xy, xz, yy, yz, zz)."""
+    rotated) with `order` Gauss-Legendre points per axis.  sigma is a 3x3
+    array or (xx, xy, xz, yy, yz, zz); electrode is (ex, ey, ez)."""
     d = CASE_DIMENSION[case]
     nodes, weights = numpy.polynomial.legendre.leggauss(order)
     nodes = 0.5*(nodes + 1.0)
@@ -185,8 +197,8 @@ def spatial_reference(case, electrode, sigma, order):
     return float(numpy.sum(w*values))
 
 
-def reference(case, electrode, sigma, t, order):
-    return time_factor(t)*spatial_reference(case, electrode, sigma, order)
+def reference(case, sigma, electrode, t, order):
+    return time_factor(t)*spatial_reference(case, sigma, electrode, order)
 '''
 
 
