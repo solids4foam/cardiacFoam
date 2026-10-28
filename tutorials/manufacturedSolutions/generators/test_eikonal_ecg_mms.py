@@ -143,15 +143,23 @@ def _parity():
 
 
 def _parity_points():
+    """Electrodes of the tutorial with times that put most points inside the
+    active windows of the single-event template, where U'(t - psi) is
+    non-negligible: t - psi in about [-6, 8] and [56, 70] with psi in [1, e^d];
+    the plateau between them and the far tails (U' is rounding noise there)
+    are kept as the last three points."""
     pts = tutorial_electrodes()[:5] + tutorial_electrodes()[5::40]
+    n = len(pts)
     rng = np.random.default_rng(5)
-    return np.column_stack([np.array(pts), rng.uniform(-6, 92, len(pts))])
+    n_early = (n - 3)//2
+    times = np.concatenate([rng.uniform(-2, 10, n_early),
+                            rng.uniform(58, 80, n - 3 - n_early), [-6.0, 35.0, 100.0]])
+    return np.column_stack([np.array(pts), times])
 
 
-def _kernel_scale(d, sigma, electrode, order):
-    """Sum of |weight * (r . sigma grad psi) / |r|^3|: the size of the terms of the
-    quadrature sum when U' = 1."""
-    import cartesian_eikonal_mms as e
+def _term_scales(ref, d, template, sigma, electrode, t, order, duration=64.0, rise=4.0):
+    """(sum |w U'(t - psi) kernel|, sum |w kernel|) of the quadrature terms, with
+    kernel = (r . sigma grad psi)/|r|^3."""
     nodes, weights = np.polynomial.legendre.leggauss(order)
     nodes, weights = 0.5*(nodes + 1.0), 0.5*weights
     grid = np.meshgrid(*([nodes]*d), indexing="ij")
@@ -161,35 +169,68 @@ def _kernel_scale(d, sigma, electrode, order):
         shape[i] = order
         w = w*weights.reshape(shape)
     c = list(grid) + [np.zeros_like(grid[0])]*(3 - d)
-    k = [1.0 if m < d else 0.0 for m in range(3)]
+    k = np.array([1.0 if m < d else 0.0 for m in range(3)])
     psi = np.exp(sum(k[m]*c[m] for m in range(3)))
-    sg = sigma @ np.array(k)
+    sg = sigma @ k
     r = [c[m] - electrode[m] for m in range(d)]
     num = sum(r[m]*sg[m]*psi for m in range(d))
     rn = np.sqrt(sum(q**2 for q in r))
     with np.errstate(all="ignore"):
-        val = np.where(rn > 1e-150, num/rn**3, 0.0)
-    return float(np.sum(np.abs(w*val)))
+        kernel = np.where(rn > 1e-150, num/rn**3, 0.0)
+    if template == "sine":
+        dU = ref.template_derivative_sine(t - psi)
+    else:
+        dU = ref.template_derivative_single_event(t - psi, duration, rise)
+    return (float(np.sum(np.abs(w*dU*kernel))), float(np.sum(np.abs(w*kernel))))
+
+
+ACTIVE_COEFFICIENT = 2e-13   # measured worst 1e-13 (single event) over the tutorial points
+NOISE_COEFFICIENT = 3e-15    # measured worst 2e-15 of sum|w kernel| (U' tails, rounding noise)
+
+
+def _parity_agrees(d, template, name, sigma=None, rise=4.0):
+    """Whether the NumPy reference (sigma and rise as given) equals the C++ at the
+    tutorial sigma/rise within
+    |diff| <= 1e-12 |C++| + ACTIVE_COEFFICIENT sum|w U' kernel| + NOISE_COEFFICIENT sum|w kernel|.
+    The quadrature sum cancels (|phi| down to 1e-6 of sum|terms|) and the C++
+    evaluates tanh/cos expressions in a different order, so the terms carry
+    rounding of that size; far from the event U' itself is rounding noise of
+    about 1e-15 and phi there is noise."""
+    from parity.test_parity import run_app
+    ref = _reference()
+    S = _sig(name) if sigma is None else sigma
+    pts = _parity_points()
+    cpp = run_app("eikonalECG", d, pts, order=ecg.TUTORIAL_QUADRATURE_ORDER,
+                  template="sine" if template == "sine" else "singleEvent",
+                  conductivity=name, duration=64, rise=4)[:, 0]
+    got = np.array([ref.spatial_reference(d, template, S, r[:3], r[3],
+                                          ecg.TUTORIAL_QUADRATURE_ORDER, 64.0, rise)
+                    for r in pts])
+    scales = np.array([_term_scales(ref, d, template, _sig(name), r[:3], r[3],
+                                    ecg.TUTORIAL_QUADRATURE_ORDER) for r in pts])
+    bound = (1e-12*np.abs(cpp) + ACTIVE_COEFFICIENT*scales[:, 0]
+             + NOISE_COEFFICIENT*scales[:, 1])
+    return bool((np.abs(got - cpp) <= bound).all())
 
 
 @pytest.mark.parametrize("d", DIMS)
 @pytest.mark.parametrize("template", ecg.TEMPLATES)
 @pytest.mark.parametrize("name", sorted(SIGMAS))
 def test_parity_eikonal_ecg(d, template, name):
-    """The quadrature sum cancels and U' is evaluated through tanh/cos in a
-    different order than the C++, so a value passes when
-    |diff| <= 1e-12 |C++ value| + 1e-14 (sum of |terms| for U' = 1), the rounding
-    noise of the terms."""
     _parity()
-    from parity.test_parity import run_app
-    ref = _reference()
-    S = _sig(name)
-    pts = _parity_points()
-    cpp_template = "sine" if template == "sine" else "singleEvent"
-    cpp = run_app("eikonalECG", d, pts, order=ecg.TUTORIAL_QUADRATURE_ORDER,
-                  template=cpp_template, conductivity=name, duration=64, rise=4)[:, 0]
-    got = np.array([ref.spatial_reference(d, template, S, r[:3], r[3],
-                                          ecg.TUTORIAL_QUADRATURE_ORDER) for r in pts])
-    floor = 1e-14*np.array([_kernel_scale(d, S, r[:3], ecg.TUTORIAL_QUADRATURE_ORDER)
-                            for r in pts])
-    assert (np.abs(got - cpp) <= 1e-12*np.abs(cpp) + floor).all(), np.abs(got - cpp).max()
+    assert _parity_agrees(d, template, name)
+
+
+@pytest.mark.parametrize("d", DIMS)
+@pytest.mark.parametrize("template", ecg.TEMPLATES)
+def test_parity_bound_detects_a_perturbed_sigma(d, template):
+    _parity()
+    S = _sig("rotated")
+    S[0, 0] *= 1 + 1e-6
+    assert not _parity_agrees(d, template, "rotated", sigma=S)
+
+
+@pytest.mark.parametrize("d", DIMS)
+def test_parity_bound_detects_a_perturbed_rise(d):
+    _parity()
+    assert not _parity_agrees(d, "single_event", "rotated", rise=4.0*(1 + 1e-6))
