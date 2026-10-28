@@ -1,4 +1,5 @@
 import importlib.util
+import math
 import os
 
 import numpy as np
@@ -61,35 +62,62 @@ def test_kernel_mass_is_half_ball():
     assert mass == pytest.approx(cp.kernel_mass(), rel=1e-12)
 
 
+def _deposition_integral(k, t):
+    """int of the deposition over the half ball at terminal k, by a tensor
+    Gauss rule in spherical coordinates (r, mu, phi) about the terminal with
+    the polar axis along x.  The kernel is linear in r, so the rule is exact
+    in r and smooth in the angles; the cube cuts the ball only at the face
+    through the terminal (y and z margins 1/6 and 1/3 exceed the radius)."""
+    n = 16
+    u, wu = np.polynomial.legendre.leggauss(n)
+    r = 0.5*cp.RADIUS*(u + 1.0)
+    wr = 0.5*cp.RADIUS*wu
+    lo, hi = (0.0, 1.0) if k == 0 else (-1.0, 0.0)
+    mu = 0.5*(hi - lo)*u + 0.5*(hi + lo)
+    wm = 0.5*(hi - lo)*wu
+    phi = np.pi*(u + 1.0)
+    wp = np.pi*wu
+    R, MU, PHI = np.meshgrid(r, mu, phi, indexing="ij")
+    sin = np.sqrt(1.0 - MU**2)
+    pts = np.stack([MU*R, sin*np.cos(PHI)*R, sin*np.sin(PHI)*R], axis=-1) + np.array(cp.TERMINALS[k])
+    vals = cp.terminal_deposition(k, pts.reshape(-1, 3), t).reshape(R.shape)
+    w = wr[:, None, None]*wm[None, :, None]*wp[None, None, :]*R**2
+    return float(np.sum(w*vals))
+
+
 def test_junction_source_integrates_to_current_per_terminal():
+    # Each terminal's deposition integrates to its own current (the sum of the
+    # two is trivially zero and would hide a wrong split).
     t = 0.07
     for k in (0, 1):
-        current = cp.continuum_current(k, t)
-        # the deposition is current * w_k / mass: integrate it as current/mass * (int w_k)
-        _, w = quadrature.half_ball_kernel_integral(
-            lambda p: np.ones(p.shape[1:]), cp.TERMINALS[k], cp.RADIUS, cp.CUBE_LO, cp.CUBE_HI, 32)
-        assert current/cp.kernel_mass()*w == pytest.approx(current, rel=1e-9, abs=1e-12)
-        # independent coarse check on the plain tensor-product rule over the
-        # kernel's support box (the cone kink limits it to about 1e-3)
-        c = np.array(cp.TERMINALS[k])
-        lo = np.maximum(c - cp.RADIUS, 0.0)
-        hi = np.minimum(c + cp.RADIUS, 1.0)
-        tensor = quadrature.gauss_legendre_box(
-            lambda p: cp.terminal_deposition(k, np.moveaxis(p, 0, -1).reshape(-1, 3), t)
-            .reshape(p.shape[1:]), lo, hi, 80)
-        assert tensor == pytest.approx(current, rel=2e-3)
-    # the two terminals carry opposite currents; the sum is not the test
+        assert _deposition_integral(k, t) == pytest.approx(
+            cp.continuum_current(k, t), rel=1e-11)
     assert cp.continuum_current(0, t)*cp.continuum_current(1, t) < 0
+    # a wrongly normalised kernel (full-ball mass) would halve the integral
+    assert _deposition_integral(0, t) != pytest.approx(0.5*cp.continuum_current(0, t), rel=1e-3)
 
 
 def test_junction_source_is_sum_of_depositions():
-    pts = np.random.default_rng(3).uniform(0, 1, (50, 3))
-    pts[:10, 0] *= 0.1
-    pts[10:20, 0] = 1 - pts[10:20, 0]*0.1
-    total = cp.continuum_junction_source(pts, 0.05)
-    parts = cp.terminal_deposition(0, pts, 0.05) + cp.terminal_deposition(1, pts, 0.05)
-    np.testing.assert_allclose(total, parts, rtol=0, atol=0)
-    assert np.all(cp.terminal_deposition(0, [[0.5, 0.5, 0.5]], 0.05) == 0)
+    t = 0.05
+    rng = np.random.default_rng(3)
+    pts = rng.uniform(0, 1, (60, 3))
+    pts[:15, 0] *= 0.15          # inside terminal 0's reach
+    pts[15:30, 0] = 1 - pts[15:30, 0]*0.15   # inside terminal 1's reach
+    pts[:30, 1] = 1/6 + rng.uniform(-0.1, 0.1, 30)
+    pts[:30, 2] = 1/3 + rng.uniform(-0.1, 0.1, 30)
+    currents = [cp.continuum_current(k, t) for k in (0, 1)]
+    mass = math.pi*cp.RADIUS**3/6.0
+    want = np.empty(len(pts))
+    for i, p in enumerate(pts):
+        total = 0.0
+        for k in (0, 1):
+            c = cp.TERMINALS[k]
+            dist = math.sqrt(sum((p[j] - c[j])**2 for j in range(3)))
+            total += currents[k]*max(0.0, 1.0 - dist/cp.RADIUS)/mass
+        want[i] = total
+    assert np.count_nonzero(want) >= 10
+    np.testing.assert_allclose(cp.continuum_junction_source(pts, t), want, rtol=1e-14, atol=0)
+    assert np.all(cp.continuum_junction_source([[0.5, 0.5, 0.5]], t) == 0)
 
 
 def test_self_checks_and_cli():

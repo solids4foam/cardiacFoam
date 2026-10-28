@@ -11,11 +11,14 @@ import graph_monodomain_mms as gr
 x, t = gr.x, gr.t
 
 
-def test_graph_residual_zero():
-    assert sp.simplify(gr.graph_residual()) == 0
+def test_graph_residual_is_rounding_level():
+    # No source is applied on the graph: the residual of the equation is
+    # (g pi^2 + beta_1) V_1D, below 1e-8 |beta_1| |V_1D|.
     f = gr.fields()
+    assert sp.simplify(gr.graph_residual() - f["residual_1D"]) == 0
+    assert "S1D" not in f
     k1 = gr.graph_conductivity()*sp.pi**2
-    assert sp.simplify(f["S1D"] - (k1 + sp.Rational(str(fda.BETA[1])))*f["V1D"]) == 0
+    assert sp.simplify(f["residual_1D"] - (k1 + sp.Rational(str(fda.BETA[1])))*f["V1D"]) == 0
     assert abs(float(k1) + fda.BETA[1]) <= 1e-8*abs(fda.BETA[1])
 
 

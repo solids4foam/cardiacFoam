@@ -43,6 +43,7 @@ import argparse
 import functools
 import inspect
 import os
+import re
 import sys
 
 import numpy as np
@@ -191,7 +192,7 @@ def _quadrature_source():
     parts = [inspect.getsource(quadrature._nodes),
              inspect.getsource(quadrature._ray_length),
              inspect.getsource(quadrature.half_ball_kernel_integral)]
-    return "\n\n" + "\n\n".join(p.replace("np.", "numpy.").rstrip("\n") + "\n" for p in parts)
+    return "\n\n" + "\n\n".join(re.sub(r"\bnp\.", "numpy.", p).rstrip("\n") + "\n" for p in parts)
 
 
 def numpy_module():

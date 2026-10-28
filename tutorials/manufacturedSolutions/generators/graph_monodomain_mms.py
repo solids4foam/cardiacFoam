@@ -11,21 +11,27 @@ with the graph conductivity g = G_GRAPH = 0.111453302 (the first diagonal entry
 of the FDA tensor), chi = 3, C_m = 2 and the FDA ionic closure with beta_1.  The
 graph equation is
 
-    chi C_m dV_1D/dt = d/dx(g dV_1D/dx) - chi C_m I_ion,1D + I_s,1D,
+    chi C_m dV_1D/dt = d/dx(g dV_1D/dx) - chi C_m I_ion,1D,
 
-where I_ion,1D = J_ion/C_m is the solver's ionic current.  The applied source
-I_s,1D is the residual of the equation without it: it equals
-(g pi^2 + beta_1) V_1D, which is rounding-level
-(|g pi^2 + beta_1| <= 1e-8 |beta_1|) because g is tuned to the eigenvalue of
-cos(pi x).
+where I_ion,1D = J_ion/C_m is the solver's ionic current.  The solver applies
+no bulk source on the graph: the FDA closure makes the residual of this
+equation vanish up to the rounding-level (g pi^2 + beta_1) V_1D, with
+|g pi^2 + beta_1| <= 1e-8 |beta_1| because g is tuned to the eigenvalue of
+cos(pi x).  That residual is kept only as a check (R_1D, residual_1D), not as
+an applied term.
+
+The only term added on the graph belongs to the coupled problem: in
+bidirectional transfer the terminal node k receives -I_pvj,k/(pi rho^2 L), with
+rho the fibre radius and L the edge length (node volume pi rho^2 L); in
+unidirectional transfer it is zero.
 
 The graph has a root (1/2, 1/6, 1/3) and two straight branches to the terminals
 (0, 1/6, 1/3) and (1, 1/6, 1/3).  At a terminal the tissue field
 V_m = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z) takes the value
 -V_1D/2 and has dV_m/dx = 0.
 
-Checks (--check): the graph equation holds with I_s,1D; I_s,1D = (g pi^2 +
-beta_1) V_1D; the ionic rates hold; V_m = -V_1D/2 and dV_m/dx = 0 at both
+Checks (--check): the graph equation holds without a source up to the residual
+(g pi^2 + beta_1) V_1D, which is rounding-level; the ionic rates hold; V_m = -V_1D/2 and dV_m/dx = 0 at both
 terminals.
 
     python graph_monodomain_mms.py --emit
@@ -63,24 +69,25 @@ def _fields():
     V = f["Vm"]
     g = graph_conductivity()
     # chi C_m dV/dt - d/dx(g dV/dx) + chi C_m (J_ion / C_m)
-    source = (fda.CHI*fda.CM*sp.diff(V, t) - g*sp.diff(V, x, 2)
-              + fda.CHI*fda.CM*(f["Iion"]/fda.CM))
+    residual = (fda.CHI*fda.CM*sp.diff(V, t) - g*sp.diff(V, x, 2)
+                + fda.CHI*fda.CM*(f["Iion"]/fda.CM))
     return {"V1D": V, "u1": f["u1"], "u2": f["u2"], "u3": f["u3"],
-            "Iion": f["Iion"], "S1D": sp.simplify(source)}
+            "Iion": f["Iion"], "residual_1D": sp.simplify(residual)}
 
 
 def fields():
-    """{V1D, u1, u2, u3, Iion, S1D} in x, t; Iion is J_ion (solver current
-    Iion/C_m), S1D the applied source I_s,1D."""
+    """{V1D, u1, u2, u3, Iion, residual_1D} in x, t; Iion is J_ion (solver
+    current Iion/C_m), residual_1D the graph-equation residual (no source is
+    applied)."""
     return dict(_fields())
 
 
 def graph_residual():
-    """chi C_m dV/dt - d/dx(g dV/dx) + chi C_m I_ion,1D - I_s,1D."""
+    """chi C_m dV/dt - d/dx(g dV/dx) + chi C_m I_ion,1D, which is residual_1D."""
     f = fields()
     g = graph_conductivity()
     return (fda.CHI*fda.CM*sp.diff(f["V1D"], t) - g*sp.diff(f["V1D"], x, 2)
-            + fda.CHI*fda.CM*(f["Iion"]/fda.CM) - f["S1D"])
+            + fda.CHI*fda.CM*(f["Iion"]/fda.CM))
 
 
 def tissue_vm():
@@ -95,10 +102,11 @@ def _check(condition, message):
 
 def run_self_checks():
     f = fields()
-    _check(sp.simplify(graph_residual()) == 0, "graph equation residual is not zero")
+    _check(sp.simplify(graph_residual() - f["residual_1D"]) == 0,
+           "graph_residual differs from residual_1D")
     k1 = graph_conductivity()*sp.pi**2
-    _check(sp.simplify(f["S1D"] - (k1 + sp.Rational(str(fda.BETA[1])))*f["V1D"]) == 0,
-           "I_s,1D differs from (g pi^2 + beta_1) V_1D")
+    _check(sp.simplify(f["residual_1D"] - (k1 + sp.Rational(str(fda.BETA[1])))*f["V1D"]) == 0,
+           "the residual differs from (g pi^2 + beta_1) V_1D")
     _check(abs(float(k1) + fda.BETA[1]) <= 1e-8*abs(fda.BETA[1]),
            "g pi^2 + beta_1 is not rounding-level")
     _check(G_GRAPH == float(fda.SIGMA_DIAG[0]), "G_GRAPH differs from sigma_xx")
@@ -116,14 +124,17 @@ def run_self_checks():
 
 
 def latex_fragments():
-    s = {n: sp.Symbol(n, real=True) for n in "V1 beta g".split()}
+    s = {n: sp.Symbol(n, real=True) for n in "V1 beta g Ik vol".split()}
     names = paper_symbol_names(s.values())
-    names.update({s["V1"]: r"V_{1D}", s["g"]: r"g"})
+    names.update({s["V1"]: r"V_{1D}", s["g"]: r"g",
+                  s["Ik"]: r"I_{\mathrm{pvj},k}", s["vol"]: r"\pi\rho^{2}L"})
     V1 = sp.sqrt(1 + t)*sp.cos(sp.pi*x)
     out = {
         "graph_V1D.tex": emit_latex_fragment(r"V_{1D}", V1, names),
-        "graph_source.tex": emit_latex_fragment(
-            r"I_{s,1D}", (s["g"]*sp.pi**2 + s["beta"])*s["V1"], names),
+        "graph_residual.tex": emit_latex_fragment(
+            r"R_{1D}", (s["g"]*sp.pi**2 + s["beta"])*s["V1"], names),
+        "graph_terminal_source.tex": emit_latex_fragment(
+            r"I_{\mathrm{app},1D}(\mathbf x_k)", -s["Ik"]/s["vol"], names),
         "graph_terminal_Vm.tex": emit_latex_fragment(r"V_m(\mathbf x_k)", -s["V1"]/2, names),
     }
     return {"latex/" + k: v for k, v in out.items()}
@@ -131,9 +142,9 @@ def latex_fragments():
 
 def numpy_module():
     f = fields()
-    functions = {name: ((x, t), f[name]) for name in ("V1D", "u1", "u2", "u3", "Iion", "S1D")}
+    functions = {name: ((x, t), f[name]) for name in ("V1D", "u1", "u2", "u3", "Iion", "residual_1D")}
     doc = ("Purkinje-graph manufactured fields; <name>(x, t) for V1D, u1, u2, u3, "
-           "Iion (J_ion), S1D (applied source I_s,1D).  Generated by "
+           "Iion (J_ion), residual_1D (graph-equation residual; no source is applied).  Generated by "
            "graph_monodomain_mms.py.")
     params = {"G_GRAPH": G_GRAPH, "CM": fda.CM, "CHI": fda.CHI, "BETA": fda.BETA[1],
               "ROOT": [float(v) for v in ROOT],
