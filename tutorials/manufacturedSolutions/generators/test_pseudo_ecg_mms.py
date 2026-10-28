@@ -127,7 +127,7 @@ def test_reference_scales_with_time_factor():
 
 
 def test_self_checks_and_cli():
-    assert ecg.main(["--check"]) == 0
+    assert ecg.main(["--self-check"]) == 0
 
 
 def test_emitted_files_up_to_date():
@@ -191,3 +191,35 @@ def test_parity_pseudo_ecg_rotated():
         return np.array(rows)
 
     compare("pseudoECGRotated", 3, numpy_fn, _parity_points(), rtol=1e-12, order=96)
+
+
+@pytest.mark.parametrize("name", sorted(ecg.HEADER_PATHS))
+def test_header_up_to_date(name):
+    assert ecg.header_matches(ecg.HEADER_PATHS[name])
+
+
+@pytest.mark.parametrize("name", sorted(ecg.HEADER_PATHS))
+def test_header_check_cli(name):
+    assert ecg.main(["--check", ecg.HEADER_PATHS[name]]) == 0
+
+
+def test_header_write_touches_only_regions(tmp_path):
+    import mms_codegen as codegen
+    for name, rel in ecg.HEADER_PATHS.items():
+        text = open(codegen.resolve(ecg.__file__, rel)).read()
+        stale = codegen.splice_regions(text, {n: ["// stale"] for n in ecg.HEADERS[name](text)})
+        assert stale != text
+        dst = tmp_path/name
+        dst.write_text(stale)
+        assert ecg.main(["--check", str(dst)]) == 1
+        assert ecg.main(["--write", str(dst)]) == 0
+        assert dst.read_text() == text
+
+
+def test_header_without_regions_is_refused(tmp_path):
+    for name in ecg.HEADER_PATHS:
+        dst = tmp_path/name
+        dst.write_text("namespace Foam {}\n")
+        assert ecg.main(["--check", str(dst)]) == 1
+        assert ecg.main(["--write", str(dst)]) == 1
+        assert dst.read_text() == "namespace Foam {}\n"

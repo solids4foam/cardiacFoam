@@ -50,7 +50,7 @@ def test_zero_flux_on_cube_faces(d):
 
 
 def test_self_checks_and_cli():
-    assert fda.main(["--check"]) == 0
+    assert fda.main(["--self-check"]) == 0
 
 
 def test_emitted_files_up_to_date():
@@ -99,3 +99,35 @@ def test_parity_fda(d):
                                 for n in ("Vm", "u1", "u2", "u3", "Iion")])
 
     compare("fda", d, numpy_fn, sample_points(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", sorted(fda.HEADER_PATHS))
+def test_header_up_to_date(name):
+    assert fda.header_matches(fda.HEADER_PATHS[name])
+
+
+@pytest.mark.parametrize("name", sorted(fda.HEADER_PATHS))
+def test_header_check_cli(name):
+    assert fda.main(["--check", fda.HEADER_PATHS[name]]) == 0
+
+
+def test_header_write_touches_only_regions(tmp_path):
+    import mms_codegen as codegen
+    for name, rel in fda.HEADER_PATHS.items():
+        text = open(codegen.resolve(fda.__file__, rel)).read()
+        stale = codegen.splice_regions(text, {n: ["// stale"] for n in fda.HEADERS[name](text)})
+        assert stale != text
+        dst = tmp_path/name
+        dst.write_text(stale)
+        assert fda.main(["--check", str(dst)]) == 1
+        assert fda.main(["--write", str(dst)]) == 0
+        assert dst.read_text() == text
+
+
+def test_header_without_regions_is_refused(tmp_path):
+    for name in fda.HEADER_PATHS:
+        dst = tmp_path/name
+        dst.write_text("namespace Foam {}\n")
+        assert fda.main(["--check", str(dst)]) == 1
+        assert fda.main(["--write", str(dst)]) == 1
+        assert dst.read_text() == "namespace Foam {}\n"

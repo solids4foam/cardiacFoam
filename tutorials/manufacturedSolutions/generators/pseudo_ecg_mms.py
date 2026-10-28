@@ -26,14 +26,23 @@ reference(d, sigma, electrode, t, n_quad):
 
 with case one of "d1", "d2", "d3", "rotated".
 
-Checks (--check): the integrand equals the C++ form (Cartesian sums for d = 1,
-2, 3) and vanishes at the electrode.
+Checks (--self-check): the integrand equals the C++ form (Cartesian sums for
+d = 1, 2, 3) and vanishes at the electrode.
+
+--write PATH rewrites, and --check PATH compares, the generated regions of a
+hand-written header, chosen by its file name: in manufacturedFDAReference.H
+the time factor sqrt(1 + t), grad F_d and the kernel (r . sigma grad F)/|r|^3
+for d = 1, 2, 3; in manufacturedAnisotropicMonodomainReference.H grad F and
+the kernel of the rotated case.  The guards, the product sigma grad F and the
+quadrature stay hand-written.
 
     python pseudo_ecg_mms.py --emit
-    python pseudo_ecg_mms.py --check
+    python pseudo_ecg_mms.py --self-check
+    python pseudo_ecg_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedFDAReference.H
+    python pseudo_ecg_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedAnisotropicMonodomainReference.H
+    python pseudo_ecg_mms.py --check <either header>
 """
 
-import argparse
 import os
 import sys
 
@@ -41,6 +50,7 @@ import numpy as np
 import sympy as sp
 
 import fda_monodomain_mms as fda
+import mms_codegen as codegen
 import rotated_monodomain_mms as rot
 from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
 from mms_common.numpy_emit import emit_numpy_module
@@ -77,6 +87,14 @@ def grad_F(d, F=None):
     return sp.Matrix([sp.diff(F, AXES[m]) if m < d else 0 for m in range(3)])
 
 
+def kernel(d, flux, r):
+    """(r . flux)/|r|^3 over the first d components, without the guard."""
+    dot = sum(r[m]*flux[m] for m in range(d))
+    if d == 1:
+        return dot/sp.Abs(r[0])**3
+    return dot/sum(c**2 for c in r[:d])**sp.Rational(3, 2)
+
+
 def integrand(d, sigma, electrode, F=None):
     """g_d as a sympy expression in x, y, z, with the VSMALL guard."""
     if d not in DIMENSIONS:
@@ -85,13 +103,12 @@ def integrand(d, sigma, electrode, F=None):
     electrode = sp.Matrix(electrode)
     flux = sigma*grad_F(d, F)
     r = [AXES[m] - electrode[m] for m in range(d)]
-    dot = sum(r[m]*flux[m] for m in range(d))
     if d == 1:
         # the C++ guard of d = 1 is on |dx|, not on dx^2
         return sp.Piecewise((sp.Integer(0), sp.Abs(r[0]) <= VSMALL),
-                            (dot/sp.Abs(r[0])**3, True))
+                            (kernel(d, flux, r), True))
     rsq = sum(c**2 for c in r)
-    return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (dot/rsq**sp.Rational(3, 2), True))
+    return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (kernel(d, flux, r), True))
 
 
 def time_factor(tt):
@@ -268,23 +285,71 @@ def outputs_match(root=HERE):
     return True
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
-    grp.add_argument("--check", action="store_true")
-    args = ap.parse_args(argv)
-    try:
-        run_self_checks()
-    except AssertionError as err:
-        print("self-check failed: %s" % err)
-        return 1
-    if args.emit:
-        for rel in write_outputs():
-            print("wrote %s" % rel)
+def _sym(name):
+    return sp.Symbol(name, real=True)
+
+
+def kernel_code(d, flux_name, indent):
+    """C++ `return` of the kernel: flux components flux_name.x() ..., r
+    components dx, dy, dz, and the guard's |dx| (d = 1) or |r|^2 (d > 1)
+    as absDx or rSq."""
+    flux = [_sym("%s.%s()" % (flux_name, c)) for c in "xyz"]
+    r = [_sym(c) for c in ("dx", "dy", "dz")]
+    expr = kernel(d, flux, r)
+    if d == 1:
+        expr = expr.subs(sp.Abs(r[0]), _sym("absDx"))
     else:
-        print("self-checks passed")
-    return 0
+        expr = expr.subs(sum(c**2 for c in r[:d]), _sym("rSq"))
+    return codegen.statement("return", expr, indent)
+
+
+def _grad_code(g, indent):
+    return codegen.call("vector", list(g), indent)
+
+
+def fda_header_regions(text):
+    """{region name: C++ lines} of manufacturedFDAReference.H."""
+    ind = lambda name: codegen.region_indent(text, name)
+    out = {"pseudoECGManufacturedTimeFactor": codegen.statement(
+        "return", fda.vm_of(sp.Integer(1)), ind("pseudoECGManufacturedTimeFactor"))}
+    for d in DIMENSIONS:
+        name = "pseudoECGManufacturedGradF_d%d" % d
+        out[name] = _grad_code(grad_F(d), ind(name))
+        name = "pseudoECGManufacturedIntegrand_d%d" % d
+        out[name] = kernel_code(d, "sigmaGradF", ind(name))
+    return out
+
+
+def anisotropic_header_regions(text):
+    """{region name: C++ lines} of manufacturedAnisotropicMonodomainReference.H."""
+    ind = lambda name: codegen.region_indent(text, name)
+    name = "pseudoECGManufacturedGradFAnisotropic"
+    lines, red = codegen.cse_lines(list(grad_F(3, _rotated_F())), ind(name))
+    out = {name: lines + _grad_code(red, ind(name))}
+    name = "pseudoECGManufacturedIntegrandAnisotropic"
+    out[name] = kernel_code(3, "sigmaGradF", ind(name))
+    return out
+
+
+_SRC = "../../../src/verificationModels/monodomainVerification/"
+HEADER_PATHS = {
+    "manufacturedFDAReference.H": _SRC + "manufacturedFDAReference.H",
+    "manufacturedAnisotropicMonodomainReference.H":
+        _SRC + "manufacturedAnisotropicMonodomainReference.H",
+}
+HEADERS = {
+    "manufacturedFDAReference.H": fda_header_regions,
+    "manufacturedAnisotropicMonodomainReference.H": anisotropic_header_regions,
+}
+
+
+def header_matches(path):
+    return codegen.regions_match(__file__, path, HEADERS[os.path.basename(path)])
+
+
+def main(argv=None):
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

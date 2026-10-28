@@ -214,3 +214,286 @@ def header_matches(module_file, generate, path, text=None):
     with open(path) as fh:
         current = fh.read()
     return current == (text if text is not None else generate())
+
+
+# ---------------------------------------------------------------------------
+# Generated regions inside hand-written headers.
+#
+# A hand-written header marks each generated formula with
+#
+#     // BEGIN GENERATED <name>
+#     ...
+#     // END GENERATED <name>
+#
+# A generator owns a set of names; it rewrites the lines between its markers,
+# indented as the BEGIN marker, and leaves every other byte of the file as it
+# is.  Region lines are given without that indentation.
+# ---------------------------------------------------------------------------
+
+LINE_WIDTH = 79
+
+_BEGIN = re.compile(r"^([ \t]*)// BEGIN GENERATED (\S+)[ \t]*$")
+_END = re.compile(r"^[ \t]*// END GENERATED (\S+)[ \t]*$")
+
+
+class _LocalPiPrinter(_CxxPrinter):
+    """As _CxxPrinter, with pi printed as a local `pi` and the square of a
+    compound base as sqr(base)."""
+
+    def _print_Pi(self, expr):
+        return "pi"
+
+    def _print_Pow(self, expr):
+        if expr.exp == 2 and not expr.base.is_Symbol:
+            return "sqr(%s)" % self._print(expr.base)
+        return super()._print_Pow(expr)
+
+
+_LOCAL_PI_PRINTER = _LocalPiPrinter()
+
+
+def cxx_local(expr):
+    """C++ of expr with pi printed as `pi` (the function declares
+    `const scalar pi = constant::mathematical::pi;`).  Raises on an integer
+    division, which C++ would truncate."""
+    code = _LOCAL_PI_PRINTER.doprint(expr)
+    if re.search(r"(?<![\w.])\d+/\d+(?![\w.])", code):
+        raise RuntimeError("integer division in emitted code: " + code)
+    return code
+
+
+def _top_level_split(code, separators):
+    """Split code at the separators that sit outside parentheses; returns
+    [(separator or '', term), ...]."""
+    out, depth, start, i, sep = [], 0, 0, 0, ""
+    while i < len(code):
+        ch = code[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif depth == 0:
+            for s in separators:
+                if code.startswith(s, i) and i > 0:
+                    out.append((sep, code[start:i]))
+                    sep, start = s.strip(), i + len(s)
+                    i += len(s) - 1
+                    break
+        i += 1
+    out.append((sep, code[start:]))
+    return out
+
+
+def _block(code, col, width):
+    """[(column, text)] of code starting at column col (>= 4): broken at
+    top-level + and - (operator two columns left of the terms), else at
+    top-level * and / (operator one column left), until each line fits width.  A
+    factor that alone is too long stays on one line.  Only whitespace is
+    inserted, so the C++ is unchanged."""
+    if col + len(code) <= width:
+        return [(col, code)]
+    for separators, back in (((" + ", " - "), 2), (("*", "/"), 1)):
+        parts = _top_level_split(code, separators)
+        if len(parts) > 1:
+            break
+    else:
+        return [(col, code)]
+    out = []
+    for k, (sep, term) in enumerate(parts):
+        sub = _block(term, col, width)
+        if k:
+            head = sep + " " if back == 2 else sep
+            sub[0] = (col - back, head + sub[0][1])
+        out += sub
+    return out
+
+
+def wrap_expression(code, indent):
+    """Lines (indented relative to a statement at column indent) of code
+    placed under that statement."""
+    return [" "*c + text for c, text in _block(code, 4, LINE_WIDTH - indent)]
+
+
+def assignment(lhs, expr, indent, decl=""):
+    """Lines of `decl lhs = expr;` (pi printed as local), wrapped for a
+    region at column indent."""
+    code = expr if isinstance(expr, str) else cxx_local(expr)
+    head = ("%s %s" % (decl, lhs)).strip()
+    one = "%s = %s;" % (head, code)
+    if indent + len(one) <= LINE_WIDTH:
+        return [one]
+    body = wrap_expression(code, indent)
+    body[-1] += ";"
+    return ["%s =" % head] + body
+
+
+def statement(keyword, expr, indent):
+    """Lines of `keyword expr;` (e.g. return), wrapped like assignment."""
+    code = expr if isinstance(expr, str) else cxx_local(expr)
+    one = "%s %s;" % (keyword, code)
+    if indent + len(one) <= LINE_WIDTH:
+        return [one]
+    body = wrap_expression(code, indent)
+    body[-1] += ";"
+    return [keyword] + body
+
+
+def call(name, args, indent, keyword="return"):
+    """Lines of `keyword name(arg, ...);`, one argument per line when long."""
+    codes = [a if isinstance(a, str) else cxx_local(a) for a in args]
+    one = "%s %s(%s);" % (keyword, name, ", ".join(codes))
+    if indent + len(one) <= LINE_WIDTH:
+        return [one]
+    lines = ["%s %s" % (keyword, name), "("]
+    for i, c in enumerate(codes):
+        sub = wrap_expression(c, indent)
+        sub[-1] += "," if i < len(codes) - 1 else ""
+        lines += sub
+    lines.append(");")
+    return lines
+
+
+def cse_lines(exprs, indent, prefix="w"):
+    """(declaration lines, reduced exprs) of the common subexpressions of
+    exprs, named prefix0, prefix1, ..."""
+    repl, red = sp.cse([sp.sympify(e) for e in exprs],
+                       symbols=sp.numbered_symbols(prefix, real=True), order="canonical")
+    lines = []
+    for sym, val in repl:
+        lines += assignment(str(sym), val, indent, decl="const scalar")
+    return lines, red
+
+
+def _regions_in(lines):
+    """{name: (begin line index, end line index, indentation)}."""
+    found, open_name = {}, None
+    for i, line in enumerate(lines):
+        b, e = _BEGIN.match(line), _END.match(line)
+        if b:
+            if open_name is not None:
+                raise ValueError("BEGIN GENERATED %s has no END GENERATED before line %d"
+                                 % (open_name[0], i + 1))
+            name = b.group(2)
+            if name in found:
+                raise ValueError("region %s is marked more than once" % name)
+            open_name = (name, i, b.group(1))
+        elif e:
+            if open_name is None or e.group(1) != open_name[0]:
+                raise ValueError("END GENERATED %s at line %d does not close the open region"
+                                 % (e.group(1), i + 1))
+            found[open_name[0]] = (open_name[1], i, open_name[2])
+            open_name = None
+    if open_name is not None:
+        raise ValueError("BEGIN GENERATED %s has no END GENERATED" % open_name[0])
+    return found
+
+
+def splice_regions(text, regions):
+    """text with the body of each region in regions ({name: [lines]})
+    replaced; raises ValueError when a region is missing or the markers are
+    malformed."""
+    lines = text.split("\n")
+    found = _regions_in(lines)
+    missing = sorted(set(regions) - set(found))
+    if missing:
+        raise ValueError("regions missing from the header: %s" % ", ".join(missing))
+    out, i = [], 0
+    for name in sorted(regions, key=lambda n: found[n][0]):
+        begin, end, pad = found[name]
+        out += lines[i:begin + 1]
+        out += [(pad + s) if s else "" for s in regions[name]]
+        i = end
+    out += lines[i:]
+    return "\n".join(out)
+
+
+def region_indent(text, name):
+    """Indentation (columns) of the BEGIN marker of region name."""
+    found = _regions_in(text.split("\n"))
+    if name not in found:
+        raise ValueError("regions missing from the header: %s" % name)
+    return len(found[name][2])
+
+
+def write_regions(module_file, path, regions_for):
+    """Rewrite the regions of the header at path; regions_for(text) returns
+    {name: [lines]}.  Returns the path written."""
+    path = resolve(module_file, path)
+    with open(path) as fh:
+        text = fh.read()
+    new = splice_regions(text, regions_for(text))
+    if new != text:
+        with open(path, "w") as fh:
+            fh.write(new)
+    return path
+
+
+def regions_match(module_file, path, regions_for):
+    """True when the regions of the header at path equal the generator's."""
+    path = resolve(module_file, path)
+    if not os.path.exists(path):
+        return False
+    with open(path) as fh:
+        text = fh.read()
+    try:
+        return splice_regions(text, regions_for(text)) == text
+    except ValueError:
+        return False
+
+
+def generator_main(argv, doc, module_file, run_self_checks, write_outputs, headers):
+    """Command line of a generator with emitted files and header regions:
+    --emit, --self-check, --write PATH, --check PATH.  --emit and --write run
+    the self-checks first."""
+    import argparse
+    ap = argparse.ArgumentParser(description=doc.split("\n\n")[0])
+    grp = ap.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--emit", action="store_true",
+                     help="write reference/*.py and latex/*.tex")
+    grp.add_argument("--self-check", action="store_true", help="run the self-checks")
+    grp.add_argument("--write", metavar="PATH",
+                     help="rewrite the generated regions of a C++ header")
+    grp.add_argument("--check", metavar="PATH",
+                     help="compare the generated regions of a C++ header")
+    args = ap.parse_args(argv)
+    if args.check:
+        return regions_cli(module_file, args.check, headers, write=False)
+    try:
+        run_self_checks()
+    except AssertionError as err:
+        print("self-check failed: %s" % err)
+        return 1
+    if args.write:
+        return regions_cli(module_file, args.write, headers, write=True)
+    if args.emit:
+        for rel in write_outputs():
+            print("wrote %s" % rel)
+        return 0
+    print("self-checks passed")
+    return 0
+
+
+def regions_cli(module_file, path, headers, write):
+    """--write / --check of a hand-written header with generated regions.
+
+    headers maps a header file name to its regions_for(text) function; the
+    file name of path selects it.  Returns the exit status."""
+    name = os.path.basename(path)
+    if name not in headers:
+        print("%s holds no regions of this generator; known headers: %s"
+              % (name, ", ".join(sorted(headers))))
+        return 2
+    full = resolve(module_file, path)
+    if write:
+        try:
+            write_regions(module_file, path, headers[name])
+        except ValueError as err:
+            print("%s: %s" % (full, err))
+            return 1
+        print("wrote the generated regions of %s" % full)
+        return 0
+    if regions_match(module_file, path, headers[name]):
+        print("%s is up to date" % full)
+        return 0
+    print("%s differs from the generator output (or lacks its regions)" % full)
+    return 1

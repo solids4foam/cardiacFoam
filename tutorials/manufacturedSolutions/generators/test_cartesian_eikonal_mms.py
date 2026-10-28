@@ -67,7 +67,7 @@ def test_emitted_matches_generator(d, name):
 
 
 def test_self_checks_and_cli():
-    assert eik.main(["--check"]) == 0
+    assert eik.main(["--self-check"]) == 0
 
 
 def test_emitted_files_up_to_date():
@@ -114,3 +114,35 @@ def test_parity_eikonal(d, c0, name):
     rng = np.random.default_rng(11)
     pts = np.column_stack([rng.uniform(0, 1, (20, 3)), rng.uniform(0, 0.1, 20)])
     compare("eikonal", d, numpy_fn, pts, rtol=1e-12, c0=c0, conductivity=name)
+
+
+@pytest.mark.parametrize("name", sorted(eik.HEADER_PATHS))
+def test_header_up_to_date(name):
+    assert eik.header_matches(eik.HEADER_PATHS[name])
+
+
+@pytest.mark.parametrize("name", sorted(eik.HEADER_PATHS))
+def test_header_check_cli(name):
+    assert eik.main(["--check", eik.HEADER_PATHS[name]]) == 0
+
+
+def test_header_write_touches_only_regions(tmp_path):
+    import mms_codegen as codegen
+    for name, rel in eik.HEADER_PATHS.items():
+        text = open(codegen.resolve(eik.__file__, rel)).read()
+        stale = codegen.splice_regions(text, {n: ["// stale"] for n in eik.HEADERS[name](text)})
+        assert stale != text
+        dst = tmp_path/name
+        dst.write_text(stale)
+        assert eik.main(["--check", str(dst)]) == 1
+        assert eik.main(["--write", str(dst)]) == 0
+        assert dst.read_text() == text
+
+
+def test_header_without_regions_is_refused(tmp_path):
+    for name in eik.HEADER_PATHS:
+        dst = tmp_path/name
+        dst.write_text("namespace Foam {}\n")
+        assert eik.main(["--check", str(dst)]) == 1
+        assert eik.main(["--write", str(dst)]) == 1
+        assert dst.read_text() == "namespace Foam {}\n"

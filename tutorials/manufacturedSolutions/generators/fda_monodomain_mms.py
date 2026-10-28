@@ -22,22 +22,30 @@ is needed.  sigma = diag(0.111453302, 0.121585420, 0.030396355) is given to nine
 significant digits and is tuned so that k_d equals -beta_d to that precision: the
 residual is nonzero but below RESIDUAL_RTOL times |div(sigma grad V_m)|.
 
-Checks (--check): the ionic rates of u_1 and u_2 hold on the exact fields; the
-residual equals (k_d + beta_d) V_m symbolically and |k_d + beta_d|/k_d is at most
-RESIDUAL_RTOL; n.grad V_m vanishes on every
-face of the cube.
+Checks (--self-check): the ionic rates of u_1 and u_2 hold on the exact fields;
+the residual equals (k_d + beta_d) V_m symbolically and |k_d + beta_d|/k_d is at
+most RESIDUAL_RTOL; n.grad V_m vanishes on every face of the cube.
+
+--write PATH rewrites, and --check PATH compares, the generated regions of the
+hand-written manufacturedFDAReference.H: F_d (computeF and manufacturedFDAFAt),
+G_d (computeG), V_m (computeManufacturedV), u_1, u_2, u_3
+(computeManufacturedU) and J_ion (computeIion).  Each sits between
+`// BEGIN GENERATED <name>` and `// END GENERATED <name>`; the rest of the
+file is left as it is.
 
     python fda_monodomain_mms.py --emit
-    python fda_monodomain_mms.py --check
+    python fda_monodomain_mms.py --self-check
+    python fda_monodomain_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedFDAReference.H
+    python fda_monodomain_mms.py --check ../../../src/verificationModels/monodomainVerification/manufacturedFDAReference.H
 """
 
-import argparse
 import functools
 import os
 import sys
 
 import sympy as sp
 
+import mms_codegen as codegen
 from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
 from mms_common.numpy_emit import emit_numpy_module
 
@@ -90,13 +98,21 @@ def ionic_current(V, u1, u2, u3, cm, beta, chi):
     return -(cm/2)*(u1 + u3 - V)*u2**2*(V - u3) + (beta/chi)*(V - u3)
 
 
+def vm_of(F):
+    """V_m = sqrt(1 + t) F."""
+    return sp.sqrt(1 + t)*F
+
+
+def u_of(F, G):
+    """(u_1, u_2, u_3) of the spatial factors F and G."""
+    return (1 + t)*G + vm_of(F), G**sp.Rational(-1, 2)/(1 + t), sp.Integer(0)
+
+
 @functools.lru_cache(maxsize=None)
 def _fields(d):
     F, G = _F(d), _G(d)
-    V = sp.sqrt(1 + t)*F
-    u1 = (1 + t)*G + V
-    u2 = G**sp.Rational(-1, 2)/(1 + t)
-    u3 = sp.Integer(0)
+    V = vm_of(F)
+    u1, u2, u3 = u_of(F, G)
     Iion = ionic_current(V, u1, u2, u3, sp.Integer(CM), _beta(d), sp.Integer(CHI))
     return {"Vm": V, "u1": u1, "u2": u2, "u3": u3, "Iion": Iion, "F": F, "G": G}
 
@@ -222,23 +238,54 @@ def outputs_match(root=HERE):
     return True
 
 
+def _sym(name):
+    return sp.Symbol(name, real=True)
+
+
+def _at(expr, xs, ys, zs):
+    """expr with x, y, z replaced by C++ symbols."""
+    return expr.subs({x: _sym(xs), y: _sym(ys), z: _sym(zs)}, simultaneous=True)
+
+
+def fda_header_regions(text):
+    """{region name: C++ lines} of manufacturedFDAReference.H."""
+    ind = functools.partial(codegen.region_indent, text)
+    out = {}
+    for d in DIMENSIONS:
+        name = "computeF_d%d" % d
+        out[name] = codegen.assignment("F[i]", _at(_F(d), "x[i]", "y[i]", "z[i]"), ind(name))
+        name = "manufacturedFDAFAt_d%d" % d
+        out[name] = codegen.statement(
+            "return", _at(_F(d), "p.x()", "p.y()", "p.z()"), ind(name))
+        name = "computeG_d%d" % d
+        out[name] = codegen.assignment("G[i]", _at(_G(d), "x[i]", "y[i]", "z[i]"), ind(name))
+    F, G = _sym("Fx[i]"), _sym("Gx[i]")
+    out["computeManufacturedV"] = codegen.assignment(
+        "V[i]", vm_of(F), ind("computeManufacturedV"))
+    u = u_of(F, G)
+    out["computeManufacturedU"] = sum(
+        (codegen.assignment("u%d[i]" % (m + 1), u[m], ind("computeManufacturedU"))
+         for m in range(3)), [])
+    V, u1, u2, u3 = (_sym(n) for n in ("V[i]", "u1[i]", "u2[i]", "u3[i]"))
+    out["computeIion"] = codegen.assignment(
+        "Iion[i]", ionic_current(V, u1, u2, u3, _sym("Cm"), _sym("beta"), _sym("chi")),
+        ind("computeIion"))
+    return out
+
+
+HEADER_PATH = ("../../../src/verificationModels/monodomainVerification/"
+               "manufacturedFDAReference.H")
+HEADER_PATHS = {"manufacturedFDAReference.H": HEADER_PATH}
+HEADERS = {"manufacturedFDAReference.H": fda_header_regions}
+
+
+def header_matches(path):
+    return codegen.regions_match(__file__, path, HEADERS[os.path.basename(path)])
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
-    grp.add_argument("--check", action="store_true")
-    args = ap.parse_args(argv)
-    try:
-        run_self_checks()
-    except AssertionError as err:
-        print("self-check failed: %s" % err)
-        return 1
-    if args.emit:
-        for rel in write_outputs():
-            print("wrote %s" % rel)
-    else:
-        print("self-checks passed")
-    return 0
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

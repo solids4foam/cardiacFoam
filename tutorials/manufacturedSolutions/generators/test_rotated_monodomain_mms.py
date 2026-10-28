@@ -43,7 +43,7 @@ def test_rejects_nonsymmetric():
 
 
 def test_self_checks_and_cli():
-    assert rot.main(["--check"]) == 0
+    assert rot.main(["--self-check"]) == 0
 
 
 def test_emitted_files_up_to_date():
@@ -88,3 +88,35 @@ def test_parity_rotated():
         return np.column_stack([getattr(ref, n)(*a) for n in ("Vm", "u1", "u2", "u3", "S")])
 
     compare("rotated", 3, numpy_fn, sample_points(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", sorted(rot.HEADER_PATHS))
+def test_header_up_to_date(name):
+    assert rot.header_matches(rot.HEADER_PATHS[name])
+
+
+@pytest.mark.parametrize("name", sorted(rot.HEADER_PATHS))
+def test_header_check_cli(name):
+    assert rot.main(["--check", rot.HEADER_PATHS[name]]) == 0
+
+
+def test_header_write_touches_only_regions(tmp_path):
+    import mms_codegen as codegen
+    for name, rel in rot.HEADER_PATHS.items():
+        text = open(codegen.resolve(rot.__file__, rel)).read()
+        stale = codegen.splice_regions(text, {n: ["// stale"] for n in rot.HEADERS[name](text)})
+        assert stale != text
+        dst = tmp_path/name
+        dst.write_text(stale)
+        assert rot.main(["--check", str(dst)]) == 1
+        assert rot.main(["--write", str(dst)]) == 0
+        assert dst.read_text() == text
+
+
+def test_header_without_regions_is_refused(tmp_path):
+    for name in rot.HEADER_PATHS:
+        dst = tmp_path/name
+        dst.write_text("namespace Foam {}\n")
+        assert rot.main(["--check", str(dst)]) == 1
+        assert rot.main(["--write", str(dst)]) == 1
+        assert dst.read_text() == "namespace Foam {}\n"

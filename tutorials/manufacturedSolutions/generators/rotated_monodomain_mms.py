@@ -19,16 +19,22 @@ The gradient of F vanishes on every face of the cube, so the conormal flux
 K grad V_m . n is zero because of the field and not because of the operator:
 the boundary flux reconstruction is not exercised by this case.
 
-Checks (--check): K is symmetric positive definite with nonzero off-diagonal
-entries; grad F vanishes on every face; the source equals the six-term Hessian
-sum of the C++ reference; the ionic rates of u_1 and u_2 hold on the exact
-fields.
+Checks (--self-check): K is symmetric positive definite with nonzero
+off-diagonal entries; grad F vanishes on every face; the source equals the
+six-term Hessian sum (cxx_source); the ionic rates of u_1 and u_2 hold on the
+exact fields.
+
+--write PATH rewrites, and --check PATH compares, the generated regions of the
+hand-written manufacturedAnisotropicMonodomainReference.H: F, V_m, u_1, u_2,
+u_3 and S, with K and beta the runtime arguments of the C++ (K need not be
+symmetric there: div(K grad F) is written for a general constant tensor).
 
     python rotated_monodomain_mms.py --emit
-    python rotated_monodomain_mms.py --check
+    python rotated_monodomain_mms.py --self-check
+    python rotated_monodomain_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedAnisotropicMonodomainReference.H
+    python rotated_monodomain_mms.py --check ../../../src/verificationModels/monodomainVerification/manufacturedAnisotropicMonodomainReference.H
 """
 
-import argparse
 import functools
 import os
 import sys
@@ -36,6 +42,7 @@ import sys
 import sympy as sp
 
 import fda_monodomain_mms as fda
+import mms_codegen as codegen
 from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
 from mms_common.numpy_emit import emit_numpy_module
 
@@ -69,14 +76,23 @@ def div_K_grad(F, K):
     return sum(sp.diff(flux[i], AXES[i]) for i in range(3))
 
 
+def source_of(F, div_K_grad_F, beta):
+    """S = sqrt(1 + t) (beta F - div(K grad F))."""
+    return fda.vm_of(beta*F - div_K_grad_F)
+
+
+def pde_source(F, K, beta):
+    """S for a constant tensor K."""
+    return source_of(F, div_K_grad(F, sp.Matrix(K)), beta)
+
+
 @functools.lru_cache(maxsize=None)
 def _fields(K):
     F, G = _F(), _G()
-    V = sp.sqrt(1 + t)*F
-    u1 = (1 + t)*G + V
-    u2 = G**sp.Rational(-1, 2)/(1 + t)
-    S = sp.sqrt(1 + t)*(sp.Rational(str(BETA))*F - div_K_grad(F, sp.Matrix(K)))
-    return {"Vm": V, "u1": u1, "u2": u2, "u3": sp.Integer(0), "F": F, "S": S}
+    V = fda.vm_of(F)
+    u1, u2, u3 = fda.u_of(F, G)
+    S = pde_source(F, K, sp.Rational(str(BETA)))
+    return {"Vm": V, "u1": u1, "u2": u2, "u3": u3, "F": F, "S": S}
 
 
 def fields(K):
@@ -181,23 +197,60 @@ def outputs_match(root=HERE):
     return True
 
 
+def _sym(name):
+    return sp.Symbol(name, real=True)
+
+
+def _at_centre(expr):
+    """expr with x, y, z replaced by the cell centre c."""
+    return expr.subs({x: _sym("c.x()"), y: _sym("c.y()"), z: _sym("c.z()")},
+                     simultaneous=True)
+
+
+# The tensor argument of the C++ source, a general (not necessarily
+# symmetric) constant tensor.
+K_CXX = sp.Matrix(3, 3, lambda i, j: _sym("K.%s%s()" % ("xyz"[i], "xyz"[j])))
+
+
+def anisotropic_header_regions(text):
+    """{region name: C++ lines} of manufacturedAnisotropicMonodomainReference.H."""
+    ind = lambda name: codegen.region_indent(text, name)
+    out = {}
+    name = "computeAnisotropicManufacturedF"
+    out[name] = codegen.assignment("F[cellI]", _at_centre(_F()), ind(name))
+    F = _sym("F[cellI]")
+    name = "computeAnisotropicManufacturedV"
+    out[name] = codegen.assignment("V[cellI]", fda.vm_of(F), ind(name))
+    name = "computeAnisotropicManufacturedU"
+    G = _sym("G")
+    u = fda.u_of(F, G)
+    out[name] = codegen.assignment("G", _at_centre(_G()), ind(name), decl="const scalar")
+    for m in range(3):
+        out[name] += codegen.assignment("u%d[cellI]" % (m + 1), u[m], ind(name))
+    name = "computeAnisotropicManufacturedPdeSource"
+    Fc, D = _at_centre(_F()), _at_centre(div_K_grad(_F(), K_CXX))
+    lines, (Fr, Dr) = codegen.cse_lines([Fc, D], ind(name))
+    lines += codegen.assignment("F", Fr, ind(name), decl="const scalar")
+    lines += codegen.assignment("divKGradF", Dr, ind(name), decl="const scalar")
+    lines += codegen.assignment(
+        "source[cellI]", source_of(_sym("F"), _sym("divKGradF"), _sym("beta")), ind(name))
+    out[name] = lines
+    return out
+
+
+HEADER_PATH = ("../../../src/verificationModels/monodomainVerification/"
+               "manufacturedAnisotropicMonodomainReference.H")
+HEADER_PATHS = {"manufacturedAnisotropicMonodomainReference.H": HEADER_PATH}
+HEADERS = {"manufacturedAnisotropicMonodomainReference.H": anisotropic_header_regions}
+
+
+def header_matches(path):
+    return codegen.regions_match(__file__, path, HEADERS[os.path.basename(path)])
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
-    grp.add_argument("--check", action="store_true")
-    args = ap.parse_args(argv)
-    try:
-        run_self_checks()
-    except AssertionError as err:
-        print("self-check failed: %s" % err)
-        return 1
-    if args.emit:
-        for rel in write_outputs():
-            print("wrote %s" % rel)
-    else:
-        print("self-checks passed")
-    return 0
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

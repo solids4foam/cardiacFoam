@@ -27,14 +27,20 @@ template_derivative_sine and a numpy-only quadrature
 
 (the same value; phi has no separate time factor).
 
-Checks (--check): the integrand equals the C++ form and vanishes at the
+Checks (--self-check): the integrand equals the C++ form and vanishes at the
 electrode; the quadrature is converged between orders 48 and 96.
 
+--write PATH rewrites, and --check PATH compares, the generated regions of the
+hand-written manufacturedEikonalReference.H: the kernel (r . sigma_g)/|r|^3 of
+manufacturedEikonalECGIntegrand for d = 1, 2, 3 (pseudo_ecg_mms.kernel).  The
+guards, sigma_g and the template derivative stay hand-written.
+
     python eikonal_ecg_mms.py --emit
-    python eikonal_ecg_mms.py --check
+    python eikonal_ecg_mms.py --self-check
+    python eikonal_ecg_mms.py --write ../../../src/verificationModels/eikonalVerification/manufacturedEikonalReference.H
+    python eikonal_ecg_mms.py --check ../../../src/verificationModels/eikonalVerification/manufacturedEikonalReference.H
 """
 
-import argparse
 import os
 import sys
 
@@ -42,6 +48,8 @@ import numpy as np
 import sympy as sp
 
 import cartesian_eikonal_mms as eik
+import mms_codegen as codegen
+from pseudo_ecg_mms import kernel, kernel_code
 from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
 from mms_common.numpy_emit import emit_numpy_module
 from mms_common.quadrature import gauss_legendre_box
@@ -90,12 +98,11 @@ def integrand(d, sigma, electrode, template="single_event"):
     dU = template_derivative(template).subs(s, t - psi)
     flux = sigma*(-dU*grad)
     r = [AXES[m] - electrode[m] for m in range(d)]
-    dot = sum(r[m]*flux[m] for m in range(d))
     if d == 1:
         return sp.Piecewise((sp.Integer(0), sp.Abs(r[0]) <= VSMALL),
-                            (dot/sp.Abs(r[0])**3, True))
+                            (kernel(d, flux, r), True))
     rsq = sum(c**2 for c in r)
-    return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (dot/rsq**sp.Rational(3, 2), True))
+    return sp.Piecewise((sp.Integer(0), rsq <= VSMALL), (kernel(d, flux, r), True))
 
 
 def cxx_integrand(d, sigma, electrode, template="single_event"):
@@ -264,23 +271,27 @@ def outputs_match(root=HERE):
     return True
 
 
+def eikonal_header_regions(text):
+    """{region name: C++ lines} of manufacturedEikonalReference.H."""
+    out = {}
+    for d in DIMENSIONS:
+        name = "manufacturedEikonalECGIntegrand_d%d" % d
+        out[name] = kernel_code(d, "sigmaGradVm", codegen.region_indent(text, name))
+    return out
+
+
+HEADER_PATH = eik.HEADER_PATH
+HEADER_PATHS = {"manufacturedEikonalReference.H": HEADER_PATH}
+HEADERS = {"manufacturedEikonalReference.H": eikonal_header_regions}
+
+
+def header_matches(path):
+    return codegen.regions_match(__file__, path, HEADERS[os.path.basename(path)])
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
-    grp.add_argument("--check", action="store_true")
-    args = ap.parse_args(argv)
-    try:
-        run_self_checks()
-    except AssertionError as err:
-        print("self-check failed: %s" % err)
-        return 1
-    if args.emit:
-        for rel in write_outputs():
-            print("wrote %s" % rel)
-    else:
-        print("self-checks passed")
-    return 0
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

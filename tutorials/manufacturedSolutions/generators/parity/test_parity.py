@@ -45,7 +45,18 @@ import pytest
 
 HERE = Path(__file__).resolve().parent
 APP = HERE / "mmsParity"
-SOURCES = [HERE / "mmsParity.C", HERE / "Make" / "files", HERE / "Make" / "options"]
+_VERIFICATION = HERE.parents[3] / "src" / "verificationModels"
+# The app and the reference headers it compiles (inline, so a header edit
+# needs a rebuild of the app).
+SOURCES = [
+    HERE / "mmsParity.C", HERE / "Make" / "files", HERE / "Make" / "options",
+    _VERIFICATION / "monodomainVerification" / "manufacturedFDAReference.H",
+    _VERIFICATION / "monodomainVerification"
+    / "manufacturedAnisotropicMonodomainReference.H",
+    _VERIFICATION / "eikonalVerification" / "manufacturedEikonalReference.H",
+    HERE.parents[3] / "src" / "electroModels" / "ecgModels" / "eikonalECG"
+    / "manufacturedTemplate.H",
+]
 DEFAULT_BASHRC = Path("/Volumes/OpenFOAM-v2412/etc/bashrc")
 
 # case -> (dimensions, number of output columns)

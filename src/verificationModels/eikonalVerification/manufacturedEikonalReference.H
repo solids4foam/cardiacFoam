@@ -21,6 +21,13 @@ Class
 Description
     Fixed manufactured references for eikonal activation and eikonal ECG.
 
+    The formulas between "// BEGIN GENERATED <name>" and
+    "// END GENERATED <name>" are written from the sympy definitions in
+    tutorials/manufacturedSolutions/generators: cartesian_eikonal_mms.py (k,
+    M, tau, grad tau, K_M, source) and eikonal_ecg_mms.py (eikonal-ECG
+    kernel).  Regenerate them with --write and compare with --check; the
+    rest of the file is hand-written.
+
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
@@ -41,9 +48,23 @@ namespace Foam
 
 inline vector manufacturedEikonalK(const label dimension)
 {
-    if (dimension == 1) return vector(1.0, 0.0, 0.0);
-    if (dimension == 2) return vector(1.0, 1.0, 0.0);
-    return vector(1.0, 1.0, 1.0);
+    if (dimension == 1)
+    {
+        // BEGIN GENERATED manufacturedEikonalK_d1
+        return vector(1, 0, 0);
+        // END GENERATED manufacturedEikonalK_d1
+    }
+
+    if (dimension == 2)
+    {
+        // BEGIN GENERATED manufacturedEikonalK_d2
+        return vector(1, 1, 0);
+        // END GENERATED manufacturedEikonalK_d2
+    }
+
+    // BEGIN GENERATED manufacturedEikonalK_d3
+    return vector(1, 1, 1);
+    // END GENERATED manufacturedEikonalK_d3
 }
 
 
@@ -54,7 +75,20 @@ inline tensor manufacturedEikonalM
     const scalar Cm
 )
 {
-    return conductivity/(chi*Cm);
+    // BEGIN GENERATED manufacturedEikonalM
+    return tensor
+    (
+        conductivity.xx()/(Cm*chi),
+        conductivity.xy()/(Cm*chi),
+        conductivity.xz()/(Cm*chi),
+        conductivity.yx()/(Cm*chi),
+        conductivity.yy()/(Cm*chi),
+        conductivity.yz()/(Cm*chi),
+        conductivity.zx()/(Cm*chi),
+        conductivity.zy()/(Cm*chi),
+        conductivity.zz()/(Cm*chi)
+    );
+    // END GENERATED manufacturedEikonalM
 }
 
 
@@ -64,7 +98,9 @@ inline scalar manufacturedEikonalTau
     const vector& k
 )
 {
-    return Foam::exp(k & point);
+    // BEGIN GENERATED manufacturedEikonalTau
+    return exp(k.x()*point.x() + k.y()*point.y() + k.z()*point.z());
+    // END GENERATED manufacturedEikonalTau
 }
 
 
@@ -86,7 +122,10 @@ inline vector manufacturedEikonalGradTau
     const vector& k
 )
 {
-    return k * manufacturedEikonalTau(point, k);
+    // BEGIN GENERATED manufacturedEikonalGradTau
+    const scalar w0 = exp(k.x()*point.x() + k.y()*point.y() + k.z()*point.z());
+    return vector(k.x()*w0, k.y()*w0, k.z()*w0);
+    // END GENERATED manufacturedEikonalGradTau
 }
 
 
@@ -101,7 +140,12 @@ inline scalar manufacturedEikonalSourceTerm
 )
 {
     const tensor M = manufacturedEikonalM(conductivity, chi, Cm);
-    const scalar KM = k & (M & k);
+    // BEGIN GENERATED manufacturedEikonalSourceTerm_KM
+    const scalar KM =
+        k.x()*(M.xx()*k.x() + M.yx()*k.y() + M.zx()*k.z())
+      + k.y()*(M.xy()*k.x() + M.yy()*k.y() + M.zy()*k.z())
+      + k.z()*(M.xz()*k.x() + M.yz()*k.y() + M.zz()*k.z());
+    // END GENERATED manufacturedEikonalSourceTerm_KM
 
     if (KM <= VSMALL)
     {
@@ -112,7 +156,9 @@ inline scalar manufacturedEikonalSourceTerm
     }
 
     const scalar tau = manufacturedEikonalTau(point, k);
-    return tau * (c0 * Foam::sqrt(KM) - KM) - 1.0;
+    // BEGIN GENERATED manufacturedEikonalSourceTerm
+    return tau*(sqrt(KM)*c0 - KM) - 1;
+    // END GENERATED manufacturedEikonalSourceTerm
 }
 
 
@@ -248,7 +294,9 @@ inline scalar manufacturedEikonalECGIntegrand
             return 0.0;
         }
 
-        return sigmaGradVm.x()*dx/Foam::pow(absDx, 3);
+        // BEGIN GENERATED manufacturedEikonalECGIntegrand_d1
+        return sigmaGradVm.x()/(absDx*dx);
+        // END GENERATED manufacturedEikonalECGIntegrand_d1
     }
 
     if (dimension == 2)
@@ -260,9 +308,9 @@ inline scalar manufacturedEikonalECGIntegrand
             return 0.0;
         }
 
-        return
-            (sigmaGradVm.x()*dx + sigmaGradVm.y()*dy)
-           /Foam::pow(rSq, 1.5);
+        // BEGIN GENERATED manufacturedEikonalECGIntegrand_d2
+        return (dx*sigmaGradVm.x() + dy*sigmaGradVm.y())/pow(rSq, 1.5);
+        // END GENERATED manufacturedEikonalECGIntegrand_d2
     }
 
     const scalar rSq = dx*dx + dy*dy + dz*dz;
@@ -272,12 +320,11 @@ inline scalar manufacturedEikonalECGIntegrand
         return 0.0;
     }
 
+    // BEGIN GENERATED manufacturedEikonalECGIntegrand_d3
     return
-        (
-            sigmaGradVm.x()*dx
-          + sigmaGradVm.y()*dy
-          + sigmaGradVm.z()*dz
-        )/Foam::pow(rSq, 1.5);
+        (dx*sigmaGradVm.x() + dy*sigmaGradVm.y() + dz*sigmaGradVm.z())
+       /pow(rSq, 1.5);
+    // END GENERATED manufacturedEikonalECGIntegrand_d3
 }
 
 
