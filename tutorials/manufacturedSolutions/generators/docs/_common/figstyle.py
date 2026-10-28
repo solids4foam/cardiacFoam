@@ -128,6 +128,8 @@ def tutorial_electrodes(case_dir):
     """Cube electrodes of a tutorial's electroProperties; the built-in set when absent."""
     path = os.path.join(GENERATORS, "..", case_dir, "constant", "electroProperties")
     found = read_electrodes(path) if os.path.exists(path) else {}
+    if not found:
+        print("note: %s not found; using the built-in cube electrode set" % path)
     return [tuple(v) for v in found.values()] or list(BUILTIN_CUBE_ELECTRODES)
 
 
@@ -136,6 +138,8 @@ def shell_electrodes(case_dir):
     path = os.path.join(GENERATORS, "..", case_dir, "sphericalShell", "constant",
                         "electroProperties")
     found = read_electrodes(path) if os.path.exists(path) else {}
+    if not found:
+        print("note: %s not found; using the built-in shell electrode set" % path)
     return found or {k: np.array(v) for k, v in BUILTIN_SHELL_ELECTRODES.items()}
 
 
@@ -334,10 +338,12 @@ def principal_frame(sigma):
     return v[..., :, 2], v[..., :, 1], v[..., :, 0]
 
 
-def frame_points(r1, r2, n_theta=6, phi=0.5 * np.pi):
-    """Points on the cut plane azimuth=phi, on three radii."""
-    radii = (r1 + 0.09, 0.5 * (r1 + r2), r2 - 0.09)
-    th = np.linspace(0.35, np.pi - 0.35, n_theta)
+def frame_points(r1, r2, n_theta=3, phi=0.5 * np.pi, half_length=0.08):
+    """Sites on the cut plane azimuth=phi: three radii, each at least half_length
+    plus a margin inside both walls, n_theta polar angles each."""
+    margin = half_length + 0.03
+    radii = (r1 + margin, 0.5 * (r1 + r2), r2 - margin)
+    th = np.linspace(0.55, np.pi - 0.55, n_theta)
     pts = [(r * np.sin(t) * np.cos(phi), r * np.sin(t) * np.sin(phi), r * np.cos(t))
            for r in radii for t in th]
     return np.array(pts)
@@ -358,8 +364,8 @@ def add_frame_glyphs(pl, pts, frame, length):
         colors = color if isinstance(color, list) else [color] * len(pts)
         for point, d, c in zip(pts, vec, colors):
             pl.add_mesh(pv.Arrow(start=point - 0.5 * length * d, direction=d,
-                                 scale=length, tip_length=0.35, tip_radius=0.14,
-                                 shaft_radius=0.06), color=c)
+                                 scale=length, tip_length=0.3, tip_radius=0.13,
+                                 shaft_radius=0.05), color=c)
 
 
 def shell_cutaway(settings, ref, scalar, clim=None, glyphs=None, direction=(1, 1, 0.7),
@@ -380,23 +386,45 @@ def shell_cutaway(settings, ref, scalar, clim=None, glyphs=None, direction=(1, 1
     return render(pl), surf
 
 
-def shell_frame_glyphs(ref, p, phi=0.5 * np.pi):
-    """Draw the frame (fibre, sheet, sheet normal) of sigma on the cut face phi and
-    carry a view direction (onto the cut face, turned 20 degrees
-    about the vertical and raised) in `.direction`.  The vectors are orthonormal to
-    rounding (asserted)."""
-    pts = frame_points(p["r1"], p["r2"], n_theta=4, phi=phi)
+def frame_view(vectors, centre, max_angle=25.0, samples=8000, seed=1):
+    """View direction within max_angle degrees of `centre` (a direction looking into
+    the removed wedge onto the cut face) maximising the shortest projected length of
+    any frame vector at any site."""
+    rng = np.random.default_rng(seed)
+    d = rng.normal(size=(samples, 3))
+    d /= np.linalg.norm(d, axis=1)[:, None]
+    d = d[d @ centre >= np.cos(np.radians(max_angle))]
+    all_vec = np.concatenate(vectors, axis=0)
+    proj = np.sqrt(np.maximum(0.0, 1.0 - (d @ all_vec.T) ** 2)).min(axis=1)
+    return d[np.argmax(proj)], float(proj.max())
+
+
+def shell_frame_glyphs(ref, p, phi=0.5 * np.pi, length=0.18):
+    """Draw the frame (fibre, sheet, sheet normal) of sigma on the cut face phi as
+    arrows of equal length centred on nine sites, and carry the view direction in
+    `.direction`.  Asserted: the vectors are orthonormal, and both ends of every
+    arrow lie inside r1 < |x| < r2."""
+    pts = frame_points(p["r1"], p["r2"], phi=phi, half_length=0.5 * length)
     sigma = ref.field("sigma", pts[:, 0], pts[:, 1], pts[:, 2])
     fibre, sheet, normal = principal_frame(sigma)
     assert np.abs((fibre * sheet).sum(1)).max() < 1e-12
     assert np.abs((fibre * normal).sum(1)).max() < 1e-12
+    assert np.abs((sheet * normal).sum(1)).max() < 1e-12
+    for vec in (fibre, sheet, normal):
+        for sign in (-1.0, 1.0):
+            r = np.linalg.norm(pts + sign * 0.5 * length * vec, axis=1)
+            assert np.all(r > p["r1"]) and np.all(r < p["r2"]), "arrow leaves the wall"
+    face = np.array([np.sin(phi), -np.cos(phi), 0.0])
+    along = np.array([np.cos(phi), np.sin(phi), 0.0])
+    centre = 0.94 * face + 0.34 * along + np.array([0.0, 0.0, 0.3])
+    direction, shortest = frame_view([fibre, sheet, normal], centre / np.linalg.norm(centre))
+    draw_direction = direction
 
     def draw(pl):
         add_frame_glyphs(pl, pts, [(fibre, depth_shades(3, len(pts) // 3)),
-                                   (sheet, SHEET), (normal, NORMAL)], 0.24)
-    face = np.array([np.sin(phi), -np.cos(phi), 0.0])
-    along = np.array([np.cos(phi), np.sin(phi), 0.0])
-    draw.direction = tuple(0.94 * face + 0.34 * along + np.array([0.0, 0.0, 0.3]))
+                                   (sheet, SHEET), (normal, NORMAL)], length)
+    draw.direction = tuple(draw_direction)
+    draw.shortest_projection = shortest
     return draw
 
 

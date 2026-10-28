@@ -149,8 +149,10 @@ def shell_eikonal(settings, outdir):
     p_clim, s_clim = fs.span(psi(*pts)), fs.symmetric(src(*pts))
 
     def pin(pl):
-        pl.add_mesh(pv.Sphere(radius=p["rPin"], center=xs, theta_resolution=40,
-                              phi_resolution=40), color=fs.PIN, opacity=0.25)
+        ball = pv.Sphere(radius=p["rPin"], center=xs, theta_resolution=12,
+                         phi_resolution=12)
+        pl.add_mesh(ball, color=fs.PIN, opacity=0.12)
+        pl.add_mesh(ball, style="wireframe", color=fs.PIN, line_width=1.5)
         pl.add_mesh(pv.Sphere(radius=0.035, center=xs), color="black")
 
     img_p, _ = fs.shell_cutaway(settings, ref, psi, p_clim, pin, direction, phi)
