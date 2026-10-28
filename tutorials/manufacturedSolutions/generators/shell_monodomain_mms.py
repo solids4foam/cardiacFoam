@@ -19,6 +19,7 @@ printed; it is divSigmaGradF of the reference module.
     python shell_monodomain_mms.py --write ../../../src/verificationModels/monodomainVerification/manufacturedShellMonodomainReference.H
     python shell_monodomain_mms.py --check ../../../src/verificationModels/monodomainVerification/manufacturedShellMonodomainReference.H
     python shell_monodomain_mms.py --emit
+    python shell_monodomain_mms.py --self-check
 """
 
 import argparse
@@ -557,7 +558,16 @@ def main(argv=None):
     grp.add_argument("--write", metavar="PATH")
     grp.add_argument("--check", metavar="PATH")
     grp.add_argument("--emit", action="store_true")
+    grp.add_argument("--self-check", action="store_true")
     args = ap.parse_args(argv)
+    if args.self_check:
+        try:
+            run_self_checks()
+        except AssertionError as err:
+            print("self-check failed: %s" % err)
+            return 1
+        print("self-checks passed")
+        return 0
     if args.emit:
         try:
             run_self_checks()

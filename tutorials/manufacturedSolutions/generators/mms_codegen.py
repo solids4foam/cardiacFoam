@@ -442,20 +442,24 @@ def regions_match(module_file, path, regions_for):
 
 
 def generator_main(argv, doc, module_file, run_self_checks, write_outputs, headers):
-    """Command line of a generator with emitted files and header regions:
-    --emit, --self-check, --write PATH, --check PATH.  --emit and --write run
-    the self-checks first."""
+    """Command line of a generator: --emit (reference/ and latex/),
+    --self-check, and, when headers is not empty, --write PATH and
+    --check PATH for the generated regions of a C++ header.  --emit and
+    --write run the self-checks first; every failure exits non-zero."""
     import argparse
     ap = argparse.ArgumentParser(description=doc.split("\n\n")[0])
     grp = ap.add_mutually_exclusive_group(required=True)
     grp.add_argument("--emit", action="store_true",
                      help="write reference/*.py and latex/*.tex")
     grp.add_argument("--self-check", action="store_true", help="run the self-checks")
-    grp.add_argument("--write", metavar="PATH",
-                     help="rewrite the generated regions of a C++ header")
-    grp.add_argument("--check", metavar="PATH",
-                     help="compare the generated regions of a C++ header")
+    if headers:
+        grp.add_argument("--write", metavar="PATH",
+                         help="rewrite the generated regions of a C++ header")
+        grp.add_argument("--check", metavar="PATH",
+                         help="compare the generated regions of a C++ header")
     args = ap.parse_args(argv)
+    if not headers:
+        args.write = args.check = None
     if args.check:
         return regions_cli(module_file, args.check, headers, write=False)
     try:

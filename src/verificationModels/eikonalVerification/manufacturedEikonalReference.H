@@ -24,7 +24,7 @@ Description
     The formulas between "// BEGIN GENERATED <name>" and
     "// END GENERATED <name>" are written from the sympy definitions in
     tutorials/manufacturedSolutions/generators: cartesian_eikonal_mms.py (k,
-    M, tau, grad tau, K_M, source) and eikonal_ecg_mms.py (eikonal-ECG
+    tau, grad tau, K_M, source) and eikonal_ecg_mms.py (eikonal-ECG
     kernel).  Regenerate them with --write and compare with --check; the
     rest of the file is hand-written.
 
@@ -75,20 +75,7 @@ inline tensor manufacturedEikonalM
     const scalar Cm
 )
 {
-    // BEGIN GENERATED manufacturedEikonalM
-    return tensor
-    (
-        conductivity.xx()/(Cm*chi),
-        conductivity.xy()/(Cm*chi),
-        conductivity.xz()/(Cm*chi),
-        conductivity.yx()/(Cm*chi),
-        conductivity.yy()/(Cm*chi),
-        conductivity.yz()/(Cm*chi),
-        conductivity.zx()/(Cm*chi),
-        conductivity.zy()/(Cm*chi),
-        conductivity.zz()/(Cm*chi)
-    );
-    // END GENERATED manufacturedEikonalM
+    return conductivity/(chi*Cm);
 }
 
 

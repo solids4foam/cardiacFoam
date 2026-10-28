@@ -47,7 +47,7 @@ def test_terminal_values():
 
 
 def test_self_checks_and_cli():
-    assert gr.main(["--check"]) == 0
+    assert gr.main(["--self-check"]) == 0
 
 
 def test_emitted_files_up_to_date():

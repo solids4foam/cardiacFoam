@@ -32,15 +32,14 @@ The graph has a root (1/2, 1/6, 1/3) and two straight branches to the terminals
 V_m = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z) takes the value
 -V_1D/2 and has dV_m/dx = 0.
 
-Checks (--check): the graph equation holds without a source up to the residual
+Checks (--self-check): the graph equation holds without a source up to the residual
 (g pi^2 + beta_1) V_1D, which is rounding-level; the ionic rates hold; V_m = -V_1D/2 and dV_m/dx = 0 at both
 terminals.
 
     python graph_monodomain_mms.py --emit
-    python graph_monodomain_mms.py --check
+    python graph_monodomain_mms.py --self-check
 """
 
-import argparse
 import functools
 import os
 import sys
@@ -48,6 +47,7 @@ import sys
 import sympy as sp
 
 import fda_monodomain_mms as fda
+import mms_codegen as codegen
 from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
 from mms_common.numpy_emit import emit_numpy_module
 
@@ -186,23 +186,12 @@ def outputs_match(root=HERE):
     return True
 
 
+HEADERS = {}
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
-    grp.add_argument("--check", action="store_true")
-    args = ap.parse_args(argv)
-    try:
-        run_self_checks()
-    except AssertionError as err:
-        print("self-check failed: %s" % err)
-        return 1
-    if args.emit:
-        for rel in write_outputs():
-            print("wrote %s" % rel)
-    else:
-        print("self-checks passed")
-    return 0
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

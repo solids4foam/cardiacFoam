@@ -31,15 +31,14 @@ junction; the exact source built with a solver's own discrete map tests the
 coupled workflow against that map, not the map against the continuum coupling,
 and the discrete map is not ported here.
 
-Checks (--check): the terminal values and currents; the sampled value tends to
+Checks (--self-check): the terminal values and currents; the sampled value tends to
 the point value at second order in r; the kernel mass is pi r^3/6; each
 terminal's deposition integrates to its current.
 
     python coupled_1d3d_mms.py --emit
-    python coupled_1d3d_mms.py --check
+    python coupled_1d3d_mms.py --self-check
 """
 
-import argparse
 import functools
 import inspect
 import os
@@ -51,6 +50,7 @@ import sympy as sp
 
 import fda_monodomain_mms as fda
 import graph_monodomain_mms as graph
+import mms_codegen as codegen
 from mms_common import quadrature
 from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
 from mms_common.numpy_emit import emit_numpy_module
@@ -266,23 +266,12 @@ def outputs_match(root=HERE):
     return True
 
 
+HEADERS = {}
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
-    grp.add_argument("--check", action="store_true")
-    args = ap.parse_args(argv)
-    try:
-        run_self_checks()
-    except AssertionError as err:
-        print("self-check failed: %s" % err)
-        return 1
-    if args.emit:
-        for rel in write_outputs():
-            print("wrote %s" % rel)
-    else:
-        print("self-checks passed")
-    return 0
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

@@ -26,9 +26,9 @@ Checks (--self-check): the residual of the eikonal equation vanishes for
 d = 1, 2, 3 and c_0 in {1, 5, 66}; K_M <= 0 is rejected.
 
 --write PATH rewrites, and --check PATH compares, the generated regions of the
-hand-written manufacturedEikonalReference.H: k_d, M, psi and grad psi for a
-runtime k, K_M = k . M k and S_psi.  The positivity guard on K_M stays
-hand-written.
+hand-written manufacturedEikonalReference.H: k_d, psi and grad psi for a
+runtime k, K_M = k . M k and S_psi.  M = sigma/(chi C_m) (one tensor scaling)
+and the positivity guard on K_M stay hand-written.
 
     python cartesian_eikonal_mms.py --emit
     python cartesian_eikonal_mms.py --self-check
@@ -267,9 +267,6 @@ def eikonal_header_regions(text):
     for d in DIMENSIONS:
         name = "manufacturedEikonalK_d%d" % d
         out[name] = codegen.call("vector", list(k_vector(d)), ind(name))
-    name = "manufacturedEikonalM"
-    M = metric(_tensor_cxx("conductivity"), _sym("chi"), _sym("Cm"))
-    out[name] = codegen.call("tensor", list(M), ind(name))
     k = _vector_cxx("k")
     point = {x: _sym("point.x()"), y: _sym("point.y()"), z: _sym("point.z()")}
     psi = psi_of_k(k).subs(point, simultaneous=True)

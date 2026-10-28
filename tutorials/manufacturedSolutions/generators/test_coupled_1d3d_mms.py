@@ -121,7 +121,7 @@ def test_junction_source_is_sum_of_depositions():
 
 
 def test_self_checks_and_cli():
-    assert cp.main(["--check"]) == 0
+    assert cp.main(["--self-check"]) == 0
 
 
 def test_emitted_files_up_to_date():
