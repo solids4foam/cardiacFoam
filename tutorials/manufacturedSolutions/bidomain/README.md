@@ -111,3 +111,14 @@ tables.
 
 - [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
   conductivity that rotates through the wall.
+
+## Notes on dictionary entries
+
+**Slab meshes.** `system/blockMeshDict.2D` is an `nx x ny x 1` slab, thin in z
+with `empty` faces; `system/blockMeshDict.3D` is a unit slab with
+`(nx ny nz)` cells in x, y and z.
+
+**Spherical shell mesh.** `sphericalShell/system/blockMeshDict` builds the
+heart shell `r1 < |x| < r2` as six projected blocks of a cubed sphere. `N` (a
+multiple of 4) sets `k = N/4`: `3k` cells along a cube-face edge and `2k`
+radially, i.e. `N` cells per unit length radially.

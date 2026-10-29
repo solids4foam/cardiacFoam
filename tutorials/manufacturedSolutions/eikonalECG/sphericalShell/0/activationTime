@@ -17,13 +17,10 @@ FoamFile
 
 dimensions      [0 0 1 0 0 0 0];
 
-// -1 marks "not yet activated"; the solve overwrites it.
 internalField   uniform -1;
 
 boundaryField
 {
-    // Both spheres are sealed walls: the verifier pins cells near the
-    // stimulus point and imposes no value on a patch.
     ".*"
     {
         type            zeroGradient;
