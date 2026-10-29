@@ -42,7 +42,8 @@ import sys
 import sympy as sp
 
 import mms_codegen as codegen
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +63,7 @@ SIGMA_SYMBOLS = sp.symbols("sxx sxy sxz syy syz szz", real=True)
 # Tutorial tensors (eikonalECG/constant/electroProperties and README).
 SIGMA_ROTATED = (0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782)
 SIGMA_AXIS = (0.111453302, 0.0, 0.0, 0.121585420, 0.0, 0.030396355)
+TUTORIAL_C0 = 1   # eikonalECG/constant/electroProperties
 
 
 def sigma_matrix(entries):
@@ -217,6 +219,14 @@ def latex_fragments():
     quad = sp.Symbol("kMk", real=True)
     names[quad] = r"\mathbf k_d\cdot\mathbf M\,\mathbf k_d"
     out["eikonal_KM.tex"] = emit_latex_fragment(r"K_M", quad, names)
+    out["eikonal_kd.tex"] = emit_parameter_fragment(
+        [(r"\mathbf k_%d" % d, k_vector(d).T) for d in DIMENSIONS], per_row=3)
+    for label, entries in (("rotated", SIGMA_ROTATED), ("axis", SIGMA_AXIS)):
+        out["eikonal_sigma_%s.tex" % label] = emit_latex_fragment(
+            r"\boldsymbol\sigma_{\mathrm{%s}}" % label,
+            sigma_matrix([sp.Float(repr(v), 9) if v else 0 for v in entries]), names)
+    out["eikonal_params.tex"] = emit_parameter_fragment(
+        [(r"\chi", CHI), ("C_m", CM), ("c_0", TUTORIAL_C0)], per_row=3)
     return {"latex/" + k: v for k, v in out.items()}
 
 

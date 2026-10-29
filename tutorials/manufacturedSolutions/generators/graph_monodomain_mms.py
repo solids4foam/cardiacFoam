@@ -48,7 +48,8 @@ import sympy as sp
 
 import fda_monodomain_mms as fda
 import mms_codegen as codegen
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -128,20 +129,26 @@ def run_self_checks():
 def latex_fragments():
     s = {n: sp.Symbol(n, real=True) for n in "V1 beta g Ik vol sumL".split()}
     names = paper_symbol_names(s.values())
-    names.update({s["V1"]: r"V_{1D}", s["g"]: r"g",
-                  s["Ik"]: r"I_{\mathrm{pvj},k}", s["vol"]: r"V_k",
+    names.update({s["V1"]: r"V_{1D}", s["g"]: r"g_e",
+                  s["Ik"]: r"I_{\mathrm{PVJ},k}", s["vol"]: r"V_k",
                   s["sumL"]: r"\sum_{e\ni k} L_e"})
     V1 = sp.sqrt(1 + t)*sp.cos(sp.pi*x)
     out = {
         "graph_V1D.tex": emit_latex_fragment(r"V_{1D}", V1, names),
         "graph_residual.tex": emit_latex_fragment(
-            r"R_{1D}", (s["g"]*sp.pi**2 + s["beta"])*s["V1"], names),
+            r"R_{1D}", (s["g"]*sp.pi**2 + s["beta"])*s["V1"], {**names, s["beta"]: r"\beta_1"}),
         "graph_node_volume.tex": emit_latex_fragment(
             r"V_k", sp.pi*sp.Symbol("rho")**2*s["sumL"]/2,
             {**names, sp.Symbol("rho"): r"\rho"}),
         "graph_terminal_source.tex": emit_latex_fragment(
             r"I_{\mathrm{app},1D}(\mathbf x_k)", -s["Ik"]/s["vol"], names),
         "graph_terminal_Vm.tex": emit_latex_fragment(r"V_m(\mathbf x_k)", -s["V1"]/2, names),
+        "graph_params.tex": emit_parameter_fragment(
+            [("g_e", G_GRAPH), (r"\chi", fda.CHI), ("C_m", fda.CM), (r"\beta_1", fda.BETA[1])]),
+        "graph_points.tex": emit_parameter_fragment(
+            [(r"\mathbf x_{\mathrm{root}}", sp.Matrix(ROOT).T)]
+            + [(r"\mathbf x_{%d}" % (k + 1), sp.Matrix(p).T) for k, p in enumerate(TERMINALS)],
+            per_row=3),
     }
     return {"latex/" + k: v for k, v in out.items()}
 

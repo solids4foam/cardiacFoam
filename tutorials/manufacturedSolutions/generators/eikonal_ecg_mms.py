@@ -28,7 +28,9 @@ template_derivative_sine and a numpy-only quadrature
 (the same value; phi has no separate time factor).
 
 Checks (--self-check): the integrand equals the C++ form and vanishes at the
-electrode; the quadrature is converged between orders 48 and 96.
+electrode; the quadrature is converged between orders 48 and 96; the printed
+single-event building blocks (H, U = H(s)(1 - H(s - D)), w, a, b) give the
+same U' as template_derivative and as the derivative of U.
 
 --write PATH rewrites, and --check PATH compares, the generated regions of the
 hand-written manufacturedEikonalReference.H: the kernel (r . sigma_g)/|r|^3 of
@@ -50,7 +52,8 @@ import sympy as sp
 import cartesian_eikonal_mms as eik
 import mms_codegen as codegen
 from pseudo_ecg_mms import kernel, kernel_code
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 from mms_common.quadrature import gauss_legendre_box
 
@@ -162,6 +165,7 @@ def run_self_checks():
     lo = reference(3, sigma, el, 30.0, TUTORIAL_QUADRATURE_ORDER)
     hi = reference(3, sigma, el, 30.0, 96)
     _check(abs(lo - hi) <= 1e-10*max(1.0, abs(hi)), "quadrature not converged: %r %r" % (lo, hi))
+    _check_single_event_blocks()
 
 
 # Source appended to the emitted module: a numpy-only quadrature over [0, 1]^d.
@@ -224,6 +228,35 @@ def numpy_module():
     return emit_numpy_module(REFERENCE_NAME, functions, params, doc).rstrip("\n") + "\n" + RUNTIME
 
 
+_W = sp.Symbol("w", positive=True)
+_A, _B = sp.symbols("a b", real=True)
+_HS, _HSD = sp.symbols("Hs HsD", real=True)
+_BLOCK_NAMES = {DURATION: "D", RISE: "r", _W: "w", _A: "a", _B: "b",
+                _HS: "H(s)", _HSD: "H(s-D)"}
+
+
+def _single_event_blocks():
+    """The single-event template in the building blocks w, a = tanh(s/w),
+    b = tanh((s - D)/w): H, U = H(s)(1 - H(s - D)) and U'."""
+    H = (1 + sp.tanh(s/_W))/2
+    U = _HS*(1 - _HSD)
+    dU = sp.Rational(1, 4)/_W*((1 - _A**2)*(1 - _B) - (1 + _A)*(1 - _B**2))
+    return {"H": H, "U": U, "dU": dU}
+
+
+def _check_single_event_blocks():
+    """U' of the building blocks equals template_derivative and the derivative of
+    H(s)(1 - H(s - D))."""
+    w = RISE/(2*sp.atanh(sp.Rational(4, 5)))
+    blocks = _single_event_blocks()
+    H = blocks["H"].subs(_W, w)
+    dU = blocks["dU"].subs({_A: sp.tanh(s/_W), _B: sp.tanh((s - DURATION)/_W)}).subs(_W, w)
+    U = H*(1 - H.subs(s, s - DURATION))
+    at = {s: sp.Rational(37, 10), DURATION: 64, RISE: 4}
+    for other in (template_derivative("single_event"), sp.diff(U, s)):
+        _check(abs(float((dU - other).subs(at))) < 1e-14, "single-event building blocks")
+
+
 def latex_fragments():
     rdot = sp.Symbol("rdot", real=True)
     rnorm = sp.Symbol("rnorm", real=True)
@@ -238,7 +271,21 @@ def latex_fragments():
         "eikonal_ecg_template_sine.tex": emit_latex_fragment(
             r"U'(s)", template_derivative("sine"), {}),
         "eikonal_ecg_template_single_event.tex": emit_latex_fragment(
-            r"U'(s)", template_derivative("single_event"), {}),
+            r"U'(s)", _single_event_blocks()["dU"], _BLOCK_NAMES),
+        "eikonal_ecg_template_U.tex": emit_latex_fragment(
+            r"U(s)", _single_event_blocks()["U"], _BLOCK_NAMES),
+        "eikonal_ecg_template_H.tex": emit_latex_fragment(
+            r"H(s)", _single_event_blocks()["H"], _BLOCK_NAMES),
+        "eikonal_ecg_template_w.tex": emit_latex_fragment(
+            "w", RISE/(2*sp.atanh(sp.Rational(4, 5))), _BLOCK_NAMES),
+        "eikonal_ecg_template_ab.tex": emit_parameter_fragment(
+            [("a", sp.latex(sp.tanh(s/_W), symbol_names=_BLOCK_NAMES)),
+             ("b", sp.latex(sp.tanh((s - DURATION)/_W), symbol_names=_BLOCK_NAMES))]),
+        "eikonal_ecg_template_sine_U.tex": emit_latex_fragment(
+            r"U(s)", sp.sin(2*sp.pi*s), {}),
+        "eikonal_ecg_params.tex": emit_parameter_fragment(
+            [("D", DEFAULT_DURATION), ("r", DEFAULT_RISE),
+             (r"q_{\mathrm{ref}}", TUTORIAL_QUADRATURE_ORDER)], per_row=3),
     }
     return {"latex/" + k: v for k, v in out.items()}
 

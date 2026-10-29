@@ -1,12 +1,86 @@
-"""Release-level tests: the figure scripts."""
+"""Release-level tests: the LaTeX notation, the figure scripts and the
+self-contained release folder."""
 
+import filecmp
+import glob
 import os
+import re
+import shutil
 import subprocess
 import sys
 
 import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+GENERATORS = ["fda_monodomain_mms.py", "rotated_monodomain_mms.py", "shell_monodomain_mms.py",
+              "pseudo_ecg_mms.py", "graph_monodomain_mms.py", "coupled_1d3d_mms.py",
+              "cartesian_eikonal_mms.py", "eikonal_ecg_mms.py", "shell_eikonal_mms.py"]
+DOCUMENTS = ["docs/monodomain/monodomain_mms.qmd", "docs/eikonal/eikonal_mms.qmd"]
+
+# Code spellings that must not reach the printed formulas (the paper writes
+# V_m, psi, sigma, C_m and D, r for the template duration and rise).
+FORBIDDEN = [r"\bVm\b", r"\btau\b", r"\bcm\b", r"\brise\b", r"\bduration\b"]
+
+
+def _without_boldsymbol(text):
+    return re.sub(r"\\boldsymbol\s*\\?\{?[A-Za-z]+\}?", "", text)
+
+
+def test_no_code_symbols_in_latex():
+    fragments = sorted(glob.glob(os.path.join(HERE, "latex", "*.tex")))
+    assert fragments
+    bad = []
+    for path in fragments:
+        with open(path) as fh:
+            text = fh.read()
+        for pattern in FORBIDDEN:
+            if re.search(pattern, text):
+                bad.append((os.path.basename(path), pattern))
+        if re.search(r"(?<![\\A-Za-z])G\b", _without_boldsymbol(text)):
+            bad.append((os.path.basename(path), "G"))
+    assert not bad, bad
+
+
+def test_documents_include_existing_fragments():
+    for doc in DOCUMENTS:
+        path = os.path.join(HERE, doc)
+        with open(path) as fh:
+            text = fh.read()
+        for rel in re.findall(r"\{\{< include (\S+) >\}\}", text):
+            assert os.path.exists(os.path.join(os.path.dirname(path), rel)), (doc, rel)
+
+
+def _copy_release(dest):
+    shutil.copytree(HERE, dest, ignore=shutil.ignore_patterns(
+        "parity", ".venv", "__pycache__", ".pytest_cache", "*_files", ".quarto"))
+
+
+@pytest.mark.slow
+def test_release_is_self_contained(tmp_path):
+    root = tmp_path / "generators"
+    _copy_release(root)
+    venv = tmp_path / "venv"
+    subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
+    python = str(venv / "bin" / "python")
+    subprocess.run([python, "-m", "pip", "install", "-q", "-r", "requirements.txt"],
+                   cwd=root, check=True)
+    for gen in GENERATORS:
+        for flag in ("--emit", "--self-check"):
+            r = subprocess.run([python, gen, flag], cwd=root, capture_output=True, text=True)
+            assert r.returncode == 0, (gen, flag, r.stdout, r.stderr)
+    emitted = glob.glob(os.path.join(HERE, "latex", "*.tex")) + \
+        glob.glob(os.path.join(HERE, "reference", "*.py"))
+    for path in emitted:
+        rel = os.path.relpath(path, HERE)
+        assert filecmp.cmp(path, root / rel, shallow=False), "%s differs after --emit" % rel
+    for doc in DOCUMENTS:
+        pdf = root / doc.replace(".qmd", ".pdf")
+        pdf.unlink()
+        r = subprocess.run(["quarto", "render", doc, "--to", "pdf"], cwd=root,
+                           capture_output=True, text=True)
+        assert r.returncode == 0, (doc, r.stderr[-2000:])
+        assert pdf.exists() and pdf.stat().st_size > 100000, doc
 
 ANALYTIC_FIGURES = {
     "monodomain": ["fda_cube.png", "rotated_cube.png", "shell_monodomain.png",

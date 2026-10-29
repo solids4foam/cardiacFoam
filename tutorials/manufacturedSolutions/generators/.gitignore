@@ -5,3 +5,7 @@ parity/Make/darwin*/
 parity/Make/linux*/
 parity/lnInclude/
 parity/mmsParity
+docs/**/*_files/
+docs/**/.quarto/
+docs/monodomain/*.tex
+docs/eikonal/*.tex

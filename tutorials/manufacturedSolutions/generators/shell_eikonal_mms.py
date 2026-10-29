@@ -556,6 +556,10 @@ def latex_fragments():
             {sp.Symbol(r"M(x_s)", real=True): r"\mathbf M(\mathbf x_s)"}),
     }
     out.update(smm.blend_fragments("shell_eikonal", r"\mathbf M", r"\psi"))
+    p = default_params()
+    out["shell_eikonal_params.tex"] = smm.parameter_fragment(
+        p, [(r"\chi", p["chi"]), ("C_m", p["cm"]), ("c_0", p["c0"]),
+            (r"\delta", p["delta"]), (r"r_{\mathrm{pin}}", p["rPin"])])
     return {"latex/" + k: v for k, v in out.items()}
 
 

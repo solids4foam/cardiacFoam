@@ -31,9 +31,10 @@ junction; the exact source built with a solver's own discrete map tests the
 coupled workflow against that map, not the map against the continuum coupling,
 and the discrete map is not ported here.
 
-Checks (--self-check): the terminal values and currents; the sampled value tends to
-the point value at second order in r; the kernel mass is pi r^3/6; each
-terminal's deposition integrates to its current.
+Checks (--self-check): the terminal values and currents; the sampled value lies
+within the O(r^2) bound of the point value; the kernel mass is pi r^3/6.
+test_coupled_1d3d_mms.py also integrates each terminal's deposition against its
+current and measures the second-order approach of the sampled value.
 
     python coupled_1d3d_mms.py --emit
     python coupled_1d3d_mms.py --self-check
@@ -52,7 +53,8 @@ import fda_monodomain_mms as fda
 import graph_monodomain_mms as graph
 import mms_codegen as codegen
 from mms_common import quadrature
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -214,26 +216,36 @@ def latex_fragments():
     s = {n: sp.Symbol(n, real=True) for n in "Vm Vbar V1k Ik Rpvj wk Wk Swv W".split()}
     names = paper_symbol_names(s.values())
     names.update({
-        s["Vbar"]: r"\bar V_{k}", s["V1k"]: r"V_{1D,k}", s["Ik"]: r"I_{\mathrm{pvj},k}",
-        s["Rpvj"]: r"R_{\mathrm{pvj}}", s["wk"]: r"w_k(\mathbf x)",
+        s["Vbar"]: r"\bar V_{k}", s["V1k"]: r"V_{1D,k}", s["Ik"]: r"I_{\mathrm{PVJ},k}",
+        s["Rpvj"]: r"R_{\mathrm{PVJ}}", s["wk"]: r"w_k(\mathbf x)",
         s["Swv"]: r"\int_{B_k\cap\Omega} w_k V_m\,\mathrm d\mathbf x",
         s["W"]: r"\int_{B_k\cap\Omega} w_k\,\mathrm d\mathbf x",
     })
-    ratio, dep = sp.symbols("ratio dep")
-    names.update({ratio: r"\left|\mathbf x-\mathbf x_k\right|/r_{\mathrm{pvj}}",
-                  dep: r"\sum_k I_{\mathrm{pvj},k}\,w_k(\mathbf x)"})
-    sgn = sp.Symbol("sgn")
+    ratio = sp.Symbol("ratio")
+    names[ratio] = r"\left|\mathbf x-\mathbf x_k\right|/r_{\mathrm{PVJ}}"
+    pm, t = sp.Symbol("pm"), sp.Symbol("t", real=True)
     out = {
         "coupled_kernel.tex": emit_latex_fragment(
             r"w_k(\mathbf x)", sp.Max(0, 1 - ratio), names),
         "coupled_sampling.tex": emit_latex_fragment(r"\bar V_k", s["Swv"]/s["W"], names),
         "coupled_current.tex": emit_latex_fragment(
-            r"I_{\mathrm{pvj},k}", (s["V1k"] - s["Vbar"])/s["Rpvj"], names),
+            r"I_{\mathrm{PVJ},k}", (s["V1k"] - s["Vbar"])/s["Rpvj"], names),
         "coupled_deposition.tex": emit_latex_fragment(
-            r"S_{\mathrm{pvj}}", dep/s["W"], names),
+            r"S_{\mathrm{PVJ}}(\mathbf x)",
+            sp.Sum(s["Ik"]*s["wk"]/s["W"], (sp.Symbol("k", integer=True), 1, len(TERMINALS))),
+            names),
         "coupled_terminal_current.tex": emit_latex_fragment(
-            r"I_{\mathrm{pvj},k}^{\mathrm{point}}",
-            sp.Rational(3, 2)*sgn/s["Rpvj"], {**names, sgn: r"\pm\sqrt{1 + t}"}),
+            r"I_{\mathrm{PVJ},k}^{\mathrm{point}}",
+            sp.Mul(pm, sp.Rational(3, 2)*sp.sqrt(1 + t)/s["Rpvj"], evaluate=False),
+            {**names, pm: r"\pm"}),
+        "coupled_kernel_mass.tex": emit_latex_fragment(
+            names[s["W"]], sp.pi*sp.Symbol("r")**3/6, {sp.Symbol("r"): r"r_{\mathrm{PVJ}}"}),
+        "coupled_sampling_bound.tex": "$$\n%s\n$$\n" % sp.latex(sp.Le(
+            sp.Symbol("gap"), 7*sp.pi**2*sp.Symbol("r")**2*sp.sqrt(1 + t)),
+            symbol_names={sp.Symbol("gap"): r"\left|\bar V_k - V_m(\mathbf x_k)\right|",
+                          sp.Symbol("r"): r"r_{\mathrm{PVJ}}"}),
+        "coupled_params.tex": emit_parameter_fragment(
+            [(r"r_{\mathrm{PVJ}}", RADIUS), (r"R_{\mathrm{PVJ}}", R_PVJ)]),
     }
     return {"latex/" + k: v for k, v in out.items()}
 

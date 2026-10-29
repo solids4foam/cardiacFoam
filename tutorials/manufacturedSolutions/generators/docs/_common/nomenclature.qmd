@@ -1,0 +1,70 @@
+The code name is the key of the cardiacFoam case dictionaries or the name used
+in the generators and the NumPy reference modules. "Case units" marks a
+quantity defined only through the manufactured construction, with no
+physical calibration.
+
+::: {.content-visible when-meta="mode.monodomain"}
+
+| Symbol | Meaning | Unit | Code name |
+|:----|:----------|:----|:-------|
+| $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
+| $t$ | time, normalised by $1\,\mathrm s$ | s | `t` |
+| $V_m$ | transmembrane potential | V | `Vm` |
+| $\boldsymbol\sigma$ | conductivity tensor of the monodomain equation | S m$^{-1}$ | `conductivity`; `G` (shell generators), `K` (rotated cube), `sigma` (NumPy) |
+| $\chi$ | membrane surface-to-volume ratio | m$^{-1}$ | `chi` |
+| $C_m$ | membrane capacitance per unit area | F m$^{-2}$ | `cm` |
+| $I_{\mathrm{ion}}$ | capacitance-normalised ionic current, $J_{\mathrm{ion}}/C_m$ | V s$^{-1}$ | (solver side) |
+| $J_{\mathrm{ion}}$ | ionic current returned by the manufactured ionic model | A m$^{-2}$ (case units) | `Iion` |
+| $I_{\mathrm{app}}$, $S$ | applied volumetric current; the manufactured source | A m$^{-3}$ | `source` |
+| $u_1,u_2,u_3$ | auxiliary states of the manufactured ionic model | case units | `u1`, `u2`, `u3` |
+| $\beta$, $\beta_d$ | reaction coefficient of the manufactured ionic model in dimension $d$ | case units | `Beta`, `BETA` |
+| $F_d$, $G_d$ | spatial factors of $V_m$ and of the auxiliary states | case units | `F`, `G` (FDA generator) |
+| $k_d$ | eigenvalue of $-\nabla\cdot(\boldsymbol\sigma\nabla\,\cdot)$ for $F_d$ | s$^{-1}$ (case units) | `eigenvalue(d)` |
+| $r_1$, $r_2$ | inner and outer radius of the shell | m | `r1`, `r2` |
+| $\lambda$, $\omega$ | transmural coordinate; function vanishing on both spheres | -- | `lam`, `om` |
+| $\mathbf f,\mathbf s,\mathbf n_s$ | fibre, sheet and sheet-normal directions | -- | (shell generator) |
+| $\mathbf e_a,\mathbf e_b$ | fixed frame of the shell fibre rotation | -- | (shell generator) |
+| $\sigma_f,\sigma_s,\sigma_n$ | conductivities along $\mathbf f$, $\mathbf s$, $\mathbf n_s$ | S m$^{-1}$ | `gil`, `git`, `gin` |
+| $\theta_0,\theta_1$ | fibre angle at the inner wall and its transmural increment | deg | `theta0`, `theta1` |
+| $\gamma_1,\gamma_2$ | rotation angles of the fixed frame | deg | `gamma1`, `gamma2` |
+| $\hat h$, $a_1,a_2,a_3$, $k$ | unsealed shell field and its coefficients | case units | `hhat`, `hA[0..2]`, `k` |
+| $m_j$, $m$, $d_j$ | wall correction of sphere $j$, its blend, $\partial_n\omega$ on sphere $j$ | -- | (shell generator) |
+| $g$ | positive spatial factor of the shell auxiliary states | case units | `g` |
+| $\mathbf r_e$, $\Phi_e$ | electrode position; pseudo-ECG functional | m; case units | `electrodePositions`; `pseudoECG` |
+| $q_{\mathrm{ref}}$ | Gauss--Legendre points per axis of the reference quadrature | -- | `referenceQuadratureOrder` |
+| $V_{1D}$, $g_e$ | graph transmembrane potential; graph edge conductivity | V; S m$^{-1}$ | `Vm1D`; `purkinjeConductivity` |
+| $\rho$, $V_k$ | Purkinje fibre radius; volume of graph node $k$ | m; m$^3$ | `purkinjeFibreRadius` |
+| $R_{\mathrm{PVJ}}$, $r_{\mathrm{PVJ}}$ | junction resistance; kernel radius | case units; m | `rPvj`; `pvjRadius` |
+| $I_{\mathrm{PVJ},k}$, $S_{\mathrm{PVJ}}$ | junction current of terminal $k$; junction source | case units | `continuum_current`; `continuum_junction_source` |
+| $w_k$, $\bar V_k$ | linear kernel of terminal $k$; sampled tissue potential | --; V | `pvjKernel linear`; `continuum_sampling` |
+
+:::
+
+::: {.content-visible when-meta="mode.eikonal"}
+
+| Symbol | Meaning | Unit | Code name |
+|:----|:----------|:----|:-------|
+| $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
+| $\psi$ | activation time | s | `activationTime`; `psi` (generators) |
+| $\boldsymbol\sigma$ | conductivity tensor | S m$^{-1}$ | `conductivity`; `G` (shell generators), `sigma` (NumPy) |
+| $\chi$ | membrane surface-to-volume ratio | m$^{-1}$ | `chi` |
+| $C_m$ | membrane capacitance per unit area | F m$^{-2}$ | `cm` |
+| $\mathbf M$ | eikonal metric, $\boldsymbol\sigma/(\chi C_m)$ | m$^2$ s$^{-1}$ | `M` |
+| $c_0$ | eikonal--diffusion scaling coefficient | s$^{-1/2}$ | `c0` |
+| $S_\psi$, $S$ | manufactured source of the eikonal equation | -- | `source` |
+| $\mathbf k_d$, $K_M$ | direction of the Cartesian field; $\mathbf k_d\cdot\mathbf M\mathbf k_d$ | m$^{-1}$; s$^{-1}$ | `k_vector(d)`; `K_M` |
+| $r_1$, $r_2$ | inner and outer radius of the shell | m | `r1`, `r2` |
+| $\lambda$, $\omega$ | transmural coordinate; function vanishing on both spheres | -- | `lam`, `om` |
+| $\mathbf f,\mathbf s,\mathbf n_s$ | fibre, sheet and sheet-normal directions | -- | (shell generator) |
+| $\sigma_f,\sigma_s,\sigma_n$ | conductivities along $\mathbf f$, $\mathbf s$, $\mathbf n_s$ | S m$^{-1}$ | `gil`, `git`, `gin` |
+| $\theta_0,\theta_1$, $\gamma_1,\gamma_2$ | fibre angles; rotation angles of the fixed frame | deg | `theta0`, `theta1`, `gamma1`, `gamma2` |
+| $\mathbf x_s$, $\mathbf M_s$ | stimulus point; $\mathbf M(\mathbf x_s)$ | m; m$^2$ s$^{-1}$ | `xs`; `Msi` holds $\mathbf M_s^{-1}$ |
+| $\delta$ | smoothing length of the anisotropic distance | case units | `delta` |
+| $r_{\mathrm{pin}}$ | radius of the ball of pinned cells | m | `rPin` |
+| $\hat h$, $m_j$, $m$, $d_j$ | unsealed field; wall correction; blend; $\partial_n\omega$ on sphere $j$ | -- | (shell generator) |
+| $U$, $U'$ | transmembrane template and its derivative | case units | `template` |
+| $D$, $r$ | duration and rise of the single-event template | s | `templateDuration`, `templateRise`; `duration`, `rise` |
+| $\mathbf r_e$, $\Phi_e$ | electrode position; eikonal-driven ECG functional | m; case units | `electrodePositions`; `eikonalECG` |
+| $q_{\mathrm{ref}}$ | Gauss--Legendre points per axis of the reference quadrature | -- | `referenceQuadratureOrder` |
+
+:::

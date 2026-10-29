@@ -154,7 +154,8 @@ def latex_fragments():
         "rotated_u2.tex": emit_latex_fragment("u_2", Gf**sp.Rational(-1, 2)/(1 + t), names),
         "rotated_S.tex": emit_latex_fragment(
             "S", sp.sqrt(1 + t)*(s["beta"]*s["F"] - s["Dsig"]), names),
-        "rotated_K.tex": emit_latex_fragment(r"\boldsymbol\sigma", K_CASE, names),
+        "rotated_K.tex": emit_latex_fragment(
+            r"\boldsymbol\sigma", K_CASE.applyfunc(lambda v: sp.Float(v, 6)), names),
     }
     return {"latex/" + k: v for k, v in out.items()}
 

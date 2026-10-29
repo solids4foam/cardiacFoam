@@ -34,7 +34,8 @@ import numpy as np
 import sympy as sp
 
 import mms_codegen as codegen
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   format_value, paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -448,7 +449,33 @@ def latex_fragments():
         "shell_monodomain_Vm.tex": emit_latex_fragment("V_m", sp.sqrt(1 + t)*Fs, names),
         "shell_monodomain_g.tex": emit_latex_fragment("g", _g(), names),
     })
+    Vm, gs, beta, dsig = sp.symbols("Vm gs beta dsig", real=True)
+    snames = shell_symbol_names([(Fs, "F"), (Vm, "V_m"), (gs, "g"), (beta, r"\beta"),
+                                 (dsig, r"\nabla\!\cdot\!\left(\boldsymbol\sigma\nabla F\right)")])
+    out.update({
+        "shell_monodomain_u1.tex": emit_latex_fragment("u_1", (1 + t)*gs + Vm, snames),
+        "shell_monodomain_u2.tex": emit_latex_fragment(
+            "u_2", gs**sp.Rational(-1, 2)/(1 + t), snames),
+        "shell_monodomain_source.tex": emit_latex_fragment(
+            "S", sp.sqrt(1 + t)*(beta*Fs - dsig), snames),
+        "shell_monodomain_params.tex": parameter_fragment(default_params()),
+    })
     return {"latex/" + k: v for k, v in out.items()}
+
+
+def parameter_fragment(params, extra=()):
+    """The shell parameters in Paper I notation (angles in degrees)."""
+    pairs = []
+    for name in SCALAR_PARAMS:
+        if name not in SHELL_SYMBOLS or name not in params:
+            continue
+        value = params[name]
+        if name in ANGLE_PARAMS:
+            value = r"%s^\circ" % format_value(float(value))
+        pairs.append((SHELL_SYMBOLS[name], value))
+    if "hA" in params:
+        pairs += [(SHELL_SYMBOLS["hA%d" % i], params["hA"][i]) for i in range(3)]
+    return emit_parameter_fragment(pairs + list(extra), per_row=5)
 
 
 def numpy_module():

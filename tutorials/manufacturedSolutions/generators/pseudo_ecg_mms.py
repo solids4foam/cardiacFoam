@@ -52,7 +52,8 @@ import sympy as sp
 import fda_monodomain_mms as fda
 import mms_codegen as codegen
 import rotated_monodomain_mms as rot
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 from mms_common.quadrature import gauss_legendre_box
 
@@ -254,6 +255,17 @@ def latex_fragments():
         "g_d", rdot/rnorm**3, names)
     out["pseudo_ecg_time_factor.tex"] = emit_latex_fragment(
         r"\sqrt{1+t}", sp.sqrt(1 + t), names)
+    integral = sp.Symbol("integral", real=True)
+    phi0 = sp.Symbol("phi0", real=True)
+    out["pseudo_ecg_functional.tex"] = emit_latex_fragment(
+        r"\Phi_e(\mathbf r_e,t)", sp.sqrt(1 + t)*phi0,
+        {**names, phi0: r"\Phi_e(\mathbf r_e,0)"})
+    out["pseudo_ecg_spatial.tex"] = emit_latex_fragment(
+        r"\Phi_e(\mathbf r_e,0)", integral,
+        {**names, integral: r"\int_{[0,1]^d} g_d\,\mathrm d\mathbf x"})
+    out["pseudo_ecg_params.tex"] = emit_parameter_fragment(
+        [(r"q_{\mathrm{ref}}", TUTORIAL_QUADRATURE_ORDER),
+         (r"g_d\big|_{\lVert\mathbf r\rVert^2\le 10^{-300}}", 0)], per_row=2)
     return {"latex/" + k: v for k, v in out.items()}
 
 

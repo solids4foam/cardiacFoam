@@ -46,7 +46,8 @@ import sys
 import sympy as sp
 
 import mms_codegen as codegen
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
+                                   paper_symbol_names)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -181,7 +182,23 @@ def latex_fragments():
         out["fda_F_d%d.tex" % d] = emit_latex_fragment("F_%d" % d, _F(d), names)
         out["fda_G_d%d.tex" % d] = emit_latex_fragment("G_%d" % d, _G(d), names)
         out["fda_beta_d%d.tex" % d] = emit_latex_fragment(
-            r"\beta_%d" % d, _beta(d), names)
+            r"\beta_%d" % d, sp.Float(str(BETA[d]), 2), names)
+    sxyz = [sp.Symbol(n, real=True) for n in ("sxx", "syy", "szz")]
+    snames = {**names, sxyz[0]: r"\sigma_{xx}", sxyz[1]: r"\sigma_{yy}",
+              sxyz[2]: r"\sigma_{zz}"}
+    out["fda_k.tex"] = emit_latex_fragment(
+        "k_3", sum(sxyz[m]*(m + 1)**2*sp.pi**2 for m in range(3)), snames)
+    out["fda_residual.tex"] = emit_latex_fragment(
+        r"\chi C_m\frac{\partial V_m}{\partial t}"
+        r" - \nabla\!\cdot\!\left(\boldsymbol\sigma\nabla V_m\right) + \chi C_m I_{\mathrm{ion}}",
+        (sp.Symbol("k_d") + sp.Symbol("beta_d"))*s["Vm"],
+        {**names, sp.Symbol("k_d"): "k_d", sp.Symbol("beta_d"): r"\beta_d"})
+    out["fda_sigma.tex"] = emit_latex_fragment(
+        r"\boldsymbol\sigma",
+        sp.diag(*[sp.Float(v, 9) for v in SIGMA_DIAG]), names)
+    out["fda_params.tex"] = emit_parameter_fragment(
+        [("C_m", CM), (r"\chi", CHI)] + [(r"\beta_%d" % d, BETA[d]) for d in DIMENSIONS],
+        per_row=5)
     out["fda_Vm.tex"] = emit_latex_fragment("V_m", sp.sqrt(1 + t)*s["Fd"], names)
     out["fda_u1.tex"] = emit_latex_fragment("u_1", (1 + t)*s["Gd"] + s["Vm"], names)
     out["fda_u2.tex"] = emit_latex_fragment("u_2", s["Gd"]**sp.Rational(-1, 2)/(1 + t), names)
