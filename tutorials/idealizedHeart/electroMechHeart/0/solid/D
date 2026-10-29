@@ -19,7 +19,6 @@ internalField   uniform (0 0 0);
 
 boundaryField
 {
-    // The basal cut plane anchors this simplified, unloaded ventricle.
     BASE
     {
         type            fixedDisplacement;

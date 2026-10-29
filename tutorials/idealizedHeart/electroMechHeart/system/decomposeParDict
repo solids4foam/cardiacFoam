@@ -13,15 +13,12 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-
 numberOfSubdomains  6;
 
 method          simple;
 
 simpleCoeffs
 {
-    // Six contiguous base-to-apex strips along global x. This matches the
-    // regional electro/solid decomposition dictionaries.
     n       (6 1 1);
     delta   0.001;
 }
