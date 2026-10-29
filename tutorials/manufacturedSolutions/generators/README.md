@@ -35,7 +35,7 @@ solver output.
 | `reference/` | emitted NumPy modules, one per case |
 | `latex/` | emitted LaTeX fragments |
 | `docs/_common/` | document preamble, nomenclature, bibliography and figure style (`figstyle.py`) |
-| `docs/monodomain/`, `docs/eikonal/` | Quarto source, rendered PDF, figure script `figures.py` and `figures/` |
+| `docs/monodomain/`, `docs/eikonal/` | Quarto entry file `<equation>_mms.qmd` (front matter), its includable text `_<equation>_body.qmd`, rendered PDF, figure script `figures.py` and `figures/` |
 | `test_*.py` | generator tests; `test_release.py` holds the release checks |
 | `requirements.txt` | Python dependencies |
 | `parity/` | cardiacFoam-only: an OpenFOAM application comparing the C++ headers with the NumPy references |

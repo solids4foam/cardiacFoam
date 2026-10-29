@@ -42,20 +42,38 @@ def test_no_code_symbols_in_latex():
     assert not bad, bad
 
 
+INCLUDE = re.compile(r"\{\{< include (\S+) >\}\}")
+
+
+def _included_files(doc):
+    """Every file reached from a document through include shortcodes. Quarto
+    resolves a nested include against the directory of the entry file."""
+    root = os.path.dirname(os.path.join(HERE, doc))
+    found, stack = [], [os.path.join(HERE, doc)]
+    while stack:
+        path = stack.pop()
+        if not path.endswith(".qmd") or not os.path.exists(path):
+            continue
+        with open(path) as fh:
+            for rel in INCLUDE.findall(fh.read()):
+                target = os.path.normpath(os.path.join(root, rel))
+                if target not in found:
+                    found.append(target)
+                    stack.append(target)
+    return found
+
+
 def test_documents_include_existing_fragments():
     for doc in DOCUMENTS:
-        path = os.path.join(HERE, doc)
-        with open(path) as fh:
-            text = fh.read()
-        for rel in re.findall(r"\{\{< include (\S+) >\}\}", text):
-            assert os.path.exists(os.path.join(os.path.dirname(path), rel)), (doc, rel)
+        missing = [p for p in _included_files(doc) if not os.path.exists(p)]
+        assert not missing, (doc, missing)
 
 
 def test_every_fragment_is_included():
     included = set()
     for doc in DOCUMENTS:
-        with open(os.path.join(HERE, doc)) as fh:
-            included.update(re.findall(r"\{\{< include \S*latex/(\S+) >\}\}", fh.read()))
+        included.update(os.path.basename(p) for p in _included_files(doc)
+                        if os.path.basename(os.path.dirname(p)) == "latex")
     emitted = {os.path.basename(p) for p in glob.glob(os.path.join(HERE, "latex", "*.tex"))}
     assert not emitted - included, sorted(emitted - included)
 
