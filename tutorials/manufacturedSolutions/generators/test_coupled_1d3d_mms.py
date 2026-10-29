@@ -188,3 +188,16 @@ def test_parity_coupled_terminal_current():
     # 0.333333333333) while this reference uses 1/6 and 1/3, so the comparison
     # is at rel 1e-10 rather than 1e-12.
     compare("coupled", 3, numpy_fn, sample_points(), rtol=1e-10)
+
+
+def test_radius_beyond_half_ball_is_rejected():
+    assert cp.MAX_RADIUS == pytest.approx(1.0/6.0, rel=1e-15)
+    ref = _reference()
+    assert ref.MAX_RADIUS == pytest.approx(cp.MAX_RADIUS, rel=1e-15)
+    for module in (cp, ref):
+        with pytest.raises(ValueError, match="pi r"):
+            module.terminal_deposition(0, np.zeros((1, 3)), 0.0, radius=0.2, n=4)
+        with pytest.raises(ValueError, match="pi r"):
+            module.continuum_sampling(0, 0.0, radius=0.2, n=4)
+    with pytest.raises(ValueError, match="pi r"):
+        cp.kernel_mass(0.2)

@@ -43,7 +43,7 @@ import sympy as sp
 
 import fda_monodomain_mms as fda
 import mms_codegen as codegen
-from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names
+from mms_common.latex_emit import emit_latex_fragment, paper_symbol_names, printed_constant
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -155,7 +155,7 @@ def latex_fragments():
         "rotated_S.tex": emit_latex_fragment(
             "S", sp.sqrt(1 + t)*(s["beta"]*s["F"] - s["Dsig"]), names),
         "rotated_K.tex": emit_latex_fragment(
-            r"\boldsymbol\sigma", K_CASE.applyfunc(lambda v: sp.Float(v, 6)), names),
+            r"\boldsymbol\sigma", K_CASE.applyfunc(lambda v: printed_constant(v, 6)), names),
     }
     return {"latex/" + k: v for k, v in out.items()}
 

@@ -47,7 +47,7 @@ import sympy as sp
 
 import mms_codegen as codegen
 from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
-                                   paper_symbol_names)
+                                   paper_symbol_names, printed_constant)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -136,6 +136,19 @@ def pde_residual(d):
     return CHI*CM*sp.diff(V, t) - div + CHI*CM*(f["Iion"]/CM)
 
 
+def relative_residual(d):
+    """|k_d + beta_d|/k_d: the residual (k_d + beta_d) V_m relative to
+    |div(sigma grad V_m)| = k_d |V_m|."""
+    k = eigenvalue(d)
+    return float(abs(k + _beta(d))/k)
+
+
+def _sig2(value):
+    """LaTeX of a positive value to two significant digits, a x 10^n."""
+    mantissa, exponent = ("%.1e" % value).split("e")
+    return r"%s\times10^{%d}" % (mantissa, int(exponent))
+
+
 def _check(condition, message):
     if not condition:
         raise AssertionError(message)
@@ -181,8 +194,6 @@ def latex_fragments():
     for d in DIMENSIONS:
         out["fda_F_d%d.tex" % d] = emit_latex_fragment("F_%d" % d, _F(d), names)
         out["fda_G_d%d.tex" % d] = emit_latex_fragment("G_%d" % d, _G(d), names)
-        out["fda_beta_d%d.tex" % d] = emit_latex_fragment(
-            r"\beta_%d" % d, sp.Float(str(BETA[d]), 2), names)
     sxyz = [sp.Symbol(n, real=True) for n in ("sxx", "syy", "szz")]
     snames = {**names, sxyz[0]: r"\sigma_{xx}", sxyz[1]: r"\sigma_{yy}",
               sxyz[2]: r"\sigma_{zz}"}
@@ -195,10 +206,14 @@ def latex_fragments():
         {**names, sp.Symbol("k_d"): "k_d", sp.Symbol("beta_d"): r"\beta_d"})
     out["fda_sigma.tex"] = emit_latex_fragment(
         r"\boldsymbol\sigma",
-        sp.diag(*[sp.Float(v, 9) for v in SIGMA_DIAG]), names)
+        sp.diag(*[printed_constant(v, 9) for v in SIGMA_DIAG]), names)
     out["fda_params.tex"] = emit_parameter_fragment(
-        [("C_m", CM), (r"\chi", CHI)] + [(r"\beta_%d" % d, BETA[d]) for d in DIMENSIONS],
+        [("C_m", CM), (r"\chi", CHI)]
+        + [(r"\beta_%d" % d, printed_constant(BETA[d], 2)) for d in DIMENSIONS],
         per_row=5)
+    out["fda_residual_relative.tex"] = emit_parameter_fragment(
+        [(r"\frac{|k_%d+\beta_%d|}{k_%d}" % (d, d, d), _sig2(relative_residual(d)))
+         for d in DIMENSIONS], per_row=3)
     out["fda_Vm.tex"] = emit_latex_fragment("V_m", sp.sqrt(1 + t)*s["Fd"], names)
     out["fda_u1.tex"] = emit_latex_fragment("u_1", (1 + t)*s["Gd"] + s["Vm"], names)
     out["fda_u2.tex"] = emit_latex_fragment("u_2", s["Gd"]**sp.Rational(-1, 2)/(1 + t), names)

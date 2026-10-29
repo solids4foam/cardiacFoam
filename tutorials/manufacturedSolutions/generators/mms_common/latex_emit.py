@@ -1,6 +1,7 @@
 """LaTeX fragments in the paper's notation."""
 
 import math
+import re
 
 import sympy as sp
 
@@ -47,6 +48,24 @@ def format_value(value):
         mantissa, exponent = text.split("e")
         text = r"%s\times10^{%d}" % (mantissa, int(exponent))
     return text
+
+
+def printed_constant(value, digits):
+    """sympy Float of `value` printed to `digits` significant digits, asserted to
+    round-trip: the printed decimal must equal `value` to a relative tolerance of
+    10^-(digits+2), one hundredth of a unit in the last printed digit, so a
+    constant that carries more digits than are printed raises."""
+    exact = sp.Rational(repr(value)) if isinstance(value, float) else sp.nsimplify(value)
+    printed = sp.Float(exact, digits)
+    text = sp.latex(printed)
+    back = sp.Rational(text) if re.fullmatch(r"-?\d+(\.\d*)?", text) else None
+    if back is None:
+        raise AssertionError("constant %r printed as %r is not a plain decimal" % (value, text))
+    tolerance = sp.Rational(1, 10**(digits + 2))*abs(exact)
+    if abs(back - exact) > tolerance:
+        raise AssertionError("constant %r printed to %d significant digits as %s does not "
+                             "round-trip; print more digits" % (value, digits, text))
+    return printed
 
 
 def emit_parameter_fragment(pairs, per_row=4):

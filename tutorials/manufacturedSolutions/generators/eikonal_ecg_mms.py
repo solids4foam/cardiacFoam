@@ -4,8 +4,8 @@
 For psi = exp(k_d . x) (cartesian_eikonal_mms) and a transmembrane template
 U(s) the eikonal ECG at an electrode e is
 
-    phi(e, t) = integral over [0, 1]^d of g_d dx,
-    g_d = (r . sigma_g) / |r|^3,   r = x - e,   sigma_g = -sigma grad(psi) U'(t - psi),
+    phi(e, t) = integral over [0, 1]^d of varphi_d dx,
+    varphi_d = (r . sigma_g) / |r|^3,   r = x - e,   sigma_g = -sigma grad(psi) U'(t - psi),
 
 where in d < 3 only the first d coordinates enter r.  The integrand is 0 where
 |r|^2 <= 1e-300 (|dx| <= 1e-300 for d = 1), the guard of the C++ reference, so
@@ -13,9 +13,9 @@ an electrode on a quadrature node contributes nothing and never produces NaN.
 The integral is a tensor-product Gauss-Legendre quadrature (tutorial order 48).
 
 Templates (derivative U'):
-    singleEvent   w = rise / (2 atanh(0.8)), a = tanh(s / w), b = tanh((s - duration) / w)
+    singleEvent   w = T_r / (2 atanh(0.8)), a = tanh(s / w), b = tanh((s - D) / w)
                   U' = 0.25/w ((1 - a^2)(1 - b) - (1 + a)(1 - b^2)),
-                  duration = 64, rise = 4
+                  D = duration = 64, T_r = rise = 4 (printed D and T_r)
     sine          U' = 2 pi cos(2 pi s)
 
 The emitted NumPy module holds integrand_d<d>_<template>(x, y, z, t, ex, ey, ez,
@@ -91,7 +91,7 @@ def template_derivative(template):
 
 
 def integrand(d, sigma, electrode, template="single_event"):
-    """g_d as a sympy expression in x, y, z, t, with the VSMALL guard."""
+    """varphi_d as a sympy expression in x, y, z, t, with the VSMALL guard."""
     if d not in DIMENSIONS:
         raise ValueError("d must be 1, 2 or 3, got %r" % (d,))
     sigma = sp.Matrix(sigma)
@@ -231,7 +231,7 @@ def numpy_module():
 _W = sp.Symbol("w", positive=True)
 _A, _B = sp.symbols("a b", real=True)
 _HS, _HSD = sp.symbols("Hs HsD", real=True)
-_BLOCK_NAMES = {DURATION: "D", RISE: "r", _W: "w", _A: "a", _B: "b",
+_BLOCK_NAMES = {DURATION: "D", RISE: "T_r", _W: "w", _A: "a", _B: "b",
                 _HS: "H(s)", _HSD: "H(s-D)"}
 
 
@@ -267,7 +267,7 @@ def latex_fragments():
                   rnorm: r"\lVert\mathbf r\rVert", up: r"U'", u: r"U"})
     out = {
         "eikonal_ecg_integrand.tex": emit_latex_fragment(
-            "g_d", -up*rdot/rnorm**3, names),
+            r"\varphi_d", -up*rdot/rnorm**3, names),
         "eikonal_ecg_template_sine.tex": emit_latex_fragment(
             r"U'(s)", template_derivative("sine"), {}),
         "eikonal_ecg_template_single_event.tex": emit_latex_fragment(
@@ -284,7 +284,7 @@ def latex_fragments():
         "eikonal_ecg_template_sine_U.tex": emit_latex_fragment(
             r"U(s)", sp.sin(2*sp.pi*s), {}),
         "eikonal_ecg_params.tex": emit_parameter_fragment(
-            [("D", DEFAULT_DURATION), ("r", DEFAULT_RISE),
+            [("D", DEFAULT_DURATION), ("T_r", DEFAULT_RISE),
              (r"q_{\mathrm{ref}}", TUTORIAL_QUADRATURE_ORDER)], per_row=3),
     }
     return {"latex/" + k: v for k, v in out.items()}

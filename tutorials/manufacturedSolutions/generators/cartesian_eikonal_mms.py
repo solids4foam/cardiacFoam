@@ -43,7 +43,7 @@ import sympy as sp
 
 import mms_codegen as codegen
 from mms_common.latex_emit import (emit_latex_fragment, emit_parameter_fragment,
-                                   paper_symbol_names)
+                                   paper_symbol_names, printed_constant)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -224,7 +224,7 @@ def latex_fragments():
     for label, entries in (("rotated", SIGMA_ROTATED), ("axis", SIGMA_AXIS)):
         out["eikonal_sigma_%s.tex" % label] = emit_latex_fragment(
             r"\boldsymbol\sigma_{\mathrm{%s}}" % label,
-            sigma_matrix([sp.Float(repr(v), 9) if v else 0 for v in entries]), names)
+            sigma_matrix([printed_constant(v, 9) if v else 0 for v in entries]), names)
     out["eikonal_params.tex"] = emit_parameter_fragment(
         [(r"\chi", CHI), ("C_m", CM), ("c_0", TUTORIAL_C0)], per_row=3)
     return {"latex/" + k: v for k, v in out.items()}

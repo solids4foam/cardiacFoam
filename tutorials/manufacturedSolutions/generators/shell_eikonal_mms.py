@@ -537,6 +537,16 @@ def self_test_samples():
     return rows
 
 
+def _stimulus_fragment(direction, radius):
+    """x_s = radius direction/|direction|, with its components to five decimals."""
+    xs = _stimulus(default_params(), direction, radius)["xs"]
+    dir_text = r"\left(%s\right)" % ", ".join("%g" % c for c in direction)
+    return "$$\n%s\n$$\n" % (
+        r"\mathbf x_s = %g\,\frac{%s}{\left\lVert%s\right\rVert}"
+        r" \approx \left(%s\right)" % (radius, dir_text, dir_text,
+                                  ", ".join("%.5f" % float(c) for c in xs)))
+
+
 def latex_fragments():
     q, div_flux, quad, Gs = sp.symbols("q divflux quad Gs", real=True)
     names = smm.shell_symbol_names([
@@ -544,13 +554,11 @@ def latex_fragments():
         (div_flux, r"\nabla\!\cdot\!\left(\mathbf M\nabla\psi\right)"),
         (quad, r"\nabla\psi\cdot\mathbf M\nabla\psi"), (Gs, r"\boldsymbol\sigma")])
     direction, radius = STIMULUS["default"]
-    d = sp.Matrix([sp.nsimplify(c) for c in direction])
     out = {
         "shell_eikonal_hhat.tex": emit_latex_fragment(r"\hat h", _hhat(q), names),
         "shell_eikonal_metric.tex": emit_latex_fragment(r"\mathbf M", _metric_tensor(Gs), names),
         "shell_eikonal_source.tex": emit_latex_fragment(r"S", _operator(div_flux, quad), names),
-        "shell_eikonal_xs.tex": emit_latex_fragment(
-            r"\mathbf x_s", sp.nsimplify(radius)*d/sp.sqrt((d.T*d)[0]), names),
+        "shell_eikonal_xs.tex": _stimulus_fragment(direction, radius),
         "shell_eikonal_Ms.tex": emit_latex_fragment(
             r"\mathbf M_s", sp.Symbol(r"M(x_s)", real=True),
             {sp.Symbol(r"M(x_s)", real=True): r"\mathbf M(\mathbf x_s)"}),

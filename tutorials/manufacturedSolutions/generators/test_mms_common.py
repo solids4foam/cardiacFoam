@@ -67,3 +67,17 @@ def test_half_ball_kernel_interior_matches_full_ball():
     s, vol = half_ball_kernel_integral(fx, c, r, np.zeros(3), np.ones(3), 40)
     assert abs(vol - math.pi * r**3 / 3.0) < 1e-8
     assert abs(s - 0.5 * vol) < 1e-8
+
+
+def test_printed_constant_round_trips_or_raises():
+    from mms_common.latex_emit import printed_constant
+    assert sp.latex(printed_constant(sp.Rational("0.111453302"), 9)) == "0.111453302"
+    assert sp.latex(printed_constant(-0.0084931, 6)) == "-0.0084931"
+    assert sp.latex(printed_constant(-8.6, 2)) == "-8.6"
+    for value, digits in ((0.1068751, 6), (sp.Rational("0.1114533021"), 9), (-8.65, 2)):
+        try:
+            printed_constant(value, digits)
+        except AssertionError as err:
+            assert "round-trip" in str(err)
+        else:
+            raise AssertionError("%r printed to %d digits did not raise" % (value, digits))

@@ -3,8 +3,8 @@
 
 For the fields V_m = sqrt(1 + t) F the pseudo-ECG at an electrode e is
 
-    phi(e, t) = sqrt(1 + t) * integral over [0, 1]^d of g_d dx,
-    g_d = (r . sigma grad F) / |r|^3,   r = x - e,
+    phi(e, t) = sqrt(1 + t) * integral over [0, 1]^d of varphi_d dx,
+    varphi_d = (r . sigma grad F) / |r|^3,   r = x - e,
 
 with F = F_d of the FDA fields (fda_monodomain_mms, sigma = diag FDA
 conductivity) or F = sin^2(pi x) sin^2(pi y) sin^2(pi z) (rotated_monodomain_mms,
@@ -97,7 +97,7 @@ def kernel(d, flux, r):
 
 
 def integrand(d, sigma, electrode, F=None):
-    """g_d as a sympy expression in x, y, z, with the VSMALL guard."""
+    """varphi_d as a sympy expression in x, y, z, with the VSMALL guard."""
     if d not in DIMENSIONS:
         raise ValueError("d must be 1, 2 or 3, got %r" % (d,))
     sigma = sp.Matrix(sigma)
@@ -117,7 +117,7 @@ def time_factor(tt):
 
 
 def spatial_reference(d, sigma, electrode, n_quad, F=None):
-    """Integral of g_d over [0, 1]^d by n_quad-point Gauss-Legendre per axis."""
+    """Integral of varphi_d over [0, 1]^d by n_quad-point Gauss-Legendre per axis."""
     g = sp.lambdify(AXES, integrand(d, sigma, electrode, F), "numpy")
 
     def f(p):
@@ -252,9 +252,7 @@ def latex_fragments():
     out["pseudo_ecg_gradF_rotated.tex"] = emit_latex_fragment(
         r"\nabla F", grad_F(3, _rotated_F()), names)
     out["pseudo_ecg_integrand.tex"] = emit_latex_fragment(
-        "g_d", rdot/rnorm**3, names)
-    out["pseudo_ecg_time_factor.tex"] = emit_latex_fragment(
-        r"\sqrt{1+t}", sp.sqrt(1 + t), names)
+        r"\varphi_d", rdot/rnorm**3, names)
     integral = sp.Symbol("integral", real=True)
     phi0 = sp.Symbol("phi0", real=True)
     out["pseudo_ecg_functional.tex"] = emit_latex_fragment(
@@ -262,10 +260,11 @@ def latex_fragments():
         {**names, phi0: r"\Phi_e(\mathbf r_e,0)"})
     out["pseudo_ecg_spatial.tex"] = emit_latex_fragment(
         r"\Phi_e(\mathbf r_e,0)", integral,
-        {**names, integral: r"\int_{[0,1]^d} g_d\,\mathrm d\mathbf x"})
+        {**names, integral: r"\int_{[0,1]^d} \varphi_d\,\mathrm d\mathbf x"})
     out["pseudo_ecg_params.tex"] = emit_parameter_fragment(
         [(r"q_{\mathrm{ref}}", TUTORIAL_QUADRATURE_ORDER),
-         (r"g_d\big|_{\lVert\mathbf r\rVert^2\le 10^{-300}}", 0)], per_row=2)
+         (r"\varphi_d\big|_{\lVert\mathbf r\rVert^2\le 10^{-300}}", 0),
+         (r"\varphi_1\big|_{|x-r_{e,x}|\le 10^{-300}}", 0)], per_row=3)
     return {"latex/" + k: v for k, v in out.items()}
 
 

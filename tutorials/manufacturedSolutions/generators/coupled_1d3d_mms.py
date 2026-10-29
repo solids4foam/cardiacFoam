@@ -67,6 +67,25 @@ CUBE_HI = np.ones(3)
 TERMINALS = tuple(tuple(float(v) for v in p) for p in graph.TERMINALS)
 
 
+def half_ball_radius_limit():
+    """Largest kernel radius for which the ball about every terminal meets no cube
+    face other than the one the terminal lies on, so that its support is a half
+    ball of mass pi r^3/6."""
+    return min(min(c - lo, hi - c) for p in TERMINALS for c, lo, hi in zip(p, CUBE_LO, CUBE_HI)
+               if lo < c < hi)
+
+
+MAX_RADIUS = half_ball_radius_limit()
+
+
+def require_half_ball(radius):
+    """Reject a radius outside (0, MAX_RADIUS]: the half-ball mass would not hold."""
+    if not 0.0 < radius <= MAX_RADIUS:
+        raise ValueError("kernel radius %r outside (0, %.6g]: beyond it the ball about a "
+                         "terminal meets a second cube face and its mass is not pi r^3/6"
+                         % (radius, MAX_RADIUS))
+
+
 @functools.lru_cache(maxsize=None)
 def _vm_numpy():
     return sp.lambdify((fda.x, fda.y, fda.z, fda.t), graph.tissue_vm(), "numpy")
@@ -90,11 +109,13 @@ def terminal_current_exact(t, R_pvj=1.0):
 
 def kernel_mass(radius=RADIUS):
     """int w over a half ball: pi r^3 / 6."""
+    require_half_ball(radius)
     return np.pi*radius**3/6.0
 
 
 def continuum_sampling(k, t, radius=RADIUS, n=32):
     """Vbar_k = int w V_m / int w over the half ball at terminal k."""
+    require_half_ball(radius)
     vm = _vm_numpy()
     num, den = quadrature.half_ball_kernel_integral(
         lambda p: vm(p[0], p[1], p[2], t), TERMINALS[k], radius, CUBE_LO, CUBE_HI, n)
@@ -130,6 +151,8 @@ def _check(condition, message):
 
 def run_self_checks():
     t = 0.07
+    _check(abs(MAX_RADIUS - 1.0/6.0) < 1e-15, "half-ball radius limit is not 1/6")
+    _check(0.0 < RADIUS <= MAX_RADIUS, "kernel radius exceeds the half-ball limit")
     for k, sign in ((0, 1.0), (1, -1.0)):
         _check(abs(terminal_current_exact(t)[k] - sign*1.5*np.sqrt(1 + t)) < 1e-15,
                "terminal current %d differs from +-(3/2) sqrt(1+t)" % k)
@@ -151,6 +174,15 @@ TERMINALS = ((0.0, 1.0/6.0, 1.0/3.0), (1.0, 1.0/6.0, 1.0/3.0))
 RADIUS = 0.11
 CUBE_LO = numpy.zeros(3)
 CUBE_HI = numpy.ones(3)
+MAX_RADIUS = 1.0/6.0
+
+
+def require_half_ball(radius):
+    """Reject a radius outside (0, MAX_RADIUS]: the half-ball mass would not hold."""
+    if not 0.0 < radius <= MAX_RADIUS:
+        raise ValueError("kernel radius %r outside (0, %.6g]: beyond it the ball about a "
+                         "terminal meets a second cube face and its mass is not pi r^3/6"
+                         % (radius, MAX_RADIUS))
 
 
 def terminal_current_exact(t, R_pvj=1.0):
@@ -161,6 +193,7 @@ def terminal_current_exact(t, R_pvj=1.0):
 
 def continuum_sampling(k, t, radius=RADIUS, n=32):
     """Vbar_k = int w V_m / int w over the half ball at terminal k."""
+    require_half_ball(radius)
     num, den = half_ball_kernel_integral(
         lambda p: Vm3D(p[0], p[1], p[2], t), TERMINALS[k], radius, CUBE_LO, CUBE_HI, n)
     return num/den
@@ -178,6 +211,7 @@ def _kernel(k, points, radius):
 
 def terminal_deposition(k, points, t, radius=RADIUS, n=32, R_pvj=1.0):
     """I_pvj,k w_k / int w_k at points of shape (N, 3)."""
+    require_half_ball(radius)
     mass = numpy.pi*radius**3/6.0
     return continuum_current(k, t, radius, n, R_pvj)*_kernel(k, points, radius)/mass
 

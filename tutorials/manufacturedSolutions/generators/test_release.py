@@ -51,6 +51,15 @@ def test_documents_include_existing_fragments():
             assert os.path.exists(os.path.join(os.path.dirname(path), rel)), (doc, rel)
 
 
+def test_every_fragment_is_included():
+    included = set()
+    for doc in DOCUMENTS:
+        with open(os.path.join(HERE, doc)) as fh:
+            included.update(re.findall(r"\{\{< include \S*latex/(\S+) >\}\}", fh.read()))
+    emitted = {os.path.basename(p) for p in glob.glob(os.path.join(HERE, "latex", "*.tex"))}
+    assert not emitted - included, sorted(emitted - included)
+
+
 def _copy_release(dest):
     shutil.copytree(HERE, dest, ignore=shutil.ignore_patterns(
         "parity", ".venv", "__pycache__", ".pytest_cache", "*_files", ".quarto"))
