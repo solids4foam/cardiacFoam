@@ -28,7 +28,6 @@ eikonalSolverCoeffs
     stimulusLocationMin (0 0 0);
     stimulusLocationMax (1e-3 10e-3 0.1e-3);
 
-    // eikonalECG builds its transmural waveform templates from this block
     ionicHeterogeneity
     {
         mode              namedRegions;
