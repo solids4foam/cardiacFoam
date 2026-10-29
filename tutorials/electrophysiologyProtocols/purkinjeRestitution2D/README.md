@@ -90,6 +90,7 @@ onwards are interior. Coordinates are in mm.
 `conductionEdges` entries are `(nodeA nodeB length conductance)`.
 
 **Variants.**
+
 - `electroProperties.antegrade`: no tissue stimulus; every myocardial
   activation enters through a junction. `apdNominal`, `minimumDI90` and
   `escapeInterval` use the compiled defaults. The escape occurs at 1.20247 s;
