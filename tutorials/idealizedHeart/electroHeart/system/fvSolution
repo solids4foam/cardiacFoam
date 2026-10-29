@@ -33,9 +33,6 @@ solvers
         relTol          0.1;
     }
 
-    // Eikonal variant only (electroProperties.eikonal / .hybrid): the
-    // monodomain variant computes activationTime as a plain output, never
-    // solves for it.
     "activationTime|activationTimeFinal"
     {
         solver          PCG;
@@ -54,7 +51,6 @@ solvers
     }
 }
 
-// PIMPLE settings for eikonalElectroActivationFoam
 PIMPLE
 {
     nOuterCorrectors    2000;
@@ -83,7 +79,6 @@ relaxationFactors
     }
     fields
     {
-        //psi    0.5;
     }
 }
 

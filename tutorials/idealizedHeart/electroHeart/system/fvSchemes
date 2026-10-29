@@ -17,17 +17,13 @@ FoamFile
 
 ddtSchemes
 {
-    //default         CrankNicolson 1.0;
-    default         backward; // 2nd order
-    //default         Euler; // 1st order
+    default         backward;
 }
 
 gradSchemes
 {
     default         leastSquares;
-    // Eikonal variant only: advection direction and eikonal ECG activation gradient
     grad(activationTime)   Gauss linear;
-    // Eikonal variant only: bounded reconstruction of div(phiU,activationTime)
     limitedGrad     cellMDLimited leastSquares 1;
 }
 
@@ -35,7 +31,6 @@ divSchemes
 {
     default         none;
     div(phiU,psi)   Gauss linear;
-    // Eikonal variant only: c0 |grad psi|_M as a bounded convection term
     div(phiU,activationTime)   Gauss linearUpwind limitedGrad;
 }
 
@@ -53,6 +48,5 @@ snGradSchemes
 {
     default         corrected;
 }
-
 
 // ************************************************************************* //
