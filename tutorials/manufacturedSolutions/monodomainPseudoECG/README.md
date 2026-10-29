@@ -16,23 +16,18 @@ problem are this work.
 
 ## Problem
 
-```text
-chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in [0,1]^d
-n . grad Vm = 0                                       on every face
-```
-
-`Vm = sqrt(1 + t) F` with
-
-- FDA (`-field fda`, 1D/2D/3D): `F = cos(pi x)`, `cos(pi x) cos(2 pi y)`,
-  `cos(pi x) cos(2 pi y) cos(3 pi z)`; `G = diag(0.111453302, 0.121585420,
-  0.030396355)`
-- anisotropic (`-field anisotropic`, 3D, default): `F = sin^2(pi x)
-  sin^2(pi y) sin^2(pi z)`; `G` the full tensor `(0.106875 -0.0084931
-  -0.022561 0.116682 -0.0130256 0.0398782)`
-
-with `chi = 3`, `Cm = 2` and the FDA ionic closure (`u1`, `u2`, `u3`). The
-pseudo-ECG at 161 electrodes is compared with a Gauss-Legendre order-96
-reference integral of the same field.
+The FDA field (`-field fda`, 1D/2D/3D) and the anisotropic field (`-field
+anisotropic`, 3D, default) are defined in the construction document
+[monodomain_mms.pdf](../generators/docs/monodomain/monodomain_mms.pdf), sections
+"FDA cube", "Rotated anisotropic cube" and "Pseudo-ECG", with the generators
+[`fda_monodomain_mms.py`](../generators/fda_monodomain_mms.py),
+[`rotated_monodomain_mms.py`](../generators/rotated_monodomain_mms.py) and
+[`pseudo_ecg_mms.py`](../generators/pseudo_ecg_mms.py) and the NumPy references
+[`fda_monodomain.py`](../generators/reference/fda_monodomain.py),
+[`rotated_monodomain.py`](../generators/reference/rotated_monodomain.py) and
+[`pseudo_ecg.py`](../generators/reference/pseudo_ecg.py). The pseudo-ECG at 161
+electrodes is compared with a Gauss-Legendre order-96 reference integral of the
+same field.
 
 ### Stack
 

@@ -26,6 +26,7 @@ Options (parameters are written to local/ and included by the dictionaries):
                             residual control)
   -exactStart               start the iteration from the exact field outside the pinned
                             cells (initialiseExact)
+  -c0 x                     eikonal c0 (default 1)
   -pinnedRadius x           radius of the ball of pinned cells around the stimulus point
                             (default the header's rPin, 0.15)
   -ecg                      also run the eikonal ECG (eikonalECG, electrodes E1-E5) and its
@@ -49,6 +50,7 @@ formulation=advectionDiffusion
 iterations=
 exactStart=false
 pinnedRadius=
+c0=1
 ecg=false
 template=
 
@@ -118,6 +120,10 @@ do
         -exactStart)
             exactStart=true
             ;;
+        -c0)
+            needValue "$@"; c0="$2"; shift
+            positiveNumber -c0 "$c0"
+            ;;
         -pinnedRadius)
             needValue "$@"; pinnedRadius="$2"; shift
             positiveNumber -pinnedRadius "$pinnedRadius"
@@ -178,6 +184,11 @@ echo "N $N;" > local/mesh
         echo "pinnedRadius $pinnedRadius;"
     fi
 } > local/verification
+
+if [ "$c0" != 1 ]
+then
+    echo "c0 [ 0 0 -0.5 0 0 0 0 ] $c0;" > local/c0
+fi
 
 if $ecg
 then

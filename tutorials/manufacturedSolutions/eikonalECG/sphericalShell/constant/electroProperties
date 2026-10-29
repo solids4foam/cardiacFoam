@@ -23,6 +23,7 @@ eikonalSolverCoeffs
     chi             [ 0 -1 0 0 0 0 0 ] 3;
     cm              [ -1 -4 4 0 0 2 0 ] 2;
     c0              [ 0 0 -0.5 0 0 0 0 ] 1;
+    #includeIfPresent "<case>/local/c0"
     sealedHeartBoundary true;
     eikonalAdvectionDiffusionApproach true;
     #includeIfPresent "<case>/local/formulation"
