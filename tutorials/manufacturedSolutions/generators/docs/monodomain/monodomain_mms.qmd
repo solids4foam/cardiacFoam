@@ -25,8 +25,10 @@ format:
 # The problem {#sec-problem}
 
 This document describes how each manufactured solution of the monodomain
-equation used by cardiacFoam is built: the exact fields, the sources that make
-them exact, the reference values of the derived functionals and the checks
+equation used by cardiacFoam is built. In the method of manufactured solutions
+[@roache2002code] an exact field is chosen first and the source that makes it
+satisfy the equation is derived from it. The document gives the exact fields,
+the sources that make them exact, the reference values of the derived functionals and the checks
 that each construction passes before anything is written. It states the
 problems only; it contains no solver output. Every displayed field, source and
 coefficient below is printed by the sympy generator that also writes the
@@ -161,8 +163,10 @@ conductivity.
 The residual of the equation is not zero. The reaction coefficient $\beta_d$ is
 given to two significant digits and the conductivity is tuned to nine digits
 so that the diffusion eigenvalue $k_d$ equals $-\beta_d$ to that precision; the
-residual is exactly $(k_d+\beta_d)V_m$, between $6\times10^{-11}$ ($d=1$) and
-$2.7\times10^{-9}$ ($d=2,3$) relative to $|\nabla\cdot(\boldsymbol\sigma\nabla V_m)|$.
+residual is exactly $(k_d+\beta_d)V_m$, and relative to
+$|\nabla\cdot(\boldsymbol\sigma\nabla V_m)|=k_d|V_m|$ it is
+
+{{< include ../../latex/fda_residual_relative.tex >}}
 
 ## Problem instance
 
@@ -171,10 +175,11 @@ Unit cube $[0,1]^d$, all faces sealed, $\chi$, $C_m$ and $\beta_d$ as in
 
 {{< include ../../latex/fda_sigma.tex >}}
 
-In cardiacFoam this is the `-field fda` option of the tutorial
-`monodomainPseudoECG` (`-dim 1|2|3`), with the ionic model
-`monodomainFDAManufactured` and the verifier
-`manufacturedFDAMonodomainVerifier`.
+In cardiacFoam:
+
+- tutorial `monodomainPseudoECG`, options `-field fda` and `-dim 1|2|3`;
+- ionic model `monodomainFDAManufactured`;
+- verifier `manufacturedFDAMonodomainVerifier`.
 
 ## Construction
 
@@ -235,6 +240,15 @@ $J_{\mathrm{ion}}$), `F_d<d>`, `G_d<d>` of `reference/fda_monodomain.py`.
 ## Figures
 
 ![The FDA spatial factors: (a) $F_3$ on three orthogonal slices of the unit cube. (b) $F_1$ of $d=1$. (c) $F_2$ of $d=2$ on the unit square.](figures/fda_cube.png){#fig-fda width=95%}
+
+::: {#fig-fda-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_fda_cube_hex.png){#fig-fda-mesh-hex}
+
+![tet: `-mesh tet -N 5`](figures/mesh_fda_cube_tet.png){#fig-fda-mesh-tet}
+
+Meshes of the unit cube from the tutorial `monodomainPseudoECG` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with $N=8$ cells per unit length; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell. The rotated cube of @sec-rotated uses the same meshes.
+:::
 
 ## Regeneration
 
@@ -358,8 +372,10 @@ The parameters are
 
 with $\chi=3$, $C_m=2$ and $\beta=\beta_3$ (@sec-ionic). The inner sphere is
 the patch `endocardium` and the outer sphere the patch `epicardium`. In
-cardiacFoam this is `monodomainPseudoECG/sphericalShell` with the verifier
-`manufacturedShellMonodomainVerifier`.
+cardiacFoam:
+
+- tutorial `monodomainPseudoECG/sphericalShell`;
+- verifier `manufacturedShellMonodomainVerifier`.
 
 ## Construction
 
@@ -463,7 +479,16 @@ parameters.
 
 ## Figures
 
-![Sealed shell. (a) $V_m$ at $t=0$ on a cut-away of the shell. (b) The fibre, sheet and sheet-normal directions at six sites through the wall on the cut face, the fibre shaded from the inner (light) to the outer (dark) wall. (c) The diffusion term $\nabla\cdot(\boldsymbol\sigma\nabla F)$ of the source.](figures/shell_monodomain.png){#fig-shell width=100%}
+![Sealed shell. (a) $V_m$ at $t=0$ on a cut-away of the shell. (b) The fibre, sheet and sheet-normal directions at six sites through the wall on the cut face, the fibre shaded from the inner (light) to the outer (dark) wall. (c) The diffusion term of the source as it enters $S$, $-\nabla\cdot(\boldsymbol\sigma\nabla F)$.](figures/shell_monodomain.png){#fig-shell width=100%}
+
+::: {#fig-shell-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_shell_hex.png){#fig-shell-mesh-hex}
+
+![tet: `-mesh tet -N 5`](figures/mesh_shell_tet.png){#fig-shell-mesh-tet}
+
+Meshes of the shell from the tutorial `monodomainPseudoECG/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
+:::
 
 ## Regeneration
 
@@ -535,15 +560,15 @@ to the electrode than the guard the integrand is set to zero:
 pseudo-ECG. The guard makes an electrode that coincides with a quadrature
 point contribute 0, not a non-finite value; a reference built in another code
 must use the same convention to agree at such an electrode. In one dimension
-the guard acts on $|x-r_{e,x}|$. The NumPy module holds `integrand_d1`,
+the guard is $|x-r_{e,x}|\le10^{-300}$, as printed above. The NumPy module holds `integrand_d1`,
 `integrand_d2`, `integrand_d3`, `integrand_rotated` (arguments $x,y,z$, the
 electrode and the six distinct entries of $\boldsymbol\sigma$),
 `spatial_reference(case, sigma, electrode, order)`,
 `reference(case, sigma, electrode, t, order)` and `time_factor(t)`, with
 `case` one of `"d1"`, `"d2"`, `"d3"`, `"rotated"`. For the shell,
-cardiacFoam integrates the same kernel with $q$ Gauss--Legendre nodes in $r$
-(Jacobian $r^2$) and in $\mu=\cos\theta$ and $2q$ trapezoid nodes in the
-azimuth, and requires every electrode to lie outside $r_2$.
+cardiacFoam integrates the same kernel with $q$ Gauss--Legendre nodes in the
+radius $|\mathbf x|$ (Jacobian $|\mathbf x|^2$) and in $\mu=\cos\vartheta$, with
+$\vartheta$ the polar angle, and $2q$ trapezoid nodes in the azimuth, and requires every electrode to lie outside $r_2$.
 
 ## Self-checks
 
@@ -682,9 +707,9 @@ Tissue: the FDA cube of @sec-fda with $d=3$. Graph: @sec-graph. Junction:
 
 {{< include ../../latex/coupled_params.tex >}}
 
-In cardiacFoam this is the tutorial `monodomain1D3D` with the coupler
-`reactionDiffusionPvjCoupler` (`pvjKernel linear`, `pvjRadius`, `rPvj`) and the
-verifier `coupled1D3DMonodomainVerifier`.
+In cardiacFoam this is the tutorial `monodomain1D3D`. Its coupler is
+`reactionDiffusionPvjCoupler` (`pvjKernel linear`, `pvjRadius`, `rPvj`) and
+its verifier `coupled1D3DMonodomainVerifier`.
 
 ## Construction
 

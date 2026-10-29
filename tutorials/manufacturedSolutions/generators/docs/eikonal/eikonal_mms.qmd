@@ -25,8 +25,10 @@ format:
 # The problem {#sec-problem}
 
 This document describes how each manufactured solution of the
-eikonal--diffusion equation used by cardiacFoam is built: the exact activation
-times, the sources that make them exact, the reference values of the
+eikonal--diffusion equation used by cardiacFoam is built. In the method of
+manufactured solutions [@roache2002code] an exact field is chosen first and the
+source that makes it satisfy the equation is derived from it. The document
+gives the exact activation times, the sources that make them exact, the reference values of the
 eikonal-driven ECG and the checks that each construction passes before
 anything is written. It states the problems only; it contains no solver
 output. Every displayed field, source and coefficient below is printed by the
@@ -176,6 +178,15 @@ rejected.
 
 ![Cartesian eikonal field. (a) $\psi=\exp(\mathbf k_3\cdot\mathbf x)$ on three orthogonal slices of the unit cube. (b) The source $S_\psi$ at $c_0=1$ with the rotated tensor on the same slices. (c) $\psi$ of $d=1,2,3$ along the diagonal of the domain.](figures/cartesian_eikonal.png){#fig-cartesian width=100%}
 
+::: {#fig-cartesian-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_cartesian_cube_hex.png){#fig-cartesian-mesh-hex}
+
+![tet: `-mesh tet -N 5`](figures/mesh_cartesian_cube_tet.png){#fig-cartesian-mesh-tet}
+
+Meshes of the unit cube from the tutorial `eikonalECG` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with $N=8$ cells per unit length; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell.
+:::
+
 ## Regeneration
 
 ```bash
@@ -217,7 +228,7 @@ Two templates: a single smooth event and a sine. The single event is
 
 {{< include ../../latex/eikonal_ecg_template_w.tex >}}
 
-so that $H$ rises from 10% to 90% within $r$, with
+so that $H$ rises from 10% to 90% within the rise time $T_r$, with
 
 {{< include ../../latex/eikonal_ecg_params.tex >}}
 
@@ -226,9 +237,11 @@ $U'(t-\psi)$ keeps one sign across the cube. The sine template is
 
 {{< include ../../latex/eikonal_ecg_template_sine_U.tex >}}
 
-In cardiacFoam this is the ECG of the tutorial `eikonalECG`, with the
-verifier `manufacturedEikonalECGVerifier` and `template singleEvent` (the
-default) or `template sine`.
+In cardiacFoam:
+
+- the ECG of the tutorial `eikonalECG`;
+- verifier `manufacturedEikonalECGVerifier`;
+- `template singleEvent` (the default) or `template sine`.
 
 ## Construction
 
@@ -265,18 +278,20 @@ its terms) and $\tanh$ and $\cos$ are evaluated in a different order by
 different codes, two correct implementations agree only to a bound that scales
 with those magnitudes, not to a fixed relative tolerance. cardiacFoam compares
 its C++ reference with the NumPy reference within
-$10^{-12}|\Phi_e|+2\times10^{-13}\sum|w\,U'\,\kappa|+3\times10^{-15}\sum|w\,\kappa|$,
-with $w$ the quadrature weights and $\kappa=\mathbf r\cdot\boldsymbol\sigma\nabla\psi/\lVert\mathbf r\rVert^3$
+$10^{-12}|\Phi_e|+2\times10^{-13}\sum_q|W_q\,U'\,\kappa|+3\times10^{-15}\sum_q|W_q\,\kappa|$,
+with $W_q$ the quadrature weights and $\kappa=\mathbf r\cdot\boldsymbol\sigma\nabla\psi/\lVert\mathbf r\rVert^3$
 the kernel at the quadrature points. For the shell, cardiacFoam integrates the
-same kernel with $q$ Gauss--Legendre nodes in $r$ (Jacobian $r^2$) and in
-$\mu=\cos\theta$ and $2q$ trapezoid nodes in the azimuth.
+same kernel with $q$ Gauss--Legendre nodes in the radius $|\mathbf x|$ (Jacobian
+$|\mathbf x|^2$) and in $\mu=\cos\vartheta$, with $\vartheta$ the polar angle, and $2q$
+trapezoid nodes in the azimuth.
 
 ## Self-checks
 
 `--self-check` asserts that the integrand equals the Cartesian component form
 of the C++ reference for $d=1,2,3$ and both templates, to $10^{-12}$; that it
 vanishes at an electrode on the evaluation point; that the reference at a
-sample electrode agrees between orders 48 and 96 to $10^{-10}$ relative; and
+sample electrode agrees between orders 48 and 96 to $10^{-10}\max(1,|\Phi_e|)$,
+an absolute bound for $|\Phi_e|\le1$ and a relative one above; and
 that the printed single-event building blocks ($H$, $U$, $w$, $a$, $b$) give
 the same $U'$ as the template derivative of the generator and as the
 derivative of $U$.
@@ -331,7 +346,7 @@ with the stimulus point
 
 {{< include ../../latex/shell_eikonal_xs.tex >}}
 
-that is, $\mathbf x_s=0.75\,(1,0.3,0.2)/\lVert(1,0.3,0.2)\rVert$. The verifier
+The verifier
 pins the cells whose centre lies within $r_{\mathrm{pin}}$ of $\mathbf x_s$ to
 the exact $\psi$ (the nearest cell when the mesh has no centre in that ball)
 and imposes no value on a wall. In cardiacFoam this is
@@ -434,6 +449,15 @@ default parameters; `c0` is one of those parameters.
 ![Sealed shell. (a) $\psi$ on a cut-away of the shell with the stimulus point and the pinned ball of radius $r_{\mathrm{pin}}$. (b) The fibre, sheet and sheet-normal directions through the wall. (c) The source $S$ at $c_0=1$.](figures/shell_eikonal.png){#fig-shell width=100%}
 
 ![$\psi$ at $c_0=1$ and $c_0=5$, each on its own colour scale: the two fields differ by the factor $1/c_0$.](figures/shell_eikonal_c0.png){#fig-shell-c0 width=80%}
+
+::: {#fig-shell-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_shell_eikonal_hex.png){#fig-shell-mesh-hex}
+
+![tet: `-mesh tet -N 5`](figures/mesh_shell_eikonal_tet.png){#fig-shell-mesh-tet}
+
+Meshes of the shell from the tutorial `eikonalECG/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
+:::
 
 ## Regeneration
 

@@ -101,7 +101,7 @@ def eikonal_ecg(settings, outdir):
     fs.shell_electrode_axes(fig.add_subplot(gs[0, 1], projection="3d", computed_zorder=False),
                             shell, title=r"(b) sealed shell: $\mathrm{E1}$ to $\mathrm{E5}$")
     specs = (("single_event", np.linspace(-10, 90, 600), np.linspace(0, 90, settings.n_time),
-              "single event (duration $64$, rise $4$)", "single event"),
+              "single event ($D=64$, $T_r=4$)", "single event"),
              ("sine", np.linspace(-0.5, 2.0, 600), np.linspace(0, 3.0, settings.n_time),
               "sine", "sine"))
     styles = ((fs.ECG, "-"), (fs.ECG_LIGHT, "--"), (fs.ECG_DARK, ":"))
@@ -163,14 +163,14 @@ def shell_eikonal(settings, outdir):
     fs.panel(fig, axes[0], img_p, title=r"$\psi$ at $c_0=%g$" % p["c0"], label=r"$\psi$",
              clim=p_clim, tag="(a)")
     fs.legend(axes[0], [("stimulus point $\\mathbf{x}_s$", "black", "o"),
-                        (r"pinned ball, $r_{\mathrm{Pin}}=%g$" % p["rPin"], fs.PIN)],
+                        (r"pinned ball, $r_{\mathrm{pin}}=%g$" % p["rPin"], fs.PIN)],
               ncol=1, inside="lower left")
     fs.panel(fig, axes[1], img_g, title=r"frame of $\boldsymbol{\sigma}$ in the wall",
              tag="(b)")
     fs.legend(axes[1], [("fibre (light: endo, dark: epi)", fs.FIBRE),
                         ("sheet", fs.SHEET), ("sheet normal", fs.NORMAL)], ncol=1)
-    fs.panel(fig, axes[2], img_s, title=r"$S_\psi$ at $c_0=%g$" % p["c0"],
-             label=r"$S_\psi$", clim=s_clim, tag="(c)")
+    fs.panel(fig, axes[2], img_s, title=r"$S$ at $c_0=%g$" % p["c0"],
+             label=r"$S$", clim=s_clim, tag="(c)")
     fs.save(fig, outdir, "shell_eikonal.png", settings)
 
 

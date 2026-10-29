@@ -471,8 +471,11 @@ def shell_frame_glyphs(ref, p, phi=0.5 * np.pi, length=0.16, margin=0.05,
 
 # ------------------------------------------------------------------ meshes ----
 
-def mesh_figure(name, path, outdir, settings, title):
-    """Surface-with-edges render of constant/polyMesh of an author-supplied case."""
+MESH_VIEW = (1.0, -1.15, 0.8)
+
+
+def read_polymesh(name, path):
+    """internalMesh of constant/polyMesh of the case at `path`."""
     if not os.path.isdir(os.path.join(path, "constant", "polyMesh")):
         raise FileNotFoundError(
             "mesh case %r: %s has no constant/polyMesh" % (name, path))
@@ -487,19 +490,34 @@ def mesh_figure(name, path, outdir, settings, title):
         open(foam, "w").close()
         reader = pv.OpenFOAMReader(foam)
         reader.skip_zero_time = True
-        mesh = reader.read()["internalMesh"]
-        pl = plotter(settings)
-        clipped = mesh.clip(normal=(0, 1, 0), origin=mesh.center, invert=False)
-        pl.add_mesh(clipped, color="#e5e5e5", show_edges=True, edge_color="#444444",
-                    line_width=0.6)
-        b = mesh.bounds
-        camera(pl, mesh.center, 1.7 * max(b[1] - b[0], b[3] - b[2], b[5] - b[4]))
-        img = render(pl)
-        fig, ax = plt.subplots(figsize=(4.2, 3.8))
-        panel(fig, ax, img, title="%s: %d cells" % (title, mesh.n_cells))
-        return save(fig, outdir, "mesh_%s.png" % name, settings)
+        return reader.read()["internalMesh"].copy()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def mesh_cutaway(mesh):
+    """Whole cells of `mesh` outside the octant that faces the common view, so
+    the cut shows the cells themselves (a crinkle cut, no sliced cells)."""
+    centres = mesh.cell_centers().points
+    mid = np.asarray(mesh.center)
+    side = np.sign(np.asarray(MESH_VIEW))
+    removed = np.all((centres - mid) * side > 0.0, axis=1)
+    return mesh.extract_cells(np.flatnonzero(~removed))
+
+
+def mesh_figure(name, path, outdir, settings, title):
+    """Light-grey cut-away of constant/polyMesh of a meshed case, cell edges drawn."""
+    mesh = read_polymesh(name, path)
+    pl = plotter(settings)
+    pl.add_mesh(mesh_cutaway(mesh), color="#dfe3e6", show_edges=True,
+                edge_color="#7b858d", line_width=0.6, smooth_shading=False,
+                ambient=0.35, diffuse=0.7, specular=0.0)
+    b = mesh.bounds
+    camera(pl, mesh.center, 2.6 * max(b[1] - b[0], b[3] - b[2], b[5] - b[4]), MESH_VIEW)
+    img = render(pl)
+    fig, ax = plt.subplots(figsize=(4.2, 4.0))
+    panel(fig, ax, img, title="%s: %d cells" % (title, mesh.n_cells))
+    return save(fig, outdir, "mesh_%s.png" % name, settings)
 
 
 def cli(description, mesh_cases):

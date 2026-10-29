@@ -300,8 +300,8 @@ def graph_fields(settings, outdir):
     ax.set_aspect("equal")
     ax.set_xlabel(XL)
     ax.set_ylabel(ZL)
-    ax.set_title(r"(c) $S_{\mathrm{pvj}}$ on $y=1/6$ at $t=0$", loc="left", fontsize=11)
-    fs.colourbar_2d(fig, ax, im, r"$S_{\mathrm{pvj}}$")
+    ax.set_title(r"(c) $S_{\mathrm{PVJ}}$ on $y=1/6$ at $t=0$", loc="left", fontsize=11)
+    fs.colourbar_2d(fig, ax, im, r"$S_{\mathrm{PVJ}}$")
     fs.save(fig, outdir, "graph_1d3d_fields.png", settings)
 
 
