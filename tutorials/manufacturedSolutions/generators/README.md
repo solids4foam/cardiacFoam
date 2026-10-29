@@ -47,7 +47,19 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 Every command below runs from this folder with that environment
-(`.venv/bin/python`, or `source .venv/bin/activate`).
+(`.venv/bin/python`, or `source .venv/bin/activate`). `requirements.txt` pins
+the versions that produced the committed outputs.
+
+Outside Python:
+
+- `quarto render` and the slow release test need [Quarto](https://quarto.org)
+  and a TeX distribution with `pdflatex` (TeX Live or MiKTeX);
+- the mesh figures need OpenFOAM and gmsh, to mesh a tutorial case; the
+  parity harness needs OpenFOAM and a cardiacFoam source tree (see
+  "cardiacFoam only").
+
+The generators, their self-checks, the NumPy references and the analytic
+figures need neither.
 
 ## One command per case
 
@@ -90,7 +102,24 @@ python docs/eikonal/figures.py
 
 (`--draft` for a fast low-resolution pass, `--outdir DIR` to write elsewhere).
 Mesh figures need a meshed case: `--mesh-case NAME=PATH` reads
-`PATH/constant/polyMesh`; `--help` lists the names.
+`PATH/constant/polyMesh`; `--help` lists the names. Mesh a copy of the
+tutorial outside the repository with only the meshing steps of its `Allrun`
+(write `N n;` to `local/mesh`, then `blockMesh`, or `gmsh` with
+`-setnumber lc 1/n -setnumber seed 1` and `gmshToFoam`). The committed mesh
+figures use the hex meshes at `N = 8` and the tet meshes at element size
+`1/5` of `monodomainPseudoECG`, `monodomainPseudoECG/sphericalShell`,
+`eikonalECG` and `eikonalECG/sphericalShell`:
+
+```bash
+python docs/monodomain/figures.py --mesh-case fda_cube_hex=CUBE_HEX \
+    --mesh-case fda_cube_tet=CUBE_TET --mesh-case shell_hex=SHELL_HEX \
+    --mesh-case shell_tet=SHELL_TET
+python docs/eikonal/figures.py --mesh-case cartesian_cube_hex=CUBE_HEX \
+    --mesh-case cartesian_cube_tet=CUBE_TET --mesh-case shell_eikonal_hex=SHELL_HEX \
+    --mesh-case shell_eikonal_tet=SHELL_TET
+```
+
+A run without `--mesh-case` leaves the committed mesh figures in place.
 
 ## Tests
 

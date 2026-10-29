@@ -1,5 +1,7 @@
-"""Parity harness: the current hand-written C++ reference functions, evaluated
-by the `mmsParity` OpenFOAM app, against a NumPy reference.
+"""Parity harness: the C++ reference functions of src/verificationModels (their
+generated regions together with the hand-written guards, quadratures and
+wrappers around them), evaluated by the `mmsParity` OpenFOAM app, against a
+NumPy reference.
 
 Only the cardiacFoam checkout can build `mmsParity`; a release folder has no
 OpenFOAM, so generator tests import `compare` lazily and skip when
