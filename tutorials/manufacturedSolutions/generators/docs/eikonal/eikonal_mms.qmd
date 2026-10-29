@@ -46,12 +46,12 @@ in the myocardium $\Omega\subset\mathbb R^d$,
 $$
 -\nabla\cdot(\mathbf M\nabla\psi)
 +c_0\sqrt{\nabla\psi\cdot\mathbf M\nabla\psi}
-=1+S,
+=1+S_\psi,
 \qquad
 \mathbf M=\frac{\boldsymbol{\sigma}}{\chi C_m},
 $$
 
-where $S$ is the manufactured source ($S=0$ in ordinary runs) and $c_0$, in
+where $S_\psi$ is the manufactured source ($S_\psi=0$ in ordinary runs) and $c_0$, in
 s$^{-1/2}$, is a scaling coefficient rather than a conduction velocity.
 Ordinary runs seal the walls, $\mathbf n\cdot\mathbf M\nabla\psi=0$, and
 prescribe $\psi=0$ at the stimulus sites. Each manufactured problem states its
@@ -59,7 +59,7 @@ own boundary and interior constraints: the Cartesian cube prescribes the exact
 $\psi$ on the boundary, and the shell seals both walls and pins a small ball of
 cells about the stimulus point. The source is the residual of the operator on
 the exact field,
-$S=-\nabla\cdot(\mathbf M\nabla\psi)+c_0\sqrt{\nabla\psi\cdot\mathbf M\nabla\psi}-1$.
+$S_\psi=-\nabla\cdot(\mathbf M\nabla\psi)+c_0\sqrt{\nabla\psi\cdot\mathbf M\nabla\psi}-1$.
 
 The normalised cases use the solver's dimensional convention: $\psi$ in s,
 $\mathbf M$ in m$^2$ s$^{-1}$ and $c_0$ in s$^{-1/2}$, with the fields written
@@ -446,7 +446,7 @@ default parameters; `c0` is one of those parameters.
 
 ## Figures
 
-![Sealed shell. (a) $\psi$ on a cut-away of the shell with the stimulus point and the pinned ball of radius $r_{\mathrm{pin}}$. (b) The fibre, sheet and sheet-normal directions through the wall. (c) The source $S$ at $c_0=1$.](figures/shell_eikonal.png){#fig-shell width=100%}
+![Sealed shell. (a) $\psi$ on a cut-away of the shell with the stimulus point and the pinned ball of radius $r_{\mathrm{pin}}$. (b) The fibre, sheet and sheet-normal directions through the wall. (c) The source $S_\psi$ at $c_0=1$.](figures/shell_eikonal.png){#fig-shell width=100%}
 
 ![$\psi$ at $c_0=1$ and $c_0=5$, each on its own colour scale: the two fields differ by the factor $1/c_0$.](figures/shell_eikonal_c0.png){#fig-shell-c0 width=80%}
 

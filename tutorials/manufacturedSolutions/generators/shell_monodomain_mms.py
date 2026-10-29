@@ -109,7 +109,7 @@ def _conductivity(theta):
 
 
 def _rotations():
-    """R_z(gamma1) and R_x(gamma2); the columns of their product are e_a, e_b, e_c."""
+    """R_z(gamma1) and R_x(gamma2); the columns of their product are e_a, e_b, n_s."""
     c1, s1 = sp.cos(P["gamma1"]), sp.sin(P["gamma1"])
     c2, s2 = sp.cos(P["gamma2"]), sp.sin(P["gamma2"])
     return (sp.Matrix([[c1, -s1, 0], [s1, c1, 0], [0, 0, 1]]),
@@ -122,7 +122,7 @@ def _fibre_sheet(theta, ea, eb):
 
 
 def _assemble(ff, ss, nn):
-    """gil ff + git ss + gin nn from the outer products of fibre, sheet and e_c."""
+    """gil ff + git ss + gin nn from the outer products of fibre, sheet and n_s."""
     return P["gil"]*ff + P["git"]*ss + P["gin"]*nn
 
 

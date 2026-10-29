@@ -169,8 +169,8 @@ def shell_eikonal(settings, outdir):
              tag="(b)")
     fs.legend(axes[1], [("fibre (light: endo, dark: epi)", fs.FIBRE),
                         ("sheet", fs.SHEET), ("sheet normal", fs.NORMAL)], ncol=1)
-    fs.panel(fig, axes[2], img_s, title=r"$S$ at $c_0=%g$" % p["c0"],
-             label=r"$S$", clim=s_clim, tag="(c)")
+    fs.panel(fig, axes[2], img_s, title=r"$S_\psi$ at $c_0=%g$" % p["c0"],
+             label=r"$S_\psi$", clim=s_clim, tag="(c)")
     fs.save(fig, outdir, "shell_eikonal.png", settings)
 
 

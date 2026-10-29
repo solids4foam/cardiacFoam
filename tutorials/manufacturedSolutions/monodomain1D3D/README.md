@@ -19,16 +19,18 @@ are this work.
 ## Problem
 
 ```text
-chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s + S_pvj          in [0,1]^3
-n . grad Vm = 0                                                      on every face
-chi Cm dV1D/dt = d/ds(g dV1D/ds) - chi Cm Iion1D + I_s1D (+ I_app1D) on each graph edge
+chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + S_pvj           in [0,1]^3
+n . grad Vm = 0                                                 on every face
+chi Cm dV1D/dt = d/ds(g dV1D/ds) - chi Cm Iion1D (+ I_app1D)    on each graph edge
 ```
 
 `Vm = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z)` and `V1D = sqrt(1 + t)
 cos(pi x)` at graph position `x`, with `G = diag(0.111453302, 0.121585420,
 0.030396355)`, graph conductivity `g = 0.111453302`, `chi = 3`, `Cm = 2` and
-the FDA ionic closure (`u1`, `u2`, `u3`) in both domains; `I_s` and `I_s1D`
-are the manufactured sources added by the verifiers.
+the FDA ionic closure (`u1`, `u2`, `u3`) in both domains. The closure makes the
+bulk residual of each domain vanish, so neither the graph nor the tissue
+receives a bulk manufactured source; the applied terms are the exact junction
+source and, for bidirectional coupling, the graph terminal term.
 
 The graph runs from the root `(1/2, 1/6, 1/3)` along two straight branches to
 the terminals `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. There `d Vm/dx = 0`, so the
@@ -40,14 +42,14 @@ samples the tissue voltage with the volume-weighted map `M_k` and is deposited
 as `S_pvj` with a linear kernel of radius 0.11 normalised to unit integral.
 `unidirectional` keeps only the tissue source; `bidirectional` also applies
 `I_app1D = -I_pvj,k` at the graph terminal, which the network loses from the
-volume `π ρ² L` of its terminal node, so the case sets `purkinjeFibreRadius`
+volume `π ρ² L_e / 2` of its terminal node (half the volume of its incident
+edge of length `L_e`), so the case sets `purkinjeFibreRadius`
 to `1/√π` m (the unit cross-section the manufactured junction current assumes)
 instead of the 20 µm default. `explicit` deposits the terminal current;
 `implicit` assembles a cell-local sink in the tissue voltage (unidirectional
 only; bidirectional transfer is always explicit). The verifiers add the exact
 junction source, computed from the exact fields with the same map and kernel,
-to the manufactured sources and write the difference between the numerical and
-the exact junction source.
+and write the difference between the numerical and the exact junction source.
 
 ### Stack
 

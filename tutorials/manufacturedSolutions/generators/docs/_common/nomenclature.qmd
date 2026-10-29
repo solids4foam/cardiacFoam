@@ -61,7 +61,7 @@ physical calibration.
 | $C_m$ | membrane capacitance per unit area | F m$^{-2}$ | `cm` |
 | $\mathbf M$ | eikonal metric, $\boldsymbol\sigma/(\chi C_m)$ | m$^2$ s$^{-1}$ | `M` |
 | $c_0$ | eikonal--diffusion scaling coefficient | s$^{-1/2}$ | `c0` |
-| $S_\psi$, $S$ | manufactured source of the eikonal equation | -- | `source` |
+| $S_\psi$ | manufactured source of the eikonal equation | -- | `source` |
 | $\mathbf k_d$, $K_M$ | direction of the Cartesian field; $\mathbf k_d\cdot\mathbf M\mathbf k_d$ | m$^{-1}$; s$^{-1}$ | `k_vector(d)`; `K_M` |
 | $r_1$, $r_2$ | inner and outer radius of the shell | m | `r1`, `r2` |
 | $\lambda$, $\omega$ | transmural coordinate; function vanishing on both spheres | -- | `lam`, `om` |

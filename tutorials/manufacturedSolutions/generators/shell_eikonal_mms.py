@@ -557,7 +557,7 @@ def latex_fragments():
     out = {
         "shell_eikonal_hhat.tex": emit_latex_fragment(r"\hat h", _hhat(q), names),
         "shell_eikonal_metric.tex": emit_latex_fragment(r"\mathbf M", _metric_tensor(Gs), names),
-        "shell_eikonal_source.tex": emit_latex_fragment(r"S", _operator(div_flux, quad), names),
+        "shell_eikonal_source.tex": emit_latex_fragment(r"S_\psi", _operator(div_flux, quad), names),
         "shell_eikonal_xs.tex": _stimulus_fragment(direction, radius),
         "shell_eikonal_Ms.tex": emit_latex_fragment(
             r"\mathbf M_s", sp.Symbol(r"M(x_s)", real=True),
