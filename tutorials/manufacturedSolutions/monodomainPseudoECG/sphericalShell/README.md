@@ -14,16 +14,14 @@ Origin: this work.
 
 ## Problem
 
-```text
-chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in r1 < |x| < r2
-n . G grad Vm = 0                                       on |x| = r1, |x| = r2
-```
-
-The shell has `r1 = 0.5` and `r2 = 1`; the inner sphere is the patch
-`endocardium` and the outer sphere the patch `epicardium`. `Vm = sqrt(1 + t)
-F` with `n . G grad F = 0` on each sphere, `chi = 3`, `Cm = 2` and the FDA
-ionic closure (`u1`, `u2`, `u3`). The generator is
-[`shell_monodomain_mms.py`](../../../generators/README.md).
+The shell field and its conductivity are defined in the construction document
+[monodomain_mms.pdf](../../generators/docs/monodomain/monodomain_mms.pdf),
+section "Sealed spherical shell", with the generator
+[`shell_monodomain_mms.py`](../../generators/shell_monodomain_mms.py) and the
+NumPy reference
+[`shell_monodomain.py`](../../generators/reference/shell_monodomain.py). The
+inner sphere is the patch `endocardium` and the outer sphere the patch
+`epicardium`.
 
 ### Stack
 
@@ -86,20 +84,15 @@ rows of
 ## Pseudo-ECG (`-ecg`)
 
 The `ecgDomains` block of `constant/electroProperties` is read only when
-`local/ecg` sets `ecg yes;`. The verifier's reference at electrode `e` is
-
-```text
-sqrt(1 + t) int_{r1 < |x| < r2} (G grad F) . (x - e) / |x - e|^3 dV
-```
-
-the integrand of the cube case and of the `pseudoECG` sum, with `F`, `grad F`,
-`G`, `r1` and `r2` from `manufacturedShellMonodomainReference.H` (no
-`sigmaExtracellular`, as in the cube case). Order `q` is a spherical tensor
-rule: `q` Gauss-Legendre nodes in `r` (Jacobian `r^2`), `q` in `mu = cos(theta)`
-and `2q` trapezoid nodes in `phi`; the reference is `q = 96`, checked against
-`q = 6 12 24 48` (`deltaQuadrature` columns). The verifier stops if an
-electrode lies on or inside `|x| = 1`, or if the ECG conductivity is not `G`.
-`cardiacFoam` prints the spatial integral of each electrode to 17 digits.
+`local/ecg` sets `ecg yes;`. The verifier's reference at electrode `e` is the
+shell integral of the pseudo-ECG section of
+[monodomain_mms.pdf](../../generators/docs/monodomain/monodomain_mms.pdf), with
+`F`, `grad F`, `G`, `r1` and `r2` from `manufacturedShellMonodomainReference.H`
+(no `sigmaExtracellular`, as in the cube case). Order `q` is a spherical tensor
+rule; the reference is `q = 96`, checked against `q = 6 12 24 48`
+(`deltaQuadrature` columns). The verifier stops if an electrode lies on or
+inside `|x| = 1`, or if the ECG conductivity is not `G`. `cardiacFoam` prints
+the spatial integral of each electrode to 17 digits.
 
 | electrode | position | `\|e\|` |
 |---|---|---|

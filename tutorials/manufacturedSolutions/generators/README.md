@@ -187,8 +187,10 @@ derivative zero there exactly. The fibre frame is fixed and the fibre angle
 varies with the radius: a fibre field tangent to a sphere would vanish
 somewhere on it.
 
-`shell_monodomain_mms.py`: `V = sqrt(1 + t) F` with the FDA ionic closure and
-the positive function `g`; the conductivity `G` has three distinct eigenvalues.
+The fields, sources and conductivity of `shell_monodomain_mms.py` and
+`shell_eikonal_mms.py` are written out in the "Sealed spherical shell" section
+of `docs/monodomain/monodomain_mms.pdf` and `docs/eikonal/eikonal_mms.pdf`;
+the documents do not cover `shell_bidomain_mms.py`.
 
 `shell_bidomain_mms.py`: `phiI = sqrt(1 + t) Fi`, `phiE = sqrt(1 + t) Fe`,
 `Vm = phiI - phiE`, with intracellular `Gi` and extracellular `Ge` of unequal
@@ -197,13 +199,9 @@ field of `shell_monodomain_mms.py`. The `phiE` equation carries the source
 `sqrt(1 + t) (div(Gi grad Fi) + div(Ge grad Fe))`, whose integral over the
 shell is zero. Its command line is `--write PATH` and `--check PATH`.
 
-`shell_eikonal_mms.py`: `psi` is the smoothed anisotropic distance from a
-mid-wall stimulus point plus the sealing correction of the monodomain shell,
-with `M = G/(chi cm)` and `G` the tensor of `shell_monodomain_mms.py`; the
-source is the exact residual of
-`-div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S`. The sealed
-problem fixes `psi` up to a constant, so the header carries the stimulus point
-and the radius `rPin` of the ball of pinned cells.
+`shell_eikonal_mms.py`: the sealed problem fixes `psi` up to a constant, so the
+header carries the stimulus point and the radius `rPin` of the ball of pinned
+cells.
 
 Checks, run by all three before a header is written: sealing on both spheres
 (30 digits), sources and gradients against finite differences, and positivity
