@@ -40,8 +40,6 @@ monodomainSolverCoeffs
     maxSteps 1000000000;
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
-    // No tissue stimulus: every myocardial activation enters through a junction.
-
     conductionNetworkDomains
     {
         purkinjeNetwork
@@ -57,10 +55,6 @@ monodomainSolverCoeffs
                 cm       0.01;
                 vm1DRest -0.084;
 
-                // apdNominal, minimumDI90 and escapeInterval use the compiled defaults.
-
-                // Escape at 1.20247 s; root beats at intervals 0.4975 s and 0.4 s
-                // are captured, the beat at 0.3 s is below apdNominal + minimumDI90.
                 rootStimulus
                 {
                     node          0;

@@ -139,3 +139,11 @@ For a new ionic model or tissue phenotype:
 1. calibrate AP shape and APD in a single-cell case first
 2. use this 1D cable to tune conductivity to the target CV
 3. move the calibrated setup into larger tissue or organ cases
+
+## Notes on dictionary entries
+
+The conductivity matches the monodomain scaling. The eikonal conduction
+velocity is `CV = c0 * sqrt(sigma / (chi * cm))`; with `sigma = 0.1334`,
+`chi = 140000` and `cm = 0.01`, `sqrt(sigma / (chi * cm)) = 0.00976`, so
+`c0 = 72` gives `CV = 0.702 m/s`. `0/activationTime` is initialised to `-1`
+("not yet activated") and overwritten by the solve.

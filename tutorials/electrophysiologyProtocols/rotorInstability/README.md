@@ -79,3 +79,8 @@ instead of the tutorial's 4 s and compares the last activation time at each
 probe against `regression/rotorInstability.reference`. By 1 s every probe has
 been activated again by the rotor that the S2 stimulus starts at 0.45 s, so
 the check still requires sustained re-entry.
+
+## Mesh
+
+`system/blockMeshDict` spans 50 x 50 x 0.1 mm with 150 x 150 x 1 cells,
+deltaX = 0.33 mm.
