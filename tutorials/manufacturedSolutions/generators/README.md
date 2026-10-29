@@ -30,6 +30,7 @@ solver output.
 | `eikonal_ecg_mms.py` | eikonal-driven ECG integrand, templates and Gauss-Legendre reference |
 | `shell_eikonal_mms.py` | activation time on the sealed shell, parametric in `c0`; critical-point report |
 | `shell_bidomain_mms.py` | heart-only bidomain field on the sealed shell (not described by the documents) |
+| `template_mms.py` | passive monodomain field on the unit square: the starting point of a new generator (see "Creating a new manufactured solution") |
 | `mms_codegen.py` | C++ emission and the shared command line |
 | `mms_common/` | NumPy and LaTeX emitters (`numpy_emit.py`, `latex_emit.py`) and Gauss-Legendre quadratures (`quadrature.py`) |
 | `reference/` | emitted NumPy modules, one per case |
@@ -39,6 +40,29 @@ solver output.
 | `test_*.py` | generator tests; `test_release.py` holds the release checks |
 | `requirements.txt` | Python dependencies |
 | `parity/` | cardiacFoam-only: an OpenFOAM application comparing the C++ headers with the NumPy references |
+
+## Reproduce
+
+From a fresh clone, regenerate everything and check that it matches the
+committed files (Python 3, Quarto and a TeX distribution; see "Setup"):
+
+```bash
+cd tutorials/manufacturedSolutions/generators
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+for g in fda_monodomain rotated_monodomain shell_monodomain pseudo_ecg \
+         graph_monodomain coupled_1d3d cartesian_eikonal eikonal_ecg \
+         shell_eikonal template; do
+    .venv/bin/python ${g}_mms.py --self-check && .venv/bin/python ${g}_mms.py --emit || break
+done
+git status --short reference latex     # empty: the emitted files are unchanged
+.venv/bin/python -m pytest -m "not slow"
+.venv/bin/python -m pytest -m slow test_release.py
+quarto render docs/monodomain/monodomain_mms.qmd --to pdf
+quarto render docs/eikonal/eikonal_mms.qmd --to pdf
+```
+
+The slow test repeats the generator runs and the renders in a copy of this
+folder with a new environment. The sections below explain each step.
 
 ## Setup
 
@@ -76,6 +100,7 @@ python coupled_1d3d_mms.py --emit
 python cartesian_eikonal_mms.py --emit
 python eikonal_ecg_mms.py --emit
 python shell_eikonal_mms.py --emit
+python template_mms.py --emit
 ```
 
 and the same with `--self-check`. The shell eikonal checks and the
@@ -131,6 +156,26 @@ python -m pytest -m slow test_release.py
 The slow test copies this folder without `parity/` and `.venv/` to a temporary
 directory, builds a fresh environment from `requirements.txt`, runs every
 generator with `--emit` and `--self-check` and renders both documents.
+
+## Creating a new manufactured solution
+
+Start from `template_mms.py`, the smallest complete generator (symbolic
+field, source derived as the residual, self-checks, `--emit`, no C++
+header), and its test `test_template_mms.py`:
+
+```bash
+cp template_mms.py mycase_mms.py
+cp test_template_mms.py test_mycase_mms.py
+python mycase_mms.py --self-check
+python mycase_mms.py --emit
+python -m pytest test_mycase_mms.py
+```
+
+Edit every step marked `REPLACE`. The guide, from the choice of a field
+whose boundary condition holds by construction to the cardiacFoam verifier,
+parity entry and tutorial case, with the checklist of traps and the check
+that catches each, is `docs/_common/creating.qmd`, printed as "Creating a new
+manufactured solution" in both documents.
 
 ## cardiacFoam only
 

@@ -117,6 +117,8 @@ quarto render docs/monodomain/monodomain_mms.qmd --to pdf
 and its figures with `python docs/monodomain/figures.py`. Each case section
 ends with the commands of its generator.
 
+{{< include ../_common/creating.qmd >}}
+
 # FDA cube {#sec-fda}
 
 ## Description and limitations

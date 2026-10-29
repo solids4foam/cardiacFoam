@@ -12,6 +12,7 @@ once, as a sympy generator, and everything else is produced from it.
 | read how each manufactured solution is built | [monodomain_mms.pdf](../tutorials/manufacturedSolutions/generators/docs/monodomain/monodomain_mms.pdf), [eikonal_mms.pdf](../tutorials/manufacturedSolutions/generators/docs/eikonal/eikonal_mms.pdf) |
 | use an exact solution in your own code | [`generators/reference/`](../tutorials/manufacturedSolutions/generators/reference): one NumPy-only module per case |
 | change or add a manufactured solution | [`generators/`](../tutorials/manufacturedSolutions/generators/README.md): the sympy generators and their self-checks |
+| create a new manufactured solution | "Creating a new manufactured solution" in [`generators/README.md`](../tutorials/manufacturedSolutions/generators/README.md) and in both PDFs, starting from `template_mms.py` |
 | run a verification case in cardiacFoam | [`tutorials/manufacturedSolutions/`](../tutorials/manufacturedSolutions/README.md): one folder per case, with `Allrun` and a regression |
 | see how the solver compares with the exact solution | [`src/verificationModels/`](../src/verificationModels/README.md): the verifiers and the C++ reference headers |
 

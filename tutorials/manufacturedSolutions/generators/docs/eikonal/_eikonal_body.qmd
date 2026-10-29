@@ -79,6 +79,8 @@ quarto render docs/eikonal/eikonal_mms.qmd --to pdf
 
 and its figures with `python docs/eikonal/figures.py`.
 
+{{< include ../_common/creating.qmd >}}
+
 # Cartesian eikonal field {#sec-cartesian}
 
 ## Description and limitations

@@ -15,7 +15,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 GENERATORS = ["fda_monodomain_mms.py", "rotated_monodomain_mms.py", "shell_monodomain_mms.py",
               "pseudo_ecg_mms.py", "graph_monodomain_mms.py", "coupled_1d3d_mms.py",
-              "cartesian_eikonal_mms.py", "eikonal_ecg_mms.py", "shell_eikonal_mms.py"]
+              "cartesian_eikonal_mms.py", "eikonal_ecg_mms.py", "shell_eikonal_mms.py",
+              "template_mms.py"]
 DOCUMENTS = ["docs/monodomain/monodomain_mms.qmd", "docs/eikonal/eikonal_mms.qmd"]
 
 # Code spellings that must not reach the printed formulas (the paper writes
