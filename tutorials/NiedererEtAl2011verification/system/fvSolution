@@ -34,7 +34,6 @@ solvers
     }
 }
 
-// PIMPLE settings for eikonalElectroActivationFoam
 PIMPLE
 {
     nOuterCorrectors    1000;
@@ -59,7 +58,6 @@ relaxationFactors
     }
     fields
     {
-        //psi    0.5;
     }
 }
 

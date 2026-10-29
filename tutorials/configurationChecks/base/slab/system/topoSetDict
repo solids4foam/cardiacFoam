@@ -13,7 +13,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Left half of the slab as a cellZone, for the cellZone-subset check
 actions
 (
     {

@@ -102,3 +102,9 @@ The Δx 0.1 mm cases take hours each and are meant for an HPC run.
 
 `regression/regressionTest.sh` is local to this case and validates against
 `regression/NiedererEtAl2011.reference`.
+
+## Notes on dictionary entries
+
+`constant/electroProperties` selects the batched TNNP model with Rush-Larsen
+gating: the same wavefront as TNNP, much faster. The batched models do not use
+the `ODESolver`, so there is no `solver` or `maxSteps` entry.
