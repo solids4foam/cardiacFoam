@@ -77,3 +77,12 @@ tissue.
 ```
 
 `python3 setup/plot_pseudo_ecg.py --case-dir .` plots the pseudo-ECG of a finished run.
+
+## Notes on dictionary entries
+
+`system/injectionProbe` holds two probes. Probe 0 is the LV free-wall cell
+near graph PMJ node 211, blocked in `lbbb`; probe 1 is the RV tissue cell near
+graph PMJ node 8151, blocked in `rbbb`. The intact side activates before the
+regression cutoff in each variant. `electroProperties` uses the Purkinje
+conduction velocity and `pvjRadius` of `../../electroHeart` (see its
+README).

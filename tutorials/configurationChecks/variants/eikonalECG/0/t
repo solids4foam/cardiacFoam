@@ -15,7 +15,6 @@ FoamFile
 
 dimensions      [0 0 0 0 0 0 0];
 
-// Transmural coordinate for ionicHeterogeneity (0 endocardium, 1 epicardium)
 internalField   uniform 0.5;
 
 boundaryField

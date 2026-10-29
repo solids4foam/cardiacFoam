@@ -155,3 +155,27 @@ tables.
 - [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
   rotated conductivity, with a pinned stimulus ball; `-ecg` adds the ECG of
   the shell field.
+
+## Notes on dictionary entries
+
+**Boundary condition of `0/activationTime`.** `0/activationTime` holds `-1`
+for "not yet activated". On the cube, the values on every non-empty patch face
+are overwritten each step by `manufacturedEikonalVerifier::applyConstraints`
+with the exact manufactured solution. Only the patch *type* matters: a
+Dirichlet type keeps those values, whereas `zeroGradient` would extrapolate
+them away from the interior and silently invalidate the verification. On the
+spherical shell both spheres are sealed walls: the verifier pins the cells
+near the stimulus point and imposes no value on a patch.
+
+**Electrodes.** The cube uses the 161 electrodes of `monodomainPseudoECG`:
+`E1-E5`, then `R1-R156` with a direction uniform on the sphere and a standoff
+uniform in `[0.05, 1.0]`. The spherical shell uses five directions with
+`|e| = 1.2, 1.4, 1.6, 1.8, 2.0`, as in `monodomainPseudoECG/sphericalShell`.
+
+**Spherical shell.** The mesh is the cubed-sphere shell described in
+`../bidomain/README.md`. The eikonal-driven ECG of the shell field is off
+unless `Allrun -ecg` writes `ecg yes;` to `local/ecg`; the template, its
+parameters and its sampling are those of the cube case, and `-template sine`
+writes `local/ecgTemplate`. The reference integrates
+`-U'(t - psi)(G grad psi).(x - e)/|x - e|^3` over the shell with a spherical
+Gauss rule; electrodes lie outside the outer sphere `|x| = 1`.

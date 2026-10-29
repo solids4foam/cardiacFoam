@@ -21,8 +21,6 @@ startTime       0;
 
 stopAt          endTime;
 
-// Run long enough to observe complete ventricular activation and the
-// electromechanical response.  The 5 ms write interval is retained.
 endTime         0.02;
 
 deltaT          1e-05;

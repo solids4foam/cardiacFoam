@@ -57,3 +57,29 @@ Each check runs in `runs/<name>`, where its logs and outputs can be
 inspected. Serial runs are deterministic, so `same` and `differ` comparisons
 use exact file equality; parallel runs differ from serial ones at round-off
 level, so they are compared within a tolerance.
+
+## Notes on dictionary entries
+
+- `0/activationTime` holds `-1` for "not yet activated"; only the eikonal
+  myocardium reads it.
+- `0/t` is the transmural coordinate for `ionicHeterogeneity` (0 endocardium,
+  1 epicardium).
+- `0/Conductivity` is read only when `conductivitySource` is `field`. In
+  `monodomainPeriodicFieldConductivity` the fibre conductivity rises from 0.02
+  to 0.06 across the 20 columns of cells, so it jumps across the periodic
+  faces.
+- The `eikonalECG` variant builds its transmural waveform templates from the
+  block in its `constant/electroProperties`.
+- The single-cell variants (`singleCellBuenoOrovio`,
+  `singleCellTWorldActiveTension`) give one beat at 20 ms; `singleCellStimulus`
+  times are in ms.
+- `base/slab` is a 10 mm x 10 mm x 0.1 mm slab with 20 x 20 x 1 cells
+  (0.5 mm); `monodomainPeriodicFieldConductivity` is periodic in x.
+  `system/topoSetDict` defines the left half of the slab as a cellZone for the
+  cellZone-subset check.
+- `base/slab/constant/purkinjeGraph`: root 0 at (1, 5) mm branches at node 1
+  (3, 5) mm to the junctions 2 (5, 3) mm and 3 (5, 7) mm, subdivided into
+  ~0.5 mm segments so `monodomain1DSolver` has a cable to integrate. The
+  junctions are close to the root so that the network activates the slab
+  within the short run. `conductionEdges` entries are
+  `(nodeA nodeB length conductance)`.
