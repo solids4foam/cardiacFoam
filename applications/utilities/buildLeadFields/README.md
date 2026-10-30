@@ -47,14 +47,16 @@ gradient). A cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
 - `system/fvSchemes`: the forward's own entries. The unknown is named
   `phiE` on the base mesh and on the heart sub-mesh, so the same
   `laplacian(...,phiE)` and `grad(phiE)` entries apply.
-- `system/fvSolution`: `solvers { leadField { ... } leadFieldFinal { ... } }`,
-  both required. The fixed point is solved until the relative change of `z`
-  between passes is below 1e-10 (at least 3 passes, the last with
-  `leadFieldFinal`; fatal after 100). The
-  passes solve with `leadField` until the change first falls below 1e-10,
-  then with `leadFieldFinal` until it falls below 1e-10 again.
+- `system/fvSolution`: `solvers { leadField { ... } leadFieldFinal { ... } }`
+  and `leadFieldFixedPoint { tolerance <t>; maxPasses <n>; }`, all required.
+  The fixed point is solved until the relative change of `z` between passes
+  is below `t` (at least 3 passes, the last with `leadFieldFinal`; fatal
+  after `n`). The passes solve with `leadField` until the change first falls
+  below `t`, then with `leadFieldFinal` until it falls below `t` again. The
+  verifier `manufacturedLeadFieldECGVerifier` repeats its direct forward
+  solve with the same `t` and `n`.
   - `leadField` may use a loose `relTol` (e.g. 0.01).
-  - `leadFieldFinal` must use `relTol 0` and a `tolerance` well below 1e-10.
+  - `leadFieldFinal` must use `relTol 0` and a `tolerance` well below `t`.
 
   ```
   leadField

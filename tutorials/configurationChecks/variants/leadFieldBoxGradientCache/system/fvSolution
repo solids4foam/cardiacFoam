@@ -59,6 +59,14 @@ cache
     grad(phiE);
 }
 
+// Lead-field fixed point (buildLeadFields) and the verifier's direct
+// forward solve: relative change between passes, and the pass limit
+leadFieldFixedPoint
+{
+    tolerance       1e-10;
+    maxPasses       100;
+}
+
 PIMPLE
 {
     // The global bath phiE is advanced outside the PIMPLE outer loop.

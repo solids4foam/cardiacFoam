@@ -15,8 +15,9 @@ point M z = e - C^T z. Ground patches are fixedValue 0, other non-coupled
 patches zeroGradient; without ground patches the phiERefPoint cell is pinned
 to 0. The unknown is named phiE on the base mesh and the heart sub-mesh, so
 the forward's fvSchemes entries apply. The fixed point repeats until the
-relative change of z between passes is below 1e-10: with the fvSolution
-entry leadField until the change first falls below it, then with
+relative change of z between passes is below the tolerance of the
+fvSolution dictionary leadFieldFixedPoint (tolerance, maxPasses): with the
+fvSolution entry leadField until the change first falls below it, then with
 leadFieldFinal (relTol 0, tight tolerance) until it falls below it again.
 The build checks the linearity of C, the probed C, the transpose, the
 symmetry of M, and each lead field's residual and reference pin, each fatal

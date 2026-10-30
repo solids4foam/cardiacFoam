@@ -30,9 +30,11 @@ Description
     diffusion, non-orthogonal and interface corrections), stored by coloured
     probing of the same assembly (leadFieldAdjoint). Each lead field is the
     fixed point M z = e - C^T z, solved from z = 0 until the relative change
-    of z between passes is below 1e-10: with the fvSolution entry leadField
-    until the change first falls below it, then with leadFieldFinal (relTol
-    0, tight tolerance) until it falls below it again.
+    of z between passes is below the tolerance of the fvSolution dictionary
+    leadFieldFixedPoint (tolerance, maxPasses; both required): with the
+    fvSolution entry leadField until the change first falls below it, then
+    with leadFieldFinal (relTol 0, tight tolerance) until it falls below it
+    again. Reaching maxPasses is fatal.
 
     The build checks the linearity of C, the probed C against the assembled
     one, the transpose, the symmetry of M and, for each lead field, the
@@ -153,8 +155,10 @@ int main(int argc, char *argv[])
     const passiveConductor& conductor = lfc.conductor();
     const dictionary& solverDict = mesh.solverDict("leadField");
     const dictionary& finalSolverDict = mesh.solverDict("leadFieldFinal");
-    const scalar convergenceTol = 1e-10;
-    const label maxPasses = 100;
+    const dictionary& fixedPointDict =
+        mesh.solutionDict().subDict("leadFieldFixedPoint");
+    const scalar convergenceTol = fixedPointDict.get<scalar>("tolerance");
+    const label maxPasses = fixedPointDict.get<label>("maxPasses");
 
     // z is in 1/(conductivity length), so that A z = e in units of the
     // matrix source
