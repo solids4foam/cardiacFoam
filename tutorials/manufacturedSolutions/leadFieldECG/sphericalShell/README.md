@@ -83,3 +83,19 @@ electrode lies in the myocardium.
 
 The verifier writes `postProcessing/manufacturedLeadFieldECG_ECG.dat` and
 `postProcessing/manufacturedLeadFieldECGSummary_ECG.dat`.
+
+## Studies
+
+`setup/studies/` holds one study per question. Each study is run in copies of
+the case, with the commands in its README. `setup/studies/summarize.py` prints
+its tables.
+
+| study | question |
+|---|---|
+| [curvedConvergence](setup/studies/curvedConvergence/README.md) | order of the lead field and of the direct solve against the exact transmission potential at the electrodes and over the field, on the cubed sphere and on tetrahedra |
+
+## Regression
+
+`regression/regressionTest.sh` runs the case defaults serially and compares
+the reciprocity gap and the static errors with
+`regression/sphericalShell.reference`.
