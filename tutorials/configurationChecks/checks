@@ -31,6 +31,8 @@ monodomainFieldConductivity            slab  monodomainFieldConductivity        
 monodomainPeriodicFieldConductivity    slab  monodomainPeriodicFieldConductivity    pass
 monodomainCellZone                     slab  monodomainCellZone                     pass  skip=v2312
 monodomainVerificationNone             slab  monodomainVerificationNone             pass
+# A keyword starting with '_' is a case variable and is accepted
+monodomainCaseVariable                 slab  monodomainExplicit                     pass  monodomainSolverCoeffs/_caseVariable=1
 bidomain                               slab  bidomain                               pass
 eikonal                                slab  eikonal                                pass
 
@@ -47,7 +49,7 @@ monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
 bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
 eikonalECG                             slab  eikonalECG                             pass
-twoEcgDomains                          slab  monodomainPseudoECG                    pass  monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;}
+twoEcgDomains                          slab  monodomainPseudoECG                    pass  monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;sigmaExtracellular~0.2;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
 bathBidomain                           bath  bathBidomain                           pass  skip=v2312
@@ -113,3 +115,23 @@ bathWithoutCellZone                    bath  bathBidomain                fail:su
 unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
 bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ  skip=v2312
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension
+
+# ---- Misspelt or unknown entries: must stop and name the valid ones ---------
+unknownTopLevelKeyword                 slab  monodomainExplicit          fail:zzzUnknownKey            zzzUnknownKey=1
+unknownCoeffsKeyword                   slab  monodomainExplicit          fail:zzzUnknownKey            monodomainSolverCoeffs/zzzUnknownKey=1
+misspeltActiveTensionModel             singleCell singleCellTWorldActiveTension fail:did~you~mean~'activeTensionModel' singleCellSolverCoeffs/activeTensionModel! singleCellSolverCoeffs/activeTensionModl=LandNiedererTWorld
+misspeltStimulusKeyword                slab  monodomainExplicit          fail:did~you~mean~'stimulusIntensity' monodomainSolverCoeffs/externalStimulus/stimulusIntensty=1
+misspeltCouplingKeyword                slab  monodomainPurkinjeReactionDiffusion fail:did~you~mean~'pvjRadius' monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjRadiu=1e-3
+misspeltPurkinjeKeyword                slab  monodomainPurkinjeReactionDiffusion fail:did~you~mean~'purkinjeConductivity' monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/purkinjeConductivty=0.4
+unknownEcgDomainKeyword                slab  monodomainPseudoECG         fail:zzzUnknownKey            monodomainSolverCoeffs/ecgDomains/ECG/zzzUnknownKey=1
+misspeltSolutionAlgorithm              slab  monodomainExplicit          fail:did~you~mean~'explicit'  monodomainSolverCoeffs/solutionAlgorithm=expicit
+misspeltPvjKernel                      slab  monodomainPurkinjeReactionDiffusionBidirectional fail:did~you~mean~'gaussian' monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjKernel=gausian
+unknownEikonalPvjCouplingScheme        slab  monodomainPurkinjeRestitutionEikonal fail:bogusScheme monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjCouplingScheme=bogusScheme
+unknownIonicExport                     slab  monodomainExplicit          fail:Unknown~ionic~model~output monodomainSolverCoeffs/outputVariables={ionic~{export~(bogusVariable);}}
+unknownPurkinjeExport                  slab  monodomainPurkinjeReactionDiffusion fail:did~you~mean~'IcouplingSource' monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(Vm~Icoupling);}
+unknownPurkinjeDebug                   slab  monodomainPurkinjeReactionDiffusion fail:did~you~mean~'Iion' monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(Vm);debug~(Vm~Iin);}
+unknownActiveTensionExport             singleCell singleCellTWorldActiveTension fail:Unknown~active~tension~output singleCellSolverCoeffs/outputVariables/activeTension={export~(bogusTa);}
+# Settings that are wrong whatever their spelling
+conductionNetworkUncoupled             slab  monodomainPurkinjeReactionDiffusion fail:links~it~to~the~myocardium monodomainSolverCoeffs/domainCouplings!
+conductionNetworkWithoutGraph          slab  monodomainPurkinjeReactionDiffusion fail:graphFile monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/graphFile!
+ecgWithoutElectrodes                   slab  monodomainPseudoECG         fail:has~no~electrodes        monodomainSolverCoeffs/ecgDomains/ECG/electrodePositions!

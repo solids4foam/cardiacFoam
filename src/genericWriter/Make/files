@@ -1,5 +1,6 @@
 activeTensionIO.C
 conductivityFieldIO.C
+dictionaryKeyCheck.C
 ecgModelIO.C
 ionicModelIO.C
 ionicVariableCompatibility.C

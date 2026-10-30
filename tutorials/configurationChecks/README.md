@@ -14,8 +14,9 @@ base case:
   `regression/manifests/<name>`, which catches a field or output file that is
   no longer written, or a new one.
 - `fail:<text>` checks must stop with a FOAM FATAL error that mentions
-  `<text>`. They cover unknown selector values and invalid combinations, such
-  as `torsoECG` without a bath.
+  `<text>`. They cover unknown selector values, invalid combinations such
+  as `torsoECG` without a bath, and misspelt or unknown keywords and values,
+  whose error must name the closest valid one (`did you mean ...`).
 - `np=2` checks run a variant on two processors (simple decomposition) and
   reconstruct it.
 - `post=<script>` checks also run a post-processing utility on the result,
