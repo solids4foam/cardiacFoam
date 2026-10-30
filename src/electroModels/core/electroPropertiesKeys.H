@@ -30,7 +30,6 @@ Description
 
 SourceFiles
     electroPropertiesKeys.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef electroPropertiesKeys_H

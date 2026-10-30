@@ -28,7 +28,6 @@ Description
 
 SourceFiles
     dictionaryKeyCheck.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef dictionaryKeyCheck_H
