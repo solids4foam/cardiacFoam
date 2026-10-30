@@ -34,8 +34,8 @@ monodomainSolverCoeffs
     {
         ionic
         {
-            export (Vm Jsi);
-            debug (Vm Iion);
+            export (Vm);
+            debug (Vm);
         }
     }
 

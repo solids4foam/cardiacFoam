@@ -86,7 +86,7 @@ rows of
 ## Pseudo-ECG (`-ecg`)
 
 The `ecgDomains` block of `constant/electroProperties` is read only when
-`local/ecg` sets `ecg yes;`. The verifier's reference at electrode `e` is
+`local/ecg` sets `_ecg yes;`. The verifier's reference at electrode `e` is
 
 ```text
 sqrt(1 + t) int_{r1 < |x| < r2} (G grad F) . (x - e) / |x - e|^3 dV

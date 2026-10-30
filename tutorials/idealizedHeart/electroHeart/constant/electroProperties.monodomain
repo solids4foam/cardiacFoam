@@ -107,7 +107,7 @@ monodomainSolverCoeffs
 
                 outputVariables
                 {
-                    export (Vm activationTime Icoupling);
+                    export (Vm activationTime IcouplingSource);
                     debug  (Vm Iion);
                 }
             }

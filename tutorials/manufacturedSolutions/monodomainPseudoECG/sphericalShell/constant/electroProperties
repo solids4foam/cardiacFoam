@@ -52,13 +52,13 @@ monodomainSolverCoeffs
         stimulusStartTime 0;
     }
 
-    // Pseudo-ECG of the shell field, off unless Allrun -ecg writes "ecg yes;"
+    // Pseudo-ECG of the shell field, off unless Allrun -ecg writes "_ecg yes;"
     // to local/ecg. The reference integrates (G grad F).(x - e)/|x - e|^3
     // over the shell with a spherical Gauss rule; electrodes lie outside the
     // outer sphere |x| = 1.
-    ecg     no;
+    _ecg    no;
     #includeIfPresent "<case>/local/ecg"
-    #ifeq $ecg yes
+    #ifeq $_ecg yes
     ecgDomains
     {
         ECG

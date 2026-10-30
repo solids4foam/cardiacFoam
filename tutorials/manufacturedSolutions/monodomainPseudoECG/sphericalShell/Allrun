@@ -158,7 +158,7 @@ echo "N $N;" > local/verification
 
 if $ecg
 then
-    echo "ecg yes;" > local/ecg
+    echo "_ecg yes;" > local/ecg
     [ -z "$electrodes" ] || cp "$electrodes" local/electrodes
 fi
 
