@@ -6,100 +6,108 @@ sweeps, `leastSquares`).
 
 ## Ladder
 
-| N | dt | hex cells (3D) |
-|---|---|---|
-| 10 | 0.00892857 | 1000 |
-| 20 | 0.00224215 | 8000 |
-| 40 | 0.000560538 | 64000 |
-| 80 | 0.000140174 | 512000 |
+| N | hex cells (3D) |
+|---|---|
+| 10 | 1000 |
+| 20 | 8000 |
+| 40 | 64000 |
+| 80 | 512000 |
 
-The time step falls as h^2, so the slopes are space-time slopes. These steps
-do not divide `endTime 0.2`, so each run stops at the step nearest to 0.2
-(0.196429, 0.199551, 0.200112, 0.200028; the verifier writes the final time
-in its summary and evaluates the exact field there). Without `-dt` the case uses
-`endTime/ceil(endTime/(0.00892857 (10/N)^2))`, which ends exactly at 0.2.
+Every run uses the `Allrun` default time step,
+`endTime/ceil(endTime/(0.00892857 (10/N)^2))`: it scales as `h^2` and every
+level ends exactly at `endTime 0.2`, so the slopes are space-time slopes.
+Two controls on the 3D ladder: `-gradient GaussLinear` at `N = 10, 20, 40`
+(parallel), and `N = 40` at half the default time step.
 
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`<d>D_N<n>`, the names that `../summarize.py` reads. From this folder:
+`<d>D_N<n>`, `GaussLinear_3D_N<n>` and `3D_N40_dt<dt>`, the names that
+`../summarize.py` reads (`3D_N40_dt<dt>` is a two-level temporal ladder; its
+default-step level is a link to `3D_N40`). From this folder:
 
 ```bash
 mkdir -p results
-N=(10 20 40 80)
-DT=(0.00892857 0.00224215 0.000560538 0.000140174)
-for i in 0 1 2 3
+for n in 10 20 40 80
 do
-    n=${N[$i]}; dt=${DT[$i]}
     for d in 1 2 3
     do
         rsync -a --exclude setup ../../../ results/${d}D_N$n/
-        results/${d}D_N$n/Allrun -dim $d -N $n -dt $dt
+        results/${d}D_N$n/Allrun -dim $d -N $n
     done
 done
+for n in 10 20 40
+do
+    rsync -a --exclude setup ../../../ results/GaussLinear_3D_N$n/
+    results/GaussLinear_3D_N$n/Allrun parallel -dim 3 -N $n -gradient GaussLinear
+done
+set -- $(awk -v N=40 'BEGIN { h = 0.00892857*(10/N)^2; k = int(0.2/h); if (k*h < 0.2) k++; printf "%.17g %.17g", 0.2/k, 0.1/k }')
+ln -s 3D_N40 results/3D_N40_dt$1
+rsync -a --exclude setup ../../../ results/3D_N40_dt$2/
+results/3D_N40_dt$2/Allrun -dim 3 -N 40 -dt $2
 python3 ../summarize.py results
 ```
 
-The omnidriver spec for this study is `sweep_hex_convergence.json`.
+The omnidriver spec for this study is `sweep_hex_convergence.json` (the
+ladder and the `Gauss linear` control).
 
 ## Measured behaviour
 
-Results of the last run of this study (`results/`), gauge-shifted potentials.
+Results of the last run of this study (`results/`), as printed by
+`../summarize.py`; gauge-shifted potentials, orders between consecutive
+levels of `h = 1/N`.
 
-`Vm`:
+| dim | N | Vm L2 | Vm Linf | phiE L2 | phiE Linf | phiI L2 | u1 L2 | u2 L2 | order Vm L2 | order Vm Linf | order phiE L2 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1D | 10 | 2.7326e-04 | 5.4861e-04 | 1.6896e-04 | 2.9385e-04 | 1.5204e-04 | 4.8571e-04 | 1.3464e-04 |  |  |  |
+| 1D | 20 | 6.8869e-05 | 1.3986e-04 | 4.2047e-05 | 7.4314e-05 | 3.8997e-05 | 1.2401e-04 | 3.4423e-05 | 1.99 | 1.97 | 2.01 |
+| 1D | 40 | 1.7191e-05 | 3.5002e-05 | 1.0459e-05 | 1.8554e-05 | 9.7826e-06 | 3.1078e-05 | 8.6293e-06 | 2.00 | 2.00 | 2.01 |
+| 1D | 80 | 4.2997e-06 | 8.7597e-06 | 2.6136e-06 | 4.6407e-06 | 2.4495e-06 | 7.7796e-06 | 2.1603e-06 | 2.00 | 2.00 | 2.00 |
+| 2D | 10 | 5.5650e-04 | 1.3069e-03 | 3.8443e-04 | 8.6064e-04 | 1.8308e-04 | 2.3732e-04 | 9.1707e-05 |  |  |  |
+| 2D | 20 | 1.4155e-04 | 3.5136e-04 | 9.8808e-05 | 2.3420e-04 | 4.5644e-05 | 5.9943e-05 | 2.3186e-05 | 1.98 | 1.90 | 1.96 |
+| 2D | 40 | 3.5600e-05 | 8.9493e-05 | 2.4921e-05 | 5.9848e-05 | 1.1409e-05 | 1.4958e-05 | 5.7876e-06 | 1.99 | 1.97 | 1.99 |
+| 2D | 80 | 8.9102e-06 | 2.2474e-05 | 6.2412e-06 | 1.5040e-05 | 2.8520e-06 | 3.7417e-06 | 1.4478e-06 | 2.00 | 1.99 | 2.00 |
+| 3D | 10 | 1.0750e-03 | 3.0313e-03 | 7.5407e-04 | 2.1051e-03 | 3.2213e-04 | 7.8365e-05 | 3.4127e-05 |  |  |  |
+| 3D | 20 | 2.7526e-04 | 8.2166e-04 | 1.9417e-04 | 5.7415e-04 | 8.1378e-05 | 1.8572e-05 | 8.0989e-06 | 1.97 | 1.88 | 1.96 |
+| 3D | 40 | 6.9285e-05 | 2.0965e-04 | 4.8947e-05 | 1.4674e-04 | 2.0410e-05 | 4.5270e-06 | 1.9751e-06 | 1.99 | 1.97 | 1.99 |
+| 3D | 80 | 1.7348e-05 | 5.2677e-05 | 1.2261e-05 | 3.6885e-05 | 5.1053e-06 | 1.1272e-06 | 4.9183e-07 | 2.00 | 1.99 | 2.00 |
 
-| dim | N | L2 | Linf | order L2 | order Linf |
-|---|---|---|---|---|---|
-| 1D | 10 | 2.7785e-04 | 5.5740e-04 |  |  |
-| 1D | 20 | 6.9473e-05 | 1.4106e-04 | 2.00 | 1.98 |
-| 1D | 40 | 1.7327e-05 | 3.5274e-05 | 2.00 | 2.00 |
-| 1D | 80 | 4.3262e-06 | 8.8128e-06 | 2.00 | 2.00 |
-| 2D | 10 | 5.3690e-04 | 1.2740e-03 |  |  |
-| 2D | 20 | 1.4051e-04 | 3.4990e-04 | 1.93 | 1.86 |
-| 2D | 40 | 3.5507e-05 | 8.9439e-05 | 1.98 | 1.97 |
-| 2D | 80 | 8.8881e-06 | 2.2456e-05 | 2.00 | 1.99 |
-| 3D | 10 | 1.0461e-03 | 2.9627e-03 |  |  |
-| 3D | 20 | 2.7395e-04 | 8.1882e-04 | 1.93 | 1.86 |
-| 3D | 40 | 6.9223e-05 | 2.0963e-04 | 1.98 | 1.97 |
-| 3D | 80 | 1.7330e-05 | 5.2654e-05 | 2.00 | 1.99 |
+The `Vm` L2, `Vm` Linf and `phiE` L2 orders are 1.99-2.00 at the finest pair
+in 1D, 2D and 3D; the `phiE` Linf, `phiI`, `u1` and `u2` errors fall about
+fourfold per level.
 
-`phiE_gauge`:
+`Gauss linear` against `leastSquares`, 3D:
 
-| dim | N | L2 | Linf | order L2 | order Linf |
-|---|---|---|---|---|---|
-| 1D | 10 | 1.7221e-04 | 2.9918e-04 |  |  |
-| 1D | 20 | 4.2442e-05 | 7.4991e-05 | 2.02 | 2.00 |
-| 1D | 40 | 1.0545e-05 | 1.8703e-05 | 2.01 | 2.00 |
-| 1D | 80 | 2.6298e-06 | 4.6689e-06 | 2.00 | 2.00 |
-| 2D | 10 | 3.7001e-04 | 8.3581e-04 |  |  |
-| 2D | 20 | 9.8042e-05 | 2.3303e-04 | 1.92 | 1.84 |
-| 2D | 40 | 2.4851e-05 | 5.9785e-05 | 1.98 | 1.96 |
-| 2D | 80 | 6.2253e-06 | 1.5024e-05 | 2.00 | 1.99 |
-| 3D | 10 | 7.3326e-04 | 2.0549e-03 |  |  |
-| 3D | 20 | 1.9324e-04 | 5.7204e-04 | 1.92 | 1.84 |
-| 3D | 40 | 4.8903e-05 | 1.4671e-04 | 1.98 | 1.96 |
-| 3D | 80 | 1.2248e-05 | 3.6868e-05 | 2.00 | 1.99 |
+| gradient | N | Vm L2 | Vm Linf | phiE L2 | phiE Linf | gradReconPhiE_boundary L2 | phiE iterations |
+|---|---|---|---|---|---|---|---|
+| `leastSquares` | 10 | 1.0750e-03 | 3.0313e-03 | 7.5407e-04 | 2.1051e-03 | 2.9385e-01 | 45 |
+| `leastSquares` | 20 | 2.7526e-04 | 8.2166e-04 | 1.9417e-04 | 5.7415e-04 | 5.8779e-02 | 95 |
+| `leastSquares` | 40 | 6.9285e-05 | 2.0965e-04 | 4.8947e-05 | 1.4674e-04 | 1.0822e-02 | 192 |
+| `Gauss linear` | 10 | 1.0750e-03 | 3.0313e-03 | 7.5407e-04 | 2.1051e-03 | 3.0546e-01 | 60 |
+| `Gauss linear` | 20 | 2.7526e-04 | 8.2166e-04 | 1.9417e-04 | 5.7415e-04 | 8.7224e-02 | 113 |
+| `Gauss linear` | 40 | 6.9285e-05 | 2.0965e-04 | 4.8947e-05 | 1.4674e-04 | 2.7731e-02 | 223 |
 
-`phiI_gauge`:
+On these hexahedra `Gauss linear` gives the `leastSquares` field errors to
+every printed digit (`Vm`, `phiE`, `phiI`, `u1`, `u2`, L2 and Linf, at every
+level); only the gradient reconstruction of the exact fields at the boundary
+and the `phiE` iteration count differ.
 
-| dim | N | L2 | Linf | order L2 | order Linf |
-|---|---|---|---|---|---|
-| 1D | 10 | 1.5386e-04 | 2.5822e-04 |  |  |
-| 1D | 20 | 3.9289e-05 | 6.6066e-05 | 1.97 | 1.97 |
-| 1D | 40 | 9.8517e-06 | 1.6570e-05 | 2.00 | 2.00 |
-| 1D | 80 | 2.4633e-06 | 4.1440e-06 | 2.00 | 2.00 |
-| 2D | 10 | 1.7860e-04 | 4.3818e-04 |  |  |
-| 2D | 20 | 4.5437e-05 | 1.1687e-04 | 1.97 | 1.91 |
-| 2D | 40 | 1.1398e-05 | 2.9655e-05 | 2.00 | 1.98 |
-| 2D | 80 | 2.8484e-06 | 7.4327e-06 | 2.00 | 2.00 |
-| 3D | 10 | 3.1412e-04 | 9.0772e-04 |  |  |
-| 3D | 20 | 8.1013e-05 | 2.4678e-04 | 1.96 | 1.88 |
-| 3D | 40 | 2.0393e-05 | 6.2919e-05 | 1.99 | 1.97 |
-| 3D | 80 | 5.0999e-06 | 1.5786e-05 | 2.00 | 1.99 |
+Half the default time step, 3D `N = 40`:
 
-The auxiliary states `u1` and `u2` converge at second order in every
-dimension (L2 orders 2.00-2.01 at the finest pair). `Vm`, `phiE` and `phiI`
-reach second order in L2 and Linf in 1D, 2D and 3D.
+| dt | Vm L2 | Vm Linf | phiE L2 | phiI L2 | u1 L2 | u2 L2 |
+|---|---|---|---|---|---|---|
+| 0.000557103 | 6.9285e-05 | 2.0965e-04 | 4.8947e-05 | 2.0410e-05 | 4.5270e-06 | 1.9751e-06 |
+| 0.000278552 | 7.7895e-05 | 2.2195e-04 | 5.5074e-05 | 2.2824e-05 | 3.6538e-06 | 1.5571e-06 |
+| change | +12.43 % | +5.87 % | +12.52 % | +11.83 % | -19.29 % | -21.16 % |
+
+Halving the time step raises the `Vm`, `phiE` and `phiI` L2 errors by about
+12 %: the Lie-Godunov splitting error is opposite in sign to the spatial
+error and both scale as `h^2` along the ladder, so at the default step they
+partly cancel. The `u1` and `u2` errors fall by about 20 %.
+
+Every linear solve reaches its absolute tolerance `1e-15` below the explicit
+`maxIter 5000`; the largest iteration count is 414 for `phiE`
+(3D `N = 80`) and 7 for `Vm`.
 
 ## Outputs
 
