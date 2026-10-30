@@ -7,17 +7,6 @@ FoamFile
     object      purkinjeGraph;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// Four straight branches from the root, subdivided into 0.25 mm segments so
-// monodomain1DSolver has a cable to integrate. Nodes 0-4 are the branch
-// points and keep their indices; nodes 5 onwards are interior.
-//
-//              2  (35, 40)
-//             /
-//   0 ---- 1 ---- 4  (45, 25)
-//             \
-//              3  (35, 10)
-//
-// conductionEdges is (nodeA nodeB length conductance).
 
 rootNode
 0;

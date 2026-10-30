@@ -21,6 +21,13 @@ Class
 Description
     Manufactured FDA reference solution.
 
+    The formulas between "// BEGIN GENERATED <name>" and
+    "// END GENERATED <name>" are written from the sympy definitions in
+    tutorials/manufacturedSolutions/generators: fda_monodomain_mms.py (F, G,
+    V, u1-u3, Iion) and pseudo_ecg_mms.py (time factor, grad F, pseudo-ECG
+    kernel).  Regenerate them with --write and compare with --check; the
+    rest of the file is hand-written.
+
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
@@ -49,23 +56,27 @@ inline void computeF
 )
 {
     F.setSize(x.size());
+    const scalar pi = constant::mathematical::pi;
 
     forAll(x, i)
     {
         if (dimension == 1)
         {
-            F[i] = Foam::cos(constant::mathematical::pi*x[i]);
+            // BEGIN GENERATED computeF_d1
+            F[i] = cos(pi*x[i]);
+            // END GENERATED computeF_d1
         }
         else if (dimension == 2)
         {
-            F[i] = Foam::cos(constant::mathematical::pi*x[i])
-                 * Foam::cos(2.0*constant::mathematical::pi*y[i]);
+            // BEGIN GENERATED computeF_d2
+            F[i] = cos(pi*x[i])*cos(2*pi*y[i]);
+            // END GENERATED computeF_d2
         }
         else
         {
-            F[i] = Foam::cos(constant::mathematical::pi*x[i])
-                 * Foam::cos(2.0*constant::mathematical::pi*y[i])
-                 * Foam::cos(3.0*constant::mathematical::pi*z[i]);
+            // BEGIN GENERATED computeF_d3
+            F[i] = cos(pi*x[i])*cos(2*pi*y[i])*cos(3*pi*z[i]);
+            // END GENERATED computeF_d3
         }
     }
 }
@@ -74,16 +85,24 @@ inline void computeF
 inline scalar manufacturedFDAFAt(const point& p, const label dimension)
 {
     const scalar pi = constant::mathematical::pi;
-    scalar F = Foam::cos(pi*p.x());
-    if (dimension >= 2)
+
+    if (dimension <= 1)
     {
-        F *= Foam::cos(2.0*pi*p.y());
+        // BEGIN GENERATED manufacturedFDAFAt_d1
+        return cos(pi*p.x());
+        // END GENERATED manufacturedFDAFAt_d1
     }
-    if (dimension >= 3)
+
+    if (dimension == 2)
     {
-        F *= Foam::cos(3.0*pi*p.z());
+        // BEGIN GENERATED manufacturedFDAFAt_d2
+        return cos(pi*p.x())*cos(2*pi*p.y());
+        // END GENERATED manufacturedFDAFAt_d2
     }
-    return F;
+
+    // BEGIN GENERATED manufacturedFDAFAt_d3
+    return cos(pi*p.x())*cos(2*pi*p.y())*cos(3*pi*p.z());
+    // END GENERATED manufacturedFDAFAt_d3
 }
 
 inline void computeG
@@ -101,15 +120,21 @@ inline void computeG
     {
         if (dimension == 1)
         {
-            G[i] = 1.0 + x[i];
+            // BEGIN GENERATED computeG_d1
+            G[i] = x[i] + 1;
+            // END GENERATED computeG_d1
         }
         else if (dimension == 2)
         {
-            G[i] = 1.0 + x[i]*Foam::pow(y[i], 2);
+            // BEGIN GENERATED computeG_d2
+            G[i] = x[i]*(y[i]*y[i]) + 1;
+            // END GENERATED computeG_d2
         }
         else
         {
-            G[i] = 1.0 + x[i]*Foam::pow(y[i], 2)*Foam::pow(z[i], 3);
+            // BEGIN GENERATED computeG_d3
+            G[i] = x[i]*(y[i]*y[i])*(z[i]*z[i]*z[i]) + 1;
+            // END GENERATED computeG_d3
         }
     }
 }
@@ -129,11 +154,11 @@ inline void computeManufacturedV
 
     V.setSize(x.size());
 
-    const scalar coeff = Foam::sqrt(1.0 + t);
-
     forAll(x, i)
     {
-        V[i] = coeff*Fx[i];
+        // BEGIN GENERATED computeManufacturedV
+        V[i] = Fx[i]*sqrt(t + 1);
+        // END GENERATED computeManufacturedV
     }
 }
 
@@ -157,14 +182,13 @@ inline void computeManufacturedU
     u2.setSize(x.size());
     u3.setSize(x.size());
 
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
-    const scalar inv1t = 1.0/(1.0 + t);
-
     forAll(x, i)
     {
-        u1[i] = (1.0 + t)*Gx[i] + sqrt1t*Fx[i];
-        u2[i] = inv1t*Foam::pow(Gx[i], -0.5);
-        u3[i] = 0.0;
+        // BEGIN GENERATED computeManufacturedU
+        u1[i] = Fx[i]*sqrt(t + 1) + Gx[i]*(t + 1);
+        u2[i] = 1/(sqrt(Gx[i])*(t + 1));
+        u3[i] = 0;
+        // END GENERATED computeManufacturedU
     }
 }
 
@@ -184,11 +208,11 @@ inline void computeIion
 
     forAll(V, i)
     {
-        const scalar term1 =
-            -(Cm/2.0)*(u1[i] + u3[i] - V[i])*Foam::pow(u2[i], 2)
-           *(V[i] - u3[i]);
-        const scalar term2 = (beta/chi)*(V[i] - u3[i]);
-        Iion[i] = term1 + term2;
+        // BEGIN GENERATED computeIion
+        Iion[i] =
+            -1.0/2.0*Cm*(u2[i]*u2[i])*(V[i] - u3[i])*(-V[i] + u1[i] + u3[i])
+          + beta*(V[i] - u3[i])/chi;
+        // END GENERATED computeIion
     }
 }
 
@@ -324,7 +348,9 @@ inline void pseudoECGManufacturedQuadratureRule
 
 inline scalar pseudoECGManufacturedTimeFactor(const scalar t)
 {
-    return Foam::sqrt(1.0 + t);
+    // BEGIN GENERATED pseudoECGManufacturedTimeFactor
+    return sqrt(t + 1);
+    // END GENERATED pseudoECGManufacturedTimeFactor
 }
 
 inline vector pseudoECGManufacturedGradF
@@ -339,25 +365,31 @@ inline vector pseudoECGManufacturedGradF
 
     if (dimension == 1)
     {
-        return vector(-pi*Foam::sin(pi*x), 0.0, 0.0);
+        // BEGIN GENERATED pseudoECGManufacturedGradF_d1
+        return vector(-pi*sin(pi*x), 0, 0);
+        // END GENERATED pseudoECGManufacturedGradF_d1
     }
 
     if (dimension == 2)
     {
+        // BEGIN GENERATED pseudoECGManufacturedGradF_d2
         return vector
         (
-           -pi*Foam::sin(pi*x)*Foam::cos(2.0*pi*y),
-           -2.0*pi*Foam::cos(pi*x)*Foam::sin(2.0*pi*y),
-            0.0
+            -pi*sin(pi*x)*cos(2*pi*y),
+            -2*pi*sin(2*pi*y)*cos(pi*x),
+            0
         );
+        // END GENERATED pseudoECGManufacturedGradF_d2
     }
 
+    // BEGIN GENERATED pseudoECGManufacturedGradF_d3
     return vector
     (
-       -pi*Foam::sin(pi*x)*Foam::cos(2.0*pi*y)*Foam::cos(3.0*pi*z),
-       -2.0*pi*Foam::cos(pi*x)*Foam::sin(2.0*pi*y)*Foam::cos(3.0*pi*z),
-       -3.0*pi*Foam::cos(pi*x)*Foam::cos(2.0*pi*y)*Foam::sin(3.0*pi*z)
+        -pi*sin(pi*x)*cos(2*pi*y)*cos(3*pi*z),
+        -2*pi*sin(2*pi*y)*cos(pi*x)*cos(3*pi*z),
+        -3*pi*sin(3*pi*z)*cos(pi*x)*cos(2*pi*y)
     );
+    // END GENERATED pseudoECGManufacturedGradF_d3
 }
 
 inline scalar pseudoECGManufacturedIntegrand
@@ -383,7 +415,9 @@ inline scalar pseudoECGManufacturedIntegrand
             return 0.0;
         }
 
-        return sigmaGradF.x()*dx/Foam::pow(absDx, 3);
+        // BEGIN GENERATED pseudoECGManufacturedIntegrand_d1
+        return sigmaGradF.x()/(absDx*dx);
+        // END GENERATED pseudoECGManufacturedIntegrand_d1
     }
 
     if (dimension == 2)
@@ -397,7 +431,9 @@ inline scalar pseudoECGManufacturedIntegrand
             return 0.0;
         }
 
-        return (sigmaGradF.x()*dx + sigmaGradF.y()*dy)/Foam::pow(rSq, 1.5);
+        // BEGIN GENERATED pseudoECGManufacturedIntegrand_d2
+        return (dx*sigmaGradF.x() + dy*sigmaGradF.y())/pow(rSq, 1.5);
+        // END GENERATED pseudoECGManufacturedIntegrand_d2
     }
 
     const scalar dx = x - electrodePosition.x();
@@ -410,9 +446,11 @@ inline scalar pseudoECGManufacturedIntegrand
         return 0.0;
     }
 
+    // BEGIN GENERATED pseudoECGManufacturedIntegrand_d3
     return
-        (sigmaGradF.x()*dx + sigmaGradF.y()*dy + sigmaGradF.z()*dz)
-       /Foam::pow(rSq, 1.5);
+        (dx*sigmaGradF.x() + dy*sigmaGradF.y() + dz*sigmaGradF.z())
+       /pow(rSq, 1.5);
+    // END GENERATED pseudoECGManufacturedIntegrand_d3
 }
 
 inline scalar computeManufacturedPseudoECGSpatialReference

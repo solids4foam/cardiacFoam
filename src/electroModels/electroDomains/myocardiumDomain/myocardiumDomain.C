@@ -21,6 +21,7 @@ License
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
 #include "sealedWallPolicy.H"
+#include "dictionaryKeyCheck.H"
 
 namespace Foam
 {
@@ -369,9 +370,12 @@ myocardiumDomain::myocardiumDomain
     )),
     useExplicitAlgorithm_
     (
-        electroProperties_.lookupOrDefault<word>
+        dictionaryKeyCheck::getWord
         (
-            "solutionAlgorithm", "implicit"
+            electroProperties_,
+            "solutionAlgorithm",
+            "implicit",
+            wordList({"explicit", "implicit"})
         ) == "explicit"
     ),
     timeCouplingScheme_

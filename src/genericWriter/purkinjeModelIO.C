@@ -39,6 +39,17 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * Static Functions  * * * * * * * * * * * * * //
 
+const wordList& purkinjeModelIO::networkTokenNames()
+{
+    static const wordList names
+    ({
+        "Vm", "Iion", "activationTime", "IcouplingSource", "IcouplingCurrent"
+    });
+
+    return names;
+}
+
+
 purkinjeModelIO::ResolvedTokens purkinjeModelIO::filterTokens
 (
     const wordList& userExport,
@@ -55,8 +66,7 @@ purkinjeModelIO::ResolvedTokens purkinjeModelIO::filterTokens
 
     for (const word& var : userExport)
     {
-        if (var == "Vm" || var == "Iion" || var == "activationTime" ||
-            var == "IcouplingSource" || var == "IcouplingCurrent")
+        if (networkTokenNames().found(var))
         {
             networkTokens.append(var);
         }

@@ -1,0 +1,35 @@
+% Preamble shared by the monodomain and eikonal construction documents.
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\allowdisplaybreaks
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\sffamily\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\sffamily\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\sffamily\bfseries}{\thesubsubsection}{1em}{}
+\usepackage{caption}
+\captionsetup{font=small,labelfont={bf,sf}}
+% Keep a heading with the start of its content: a page break before a heading
+% when less than the given space is left on the page, and no other break
+% point added.
+\usepackage{etoolbox}
+\makeatletter
+\newcommand{\mmskeepspace}[1]{\par
+  \penalty\@M % brings \pagetotal up to date without adding a break point
+  \begingroup
+  \setlength{\dimen@}{#1}%
+  \dimen@ii\pagegoal \advance\dimen@ii-\pagetotal
+  % a full page (no space left) breaks earlier by itself
+  \ifdim\dimen@ii>\z@
+    \ifdim\dimen@>\dimen@ii \vfil\penalty-\@M \fi
+  \fi
+  \endgroup}
+\makeatother
+\pretocmd{\section}{\mmskeepspace{14\baselineskip}}{}{}
+\pretocmd{\subsection}{\mmskeepspace{8\baselineskip}}{}{}
+% Long identifiers in inline code are not hyphenated: a line before one may
+% stretch further, and a name may break after an underscore.
+\setlength{\emergencystretch}{6em}
+\let\mmsunderscore\_
+\renewcommand{\_}{\mmsunderscore\allowbreak}

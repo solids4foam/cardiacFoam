@@ -64,7 +64,6 @@ functions
         #include "Vmprobes"
     }
 
-    // Area-averaged displacement of each spring-supported end
     D_xMin
     {
         type            surfaceFieldValue;
@@ -85,7 +84,6 @@ functions
         name            xMax;
     }
 
-    // Force on each end from the stress field, independent of the spring law
     F_xMin
     {
         type            solidForces;

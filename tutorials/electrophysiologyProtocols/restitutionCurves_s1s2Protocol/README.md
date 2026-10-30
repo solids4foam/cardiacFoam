@@ -81,3 +81,14 @@ single-cell `stim_amplitude`) and `s1s2Protocol` (a mapping of
 `s1_interval_ms`/`n_s1`/`s2_interval_ms`/`n_s2`; derives the
 `singleCellStimulus` S1/S2 keys plus the case's `endTime`/`writeAfterTime`).
 This study sweeps TWorld at S1=1000ms/10 beats with S2 from 1500ms down to 250ms.
+
+## Mesh resolutions
+
+`system/blockMeshDict` spans 20 x 3 x 7 mm. Three uniform, orthogonal meshes
+are used:
+
+| deltaX | cells |
+|---|---|
+| 0.5 mm | (40 6 14) |
+| 0.2 mm | (100 15 35) |
+| 0.1 mm | (200 30 70) (the committed block) |

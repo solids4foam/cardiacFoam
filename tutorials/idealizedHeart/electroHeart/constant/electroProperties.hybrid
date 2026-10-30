@@ -15,13 +15,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Hybrid variant: full 3D reaction-diffusion myocardium (same as
-// ../electroProperties.monodomain) coupled to an eikonal (not full-cable)
-// 1D Purkinje network - the middle ground between the monodomain and
-// eikonal variants. Ported from the former
-// tutorials/heartSim3D-1D/monodomain3D-eikonal1D onto this tutorial's
-// shared mesh and electrode positions.
-
 myocardiumSolver monodomainSolver;
 
 monodomainSolverCoeffs
@@ -48,19 +41,6 @@ monodomainSolverCoeffs
             epicardialCells  { range (0.7 1); }
         }
 
-        // Apex-to-base APD gradient (composes with the named regions
-        // above): APD shorter at the apex, longer at the base, matching the
-        // consistently reported direction in the literature (e.g. Opthof
-        // et al., J Cardiovasc Electrophysiol; Sengupta et al., Circulation
-        // Cardiovasc Imaging). apicobasal follows the same 0=apex/1=base
-        // convention this tutorial already uses for Purkinje-tree UVCs (see
-        // README), so it is used directly as the distance field, no
-        // inversion needed. tauSi is the primary APD-determining time
-        // constant in the Bueno-Orovio-Cherry-Fenton minimal model;
-        // scalingMin/scalingMax were calibrated against single-cell APD90
-        // measurements (RKF45, S1 pacing) to target the ~20ms total
-        // apex-base gradient commonly used in simulation studies, not the
-        // library's generic wide-range defaults.
         gradientAxes
         {
             apicobasal
@@ -121,8 +101,6 @@ monodomainSolverCoeffs
             electroDomainCoupler    eikonalMonodomainPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
             rPvj                    1000;
-            // Smallest radius valid at every junction of both Purkinje trees:
-            // the coarsest junction cell (pig tree, mid-wall) is 1.60 mm across.
             pvjRadius               1.65e-3;
             couplingMode            unidirectional;
             debugCoupling           true;

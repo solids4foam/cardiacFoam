@@ -100,3 +100,16 @@ errors of `Vm`, `D`, `lambda` and `Ta`. With
 ```bash
 ./regression/regressionTest.sh
 ```
+
+## Notes on dictionary entries
+
+`0/solid/Ta` is the initial active tension. The electromechanical model
+registers and solves `Ta`, but the solid model builds its stiffness while it is
+constructed, before that field exists, so `electroMechanicalLaw` reads `Ta`
+from this file.
+
+`system/solid/fvOptions` deduces all physics parameters at run time from the
+authoritative dictionaries, so they cannot drift from the solver:
+`amplitude`, `Tmax`, `V0`, `gamma` and `TaScale` from
+`constant/electroMechanicalProperties`, and `E`, `nu` from
+`constant/solid/mechanicalProperties` (`passiveMechanicalLaw`).

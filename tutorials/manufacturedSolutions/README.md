@@ -2,6 +2,17 @@
 
 This folder groups the manufactured-solution verification cases by model scope.
 
+## Definitions of the manufactured solutions
+
+[`generators/`](generators/README.md) holds the definition of each monodomain
+and eikonal manufactured solution: the sympy generators, the NumPy reference
+modules, and the two construction documents
+([monodomain_mms.pdf](generators/docs/monodomain/monodomain_mms.pdf),
+[eikonal_mms.pdf](generators/docs/eikonal/eikonal_mms.pdf)). The C++ reference
+headers in `src/verificationModels/` are generated from the generators, in
+whole or in marked regions. The case READMEs describe how to run a case and
+point to these definitions.
+
 ## Cases
 
 - `monodomainPseudoECG` : spatial manufactured-solution verification for the monodomain solver with pseudo-ECG output

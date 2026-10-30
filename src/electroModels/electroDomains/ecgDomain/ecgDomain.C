@@ -128,9 +128,12 @@ void ecgDomain::readElectrodes(const dictionary& dict)
         eDictPtr = inheritedElectrodePositionsPtr_;
     }
 
-    if (!eDictPtr)
+    if (!eDictPtr || eDictPtr->empty())
     {
-        return;
+        FatalIOErrorInFunction(dict)
+            << "ECG domain " << dict.dictName() << " has no electrodes: "
+            << "give electrodePositions in the domain or in ecgDomains."
+            << exit(FatalIOError);
     }
 
     const dictionary& eDict = *eDictPtr;

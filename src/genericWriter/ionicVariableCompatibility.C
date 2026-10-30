@@ -19,6 +19,8 @@ License
 
 #include "ionicVariableCompatibility.H"
 #include "error.H"
+#include "dictionaryKeyCheck.H"
+#include "FlatOutput.H"
 #include <string>
 
 namespace Foam
@@ -333,12 +335,70 @@ void ionicVariableCompatibility::mapVariableNames
             continue;
         }
 
-        FatalErrorInFunction
-            << "Unknown debug variable: " << names[k]
-            << ". Expected Vm, one of the STATE names, one of the ALGEBRAIC "
-            << "names, or a rate name of the form RATES_<stateName>."
-            << exit(FatalError);
+        wordList valid(variableNames(stateNames, nStates, algNames, nAlg));
+        valid.append("Vm");
+        reportUnknownVariables("ionic model debug", wordList({names[k]}), valid);
     }
+}
+
+
+wordList ionicVariableCompatibility::variableNames
+(
+    const char* const stateNames[],
+    label nStates,
+    const char* const algNames[],
+    label nAlg
+)
+{
+    wordList names(2*nStates + nAlg);
+    label n = 0;
+
+    for (label i = 0; i < nStates; ++i)
+    {
+        names[n++] = word(stateNames[i]);
+    }
+    for (label i = 0; i < nAlg; ++i)
+    {
+        names[n++] = word(algNames[i]);
+    }
+    for (label i = 0; i < nStates; ++i)
+    {
+        names[n++] = word(ratePrefix) + word(stateNames[i]);
+    }
+
+    return names;
+}
+
+
+void ionicVariableCompatibility::reportUnknownVariables
+(
+    const word& modelKind,
+    const wordList& unknown,
+    const wordList& valid
+)
+{
+    FatalErrorInFunction
+        << "Unknown " << modelKind << " output variable"
+        << (unknown.size() > 1 ? "s" : "") << ':' << nl;
+
+    for (const word& name : unknown)
+    {
+        const word suggestion
+        (
+            dictionaryKeyCheck::closestMatch(name, valid)
+        );
+
+        FatalError << "    '" << name << "'";
+
+        if (!suggestion.empty())
+        {
+            FatalError << ", did you mean '" << suggestion << "'?";
+        }
+
+        FatalError << nl;
+    }
+
+    FatalError << nl << "Valid names are " << flatOutput(valid) << exit(FatalError);
 }
 
 } // namespace Foam

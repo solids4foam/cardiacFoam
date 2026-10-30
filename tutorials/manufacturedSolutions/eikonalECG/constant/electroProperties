@@ -55,8 +55,6 @@ eikonalSolverCoeffs
             }
             electrodePositions
             {
-                // The 161 electrodes of monodomainPseudoECG: E1-E5, then R1-R156 with a
-                // direction uniform on the sphere and a standoff uniform in [0.05, 1.0]
                 E1    (-0.5 0.5 0.5);
                 E2    (1.5 0.5 0.5);
                 E3    (1.2 0.23 0.61);
@@ -225,6 +223,5 @@ eikonalSolverCoeffs
     }
     #includeIfPresent "<case>/local/field"
 }
-
 
 // ************************************************************************* //

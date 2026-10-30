@@ -62,8 +62,6 @@ monodomainSolverCoeffs
 
                 chi                    14000;
                 cm                     0.01;
-                // Purkinje conduction velocity ~3.3 m/s, matching the hybrid variant's
-                // calibrated restitution maximum (3.33 m/s); 10.0 gave ~8.7 m/s.
                 purkinjeConductivity   0.4;
                 vm1DRest               -0.084;
 
@@ -80,7 +78,7 @@ monodomainSolverCoeffs
 
                 outputVariables
                 {
-                    export (Vm activationTime Icoupling);
+                    export (Vm activationTime IcouplingSource);
                     debug  (Vm Iion);
                 }
             }
@@ -94,8 +92,6 @@ monodomainSolverCoeffs
             electroDomainCoupler    reactionDiffusionPvjCoupler;
             conductionNetworkDomain purkinjeNetwork;
             rPvj                    1000;
-            // Same as ../../electroHeart: the smallest radius valid at every
-            // junction of its human and pig Purkinje trees (pig: 1.60 mm cells).
             pvjRadius               1.65e-3;
             couplingMode            unidirectional;
             debugCoupling           true;

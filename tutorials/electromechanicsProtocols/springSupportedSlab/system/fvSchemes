@@ -13,8 +13,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Dummy fvSchemes for the top-level region (not used directly)
-
 ddtSchemes
 {
     default         Euler;
