@@ -37,8 +37,10 @@ This study adds:
 | configuration | options | levels |
 |---|---|---|
 | `isotropic_tet` | `-mesh tet -conductivity isotropic` (non-orthogonal correction only) | 10, 14, 20 |
-| `bidomain_hex`, `bidomain_tet` | `-myocardium bidomain` | 10, 20 |
+| `bidomain_hex` | `-mesh hex -myocardium bidomain` | 10, 20, 40 |
+| `bidomain_tet` | `-mesh tet -myocardium bidomain` | 10, 14, 20, 28 |
 | `parallel_hex`, `parallel_tet` | `parallel` (2 ranks, `numberOfSubdomains 2` in `system/decomposeParDict`) | 20 |
+| `fixedPointTight_tet` | `-mesh tet -fixedPointTolerance 1e-12` | 20 |
 
 The `parallel` rows run on 2 ranks; every other run is serial.
 
@@ -63,13 +65,17 @@ for n in 10 14 20
 do
     run isotropic_tet_N$n -mesh tet -N $n -conductivity isotropic
 done
-for n in 10 20
+for n in 10 20 40
 do
     run bidomain_hex_N$n -mesh hex -N $n -myocardium bidomain
+done
+for n in 10 14 20 28
+do
     run bidomain_tet_N$n -mesh tet -N $n -myocardium bidomain
 done
 run parallel_hex_N20 parallel -mesh hex -N 20
 run parallel_tet_N20 parallel -mesh tet -N 20
+run fixedPointTight_tet_N20 -mesh tet -N 20 -fixedPointTolerance 1e-12
 python3 ../summarize.py ../leadFieldConvergence/results results
 ```
 
@@ -93,6 +99,7 @@ Hexahedra (corrected; the snGrad scheme has no effect there):
 |  | 40 | 9.855e-13 | 2.929e-12 | 1.008e-12 | 2.998e-12 |
 | bidomain | 10 | 1.470e-13 | 9.779e-14 | 1.206e-13 | 6.607e-14 |
 |  | 20 | 2.470e-13 | 8.419e-14 | 2.652e-13 | 9.468e-14 |
+|  | 40 | 1.842e-13 | 4.604e-13 | 4.148e-13 | 7.231e-13 |
 | parallel (2 ranks) | 20 | 3.591e-12 | 1.566e-12 | 2.062e-12 | 2.298e-12 |
 
 Tetrahedra:
@@ -111,7 +118,9 @@ Tetrahedra:
 |  | 14 | 3.337e-12 | 4.007e-12 | 1.783e-12 | 1.935e-12 |
 |  | 20 | 2.693e-12 | 2.819e-12 | 3.183e-12 | 3.372e-12 |
 | bidomain | 10 | 1.351e-11 | 1.299e-11 | 1.098e-11 | 1.081e-11 |
+|  | 14 | 6.000e-11 | 5.992e-11 | 1.020e-10 | 1.006e-10 |
 |  | 20 | 4.039e-11 | 3.970e-11 | 4.418e-11 | 4.488e-11 |
+|  | 28 | 3.682e-11 | 3.687e-11 | 3.943e-11 | 3.937e-11 |
 | parallel (2 ranks) | 20 | 8.010e-11 | 8.208e-11 | 1.270e-10 | 1.302e-10 |
 
 - **Hexahedra.** The gap is at round-off, 6.6e-14 to 3.6e-12, and rises
@@ -128,6 +137,24 @@ Tetrahedra:
 - **Electrodes next to the heart.** The `near` group, in torso cells that
   touch the heart, follows the far `torso` group. Electrodes inside the
   heart are not supported (case [README](../../../README.md)).
+
+## Fixed-point tolerance control
+
+`fixedPointTight_tet_N20` repeats the default tetrahedral run at `N = 20`
+with both fixed points stopped at `1e-12` instead of `1e-10`:
+
+| tolerance | torso dynamic | torso static | near dynamic | near static | LF torso error | LF near error |
+|---|---|---|---|---|---|---|
+| `1e-10` | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 | 1.6008e-03 | 1.6392e-03 |
+| `1e-12` | 2.137e-12 | 1.478e-12 | 2.208e-12 | 1.956e-12 | 1.6008e-03 | 1.6392e-03 |
+
+The error columns are the static Linf errors of the lead-field channel
+against the exact potential; the direct channel has the same values. With
+the tighter tolerance the gap drops by about two orders of magnitude, to
+the round-off level of the hexahedra and of `isotropic`, the errors against
+the exact potential are identical, and the lead-field fixed points take
+about a third more passes. The tetrahedral gap is set by the fixed-point
+tolerance, not by the transposed operator.
 
 ## Outputs
 

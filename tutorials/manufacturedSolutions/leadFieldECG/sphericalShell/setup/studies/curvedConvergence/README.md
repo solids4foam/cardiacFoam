@@ -26,13 +26,16 @@ between consecutive levels.
 |---|---|---|
 | hex (cubed sphere) | 8, 12, 16, 24, 32 | 2808, 9477, 22464, 75816, 179712 |
 | tet (gmsh 4.15.2, seed 1) | 8, 12, 16, 20 | 36754, 118535, 278906, 526677 |
+| tet (gmsh 4.15.2, seeds 2 and 3) | 8, 12, 16 | see [Tetrahedra: seeds](#tetrahedra-seeds) |
 
 Every run is one time step of the case defaults; the static rows do not
 depend on it. The lead fields need 31 to 49 passes of their adjoint fixed
-point on the hexahedra and 71 to 203 on the tetrahedra, each to the
-`leadFieldFixedPoint` tolerance `1e-10` of the case.
+point on the hexahedra and 66 to 203 on the tetrahedra, each to the
+`leadFieldFixedPoint` tolerance `1e-10` of the case. The exception is the
+seed 2 tetrahedra at `N = 12`, which need 531 to 602 passes, within the
+`maxPasses 1000` of `system/fvSolution`.
 
-All levels were run in parallel on 6 ranks (`parallel`, the case's
+All levels and seeds run in parallel on 6 ranks (`parallel`, the case's
 `decomposeParDict`).
 
 ## Execution
@@ -58,6 +61,24 @@ do
 done
 python3 ../summarize.py results
 ```
+
+The tetrahedral seeds 2 and 3 go to `results/seeds/tet_N<n>_seed<s>`:
+
+```bash
+mkdir -p results/seeds
+for s in 2 3
+do
+    for n in 8 12 16
+    do
+        name=seeds/tet_N${n}_seed$s
+        rsync -a --exclude setup ../../../ results/$name/
+        bash results/$name/Allrun parallel -mesh tet -N $n -seed $s
+    done
+done
+```
+
+`../summarize.py` reads one seed at a time from a folder of
+`tet_N<n>` entries, for example links to `results/seeds/tet_N<n>_seed2`.
 
 ## Measured behaviour
 
@@ -99,6 +120,28 @@ python3 ../summarize.py results
 | 16 | 1.372e-02 (2.28) | 3.643e-02 (2.26) | 1.389e-02 (2.27) | 3.643e-02 (2.26) | 1.366e-02 (2.28) | 3.421e-02 (2.15) | 1.420e-02 (2.30) | 3.404e-02 (2.46) |
 | 20 | 8.357e-03 (2.34) | 2.337e-02 (2.09) | 8.440e-03 (2.35) | 2.309e-02 (2.15) | 8.327e-03 (2.34) | 2.337e-02 (1.80) | 8.688e-03 (2.32) | 2.337e-02 (1.77) |
 
+### Tetrahedra: seeds
+
+The same levels meshed with three gmsh seeds. Columns: the RMS and maximum
+error of the direct static potential over all cells, the RMS over the
+interface band, and the static lead-field error at each electrode. The
+`max/min` rows are the largest over the smallest value of the three seeds.
+
+| N | seed | cells | all RMS | all max | band RMS | outerFar | outerNear | outerSide | pool |
+|---|---|---|---|---|---|---|---|---|---|
+| 8 | 1 | 36754 | 6.334e-02 | 1.525e-01 | 6.622e-02 | 1.497e-03 | 1.178e-01 | 8.144e-02 | 4.435e-02 |
+| 8 | 2 | 36660 | 6.677e-02 | 1.665e-01 | 6.984e-02 | 1.350e-03 | 1.028e-01 | 8.999e-02 | 4.717e-02 |
+| 8 | 3 | 36853 | 6.728e-02 | 1.619e-01 | 7.028e-02 | 1.002e-02 | 1.090e-01 | 8.744e-02 | 4.542e-02 |
+| 8 | max/min |  | 1.06 | 1.09 | 1.06 | 7.42 | 1.15 | 1.11 | 1.06 |
+| 12 | 1 | 118535 | 2.628e-02 | 6.934e-02 | 2.735e-02 | 2.272e-04 | 4.399e-02 | 3.317e-02 | 1.674e-02 |
+| 12 | 2 | 118663 | 2.734e-02 | 6.986e-02 | 2.845e-02 | 6.011e-04 | 4.507e-02 | 3.443e-02 | 1.797e-02 |
+| 12 | 3 | 119209 | 2.593e-02 | 6.902e-02 | 2.692e-02 | 1.716e-03 | 4.088e-02 | 3.365e-02 | 1.728e-02 |
+| 12 | max/min |  | 1.05 | 1.01 | 1.06 | 7.55 | 1.10 | 1.04 | 1.07 |
+| 16 | 1 | 278906 | 1.372e-02 | 3.643e-02 | 1.420e-02 | 7.157e-04 | 2.326e-02 | 1.693e-02 | 9.308e-03 |
+| 16 | 2 | 278490 | 1.298e-02 | 3.530e-02 | 1.353e-02 | 8.796e-04 | 2.115e-02 | 1.670e-02 | 8.502e-03 |
+| 16 | 3 | 278405 | 1.357e-02 | 4.202e-02 | 1.412e-02 | 2.316e-05 | 2.343e-02 | 1.673e-02 | 8.810e-03 |
+| 16 | max/min |  | 1.06 | 1.19 | 1.05 | 37.99 | 1.11 | 1.01 | 1.09 |
+
 ### Reading
 
 - The field error is second order on both meshes, in the RMS and in the
@@ -111,5 +154,12 @@ python3 ../summarize.py results
   `-9.1e-4` at N = 12, `-2.3e-4` at N = 24, `+5.0e-5` at N = 32): the
   electrode lies near a zero of the discretisation error, so its order is not
   defined. Its error stays below the field maximum of the same level.
+- The convergence trend is seed-independent. On the tetrahedra the field
+  RMS, the band RMS and the errors at `outerNear`, `outerSide` and `pool`
+  differ by less than a fifth between seeds at each level, and fall at
+  second order or slightly above for every seed. The field maximum, a single-cell value, spreads
+  more at the finest level. Only `outerFar` depends on the seed, by up to
+  more than an order of magnitude, as expected for an electrode at a zero
+  of the discretisation error.
 - The lead field and the direct solve agree to `5e-10` at every level, at
   the level of the fixed-point and linear-solver tolerances.
