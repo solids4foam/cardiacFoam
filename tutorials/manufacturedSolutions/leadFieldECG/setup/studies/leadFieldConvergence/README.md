@@ -32,16 +32,14 @@ Two conductivity configurations, both monodomain with `corrected` snGrad:
 
 | mesh | N | cells |
 |---|---|---|
-| hex | 10, 20, 40, 80 | 3000, 24000, 192000, 1536000 |
-| tet (gmsh 4.15.2, seed 1) | 10, 14, 20, 28, 40 | 14792, 39131, 111482, 299957, 867138 |
+| hex | 10, 20, 40 | 3000, 24000, 192000 |
+| tet (gmsh 4.15.2, seed 1) | 10, 14, 20, 28 | 14792, 39131, 111482, 299957 |
 
-All runs use `-endTime 0.02` (two samples, `dt = 0.01`). On tetrahedra the
-lead fields need 40 to 67 passes of their adjoint fixed point, and each
-direct solve about as many.
-
-The `N = 40` tetrahedra and the `N = 40` and `80` hexahedra in the tables
-were run on 8 ranks (`parallel` with `numberOfSubdomains 8`); the other
-levels serially.
+All runs are serial and use `-endTime 0.02` (two samples, `dt = 0.01`). The
+lead-field and direct fixed points stop at the `leadFieldFixedPoint`
+tolerance of `system/fvSolution`. On hexahedra the lead fields need 5 or 6
+passes and each direct solve 2. On tetrahedra the lead fields need 40 to 77
+passes and each direct solve 39 to 84.
 
 ## Execution
 
@@ -57,20 +55,14 @@ run()
     rsync -a --exclude setup ../../../ results/$name/
     bash results/$name/Allrun "$@" -endTime 0.02
 }
-for n in 10 20 40 80
-do
-    run default_hex_N$n -mesh hex -N $n
-done
 for n in 10 20 40
 do
+    run default_hex_N$n -mesh hex -N $n
     run unequal_hex_N$n -mesh hex -N $n -conductivity unequal
 done
-for n in 10 14 20 28 40
+for n in 10 14 20 28
 do
     run default_tet_N$n -mesh tet -N $n
-done
-for n in 10 14 20 28 40
-do
     run unequal_tet_N$n -mesh tet -N $n -conductivity unequal
 done
 python3 ../summarize.py results
@@ -85,50 +77,48 @@ potentials reach 1.43; the order is between consecutive levels, with
 
 Hexahedra, `default`:
 
-| N | LF torso | order | direct torso | order | LF near | order | direct near | order |
-|---|---|---|---|---|---|---|---|---|
-| 10 | 1.7585e-02 | | 1.7585e-02 | | 1.7585e-02 | | 1.7585e-02 | |
-| 20 | 4.4029e-03 | 2.00 | 4.4029e-03 | 2.00 | 4.4029e-03 | 2.00 | 4.4029e-03 | 2.00 |
-| 40 | 1.1012e-03 | 2.00 | 1.1012e-03 | 2.00 | 1.1012e-03 | 2.00 | 1.1012e-03 | 2.00 |
-| 80 | 2.7532e-04 | 2.00 | 2.7532e-04 | 2.00 | 2.7532e-04 | 2.00 | 2.7532e-04 | 2.00 |
+| N | h | LF torso | order | direct torso | order | LF near | order | direct near | order |
+|---|---|---|---|---|---|---|---|---|---|
+| 10 | 0.1 | 1.7585e-02 |  | 1.7585e-02 |  | 1.7585e-02 |  | 1.7585e-02 |  |
+| 20 | 0.05 | 4.4029e-03 | 2.00 | 4.4029e-03 | 2.00 | 4.4029e-03 | 2.00 | 4.4029e-03 | 2.00 |
+| 40 | 0.025 | 1.1012e-03 | 2.00 | 1.1012e-03 | 2.00 | 1.1012e-03 | 2.00 | 1.1012e-03 | 2.00 |
 
-Hexahedra, `unequal` (N = 10, 20, 40): the same values as `default` to
-1e-12.
+Hexahedra, `unequal`: the same values as `default` to every printed digit.
 
 Tetrahedra, `default`:
 
 | N | h | LF torso | order | direct torso | order | LF near | order | direct near | order |
 |---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.0588 | 5.8575e-03 | | 5.8575e-03 | | 6.6472e-03 | | 6.6472e-03 | |
-| 14 | 0.0425 | 3.0903e-03 | 1.97 | 3.0903e-03 | 1.97 | 2.9428e-03 | 2.51 | 2.9428e-03 | 2.51 |
-| 20 | 0.0300 | 1.6008e-03 | 1.88 | 1.6008e-03 | 1.88 | 1.6392e-03 | 1.68 | 1.6392e-03 | 1.68 |
-| 28 | 0.0216 | 8.1462e-04 | 2.05 | 8.1462e-04 | 2.05 | 7.1188e-04 | 2.53 | 7.1188e-04 | 2.53 |
-| 40 | 0.0151 | 4.0274e-04 | 1.99 | 4.0274e-04 | 1.99 | 4.0446e-04 | 1.60 | 4.0446e-04 | 1.60 |
+| 10 | 0.05875 | 5.8575e-03 |  | 5.8575e-03 |  | 6.6472e-03 |  | 6.6472e-03 |  |
+| 14 | 0.04248 | 3.0903e-03 | 1.97 | 3.0903e-03 | 1.97 | 2.9428e-03 | 2.51 | 2.9428e-03 | 2.51 |
+| 20 | 0.02997 | 1.6008e-03 | 1.88 | 1.6008e-03 | 1.88 | 1.6392e-03 | 1.68 | 1.6392e-03 | 1.68 |
+| 28 | 0.02155 | 8.1462e-04 | 2.05 | 8.1462e-04 | 2.05 | 7.1188e-04 | 2.53 | 7.1188e-04 | 2.53 |
 
 Tetrahedra, `unequal`:
 
 | N | h | LF torso | order | direct torso | order | LF near | order | direct near | order |
 |---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.0588 | 6.9005e-03 | | 6.9005e-03 | | 7.5938e-03 | | 7.5938e-03 | |
-| 14 | 0.0425 | 3.5622e-03 | 2.04 | 3.5622e-03 | 2.04 | 3.4221e-03 | 2.46 | 3.4221e-03 | 2.46 |
-| 20 | 0.0300 | 1.8683e-03 | 1.85 | 1.8683e-03 | 1.85 | 1.9919e-03 | 1.55 | 1.9919e-03 | 1.55 |
-| 28 | 0.0216 | 9.5185e-04 | 2.04 | 9.5185e-04 | 2.04 | 8.7854e-04 | 2.48 | 8.7854e-04 | 2.48 |
-| 40 | 0.0151 | 4.7127e-04 | 1.99 | 4.7127e-04 | 1.99 | 4.9225e-04 | 1.64 | 4.9225e-04 | 1.64 |
+| 10 | 0.05875 | 6.9005e-03 |  | 6.9005e-03 |  | 7.5938e-03 |  | 7.5938e-03 |  |
+| 14 | 0.04248 | 3.5622e-03 | 2.04 | 3.5622e-03 | 2.04 | 3.4221e-03 | 2.46 | 3.4221e-03 | 2.46 |
+| 20 | 0.02997 | 1.8683e-03 | 1.85 | 1.8683e-03 | 1.85 | 1.9919e-03 | 1.55 | 1.9919e-03 | 1.55 |
+| 28 | 0.02155 | 9.5185e-04 | 2.04 | 9.5185e-04 | 2.04 | 8.7854e-04 | 2.48 | 8.7854e-04 | 2.48 |
 
 - **Hexahedra.** The lead field and the direct solve agree to every printed
-  digit and converge at 2.00 in both groups. The ECG between the slabs,
-  `torsoRight - torsoLeft`, has the error of the `LF torso` column. With
-  either configuration the heart rows are exact on this mesh, so these
-  rows measure the interface, the torso and the recording.
+  digit and converge at second order (2.00) in both groups. The ECG between
+  the slabs, `torsoRight - torsoLeft`, is second order as well (invariance
+  table of [leadFieldOrganJump](../leadFieldOrganJump/README.md)). With
+  either configuration the heart rows are exact on this mesh, so these rows
+  measure the interface, the torso and the recording.
 - **Tetrahedra.** The lead field equals the direct solve to every printed
-  digit (gap at most 2.8e-10 relative, see
-  [leadFieldReciprocity](../leadFieldReciprocity/README.md)). Both converge
-  at 1.85 to 2.05 in the torso group: `default` 1.97, 1.88, 2.05, 1.99, whose
-  heart rows are exact (`Ge` proportional to `Gi`); `unequal` 2.04, 1.85,
-  2.04, 1.99, with an error 10 to 20% larger.
-- **Electrodes next to the heart.** The `near` group converges as the far
-  torso electrodes do, at a less regular order (1.55 to 2.53): a torso cell
-  that touches the heart does not affect convergence.
+  digit (gap at most 3.8e-10 relative, see
+  [leadFieldReciprocity](../leadFieldReciprocity/README.md)). The centroid
+  errors converge at about second order with scatter, 1.85 to 2.05 in the
+  torso group: `default` 1.97, 1.88, 2.05, whose heart rows are exact (`Ge`
+  proportional to `Gi`); `unequal` 2.04, 1.85, 2.04, with an error about 1.2
+  times larger at every level.
+- **Electrodes next to the heart.** The `near` group has errors of the size
+  of the far torso group and converges at about second order with more
+  scatter (1.55 to 2.53).
 
 ## Outputs
 
