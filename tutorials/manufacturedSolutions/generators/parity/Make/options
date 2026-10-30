@@ -1,0 +1,12 @@
+VERIF = ../../../../src/verificationModels
+TEMPLATE = ../../../../src/electroModels/ecgModels/eikonalECG
+
+EXE_INC = \
+    -I$(VERIF) \
+    -I$(TEMPLATE) \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude
+
+EXE_LIBS = \
+    -lfiniteVolume \
+    -lmeshTools

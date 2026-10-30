@@ -221,3 +221,43 @@ of it. The run is compared against `regression/springSupportedSlab.reference`:
 
 It exits 77 (expected skip) in `lightweight` build mode, and is wired into
 `tutorials/Alltest-regression`.
+
+## Notes on dictionary entries
+
+**Mesh.** `system/blockMeshDict` uses deltaX = 1.0 mm.
+
+**Active tension.** `0/solid/Ta` is the initial active tension. The
+electromechanical model registers and solves `Ta`, but the solid model builds
+its stiffness while it is constructed, before that field exists, so
+`electroMechanicalLaw` reads `Ta` from this file. In
+`constant/electroMechanicalProperties`, the `Batched` variants of the
+active-tension models (`LandNiedererTWorldBatched`, `NashPanfilovBatched`) use
+GPU/OpenMP vectorisation with `batchedSubsteps` explicit substeps per
+mechanics step and `batchedParallelCells` for CPU multi-threading. Batched
+active tension always integrates with explicit Euler (its states are not stiff,
+the fastest time constant being ~0.7 ms), so it has no `batchedIntegrator`
+key; that key belongs to the ionic model only. `preconditioningTime` (default
+1000 ms, 0 disables) overrides the pre-conditioning time; the resting `Cai` is
+queried from the ionic model's initial state. The `ODESolver` settings apply
+to the scalar `LandNiedererTWorld` only.
+
+**Solid solver.** In `constant/solid/solidProperties`, `rTol` is the relative
+residual (converged when residual < rTol x initial residual), `aTol` the
+absolute residual (kept far below the per-step residual so that `rTol` and
+`sTol` decide convergence at any `deltaT`), and `sTol` the step norm
+(converged when deltaX < sTol x xNorm).
+
+**Probes.** `Taprobes` and `CaiProbes` share the transmural column under the
+stimulus footprint at x, y = 0.75 mm: probe 0 (col 2) endo band centre,
+t = 0.15, z = 1.05 mm; probe 1 (col 3) M band centre, t = 0.50, z = 3.50 mm;
+probe 2 (col 4) epi band centre, t = 0.85, z = 5.95 mm. `Taprobes` adds probes
+3-4 (cols 5-6) at the slab centre and far end along the fibres (x = 10.0 and
+19.25 mm; y = 1.5 mm, z = 3.5 mm). `Vmprobes` samples the transmembrane
+potential along the fibres at y = 1.5 mm, z = 3.5 mm: stimulated layer, slab
+centre and far end (x = 0.75, 10.0 and 19.25 mm).
+
+**Controls.** `system/controlDict` records the area-averaged displacement of
+each spring-supported end, and the force on each end from the stress field,
+independent of the spring law. The top-level `system/fvSchemes` and
+`system/fvSolution` are dummies for the parent region and are not used
+directly.

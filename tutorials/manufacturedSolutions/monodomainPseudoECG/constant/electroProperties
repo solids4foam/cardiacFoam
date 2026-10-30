@@ -68,20 +68,12 @@ monodomainSolverCoeffs
             }
             electrodePositions
             {
-                // 5-point set kept for the existing tet per-electrode table (tbl-tet-pseudoecg-electrodes).
                 E1    (-0.5 0.5 0.5);
                 E2    (1.5 0.5 0.5);
                 E3    (1.2 0.23 0.61);
                 E4    (1.35 0.74 0.28);
                 E5    (1.55 0.41 0.83);
 
-                // Random scatter: 156 points, direction uniform on the sphere, standoff
-                // uniform in [0.05, 1.0] from the nearest cube surface point (below 0.05
-                // risks the near-boundary mesh layer; above ~1.0 the field has decayed
-                // too far for distance to discriminate). R1-R56 and R57-R156 are
-                // independent draws, concatenated so the first 56 stay fixed if the set
-                // is extended. Placement: exit the cube along the ray from the centre
-                // (0.5,0.5,0.5), then go the standoff distance further.
                 R1    (1.336870 1.061103 -0.151150);
                 R2    (-0.253831 0.889985 -0.260892);
                 R3    (-0.386491 1.036830 0.318377);
@@ -243,6 +235,5 @@ monodomainSolverCoeffs
     }
     #includeIfPresent "<case>/local/field"
 }
-
 
 // ************************************************************************* //

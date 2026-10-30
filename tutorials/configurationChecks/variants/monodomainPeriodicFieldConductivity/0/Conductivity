@@ -15,7 +15,6 @@ FoamFile
 
 dimensions      [-1 -3 3 0 0 2 0];
 
-// Fibre conductivity rising from 0.02 to 0.06 across the 20 columns of cells, so it jumps across the periodic faces
 internalField   nonuniform List<symmTensor>
 400
 (

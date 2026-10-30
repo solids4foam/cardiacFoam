@@ -15,29 +15,20 @@ Origin: this work.
 
 ## Problem
 
-```text
--div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in r1 < |x| < r2
-n . M grad psi = 0                                            on |x| = r1, |x| = r2
-```
-
-with `M = G/(chi Cm)`. The shell has `r1 = 0.5` and `r2 = 1`; the inner
-sphere is the patch `endocardium` and the outer sphere the patch
-`epicardium`. `G` is the conductivity of the
-[monodomain shell](../../monodomainPseudoECG/sphericalShell/README.md), and
-`chi = 3`, `Cm = 2`, `c0 = 1`.
-
-`psi` is the smoothed anisotropic distance from a mid-wall stimulus point
-`xs = 0.75 (1, 0.3, 0.2)/|(1, 0.3, 0.2)|`,
-`sqrt((x - xs)^T M(xs)^-1 (x - xs) + 0.05^2)/c0`, plus the sealing correction
-of the monodomain shell; `S` is the exact residual of the operator,
-including the gradient of `M`. The sealed problem fixes `psi` up to a
-constant, so the verifier pins the cells whose centre lies within `0.15` of
-`xs` to the exact `psi` (the nearest cell when the mesh is too coarse to have
-a centre in that ball) and imposes no value on a patch. `psi` has critical
-points on the walls, where the metric `sqrt(grad psi . M grad psi)` is not
-differentiable; the generator lists them
-(`python3 shell_eikonal_mms.py --report`, in
-[the generator folder](../../../generators/README.md)).
+The sealed shell field is defined in the construction document
+[eikonal_mms.pdf](../../generators/docs/eikonal/eikonal_mms.pdf), section
+"Sealed spherical shell", with the generator
+[`shell_eikonal_mms.py`](../../generators/shell_eikonal_mms.py) and the NumPy
+reference [`shell_eikonal.py`](../../generators/reference/shell_eikonal.py); the
+conductivity is that of the
+[monodomain shell](../../monodomainPseudoECG/sphericalShell/README.md). The
+inner sphere is the patch `endocardium` and the outer sphere the patch
+`epicardium`. The sealed problem fixes `psi` up to a constant, so the verifier
+pins the cells whose centre lies within `0.15` of the stimulus point to the
+exact `psi` (the nearest cell when the mesh is too coarse to have a centre in
+that ball) and imposes no value on a patch. `python3 shell_eikonal_mms.py
+--report`, in [the generator folder](../../generators/README.md), lists the
+critical points of `psi` on the walls.
 
 ### Stack
 
@@ -102,6 +93,7 @@ with `run ./Allclean first` if a mesh log exists, and, for `-mesh tet`, when
 | `-formulation explicit\|advectionDiffusion` | `eikonalAdvectionDiffusionApproach` false or true | advectionDiffusion |
 | `-iterations n` | at most `n` outer iterations | 8000, stopped by the residual control |
 | `-exactStart` | start the iteration from the exact field outside the pinned cells (`initialiseExact`); with `-iterations 1` the field after one linearised solve from the exact one | off |
+| `-c0 x` | eikonal `c0` | 1 |
 | `-pinnedRadius x` | radius of the ball of pinned cells | 0.15, the header's `rPin` |
 | `-ecg` | the eikonal ECG at E1-E5 and its shell reference (writes `local/ecg`) | off |
 | `-template singleEvent\|sine` | with `-ecg`: the manufactured ECG template and its sampling (writes `local/ecgTemplate` for `sine`) | singleEvent |
@@ -122,19 +114,15 @@ The `ecgDomains` block of `constant/electroProperties` is read only when
 `G grad Vm . (x - e)/|x - e|^3 V` over the cells, with
 `grad Vm = -U'(t - psi) grad psi` and `grad psi` the cell gradient of
 `fvSchemes` (so `-wallGradient` reaches the ECG). The verifier's reference at
-electrode `e` and sample time `t` is the same functional of the exact field,
-
-```text
-int_{r1 < |x| < r2} -U'(t - psi) (G grad psi) . (x - e)/|x - e|^3 dV
-```
-
+electrode `e` and sample time `t` is the same functional of the exact field
+(the ECG section of [eikonal_mms.pdf](../../generators/docs/eikonal/eikonal_mms.pdf)),
 with `psi`, `grad psi`, `G`, `r1` and `r2` from
 `manufacturedShellEikonalReference.H` and `c0` from `eikonalSolverCoeffs`
 (no `sigmaExtracellular`, as in the cube case). The integrand does not
 separate in space and time, so the verifier evaluates `psi` and the kernel
-`-w (G grad psi) . (x - e)/|x - e|^3` once at the nodes of each order and
-forms every sample as the sum of the kernel times `U'(t - psi)`; in parallel
-the radial nodes are shared out among the ranks.
+once at the nodes of each order and forms every sample as the sum of the
+kernel times `U'(t - psi)`; in parallel the radial nodes are shared out among
+the ranks.
 
 Order `q` is a spherical tensor rule: `q` Gauss-Legendre nodes in `r`
 (Jacobian `r^2`), `q` in `mu = cos(theta)` and `2q` trapezoid nodes in `phi`.

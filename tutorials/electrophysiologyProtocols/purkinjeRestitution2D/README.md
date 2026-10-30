@@ -68,3 +68,35 @@ node's `Vm`. `postProcessing/purkinjeNetworkVTK/` holds the network as VTK.
 network, and `antegrade` on a 75 x 75 slab: its checks are network activation
 times, which the slab resolution does not change.
 For `monodomain` it also runs the graph-only `runPurkinjeGraph` utility.
+
+## Notes on dictionary entries
+
+**Mesh.** The 50 x 50 x 0.1 mm slab has 150 x 150 x 1 cells, deltaX = 0.33 mm
+(the same mesh as `rotorInstability`).
+
+**Purkinje graph.** `constant/purkinjeGraph` holds four straight branches from
+the root, subdivided into 0.25 mm segments so `monodomain1DSolver` has a cable
+to integrate. Nodes 0-4 are the branch points and keep their indices; nodes 5
+onwards are interior. Coordinates are in mm.
+
+```
+             2  (35, 40)
+            /
+  0 ---- 1 ---- 4  (45, 25)
+            \
+             3  (35, 10)
+```
+
+`conductionEdges` entries are `(nodeA nodeB length conductance)`.
+
+**Variants.**
+
+- `electroProperties.antegrade`: no tissue stimulus; every myocardial
+  activation enters through a junction. `apdNominal`, `minimumDI90` and
+  `escapeInterval` use the compiled defaults. The escape occurs at 1.20247 s;
+  root beats at intervals of 0.4975 s and 0.4 s are captured, and the beat at
+  0.3 s falls below `apdNominal + minimumDI90`.
+- `electroProperties.retrograde`: two tissue beats 0.5 s apart, each on the
+  junction at node 4.
+- `electroProperties.monodomain`: current is injected at the root node over
+  each stimulus window.

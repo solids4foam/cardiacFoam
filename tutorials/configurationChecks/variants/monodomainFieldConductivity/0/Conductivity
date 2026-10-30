@@ -15,7 +15,6 @@ FoamFile
 
 dimensions      [-1 -3 3 0 0 2 0];
 
-// Read only when conductivitySource is field
 internalField   uniform (0.04 0 0 0.04 0 0.02);
 
 boundaryField

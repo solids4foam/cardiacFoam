@@ -15,15 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Before the run, one single BuenoOrovio cell per tissue region
-// (endocardialCells, mCells, epicardialCells) is paced at 1000 ms until its
-// state repeats beat to beat, and every myocardium cell starts from its
-// region's converged state. Blend-band cells and the apicobasal tauSi
-// scaling keep their own constants and start from their dominant region's
-// state. Only the monodomain and hybrid variants read this file; the
-// eikonal variant has no ionic model.
-
-tolerance   1e-4;   // max relative state change between successive beats
+tolerance   1e-4;
 minBeats    10;
 maxBeats    3000;
 

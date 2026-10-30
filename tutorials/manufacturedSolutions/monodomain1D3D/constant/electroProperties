@@ -69,8 +69,6 @@ monodomainSolverCoeffs
                 graphFile purkinjeGraph.nodes021;
                 #includeIfPresent "<case>/local/graph"
                 purkinjeConductivity 0.111453302;
-                // Unit cross-section (1/sqrt(pi) m), which the manufactured
-                // junction current assumes; used in bidirectional mode.
                 purkinjeFibreRadius 0.5641895835477563;
 
                 ionicModel monodomainFDAManufactured;

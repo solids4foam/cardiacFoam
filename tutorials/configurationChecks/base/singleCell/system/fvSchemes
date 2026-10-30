@@ -17,9 +17,7 @@ FoamFile
 
 ddtSchemes
 {
-    //default         CrankNicolson 1.0;
-    default         backward; // 2nd order
-    //default         Euler; // 1st order
+    default         backward;
 }
 
 gradSchemes
@@ -47,6 +45,5 @@ snGradSchemes
 {
     default         corrected;
 }
-
 
 // ************************************************************************* //
