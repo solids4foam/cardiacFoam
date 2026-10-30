@@ -8,9 +8,11 @@
 #     For each mesh family it prints, per level: the static lead-field error
 #     against the exact potential at each electrode cell centroid; the
 #     largest gap between the static lead field and the static direct solve;
-#     the RMS and maximum error of the direct static potential field over
-#     the whole mesh, the heart, the torso and the interface band; and the
-#     orders between consecutive levels of h = cbrt(mean cell volume).
+#     the maximum and the RMS of that error over the body-surface electrodes
+#     (names surface<k>); the RMS and maximum error of the direct static
+#     potential field over the whole mesh, the heart, the torso, the
+#     interface band and the surface cells; and the orders between
+#     consecutive levels of h = cbrt(mean cell volume).
 #
 # Usage
 #     python3 summarize.py curvedConvergence/results
@@ -25,7 +27,7 @@ from pathlib import Path
 
 RUN_RE = re.compile(r"^(hex|tet)_N(\d+)$")
 REGIONS = ("phiStatic", "phiStatic_heart", "phiStatic_torso",
-           "phiStatic_interfaceBand")
+           "phiStatic_interfaceBand", "phiStatic_surface")
 
 
 def read_run(run: Path):
@@ -84,6 +86,23 @@ def main() -> None:
                 for i, x in enumerate(errs))
             print(f"| {n} | {h:.4f} | {cells} | {gap:.1e} |")
             prev = (n, h, errs)
+
+        surface = [i for i, e in enumerate(electrodes) if e.startswith("surface")]
+        if surface:
+            print(f"\n### {mesh}: body-surface electrodes, over the "
+                  f"{len(surface)} electrodes\n")
+            print("| N | h | max | RMS |")
+            print("|---|---|---|---|")
+            prev = None
+            for n, h, v, rows, _ in levels:
+                errs = [abs(v[f"leadFieldStatic_{electrodes[i]}"]
+                            - v[f"exactCentroid_{electrodes[i]}"]) for i in surface]
+                group = (max(errs), math.sqrt(sum(x*x for x in errs)/len(errs)))
+                cells = " | ".join(
+                    f"{x:.3e}" + (f" ({order(prev[1][k], x, prev[0], h)})" if prev else "")
+                    for k, x in enumerate(group))
+                print(f"| {n} | {h:.4f} | {cells} |")
+                prev = (h, group)
 
         print(f"\n### {mesh}: error of the direct static potential field\n")
         print("| N | " + " | ".join(f"{r} RMS | {r} max" for r in REGIONS) + " |")

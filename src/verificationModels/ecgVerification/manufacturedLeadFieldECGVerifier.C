@@ -64,7 +64,8 @@ const wordList manufacturedLeadFieldECGVerifier::fieldRegionNames_
     "phiStatic",
     "phiStatic_heart",
     "phiStatic_torso",
-    "phiStatic_interfaceBand"
+    "phiStatic_interfaceBand",
+    "phiStatic_surface"
 });
 
 
@@ -854,6 +855,21 @@ void manufacturedLeadFieldECGVerifier::recordFieldError(const scalar t)
         }
     }
 
+    // Cells with a face on the outer boundary of the conductor
+    boolList surface(baseMesh.nCells(), false);
+    forAll(baseMesh.boundary(), patchI)
+    {
+        const fvPatch& patch = baseMesh.boundary()[patchI];
+        if (patch.coupled() || isA<emptyFvPatch>(patch))
+        {
+            continue;
+        }
+        for (const label cellI : patch.faceCells())
+        {
+            surface[cellI] = true;
+        }
+    }
+
     // Per region: sum |e| V, sum e^2 V, sum V, max |e|
     List<FixedList<scalar, 4>> sums(fieldRegionNames_.size(), Zero);
     scalar maxE = -1;
@@ -864,8 +880,9 @@ void manufacturedLeadFieldECGVerifier::recordFieldError(const scalar t)
             reference_ == referenceType::sphericalShell ? shellZones_[cellI] : -1;
         const scalar e = mag(phi[cellI] - exactPhi(C[cellI], t, zone));
         const bool inHeart = heart[cellI] > 0.5;
-        const bool member[4] = {true, inHeart, !inHeart, band[cellI]};
-        for (label r = 0; r < 4; ++r)
+        const bool member[5] =
+            {true, inHeart, !inHeart, band[cellI], surface[cellI]};
+        for (label r = 0; r < 5; ++r)
         {
             if (member[r])
             {

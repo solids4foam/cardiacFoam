@@ -7,13 +7,17 @@
 #     postProcessing/manufacturedLeadFieldECGSummary_ECG.dat of the run copies
 #     in one or more results folders. Run copies are grouped by their name
 #     with the token N<n> removed; the rest names the configuration. For every
-#     configuration it prints, separately for the far torso electrodes
-#     (names torso*) and the torso electrodes next to the heart (near*), as
-#     the maximum over the group of the Linf over samples:
+#     configuration it prints, separately for the body-surface electrodes
+#     (names surface*), the interior torso probes (torso*) and the torso
+#     probes next to the heart (near*), as the maximum over the group of the
+#     Linf over samples:
 #       - the reciprocity gap: leadField-direct and
 #         leadFieldStatic-directStatic, relative to the largest |exact|;
 #       - the static errors against the exact potential at the cell
 #         centroid, for the lead field and the direct solve;
+#       - the RMS and maximum error of the direct static potential field over
+#         the whole mesh and over the surface cells (rows phiStatic,
+#         phiStatic_surface);
 #     with the order between consecutive levels of h = (cells/3)^(-1/3)
 #     (1/N on hexahedra). For the layered reference it also prints:
 #       - the static errors against the exact potential at the electrode
@@ -44,9 +48,11 @@ SUMMARY = "postProcessing/manufacturedLeadFieldECGSummary_ECG.dat"
 SAMPLES = "postProcessing/manufacturedLeadFieldECG_ECG.dat"
 N_RE = re.compile(r"(?:^|_)N(\d+)(?=_|$)")
 
-GROUPS = ("torso", "near")
+GROUPS = ("surface", "torso", "near")
 
 STATIC = (
+    ("leadFieldStatic-exactCentroid", "surface", "LF surface"),
+    ("directStatic-exactCentroid", "surface", "direct surface"),
     ("leadFieldStatic-exactCentroid", "torso", "LF torso"),
     ("directStatic-exactCentroid", "torso", "direct torso"),
     ("leadFieldStatic-exactCentroid", "near", "LF near"),
@@ -54,6 +60,8 @@ STATIC = (
 )
 
 STATIC_POINT = (
+    ("leadFieldStatic-exactPoint", "surface", "LF surface"),
+    ("directStatic-exactPoint", "surface", "direct surface"),
     ("leadFieldStatic-exactPoint", "torso", "LF torso"),
     ("directStatic-exactPoint", "torso", "direct torso"),
     ("leadFieldStatic-exactPoint", "near", "LF near"),
@@ -154,6 +162,18 @@ def static_table(runs: list[dict], quantities=STATIC) -> str:
     return table(header, rows)
 
 
+def field_table(runs: list[dict]) -> str:
+    """RMS and maximum error of the direct static field, all and surface."""
+    labels, values = [], []
+    for region in ("phiStatic", "phiStatic_surface"):
+        labels += [f"{region} RMS", f"{region} max"]
+    for r in runs:
+        values.append([r["rows"][region][k]
+                       for region in ("phiStatic", "phiStatic_surface")
+                       for k in (1, 2)])
+    return ordered_table(labels, runs, values)
+
+
 def read_samples(run: Path) -> list[dict[str, float]]:
     """Rows of the per-sample file, as column name -> value."""
     lines = (run / SAMPLES).read_text().splitlines()
@@ -244,6 +264,8 @@ def main() -> None:
         print(reciprocity_table(groups[config]))
         print("\nstatic errors against the exact potential:\n")
         print(static_table(groups[config]))
+        print("\nerror of the direct static potential field:\n")
+        print(field_table(groups[config]))
         if groups[config][0]["reference"] == "layered":
             print("\nstatic errors against the exact potential at the "
                   "electrode point:\n")

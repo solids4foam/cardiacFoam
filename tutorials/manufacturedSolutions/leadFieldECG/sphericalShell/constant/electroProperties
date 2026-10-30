@@ -62,13 +62,24 @@ bidomainSolverCoeffs
                 phiERefPoint    ( 1.3137 0.0371 0.0459 );
                 phiEReferenceValue 0;
             }
-            // Outer bath far from and next to the heart, and inside the
-            // bath ball
+            // Body surface: eight electrodes spread over the outer sphere at
+            // |x| = 1.495, inside its faceted surface at every level, off the
+            // coordinate planes and the cubed-sphere block seams. Interior
+            // probes: three in the outer bath (next to the heart, lateral,
+            // towards the surface) and one inside the bath ball
             electrodePositions
             {
-                outerFar        ( 0.9113 0.8121 -0.6730 );
+                surface1        ( 1.2436 0.8151 -0.1553 );
+                surface2        ( 0.2050 0.6740 1.3186 );
+                surface3        ( 1.1945 -0.8631 -0.2517 );
+                surface4        ( -0.2551 1.4080 -0.4329 );
+                surface5        ( -0.3258 -0.8777 1.1656 );
+                surface6        ( 0.1488 -0.3633 -1.4425 );
+                surface7        ( -1.4160 0.4317 0.2089 );
+                surface8        ( -0.8375 -1.1858 -0.3569 );
                 outerNear       ( 0.0517 1.0713 0.0811 );
                 outerSide       ( -1.2117 -0.4313 0.6271 );
+                outerFar        ( 0.9113 0.8121 -0.6730 );
                 pool            ( 0.1131 -0.0733 0.2117 );
             }
             verificationModel

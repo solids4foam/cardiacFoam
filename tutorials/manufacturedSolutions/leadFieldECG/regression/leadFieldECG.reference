@@ -13,3 +13,7 @@ error    leadFieldStatic-exactCentroid_torsoRight   L2    0.0176705555    1.8e-0
 error    leadFieldStatic-exactCentroid_nearRight    L2    0.0176705555    1.8e-07
 error    directStatic-exactCentroid_torsoRight      L2    0.0176705555    1.8e-07
 error    directStatic-exactCentroid_nearRight       L2    0.0176705555    1.8e-07
+# Body surface: an electrode on the right end face and the cells of the
+# outer boundary (direct solve)
+error    leadFieldStatic-exactCentroid_surface3     L2    0.0176705555    1.8e-07
+error    phiStatic_surface                          L2    0.0116378923    1.8e-07

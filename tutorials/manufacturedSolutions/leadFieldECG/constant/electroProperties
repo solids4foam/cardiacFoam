@@ -47,11 +47,21 @@ _leadFieldTorso
     #includeIfPresent "<case>/local/torso"
 }
 
-// Torso electrodes: two in the left slab and one in the right, and one in
-// each slab next to the heart; none lies on a hexahedral face at
-// N = 10, 20, 40, 80
+// Body surface: eight electrodes 0.003 inside the outer faces of the torso
+// slabs, two on each end face (x = -1, x = 2) and one on each of four side
+// faces, in both layers of -problem layered. Interior probes: two in the left
+// slab and one in the right, and one in each slab next to the heart. None
+// lies on a hexahedral face at N = 10, 20, 40, 80
 _leadFieldElectrodes
 {
+    surface1        ( -0.997 0.3137 0.6871 );
+    surface2        ( -0.997 0.7213 0.2419 );
+    surface3        ( 1.997 0.4127 0.5813 );
+    surface4        ( 1.997 0.8317 0.1733 );
+    surface5        ( -0.3713 0.003 0.4419 );
+    surface6        ( -0.6871 0.5371 0.997 );
+    surface7        ( 1.3317 0.997 0.6137 );
+    surface8        ( 1.7219 0.2713 0.003 );
     torsoLeft       ( -0.4567 0.4137 0.5871 );
     torsoLeftFar    ( -0.8713 0.2311 0.7129 );
     torsoRight      ( 1.5433 0.6173 0.3311 );

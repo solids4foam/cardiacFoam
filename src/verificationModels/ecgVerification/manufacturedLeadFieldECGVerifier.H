@@ -32,7 +32,8 @@ Description
       applied to the exact Vm at the heart cell centres;
     - phiStatic: the error of the directStatic potential field against the
       exact potential at the cell centres, over the whole mesh, the heart,
-      the torso and the interface band (cells with a heart-torso face):
+      the torso, the interface band (cells with a heart-torso face) and the
+      surface (cells with a face on the outer boundary of the conductor):
       mean |e|, volume-weighted RMS and maximum, the largest over the
       samples; the cell of the largest error is logged.
 
@@ -162,7 +163,7 @@ private:
     List<errorNorms> maxNorms_;
     errorNorms relativeGapNorms_;
 
-    //- phiStatic: per region (all, heart, torso, interfaceBand), the
+    //- phiStatic: per region (all, heart, torso, interfaceBand, surface), the
     //  largest mean |e|, RMS and maximum over the samples
     static const wordList fieldRegionNames_;
     List<FixedList<scalar, 3>> fieldErrors_;

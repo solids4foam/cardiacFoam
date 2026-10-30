@@ -58,16 +58,23 @@ potential is constant in each slab, so the torso conductivity
 The verifier gauges the exact potential to 0 at the centroid of the pinned
 cell. The exact ECG between the two slabs is `2 k S`.
 
-Electrodes:
+Electrodes: eight on the body surface, 0.003 inside the outer faces of the
+torso slabs, and five interior probes:
 
 | name | position | exact potential |
 |---|---|---|
+| `surface1`, `surface2` | `(-0.997 0.3137 0.6871)`, `(-0.997 0.7213 0.2419)` (face `x = -1`) | 0 |
+| `surface3`, `surface4` | `(1.997 0.4127 0.5813)`, `(1.997 0.8317 0.1733)` (face `x = 2`) | `2 k S` |
+| `surface5`, `surface6` | `(-0.3713 0.003 0.4419)`, `(-0.6871 0.5371 0.997)` (faces `y = 0`, `z = 1`) | 0 |
+| `surface7`, `surface8` | `(1.3317 0.997 0.6137)`, `(1.7219 0.2713 0.003)` (faces `y = 1`, `z = 0`) | `2 k S` |
 | `torsoLeft`, `torsoLeftFar` | `(-0.4567 0.4137 0.5871)`, `(-0.8713 0.2311 0.7129)` | 0 (a null lead) |
 | `torsoRight` | `(1.5433 0.6173 0.3311)` | `2 k S` |
 | `nearLeft`, `nearRight` | `(-0.0213 0.4521 0.5317)`, `(1.0187 0.3719 0.4613)` | 0, `2 k S` |
 
 `nearLeft` and `nearRight` lie in torso cells next to the heart. No
-electrode lies on a hexahedral face at `N = 10, 20, 40, 80`. The exact
+electrode lies on a hexahedral face at `N = 10, 20, 40, 80`. The verifier
+also writes the error of the direct solve over the cells of the outer
+boundary (`phiStatic_surface`). The exact
 potential is constant in each torso slab, so the point value and the
 centroid value are equal.
 
@@ -156,9 +163,11 @@ combined with the bidomain myocardium. With a current the heart slope
 `alpha/(Gi + Ge)_xx` at the walls carries the intracellular flux
 `alpha Gi_xx/(Gi + Ge)_xx`, which the sealed monodomain `Vm` admits and
 the insulated bidomain intracellular potential does not. The pin and the
-electrodes are those of the slab: `torsoLeftFar` lies in the pinned outer
-layer, `torsoLeft` and `nearLeft` in the inner left layer, `nearRight` in
-the inner right layer and `torsoRight` in the outer right layer. With
+electrodes are those of the slab: `surface1`, `surface2`, `surface6` and
+`torsoLeftFar` lie in the pinned outer layer, `surface5`, `torsoLeft` and
+`nearLeft` in the inner left layer, `surface7` and `nearRight` in the inner
+right layer and `surface3`, `surface4`, `surface8` and `torsoRight` in the
+outer right layer. With
 `alpha != 0` the exact potential varies in the torso, so the point and the
 centroid values differ.
 

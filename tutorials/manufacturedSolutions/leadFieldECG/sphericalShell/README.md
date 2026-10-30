@@ -53,8 +53,11 @@ electrode lies in the myocardium.
   `0/ConductivityExtracellular` and `0/bodyAndOrgansConductivity` written by
   `setManufacturedFields` from the solution at the cell centres;
 - ECG domain: `leadFieldECG`, torso cellZones `bloodPool` and `bath`,
-  `distanceWeightedHarmonic`, pinned in the outer bath; electrodes
-  `outerFar`, `outerNear`, `outerSide` (outer bath) and `pool` (bath ball);
+  `distanceWeightedHarmonic`, pinned in the outer bath; body-surface
+  electrodes `surface1` to `surface8`, spread over the outer sphere at
+  `|x| = 1.495`, inside its faceted surface at every level, and the
+  interior probes `outerNear`, `outerSide`, `outerFar` (outer bath) and
+  `pool` (bath ball);
 - verifier: `manufacturedLeadFieldECGVerifier`, `reference sphericalShell`;
 - schemes: `sealedWallLeastSquares` for `Vm` and `phiE`, `leastSquares`
   elsewhere, `Gauss linear corrected`.
