@@ -238,6 +238,7 @@ removes `local/`, `0/`, the mesh and the lead fields.
 | `-snGrad corrected\|orthogonal` | laplacian and snGrad correction | corrected |
 | `-dt x` | time step | 0.01 |
 | `-endTime x` | end time | 0.05 |
+| `-fixedPointTolerance x` | tolerance of the lead-field and direct fixed points (`leadFieldFixedPoint` in `system/fvSolution`) | 1e-10 |
 
 Outputs in `postProcessing/`:
 

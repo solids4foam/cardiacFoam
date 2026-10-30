@@ -63,6 +63,8 @@ leadFieldFixedPoint
 {
     tolerance       1e-10;
     maxPasses       100;
+
+    #includeIfPresent "<case>/local/fixedPoint"
 }
 
 PIMPLE

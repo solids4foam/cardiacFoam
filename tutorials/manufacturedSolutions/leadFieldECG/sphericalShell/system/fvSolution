@@ -62,7 +62,7 @@ solvers
 leadFieldFixedPoint
 {
     tolerance       1e-10;
-    maxPasses       400;
+    maxPasses       1000;
 }
 
 PIMPLE
