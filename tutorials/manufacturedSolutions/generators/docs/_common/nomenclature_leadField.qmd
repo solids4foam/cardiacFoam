@@ -1,0 +1,27 @@
+| Symbol | Meaning | Unit | Code name |
+|:----|:--------|:----|:---------|
+| $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
+| $t$, $S(t)$ | time, normalised by $1\,\mathrm s$; $\sqrt{1+t}$ | s; -- | `t`; `St` |
+| $\Omega_H$, $\Omega_T$, $\Gamma$ | heart (cellZone `myocardium`); torso (the bath cellZones); heart--torso interface | -- | `cellZone`; `bathCellZones` |
+| $\mathbf n$ | unit normal of $\Gamma$ or of the outer boundary | -- | -- |
+| $V_m$ | transmembrane potential, the heart input of the conductor | V | `Vm` |
+| $\phi$ | potential of the passive conductor (heart and torso) | V | `phiE` |
+| $\mathbf G_i$, $\mathbf G_e$ | intracellular and extracellular conductivity tensors | S m$^{-1}$ | `conductivityIntracellular`, `conductivityExtracellular`; `Gi`, `Ge` |
+| $\sigma$, $\sigma_B$ | torso conductivity; its value in the curved conductor | S m$^{-1}$ | `bodyAndOrgansConductivity`; `sigmaB` |
+| $k$ | $G_{i,xx}/(G_{i,xx}+G_{e,xx})$ of the slab | -- | `slabK_`; `K` (NumPy) |
+| $\sigma_1$, $\sigma_2$, $x_L$, $x_R$ | inner and outer torso layer conductivities; layer interfaces | S m$^{-1}$; m | `torsoInner`, `torsoOuter`; `layerInterfaces` |
+| $\alpha$, $R(x)$ | surface current of the layered slab; $\int_0^x\mathrm dx'/\sigma(x')$ | A m$^{-2}$; m$^2$ S$^{-1}$ | `surfaceCurrentPatches`; `layered_resistance` |
+| $S_H$, $S_T$, $g$ | phiE source in the heart and in the torso; outward current on the outer boundary (curved conductor) | A m$^{-3}$; A m$^{-2}$ | `phiESource`; `shellSource` |
+| $r_1$, $r_2$, $r_3$ | radii of the bath ball, of the heart shell and of the outer sphere | m | `r1`, `r2`, `r3` |
+| $\lambda$, $\omega$, $\theta$ | transmural coordinate; function vanishing on both spheres; fibre angle | --; m; rad | `lam`, `om` (shell generator) |
+| $\mathbf f,\mathbf s,\mathbf e_c$ | fibre, sheet and sheet-normal directions of $\mathbf G_i$ and $\mathbf G_e$ | -- | (shell generator) |
+| $\sigma_{il},\sigma_{it},\sigma_{in}$; $\sigma_{el},\sigma_{et},\sigma_{en}$ | eigenvalues of $\mathbf G_i$ and of $\mathbf G_e$ | S m$^{-1}$ | `gil`, `git`, `gin`; `gel`, `get`, `gen` |
+| $\hat f$, $\hat h$, $a_j$, $b_j$ | smooth extracellular and intracellular fields and their coefficients | V | `fhat`, `hhat`, `fA`, `hA` |
+| $g_j$, $m_j$, $d_j$, $\mathbf n_j$ | wall corrections of sphere $j$; $\partial_n\omega$ on sphere $j$; normal of sphere $j$ out of the heart | -- | `g`, `m` (shell generator) |
+| $\mathbf r_e$, $c(e)$, $\mathbf x_{c(e)}$ | electrode position; the cell that contains it; its centroid | m | `electrodePositions`; `electrodeCells_`; `electrodeCentroids_` |
+| $e$ | an electrode: a body-surface electrode (`surface1` to `surface8`, in a cell with a face on the outer boundary) or an interior probe | -- | `electrodePositions` |
+| $\partial\Omega$ | outer boundary of the conductor; its cells (a face on it) are the region of `phiStatic_surface` | -- | `phiStatic_surface` |
+| $\mathbf r_{\mathrm{ref}}$, $\mathbf x_{\mathrm{ref}}$, $\phi_{\mathrm{ref}}$ | reference point of the conductor; centroid of its cell; reference value | m; m; V | `phiERefPoint`; `referenceCentroid_`; `phiEReferenceValue` |
+| $A$, $\mathbf b$, $\mathbf s$ | discrete forward operator; heart source $-\nabla_h\cdot(\mathbf G_i\nabla_h V_m)$; extra source of the curved conductor | -- | `assemble`; `heartSource`; `shellSource` |
+| $\mathbf z_e$, $c_e$ | lead field of electrode $e$; constant term of its channel | -- | `leadField_<e>`; `constants_` |
+| $V_c$ | volume of cell $c$ | m$^3$ | `V()` |
