@@ -244,3 +244,9 @@ For a new ionic model or tissue phenotype:
 2. use this 1D cable to tune conductivity to the target CV
 3. if using dynamic restitution in eikonal solves, run an S1-S2 protocol to extract functional restitution values
 4. move the calibrated setup into larger tissue or organ cases
+
+## Notes on dictionary entries
+
+The tissue conductivity in `constant/electroProperties` is this tutorial's
+calibration parameter: 3.3 S/m gives roughly 3.0 m/s with the Stewart
+Purkinje/myocyte model.

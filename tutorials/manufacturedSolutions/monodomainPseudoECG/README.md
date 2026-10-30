@@ -16,23 +16,18 @@ problem are this work.
 
 ## Problem
 
-```text
-chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s    in [0,1]^d
-n . grad Vm = 0                                       on every face
-```
-
-`Vm = sqrt(1 + t) F` with
-
-- FDA (`-field fda`, 1D/2D/3D): `F = cos(pi x)`, `cos(pi x) cos(2 pi y)`,
-  `cos(pi x) cos(2 pi y) cos(3 pi z)`; `G = diag(0.111453302, 0.121585420,
-  0.030396355)`
-- anisotropic (`-field anisotropic`, 3D, default): `F = sin^2(pi x)
-  sin^2(pi y) sin^2(pi z)`; `G` the full tensor `(0.106875 -0.0084931
-  -0.022561 0.116682 -0.0130256 0.0398782)`
-
-with `chi = 3`, `Cm = 2` and the FDA ionic closure (`u1`, `u2`, `u3`). The
-pseudo-ECG at 161 electrodes is compared with a Gauss-Legendre order-96
-reference integral of the same field.
+The FDA field (`-field fda`, 1D/2D/3D) and the anisotropic field (`-field
+anisotropic`, 3D, default) are defined in the construction document
+[monodomain_mms.pdf](../generators/docs/monodomain/monodomain_mms.pdf), sections
+"FDA cube", "Rotated anisotropic cube" and "Pseudo-ECG", with the generators
+[`fda_monodomain_mms.py`](../generators/fda_monodomain_mms.py),
+[`rotated_monodomain_mms.py`](../generators/rotated_monodomain_mms.py) and
+[`pseudo_ecg_mms.py`](../generators/pseudo_ecg_mms.py) and the NumPy references
+[`fda_monodomain.py`](../generators/reference/fda_monodomain.py),
+[`rotated_monodomain.py`](../generators/reference/rotated_monodomain.py) and
+[`pseudo_ecg.py`](../generators/reference/pseudo_ecg.py). The pseudo-ECG at 161
+electrodes is compared with a Gauss-Legendre order-96 reference integral of the
+same field.
 
 ### Stack
 
@@ -111,3 +106,33 @@ tables.
 
 - [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
   conductivity that rotates through the wall.
+
+## Notes on dictionary entries
+
+**Slab meshes.** `system/blockMeshDict.2D` is an `nx x ny x 1` slab, thin in z
+with `empty` faces; `system/blockMeshDict.3D` is a unit slab with
+`(nx ny nz)` cells in x, y and z. `sphericalShell/system/blockMeshDict` builds
+the heart shell `r1 < |x| < r2` as six projected blocks of a cubed sphere;
+`N` (a multiple of 4) sets `k = N/4`: `3k` cells along a cube-face edge and
+`2k` radially, i.e. `N` cells per unit length radially.
+
+**Electrodes (cube).** The five-point set is kept for the tet per-electrode
+table (`tbl-tet-pseudoecg-electrodes`). The random scatter adds 156 points
+(`R1-R156`): direction uniform on the sphere, standoff uniform in
+`[0.05, 1.0]` from the nearest cube surface point (below 0.05 risks the
+near-boundary mesh layer; above ~1.0 the field has decayed too far for the
+distance to discriminate). `R1-R56` and `R57-R156` are independent draws,
+concatenated so that the first 56 stay fixed if the set is extended. Each
+point is placed by exiting the cube along the ray from the centre
+`(0.5, 0.5, 0.5)` and going the standoff distance further.
+
+**Electrodes (spherical shell).** Five directions with `|e| = 1.2, 1.4, 1.6,
+1.8, 2.0`. The pseudo-ECG of the shell field is off unless `Allrun -ecg`
+writes `ecg yes;` to `local/ecg`. The reference integrates
+`(G grad F).(x - e)/|x - e|^3` over the shell with a spherical Gauss rule;
+electrodes lie outside the outer sphere `|x| = 1`. `Allrun -electrodes <file>`
+copies the file in (`name (x y z);` lines, `|x| > 1`).
+
+**Solver settings.** In `system/fvSolution`, one additional deferred-correction
+assembly gives the same result as two outer sweeps and assigns the iteration
+count correctly.

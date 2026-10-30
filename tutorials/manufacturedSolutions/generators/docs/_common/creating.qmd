@@ -1,0 +1,125 @@
+## Creating a new manufactured solution {#sec-creating}
+
+A new manufactured solution is a new generator in
+`tutorials/manufacturedSolutions/generators/`. The steps below go from a copy
+of the template to a case that cardiacFoam runs and checks.
+
+### Copy the template
+
+`template_mms.py` is the smallest complete generator: a passive monodomain
+field on the unit square with a diagonal conductivity and no ionic current,
+
+{{< include ../../latex/template_Vm.tex >}}
+
+{{< include ../../latex/template_S.tex >}}
+
+{{< include ../../latex/template_params.tex >}}
+
+Copy it and its test, rename both, and edit every step marked `REPLACE`:
+`REFERENCE_NAME`, the coordinates, the constants, `exact_field`, `operator`,
+the self-checks and the emitted fragments.
+
+```bash
+cp template_mms.py mycase_mms.py
+cp test_template_mms.py test_mycase_mms.py
+```
+
+### Choose the exact field
+
+Choose the field so that the boundary condition holds by construction; the
+solver's boundary treatment is then measured, not assumed. The generators of
+this folder use four patterns:
+
+- a field whose gradient vanishes on every face, so every conormal flux is
+  zero for any tensor (rotated cube, $\sin^2$ factors);
+- a cosine eigenfunction of the operator with zero normal derivative on the
+  faces of a box (FDA cube, the template);
+- a sealing correction $F=\hat h+\omega m$ on a curved wall: $\omega$ vanishes
+  on the walls and $m$ cancels the conormal derivative of $\hat h$ there (the
+  "Sealed spherical shell" section of this document);
+- Dirichlet data plus pinned cells: the exact field is imposed on every face
+  and on a layer of cells, so no flux condition is needed (Cartesian
+  eikonal); this leaves the wall treatment untested.
+
+Keep every factor smooth beyond the domain: polyhedral meshes put cell and
+face centres slightly outside a curved wall.
+
+### Derive the source
+
+Write the operator the solver implements, with its signs and scalings, and
+take the source as its residual on the exact field, symbolically. For the
+monodomain equation that means the full tensor divergence
+$\nabla\cdot(\boldsymbol\sigma\nabla V_m)$, including the derivatives of a
+spatially varying tensor, the $\chi C_m$ scaling of the time derivative, and
+the capacitance-normalised ionic current $I_{\mathrm{ion}}=J_{\mathrm{ion}}/C_m$
+that enters as $-\chi C_m I_{\mathrm{ion}}$. A source derived for a
+different convention converges to the wrong field.
+
+### Write the self-checks first
+
+Each check fails before anything is written. The traps met in this folder,
+with the check that catches each:
+
+| trap | check |
+|:-------------|:--------------------|
+| residual nonzero because a constant is rounded | keep constants as exact rationals; where a rounded constant is part of the problem, check the residual against a stated tolerance (FDA $\beta_d$) |
+| conormal flux not zero on a curved wall | evaluate $\mathbf n\cdot\boldsymbol\sigma\nabla F$ on each wall at high precision (30 digits) |
+| denominator that crosses zero | minimum of every denominator over the domain, extended past the walls, is positive |
+| eikonal critical points | locate them; the Morse count (minima $-$ saddles $+$ maxima) on each sphere is 2 and every point is non-degenerate |
+| electrode or quadrature node on a singular point | a coincident point contributes zero, with the solver's `VSMALL` guard reproduced in the generator |
+| float sums that change with the Python version | `math.fsum` for every sum of floats |
+| cancellation in a quadrature or finite-difference check | scale the tolerance by the sum of the absolute terms, not by the result |
+| printed constant that hides digits | `printed_constant(value, digits)` asserts the printed decimal round-trips |
+
+Add a finite-difference evaluation of the operator on the exact field and
+compare it with the source; it catches an operator written for the wrong
+convention, which the symbolic residual cannot.
+
+### Emit and document
+
+`python mycase_mms.py --emit` writes `reference/mycase.py` and
+`latex/mycase_*.tex`. Add a section to the document of the equation by copying
+an existing case section and keeping its order: Description and limitations,
+Problem instance, Construction, Exact solution, Self-checks, Figures,
+Regeneration. Print every formula by including its fragment from
+`../../latex/`, as the existing sections do; the release test fails if an
+emitted fragment is included nowhere. Add the figures as a function of
+`docs/<equation>/figures.py`, add the generator to `GENERATORS` of
+`test_release.py` and to `CLI_GENERATORS` of `test_mms_codegen.py`, and render:
+
+```bash
+python docs/monodomain/figures.py
+quarto render docs/monodomain/monodomain_mms.qmd --to pdf
+```
+
+### Use it in cardiacFoam
+
+1. Write or extend a verifier in `src/verificationModels/<equation>Verification/`
+   that evaluates the reference on the mesh and reports the error norms.
+2. Generate its reference header with `--write PATH`: either a whole header,
+   or the lines between `// BEGIN GENERATED <name>` and
+   `// END GENERATED <name>` of a hand-written one. Map the header name to
+   its region function in `HEADERS` of the generator (`HEADERS = {}` in the
+   template).
+3. Add the case to `parity/mmsParity.C` and `CASES` of `parity/test_parity.py`,
+   and a `test_parity_<case>` to the generator test that compares the
+   compiled header with `reference/mycase.py`.
+4. Add a tutorial case in `tutorials/manufacturedSolutions/` with `Allrun`, a
+   `regression/regressionTest.sh` on `tutorials/regression/lib.sh` and its
+   reference, and mark it in the case table of `tutorials/README.md`.
+5. Check the header, the parity and the regression:
+
+   ```bash
+   python mycase_mms.py --check PATH
+   python -m pytest parity/test_parity.py test_mycase_mms.py
+   ```
+
+   then run `regression/regressionTest.sh` of the tutorial case.
+
+### Reproduce
+
+A new generator is reproduced like the existing ones: set up the environment,
+run `--self-check` and `--emit`, the tests, the slow release test and the
+renders, as in the previous section. The release test then runs the new
+generator from a fresh environment and checks that its emitted files are
+unchanged.

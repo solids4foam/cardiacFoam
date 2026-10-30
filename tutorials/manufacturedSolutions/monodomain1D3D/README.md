@@ -18,36 +18,31 @@ are this work.
 
 ## Problem
 
-```text
-chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s + S_pvj          in [0,1]^3
-n . grad Vm = 0                                                      on every face
-chi Cm dV1D/dt = d/ds(g dV1D/ds) - chi Cm Iion1D + I_s1D (+ I_app1D) on each graph edge
-```
+The tissue field, the graph field and the junction are defined in the
+construction document
+[monodomain_mms.pdf](../generators/docs/monodomain/monodomain_mms.pdf), sections
+"Coupled 1D--3D junction", "Purkinje graph" and "FDA cube", with the generators
+[`coupled_1d3d_mms.py`](../generators/coupled_1d3d_mms.py),
+[`graph_monodomain_mms.py`](../generators/graph_monodomain_mms.py) and
+[`fda_monodomain_mms.py`](../generators/fda_monodomain_mms.py) and the NumPy
+references [`coupled_1d3d.py`](../generators/reference/coupled_1d3d.py),
+[`graph_monodomain.py`](../generators/reference/graph_monodomain.py) and
+[`fda_monodomain.py`](../generators/reference/fda_monodomain.py). Neither the
+graph nor the tissue receives a bulk manufactured source; the applied terms are
+the exact junction source and, for bidirectional coupling, the graph terminal
+term.
 
-`Vm = sqrt(1 + t) cos(pi x) cos(2 pi y) cos(3 pi z)` and `V1D = sqrt(1 + t)
-cos(pi x)` at graph position `x`, with `G = diag(0.111453302, 0.121585420,
-0.030396355)`, graph conductivity `g = 0.111453302`, `chi = 3`, `Cm = 2` and
-the FDA ionic closure (`u1`, `u2`, `u3`) in both domains; `I_s` and `I_s1D`
-are the manufactured sources added by the verifiers.
-
-The graph runs from the root `(1/2, 1/6, 1/3)` along two straight branches to
-the terminals `(0, 1/6, 1/3)` and `(1, 1/6, 1/3)`. There `d Vm/dx = 0`, so the
-3D no-flux condition holds, and `Vm = -V1D/2`, so the junction current does not
-vanish: with `R_pvj = 1` the exact terminal currents are `+-(3/2) sqrt(1 + t)`.
-
-At terminal `k` the junction current `I_pvj,k = (V1D_k - M_k[Vm])/R_pvj`
-samples the tissue voltage with the volume-weighted map `M_k` and is deposited
-as `S_pvj` with a linear kernel of radius 0.11 normalised to unit integral.
-`unidirectional` keeps only the tissue source; `bidirectional` also applies
-`I_app1D = -I_pvj,k` at the graph terminal, which the network loses from the
-volume `π ρ² L` of its terminal node, so the case sets `purkinjeFibreRadius`
-to `1/√π` m (the unit cross-section the manufactured junction current assumes)
-instead of the 20 µm default. `explicit` deposits the terminal current;
-`implicit` assembles a cell-local sink in the tissue voltage (unidirectional
-only; bidirectional transfer is always explicit). The verifiers add the exact
-junction source, computed from the exact fields with the same map and kernel,
-to the manufactured sources and write the difference between the numerical and
-the exact junction source.
+The junction current at a terminal is deposited as `S_pvj` with a linear kernel
+of radius `pvjRadius 0.11` and `R_pvj = 1` (`-rPvj`). `unidirectional` keeps
+only the tissue source; `bidirectional` also applies the negative junction
+current at the graph terminal, which the network loses from the volume of its
+terminal node, so the case sets `purkinjeFibreRadius` to `1/sqrt(pi)` m (the
+unit cross-section the manufactured junction current assumes) instead of the
+20 um default. `explicit` deposits the terminal current; `implicit` assembles a
+cell-local sink in the tissue voltage (unidirectional only; bidirectional
+transfer is always explicit). The verifiers add the exact junction source,
+computed from the exact fields with the same map and kernel, and write the
+difference between the numerical and the exact junction source.
 
 ### Stack
 

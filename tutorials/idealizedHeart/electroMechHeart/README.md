@@ -27,3 +27,47 @@ The isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test ap
 ## Run prerequisites
 
 This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun parallel`). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live in `../mesh/` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
+
+## Notes on dictionary entries
+
+**Stimulus.** The apical stimulus box in `constant/electro/electroProperties`
+contains 26 cell centres at the mesh apex, where the supplied `apicobasal`
+coordinate is smallest. All values are SI: `Allrun` scales the mesh to
+adult-heart dimensions. The ionic and mechanical states remain at rest for 2 ms
+before the apical pacing pulse begins.
+
+**Run length.** `endTime` covers complete ventricular activation and the
+electromechanical response; the write interval is 5 ms.
+
+**Active tension.** `0/solid/Ta` is the initial active tension. The
+electromechanical model registers and solves `Ta`, but the solid model builds
+its stiffness while it is constructed, before that field exists, so
+`electroMechanicalLaw` reads `Ta` from this file. In
+`constant/electroMechanicalProperties` the `Batched` variants of the
+active-tension models (`LandNiedererTWorldBatched`, `NashPanfilovBatched`) use
+GPU/OpenMP vectorisation with `batchedSubsteps` explicit substeps per
+mechanics step and `batchedParallelCells` for CPU multi-threading. Batched
+active tension always integrates with explicit Euler (its states are not stiff,
+the fastest time constant being ~0.7 ms), so it has no `batchedIntegrator`
+key; that key belongs to the ionic model only. `preconditioningTime` (default
+1000 ms, 0 disables) overrides the pre-conditioning time; the resting `Cai` is
+queried from the ionic model's initial state. The `ODESolver` settings apply
+to the scalar `LandNiedererTWorld` only.
+
+**Solid solver.** In `constant/solid/solidProperties`, `rTol` is the relative
+residual (converged when residual < rTol x initial residual; the solver
+plateaus at ~12 % of the initial residual because of under-relaxation, which
+0.2 accepts), `aTol` the absolute residual, and `sTol` the step norm
+(converged when deltaX < sTol x xNorm). `0/solid/D`: the basal cut plane
+anchors this simplified, unloaded ventricle.
+
+**Mesh and decomposition.** `system/decomposeParDict` uses six contiguous
+base-to-apex strips along global x, matching the regional electro and solid
+decomposition dictionaries. The top-level `system/fvSchemes` and
+`system/fvSolution` are dummies for the parent region and are not used
+directly. `system/electro/setExprFieldsDict` preloads `tm` so the expression
+reads an owned, mutable field.
+
+**Probes.** `Taprobes` and `CaiProbes` sample the active tension and `Cai` at
+the apex (inside the stimulus region, `(0.077286 -0.000616 0.004096)`) and the
+mid-wall (later activation, `(0.024482 0.017758 -0.001906)`).

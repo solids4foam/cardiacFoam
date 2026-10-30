@@ -1,0 +1,39 @@
+| Symbol | Meaning | Unit | Code name |
+|:----|:--------|:----|:---------|
+| $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
+| $d$, $\Omega$, $\mathbf n$ | spatial dimension; the domain; outward unit normal of $\partial\Omega$ | --; --; -- | `dim`, `d` |
+| $t$ | time, normalised by $1\,\mathrm s$ | s | `t` |
+| $V_m$ | transmembrane potential | V | `Vm` |
+| $\boldsymbol\sigma$ | conductivity tensor of the monodomain equation | S m$^{-1}$ | `conductivity`; `G` (shell generators), `K` (rotated cube), `sigma` (NumPy) |
+| $\chi$ | membrane surface-to-volume ratio | m$^{-1}$ | `chi` |
+| $C_m$ | membrane capacitance per unit area | F m$^{-2}$ | `cm` |
+| $I_{\mathrm{ion}}$ | capacitance-normalised ionic current, $J_{\mathrm{ion}}/C_m$ | V s$^{-1}$ | (solver side) |
+| $J_{\mathrm{ion}}$ | ionic current returned by the manufactured ionic model | A m$^{-2}$ (case units) | `Iion` |
+| $I_{\mathrm{app}}$, $S$ | applied volumetric current; the manufactured source | A m$^{-3}$ | `source` |
+| $\mathbf w$, $\mathbf F$ | state vector of a general ionic model; its rate | case units | -- |
+| $u_1,u_2,u_3$ | auxiliary states of the manufactured ionic model | case units | `u1`, `u2`, `u3` |
+| $\beta$, $\beta_d$ | reaction coefficient of the manufactured ionic model in dimension $d$ | case units | `Beta`, `BETA` |
+| $F_d$, $G_d$ | spatial factors of $V_m$ and of the auxiliary states | case units | `F`, `G` (FDA generator) |
+| $k_d$ | eigenvalue of $-\nabla\cdot(\boldsymbol\sigma\nabla\,\cdot)$ for $F_d$ | s$^{-1}$ (case units) | `eigenvalue(d)` |
+| $r_1$, $r_2$ | inner and outer radius of the shell | m | `r1`, `r2` |
+| $\lambda$, $\omega$ | transmural coordinate; function vanishing on both spheres | -- | `lam`, `om` |
+| $\mathbf f,\mathbf s,\mathbf n_s$ | fibre, sheet and sheet-normal directions | -- | (shell generator) |
+| $\mathbf e_a,\mathbf e_b$ | fixed frame of the shell fibre rotation | -- | (shell generator) |
+| $\sigma_f,\sigma_s,\sigma_n$ | conductivities along $\mathbf f$, $\mathbf s$, $\mathbf n_s$ | S m$^{-1}$ | `gil`, `git`, `gin` |
+| $\theta_0,\theta_1$ | fibre angle at the inner wall and its transmural increment | deg | `theta0`, `theta1` |
+| $\gamma_1,\gamma_2$ | rotation angles of the fixed frame | deg | `gamma1`, `gamma2` |
+| $\hat h$, $a_1,a_2,a_3$, $k$ | unsealed shell field and its coefficients | case units | `hhat`, `hA[0..2]`, `k` |
+| $m_j$, $m$, $d_j$, $\mathbf n_j$ | wall correction of sphere $j$, its blend, $\partial_n\omega$ on sphere $j$, unit normal of sphere $j$ out of the heart | -- | (shell generator) |
+| $g$ | positive spatial factor of the shell auxiliary states, in place of $G_d$ (shell only) | case units | `g` |
+| $\mathbf r_e$, $\Phi_e$ | electrode position; pseudo-ECG functional | m; case units | `electrodePositions`; `pseudoECG` |
+| $\mathbf r$, $\varphi_d$ | $\mathbf x-\mathbf r_e$; integrand of $\Phi_e$ in dimension $d$ | m; case units | `integrand_d<d>` |
+| $c_{\mathrm{ECG}}$ | normalisation of the pseudo-ECG functional, here 1 | -- | -- |
+| $q$; $\mu$, $\vartheta$ | Gauss--Legendre points of the shell quadrature; $\cos\vartheta$; polar angle | -- | -- |
+| $q_{\mathrm{ref}}$ | Gauss--Legendre points per axis of the reference quadrature | -- | `referenceQuadratureOrder` |
+| $V_{1D}$, $g_e$ | graph transmembrane potential; graph edge conductivity (graph only) | V; S m$^{-1}$ | `Vm1D`; `purkinjeConductivity` |
+| $R_{1D}$, $I_{\mathrm{app},1D}$ | residual of the graph equation; terminal term of the graph | case units | `residual_1D`; -- |
+| $\mathbf x_{\mathrm{root}}$, $\mathbf x_k$, $L_e$ | graph root; terminal $k$; length of edge $e$ | m | `ROOT`, `TERMINALS` |
+| $\rho$, $V_k$ | Purkinje fibre radius; volume of graph node $k$ | m; m$^3$ | `purkinjeFibreRadius` |
+| $R_{\mathrm{PVJ}}$, $r_{\mathrm{PVJ}}$ | junction resistance; kernel radius | case units; m | `rPvj`; `pvjRadius` |
+| $I_{\mathrm{PVJ},k}$, $S_{\mathrm{PVJ}}$ | junction current of terminal $k$; junction source | case units | `continuum_current`; `continuum_junction_source` |
+| $w_k$, $B_k$, $\bar V_k$ | linear kernel of terminal $k$; ball of radius $r_{\mathrm{PVJ}}$ about $\mathbf x_k$; sampled tissue potential | --; --; V | `pvjKernel linear`; --; `continuum_sampling` |
