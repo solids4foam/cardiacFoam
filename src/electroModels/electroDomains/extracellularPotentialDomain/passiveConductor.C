@@ -21,6 +21,7 @@ License
 #include "extracellularFaceConductivity.H"
 #include "insulatedFaceConductivity.H"
 #include "interfaceGradient.H"
+#include "conormalStabilisation.H"
 #include "PstreamReduceOps.H"
 #include "fixedValueFvPatchFields.H"
 #include "surfaceFields.H"
@@ -199,16 +200,14 @@ passiveConductor::passiveConductor
 {
     if
     (
-        interfaceConductivityInterpolation_ != "unweightedHarmonic"
-     && interfaceConductivityInterpolation_ != "distanceWeightedHarmonic"
+        interfaceConductivityInterpolation_ != "distanceWeightedHarmonic"
      && interfaceConductivityInterpolation_ != "conormalHarmonic"
     )
     {
         FatalErrorInFunction
             << "Unknown interfaceConductivityInterpolation '"
             << interfaceConductivityInterpolation_ << "'. Valid values are "
-            << "unweightedHarmonic, distanceWeightedHarmonic and "
-            << "conormalHarmonic."
+            << "distanceWeightedHarmonic and conormalHarmonic."
             << exit(FatalError);
     }
 
@@ -501,6 +500,28 @@ void passiveConductor::buildSigmaExtracellularSurface()
     );
 
     surfaceTensorField& Sef = sigmaExtracellularfPtr_();
+
+    // Myocardium membership from the heart cell map, with coupled neighbours
+    volScalarField heartFlag
+    (
+        IOobject
+        (
+            "heartFlag",
+            m.time().timeName(),
+            m,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE,
+            false
+        ),
+        m,
+        dimensionedScalar(dimless, 0)
+    );
+    for (const label baseCellI : heartCellToBaseCell_)
+    {
+        heartFlag[baseCellI] = 1;
+    }
+    heartFlag.correctBoundaryConditions();
+
     const labelUList& own = m.owner();
     const labelUList& nei = m.neighbour();
     const tensorField& sigmaI = sigma.primitiveField();
@@ -512,8 +533,8 @@ void passiveConductor::buildSigmaExtracellularSurface()
     {
         const label ownCell = own[faceI];
         const label neiCell = nei[faceI];
-        const bool ownHeart = magSqr(sigmaIntracellularI[ownCell]) > SMALL;
-        const bool neiHeart = magSqr(sigmaIntracellularI[neiCell]) > SMALL;
+        const bool ownHeart = heartFlag[ownCell] > 0.5;
+        const bool neiHeart = heartFlag[neiCell] > 0.5;
         const bool wallFace = ownHeart != neiHeart;
         const tensor ownSigmaE =
             ownHeart && !(wallFace && totalWallConductivity_)
@@ -537,14 +558,7 @@ void passiveConductor::buildSigmaExtracellularSurface()
                     ownSigmaE, neiSigmaE, weights[faceI]
                 );
         }
-        else if (interfaceConductivityInterpolation_ == "unweightedHarmonic")
-        {
-            SefI[faceI] = extracellularFaceConductivity::unweightedHarmonic
-            (
-                ownSigmaE, neiSigmaE
-            );
-        }
-        else if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+        else
         {
             SefI[faceI] = extracellularFaceConductivity::conormalHarmonic
             (
@@ -554,17 +568,6 @@ void passiveConductor::buildSigmaExtracellularSurface()
                 1.0 - weights[faceI],
                 weights[faceI]
             );
-        }
-        else
-        {
-            SefI[faceI] =
-                extracellularFaceConductivity::distanceWeightedHarmonic
-                (
-                    ownSigmaE,
-                    neiSigmaE,
-                    1.0 - weights[faceI],
-                    weights[faceI]
-                );
         }
     }
 
@@ -588,6 +591,14 @@ void passiveConductor::buildSigmaExtracellularSurface()
             (
                 sigmaIglobal.boundaryField()[patchI].patchNeighbourField()
             );
+            const scalarField heartP
+            (
+                heartFlag.boundaryField()[patchI].patchInternalField()
+            );
+            const scalarField heartN
+            (
+                heartFlag.boundaryField()[patchI].patchNeighbourField()
+            );
 
             Field<tensor>& Sefp = Sef.boundaryFieldRef()[patchI];
             const scalarField& patchWeights =
@@ -596,8 +607,8 @@ void passiveConductor::buildSigmaExtracellularSurface()
 
             forAll(Sefp, faceI)
             {
-                const bool pHeart = magSqr(sigmaIP[faceI]) > SMALL;
-                const bool nHeart = magSqr(sigmaIN[faceI]) > SMALL;
+                const bool pHeart = heartP[faceI] > 0.5;
+                const bool nHeart = heartN[faceI] > 0.5;
                 const bool wallFace = pHeart != nHeart;
                 const tensor pSigmaE =
                     pHeart && !(wallFace && totalWallConductivity_)
@@ -620,23 +631,7 @@ void passiveConductor::buildSigmaExtracellularSurface()
                             pSigmaE, nSigmaE, patchWeights[faceI]
                         );
                 }
-                else if
-                (
-                    interfaceConductivityInterpolation_
-                 == "unweightedHarmonic"
-                )
-                {
-                    Sefp[faceI] =
-                        extracellularFaceConductivity::unweightedHarmonic
-                        (
-                            pSigmaE, nSigmaE
-                        );
-                }
-                else if
-                (
-                    interfaceConductivityInterpolation_
-                 == "conormalHarmonic"
-                )
+                else
                 {
                     Sefp[faceI] =
                         extracellularFaceConductivity::conormalHarmonic
@@ -644,17 +639,6 @@ void passiveConductor::buildSigmaExtracellularSurface()
                             pSigmaE,
                             nSigmaE,
                             patchNf[faceI],
-                            1.0 - patchWeights[faceI],
-                            patchWeights[faceI]
-                        );
-                }
-                else
-                {
-                    Sefp[faceI] = extracellularFaceConductivity::
-                        distanceWeightedHarmonic
-                        (
-                            pSigmaE,
-                            nSigmaE,
                             1.0 - patchWeights[faceI],
                             patchWeights[faceI]
                         );
@@ -709,6 +693,7 @@ tmp<fvScalarMatrix> passiveConductor::assemble
         tphiEqn =
         (
             fvm::laplacian(gammaNN, psi)
+          + conormalStabilisation(Sef, psi)
           + fvc::div(SfGammaCorr & linearInterpolate(tgrad()))
         );
         if (source)
@@ -736,7 +721,11 @@ tmp<fvScalarMatrix> passiveConductor::assemble
     }
     else
     {
-        tphiEqn = fvm::laplacian(sigmaExtracellularfPtr_(), psi);
+        tphiEqn =
+        (
+            fvm::laplacian(sigmaExtracellularfPtr_(), psi)
+          + conormalStabilisation(sigmaExtracellularfPtr_(), psi)
+        );
         if (source)
         {
             tphiEqn.ref() -= *source;
@@ -750,16 +739,14 @@ tmp<fvScalarMatrix> passiveConductor::assemble
     fvScalarMatrix& phiEqn = tphiEqn.ref();
 
     {
+        const tmp<surfaceTensorField> tGif
+        (
+            insulatedFaceConductivity(Gi_, sealingField_, sealedHeartBoundary_)
+        );
         fvScalarMatrix heartPhiEqn
         (
-            fvm::laplacian
-            (
-                insulatedFaceConductivity
-                (
-                    Gi_, sealingField_, sealedHeartBoundary_
-                ),
-                heartPsi
-            )
+            fvm::laplacian(tGif(), heartPsi)
+          + conormalStabilisation(tGif(), heartPsi)
         );
         const labelUList& heartFaceMap = heartFaceToBaseFace_;
         const labelUList& heartOwner = heartPsi.mesh().owner();

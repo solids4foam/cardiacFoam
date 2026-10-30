@@ -416,7 +416,7 @@ int main(int argc, char* argv[])
     const word method = bath.lookupOrDefault<word>
     (
         "interfaceConductivityInterpolation",
-        "unweightedHarmonic"
+        "distanceWeightedHarmonic"
     );
     const word assembly("matchedSubmesh");
 
@@ -487,21 +487,14 @@ int main(int argc, char* argv[])
                     ownSigmaE, neiSigmaE, weights[faceI]
                 );
         }
-        else if (method == "unweightedHarmonic")
-        {
-            sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::unweightedHarmonic
-                (
-                    ownSigmaE, neiSigmaE
-                );
-        }
         else
         {
             sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::distanceWeightedHarmonic
+                extracellularFaceConductivity::conormalHarmonic
                 (
                     ownSigmaE,
                     neiSigmaE,
+                    mesh.Sf()[faceI]/mesh.magSf()[faceI],
                     1.0 - weights[faceI],
                     weights[faceI]
                 );

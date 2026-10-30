@@ -24,7 +24,7 @@ Options (parameters are written to local/ and included by the dictionaries):
                                                phiE pinned at phiERefPoint
   -predictorCorrector yes|no
                             bathPredictorCorrector (default yes)
-  -interface distanceWeightedHarmonic|unweightedHarmonic
+  -interface distanceWeightedHarmonic|conormalHarmonic
                             interfaceConductivityInterpolation (default
                             distanceWeightedHarmonic)
   -gradient leastSquares|GaussLinear
@@ -119,7 +119,7 @@ do
             ;;
         -interface)
             needValue "$@"; interface="$2"; shift
-            oneOf -interface "$interface" distanceWeightedHarmonic unweightedHarmonic
+            oneOf -interface "$interface" distanceWeightedHarmonic conormalHarmonic
             ;;
         -gradient)
             needValue "$@"; gradient="$2"; shift

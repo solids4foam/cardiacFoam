@@ -87,8 +87,9 @@ public:
         //  (default bodyAndOrgansConductivity)
         word bathConductivityField;
 
-        //- Heart-torso face interpolation
-        //  (default distanceWeightedHarmonic)
+        //- Heart-torso faces carry the flux-continuous face conductivity;
+        //  distanceWeightedHarmonic (default) uses the standard cell
+        //  gradient for its cross term, conormalHarmonic the jump-aware one
         word interfaceConductivityInterpolation;
 
         //- Dirichlet patches and their values
