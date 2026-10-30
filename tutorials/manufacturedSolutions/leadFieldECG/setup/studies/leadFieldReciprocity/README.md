@@ -44,9 +44,11 @@ This study adds:
 
 The `parallel` rows run on 2 ranks; every other run is serial.
 
-All runs use `-endTime 0.02` (two samples, `dt = 0.01`). The electrodes are
-the case's torso electrodes, in two groups: `torso` (away from the heart)
-and `near` (in torso cells next to the heart).
+All runs use `-endTime 0.02` (two samples, `dt = 0.01`) and build 13 lead
+fields, one per electrode. The electrodes are those of the case, in three
+groups: `surface` (`surface1` to `surface8`, the body-surface electrodes of
+the ECG), and the interior probes `torso` (away from the heart) and `near`
+(in torso cells next to the heart).
 
 ## Execution
 
@@ -58,7 +60,8 @@ mkdir -p results
 run()
 {
     name=$1; shift
-    rsync -a --exclude setup ../../../ results/$name/
+    rsync -a --exclude setup --exclude regression --exclude sphericalShell \
+        ../../../ results/$name/
     bash results/$name/Allrun "$@" -endTime 0.02
 }
 for n in 10 14 20
@@ -89,72 +92,82 @@ the exact `Vm`. Tetrahedra: 14792, 39131, 111482 and 299957 cells at
 
 Hexahedra (corrected; the snGrad scheme has no effect there):
 
-| configuration | N | torso dynamic | torso static | near dynamic | near static |
-|---|---|---|---|---|---|
-| default | 10 | 2.451e-13 | 2.806e-13 | 7.693e-14 | 3.080e-13 |
-|  | 20 | 1.161e-12 | 6.813e-13 | 1.298e-12 | 6.731e-13 |
-|  | 40 | 1.481e-12 | 2.955e-12 | 1.248e-12 | 1.988e-12 |
-| `unequal` | 10 | 1.637e-13 | 2.584e-13 | 3.400e-13 | 6.903e-13 |
-|  | 20 | 6.848e-13 | 6.368e-13 | 1.219e-12 | 1.169e-12 |
-|  | 40 | 9.855e-13 | 2.929e-12 | 1.008e-12 | 2.998e-12 |
-| bidomain | 10 | 1.470e-13 | 9.779e-14 | 1.206e-13 | 6.607e-14 |
-|  | 20 | 2.470e-13 | 8.419e-14 | 2.652e-13 | 9.468e-14 |
-|  | 40 | 1.842e-13 | 4.604e-13 | 4.148e-13 | 7.231e-13 |
-| parallel (2 ranks) | 20 | 3.591e-12 | 1.566e-12 | 2.062e-12 | 2.298e-12 |
+| configuration | N | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
+|---|---|---|---|---|---|---|---|
+| default | 10 | 2.689e-13 | 5.389e-13 | 2.451e-13 | 2.806e-13 | 7.693e-14 | 3.080e-13 |
+|  | 20 | 1.070e-12 | 7.111e-13 | 1.161e-12 | 6.813e-13 | 1.298e-12 | 6.731e-13 |
+|  | 40 | 1.492e-12 | 2.950e-12 | 1.481e-12 | 2.955e-12 | 1.248e-12 | 1.988e-12 |
+| `unequal` | 10 | 3.032e-13 | 4.854e-13 | 1.637e-13 | 2.584e-13 | 3.400e-13 | 6.903e-13 |
+|  | 20 | 5.437e-13 | 4.913e-13 | 6.848e-13 | 6.368e-13 | 1.219e-12 | 1.169e-12 |
+|  | 40 | 1.449e-12 | 2.903e-12 | 9.855e-13 | 2.929e-12 | 1.008e-12 | 2.998e-12 |
+| bidomain | 10 | 1.660e-13 | 1.147e-13 | 1.470e-13 | 9.779e-14 | 1.206e-13 | 6.607e-14 |
+|  | 20 | 3.695e-13 | 1.957e-13 | 2.470e-13 | 8.419e-14 | 2.652e-13 | 9.468e-14 |
+|  | 40 | 5.191e-13 | 8.134e-13 | 1.842e-13 | 4.604e-13 | 4.148e-13 | 7.231e-13 |
+| parallel (2 ranks) | 20 | 3.778e-12 | 3.076e-12 | 3.591e-12 | 1.566e-12 | 2.062e-12 | 2.298e-12 |
 
 Tetrahedra:
 
-| configuration | N | torso dynamic | torso static | near dynamic | near static |
-|---|---|---|---|---|---|
-| default (corrected, anisotropic) | 10 | 4.646e-11 | 4.142e-11 | 3.756e-11 | 3.455e-11 |
-|  | 14 | 1.736e-10 | 1.759e-10 | 2.484e-10 | 2.536e-10 |
-|  | 20 | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 |
-|  | 28 | 1.129e-10 | 1.137e-10 | 1.102e-10 | 1.099e-10 |
-| `unequal` | 10 | 4.822e-11 | 4.305e-11 | 3.212e-11 | 3.344e-11 |
-|  | 14 | 3.540e-10 | 3.571e-10 | 2.532e-10 | 2.536e-10 |
-|  | 20 | 3.782e-10 | 3.766e-10 | 2.704e-10 | 2.716e-10 |
-|  | 28 | 1.006e-10 | 1.008e-10 | 1.105e-10 | 1.105e-10 |
-| `isotropic` | 10 | 1.310e-12 | 1.831e-12 | 1.047e-12 | 1.672e-12 |
-|  | 14 | 3.337e-12 | 4.007e-12 | 1.783e-12 | 1.935e-12 |
-|  | 20 | 2.693e-12 | 2.819e-12 | 3.183e-12 | 3.372e-12 |
-| bidomain | 10 | 1.351e-11 | 1.299e-11 | 1.098e-11 | 1.081e-11 |
-|  | 14 | 6.000e-11 | 5.992e-11 | 1.020e-10 | 1.006e-10 |
-|  | 20 | 4.039e-11 | 3.970e-11 | 4.418e-11 | 4.488e-11 |
-|  | 28 | 3.682e-11 | 3.687e-11 | 3.943e-11 | 3.937e-11 |
-| parallel (2 ranks) | 20 | 8.010e-11 | 8.208e-11 | 1.270e-10 | 1.302e-10 |
+| configuration | N | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
+|---|---|---|---|---|---|---|---|
+| default (corrected, anisotropic) | 10 | 6.033e-11 | 5.395e-11 | 4.646e-11 | 4.142e-11 | 3.756e-11 | 3.455e-11 |
+|  | 14 | 1.943e-10 | 1.975e-10 | 1.736e-10 | 1.759e-10 | 2.484e-10 | 2.536e-10 |
+|  | 20 | 1.073e-10 | 1.085e-10 | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 |
+|  | 28 | 1.677e-10 | 1.692e-10 | 1.129e-10 | 1.137e-10 | 1.102e-10 | 1.099e-10 |
+| `unequal` | 10 | 6.098e-11 | 5.197e-11 | 4.822e-11 | 4.305e-11 | 3.212e-11 | 3.344e-11 |
+|  | 14 | 5.846e-10 | 5.921e-10 | 3.540e-10 | 3.571e-10 | 2.532e-10 | 2.536e-10 |
+|  | 20 | 2.842e-10 | 2.834e-10 | 3.782e-10 | 3.766e-10 | 2.704e-10 | 2.716e-10 |
+|  | 28 | 1.520e-10 | 1.529e-10 | 1.006e-10 | 1.008e-10 | 1.105e-10 | 1.105e-10 |
+| `isotropic` | 10 | 2.589e-12 | 3.040e-12 | 1.310e-12 | 1.831e-12 | 1.047e-12 | 1.672e-12 |
+|  | 14 | 4.013e-12 | 3.864e-12 | 3.337e-12 | 4.007e-12 | 1.783e-12 | 1.935e-12 |
+|  | 20 | 4.890e-12 | 3.646e-12 | 2.693e-12 | 2.819e-12 | 3.183e-12 | 3.372e-12 |
+| bidomain | 10 | 1.610e-11 | 1.588e-11 | 1.351e-11 | 1.299e-11 | 1.098e-11 | 1.081e-11 |
+|  | 14 | 1.041e-10 | 1.050e-10 | 6.000e-11 | 5.992e-11 | 1.020e-10 | 1.006e-10 |
+|  | 20 | 5.207e-11 | 5.157e-11 | 4.039e-11 | 3.970e-11 | 4.418e-11 | 4.488e-11 |
+|  | 28 | 5.037e-11 | 5.036e-11 | 3.682e-11 | 3.687e-11 | 3.943e-11 | 3.937e-11 |
+| parallel (2 ranks) | 20 | 1.104e-10 | 1.075e-10 | 8.564e-11 | 8.465e-11 | 1.281e-10 | 1.303e-10 |
 
-- **Hexahedra.** The gap is at round-off, 6.6e-14 to 3.6e-12, and rises
+- **Hexahedra.** The gap on the body surface is at round-off and rises
   slightly with the cell count. It is of the same size for `unequal`, for
-  the bidomain myocardium and on two ranks.
-- **Tetrahedra.** The gap is at the level of the fixed-point tolerances,
-  1.1e-11 to 3.8e-10, at every level, for every configuration and both
-  electrode groups, with no trend in `N`. With only the non-orthogonal
-  correction (`isotropic`) the fixed points take fewer passes (lead fields
-  33 to 51, direct solves 28 to 53, against 40 to 77 and 39 to 84 for
-  `default` and `unequal`) and the gap is 1.0e-12 to 4.0e-12.
-- **Parallel.** The parallel channels agree with the serial ones to 5.8e-12
-  (absolute) on both meshes.
-- **Electrodes next to the heart.** The `near` group, in torso cells that
-  touch the heart, follows the far `torso` group. Electrodes inside the
-  heart are not supported (case [README](../../../README.md)).
+  the bidomain myocardium and on two ranks. Over all groups the gap lies
+  between 6.6e-14 and 3.8e-12.
+- **Tetrahedra.** The gap on the body surface is at the level of the
+  fixed-point tolerances at every level and for every configuration, with
+  no trend in `N`; over all groups it lies between 1.1e-11 and 5.9e-10.
+  With only the non-orthogonal correction (`isotropic`) the fixed points
+  take fewer passes (lead fields 32 to 59, direct solves 28 to 53, against
+  40 to 77 and 39 to 84 for `default` and `unequal`) and the gap is
+  1.0e-12 to 4.9e-12.
+- **Parallel.** The parallel channels agree with the serial ones to 8.1e-12
+  (absolute) on both meshes, at every electrode.
+- **Probes.** The interior `torso` and `near` probes have gaps of the size
+  of the surface group, `near` included, in torso cells that touch the
+  heart. Electrodes inside the heart are not supported (case
+  [README](../../../README.md)).
 
 ## Fixed-point tolerance control
 
 `fixedPointTight_tet_N20` repeats the default tetrahedral run at `N = 20`
 with both fixed points stopped at `1e-12` instead of `1e-10`:
 
-| tolerance | torso dynamic | torso static | near dynamic | near static | LF torso error | LF near error |
+| tolerance | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
 |---|---|---|---|---|---|---|
-| `1e-10` | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 | 1.6008e-03 | 1.6392e-03 |
-| `1e-12` | 2.137e-12 | 1.478e-12 | 2.208e-12 | 1.956e-12 | 1.6008e-03 | 1.6392e-03 |
+| `1e-10` | 1.073e-10 | 1.085e-10 | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 |
+| `1e-12` | 4.030e-12 | 3.111e-12 | 2.137e-12 | 1.478e-12 | 2.208e-12 | 1.956e-12 |
 
-The error columns are the static Linf errors of the lead-field channel
-against the exact potential; the direct channel has the same values. With
-the tighter tolerance the gap drops by about two orders of magnitude, to
-the round-off level of the hexahedra and of `isotropic`, the errors against
-the exact potential are identical, and the lead-field fixed points take
-about a third more passes. The tetrahedral gap is set by the fixed-point
-tolerance, not by the transposed operator.
+Static Linf errors of the lead-field channel against the exact potential,
+and of the direct static field over the surface cells (the direct channel
+has the same electrode values):
+
+| tolerance | LF surface | `phiStatic_surface` RMS | `phiStatic_surface` max | LF torso | LF near |
+|---|---|---|---|---|---|
+| `1e-10` | 1.5989e-03 | 1.0391e-03 | 1.6101e-03 | 1.6008e-03 | 1.6392e-03 |
+| `1e-12` | 1.5989e-03 | 1.0391e-03 | 1.6101e-03 | 1.6008e-03 | 1.6392e-03 |
+
+With the tighter tolerance the gap drops by more than an order of
+magnitude in every group, to the round-off level of the hexahedra and of
+`isotropic`, the errors against the exact potential are identical, and the
+lead-field fixed points take about a third more passes. The tetrahedral gap
+is set by the fixed-point tolerance, not by the transposed operator.
 
 ## Outputs
 
