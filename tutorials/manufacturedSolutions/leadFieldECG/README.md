@@ -272,6 +272,13 @@ it checks:
 ./regression/regressionTest.sh
 ```
 
+## Curved heart
+
+[sphericalShell](sphericalShell/README.md) is a separate case: a heart shell
+between a bath ball and an outer bath, rotated heart tensors and a varying
+bath conductivity, with the exact transmission solution, so the current
+generated in the heart crosses both curved heart-torso interfaces.
+
 ## Studies
 
 `setup/studies/` holds one study per question. Each study is run in copies of

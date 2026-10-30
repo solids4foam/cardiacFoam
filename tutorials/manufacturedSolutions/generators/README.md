@@ -17,6 +17,7 @@ emission they share.
 | `shell_monodomain_mms.py` | monodomain, `n . G grad V = 0` on both spheres | `../../../src/verificationModels/monodomainVerification/manufacturedShellMonodomainReference.H` | `manufacturedShellMonodomainVerifier` |
 | `shell_bidomain_mms.py` | heart-only bidomain, `phiI` and `phiE` each sealed by its own tensor | `../../../src/verificationModels/bidomainVerification/manufacturedShellBidomainReference.H` | `manufacturedShellBidomainVerifier` |
 | `shell_eikonal_mms.py` | eikonal activation time, `n . M grad psi = 0` on both spheres | `../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H` | `manufacturedShellEikonalVerifier` |
+| `shell_mms.py` | heart shell between a bath ball and an outer bath: `phiE` and the extracellular current continuous, `n . Gi grad phiI = 0` on both spheres, rotated heart tensors, varying bath conductivity | `../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H` | `manufacturedLeadFieldECGVerifier` (`reference sphericalShell`) |
 
 Every field is a polynomial, trigonometric or exponential function of x, y, z,
 or a ratio with a positive denominator, so the formulas extend smoothly into
@@ -84,6 +85,10 @@ python shell_bidomain_mms.py --write ../../../src/verificationModels/bidomainVer
 python shell_eikonal_mms.py --write ../../../src/verificationModels/eikonalVerification/manufacturedShellEikonalReference.H
 ```
 
+```bash
+python shell_mms.py --write ../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H
+```
+
 Check that a tracked header matches its generator (exit status 1 on a
 difference): the same commands with `--check`.
 
@@ -95,6 +100,10 @@ python -m pytest test_shell_monodomain_mms.py test_shell_bidomain_mms.py
 
 ```bash
 python test_shell_eikonal_mms.py
+```
+
+```bash
+python test_shell_mms.py
 ```
 
 Requires sympy, mpmath, numpy and scipy; each header records the sympy

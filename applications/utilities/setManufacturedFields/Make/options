@@ -1,7 +1,8 @@
 EXE_INC = \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
-    -I../../../src/electroModels/lnInclude
+    -I../../../src/electroModels/lnInclude \
+    -I../../../src/verificationModels
 
 EXE_LIBS = \
     -L$(FOAM_USER_LIBBIN) \

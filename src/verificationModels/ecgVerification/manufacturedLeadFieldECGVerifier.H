@@ -23,12 +23,18 @@ Description
     - leadField: the channel of the leadFieldECG domain (z_e^T b(Vm_h) + c_e);
     - direct: a direct forward solve of the same conductor on Vm_h, with the
       same boundary values and reference, assembly and solve repeated until
-      the relative change between passes is below 1e-10, sampled in the
-      electrode cell;
+      the relative change between passes is below the tolerance of the
+      fvSolution dictionary leadFieldFixedPoint (as buildLeadFields), sampled
+      in the electrode cell;
     - exactPoint, exactCentroid: the exact potential of the selected
       reference at the electrode and at its cell centroid, for the exact Vm;
     - leadFieldStatic, directStatic: the lead field and the direct solve
-      applied to the exact Vm at the heart cell centres.
+      applied to the exact Vm at the heart cell centres;
+    - phiStatic: the error of the directStatic potential field against the
+      exact potential at the cell centres, over the whole mesh, the heart,
+      the torso and the interface band (cells with a heart-torso face):
+      mean |e|, volume-weighted RMS and maximum, the largest over the
+      samples; the cell of the largest error is logged.
 
     With a pinned reference the exact potential is shifted to equal the
     reference value at the centroid of the pinned cell.
@@ -39,7 +45,7 @@ Description
     electrodes).
 
     Keys of verificationModel:
-        reference   slab;    // required: the exact solution, slab or layered
+        reference   slab;    // required: slab, layered or sphericalShell
         layerInterfaces (-0.5 1.5);  // layered only, required: xL < 0, xR > 1
 
     layered takes alpha from the surface-current patches of the conductor
@@ -47,6 +53,15 @@ Description
     net current; none for alpha = 0) and the layer conductivities from its
     torso cells, which must each lie in one layer with one isotropic value
     per layer.
+
+    sphericalShell is the transmission solution of shell_mms.py (heart shell
+    between the bath zones bloodPool and bath): the conductor must be the
+    bidomain one, pinned, with no ground or surface-current patches, and its
+    zones, Gi, Ge and torso conductivity must be those of the solution at
+    the cell centres. Its phiE source and the exact outward current on the
+    outer boundary enter both static channels as one extra source, without
+    its volume mean: the direct solve adds it to b, the lead field adds
+    sum z_e V s.
 
     The direct solve uses the fvSolution entry phiE.
 
@@ -63,6 +78,7 @@ Author
 #include "ecgVerificationModel.H"
 #include "leadFieldECG.H"
 #include "ecgVerification/manufacturedLeadFieldECGReference.H"
+#include "ecgVerification/manufacturedLeadFieldShellFields.H"
 #include "OFstream.H"
 #include "Enum.H"
 #include "overrideTypeName.H"
@@ -80,7 +96,8 @@ public:
     enum class referenceType
     {
         slab,
-        layered
+        layered,
+        sphericalShell
     };
 
     static const Enum<referenceType> referenceTypeNames;
@@ -115,6 +132,13 @@ private:
     manufacturedLeadFieldLayers layers_;
     scalar alpha_;
 
+    //- sphericalShell: the parameters and the lead fields z_e
+    shellTransmissionMMS::Params shellParams_;
+    PtrList<volScalarField> leadFields_;
+
+    //- sphericalShell: the solution zone of every base cell (its cellZone)
+    labelList shellZones_;
+
     labelList electrodeCells_;
     List<point> electrodeCentroids_;
 
@@ -138,6 +162,14 @@ private:
     List<errorNorms> maxNorms_;
     errorNorms relativeGapNorms_;
 
+    //- phiStatic: per region (all, heart, torso, interfaceBand), the
+    //  largest mean |e|, RMS and maximum over the samples
+    static const wordList fieldRegionNames_;
+    List<FixedList<scalar, 3>> fieldErrors_;
+
+    //- Error of the directStatic field against the exact potential at t
+    void recordFieldError(const scalar t);
+
     bool summaryWritten_;
 
     static const wordList quantityNames_;
@@ -149,8 +181,21 @@ private:
     //  from the torso cells
     void initialiseLayered(const leadFieldConductor& lfc);
 
-    //- Exact potential at p and time t, gauged
-    scalar exactPhi(const point& p, const scalar t) const;
+    //- sphericalShell: check the conductor against the solution and read
+    //  the lead fields
+    void initialiseShell(const leadFieldConductor& lfc);
+
+    //- sphericalShell: phiE source and outer-boundary current at time t as
+    //  one source with the dimensions of b, volume mean removed
+    tmp<volScalarField> shellSource
+    (
+        const scalar t,
+        const dimensionSet& dims
+    ) const;
+
+    //- Exact potential at p and time t, gauged; sphericalShell takes the
+    //  formula of zone, or of the zone containing p when zone < 0
+    scalar exactPhi(const point& p, const scalar t, const label zone = -1) const;
 
     //- Exact heart Vm at p and time t
     scalar exactVm(const point& p, const scalar t) const;
@@ -161,7 +206,8 @@ private:
     (
         const volScalarField& Vm,
         volScalarField& phi,
-        scalarField& values
+        scalarField& values,
+        const volScalarField* extraSource = nullptr
     );
 
     void writeSummary();
