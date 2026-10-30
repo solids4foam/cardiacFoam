@@ -46,6 +46,10 @@ case's `dt ~ h^2`, `endTime 0.1`, graph `nodes<N+1>`:
   where the terminal has the same position within its cell as at `N = 40`;
   uniform, linear, cosine (and cosine at `N = 40`)
 
+- `R/h` guideline on tetrahedra: shell, `R = c lc` (`c = 1.5, 2, 3, 4, 6`),
+  `N = 14, 20`, uniform, linear, cosine; linear also on seeds 2 and 3 at
+  `N = 20`
+
 Shell (`monodomain1D3DShell`), bidirectional, `R = 0.2`, `R_pvj = 1`: gmsh
 element size `1/N`, `N = 10, 14, 20, 28`, kernels linear, cosine, uniform,
 gaussian, and linear with `R_pvj = 1e6` on seed 1; linear, cosine and the
@@ -107,6 +111,17 @@ do
     done
 done
 run $shell shpar_N14 parallel -N 14 -kernel linear
+for N in 20 14
+do
+    for k in linear uniform cosine
+    do
+        for c in 1.5 2 3 4 6; do run $shell tscan_${k}_N${N}_c$c -N $N -kernel $k -radius $(awk -v c=$c -v N=$N 'BEGIN{printf "%.17g", c/N}'); done
+    done
+done
+for s in 2 3
+do
+    for c in 1.5 2 3 4 6; do run $shell tscan_linear_N20_c${c}_s$s -N 20 -seed $s -kernel linear -radius $(awk -v c=$c 'BEGIN{printf "%.17g", c/20}'); done
+done
 for c in 1 1.5 2 3 4 6; do run $box scan_cosine_c$c -N 40 $cont -kernel cosine -radius $(awk -v c=$c 'BEGIN{printf "%.17g", c/40}'); done
 for k in uniform linear cosine
 do
@@ -235,6 +250,31 @@ support sharpens the source), and the far field scales with `h^2` alone
 (1.2e-4 to 4.7e-5). For the linear kernel the current error falls roughly as
 `(h/R)^1.8`: about 4.5% at `R = 2h`, 2% at `3h`, 1.3-1.5% at `4h`, 0.65% at
 `6h`, 0.4% at `8h`.
+
+### R/h guideline on tetrahedra
+
+Sealed shell, gmsh tetrahedra, `R = c lc` with `lc = 1/N` the gmsh element
+size (`N = 14, 20`; the verifier's mean cell spacing is `0.6 lc`, so
+`R/h = 1.67 c`), bidirectional transfer, `t = 0.1`; linear kernel also on
+seeds 2 and 3 at `N = 20`. Indexed by the number of cells in the support,
+the hexahedral and tetrahedral errors overlap; tetrahedra add a scatter
+between terminals and meshes. Junction current error relative to the
+current, linear kernel, range over terminals and meshes:
+
+| cells in the support | hexahedra (cube) | tetrahedra (shell) |
+|---|---|---|
+| 38-59 | 2.0-2.3 % (59) | 1.4-7.6 % (38-46) |
+| 90-134 | 1.3-1.5 % (134) | 1.6-3.6 % (90-99) |
+| 311-452 | 0.63-0.68 % (452) | 0.57-1.5 % (311-337) |
+| 739-1071 | 0.38 % (1071) | 0.17-0.60 % (739-800) |
+| 2640-2824 | - | 0.02-0.12 % |
+
+The uniform and cosine kernels follow the same pattern (uniform 2.0-7.5 %,
+cosine 1.9-4.6 % at 38-46 cells). Under refinement at fixed `c` the
+tetrahedral current error grows (linear, `c = 4`: 0.17-0.25 % at `N = 14`,
+0.42-0.60 % at `N = 20`), as for the point-source limit on the cube; the
+far field stays at the shell operator's error (`9e-4` to `1.6e-3`), except
+where `2R` exceeds the far-field cutoff of 0.25.
 
 ### Sealed curved wall, tetrahedra (shell)
 
