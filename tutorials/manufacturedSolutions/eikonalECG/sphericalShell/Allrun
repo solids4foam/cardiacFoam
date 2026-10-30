@@ -192,7 +192,7 @@ fi
 
 if $ecg
 then
-    echo "ecg yes;" > local/ecg
+    echo "_ecg yes;" > local/ecg
     # The sine template and sampling of the cube case, with the higher
     # quadrature orders its shorter wavelength in space needs
     if [ "$template" = sine ]

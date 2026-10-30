@@ -37,9 +37,9 @@ eikonalSolverCoeffs
         #includeIfPresent "<case>/local/verification"
     }
 
-    ecg     no;
+    _ecg    no;
     #includeIfPresent "<case>/local/ecg"
-    #ifeq $ecg yes
+    #ifeq $_ecg yes
     ecgDomains
     {
         ECG

@@ -108,11 +108,6 @@ autoPtr<conductionSystemDomain> conductionSystemDomain::New
 
 void conductionSystemDomain::readGraphFile(const dictionary& dict)
 {
-    if (!dict.found("graphFile"))
-    {
-        return;
-    }
-
     const word graphFile(dict.get<word>("graphFile"));
 
     IOdictionary graphDict
@@ -338,9 +333,21 @@ void conductionSystemDomain::initialiseOutputControls()
 
         if (resolved.unknownTokens.size() > 0)
         {
-            WarningInFunction
-                << "The following export variables are unknown and will be ignored: "
-                << resolved.unknownTokens << endl;
+            wordList valid
+            (
+                ionicVariableCompatibility::variableNames
+                (
+                    ionicModelPtr_->ioStateNames(),
+                    ionicModelPtr_->ioNumStates(),
+                    ionicModelPtr_->ioAlgebraicNames(),
+                    ionicModelPtr_->ioNumAlgebraic()
+                )
+            );
+            valid.append(purkinjeModelIO::networkTokenNames());
+            ionicVariableCompatibility::reportUnknownVariables
+            (
+                "Purkinje network", resolved.unknownTokens, valid
+            );
         }
 
         ionicExportStateIndices_.setSize(ionicExport_.size(), -1);
@@ -379,6 +386,26 @@ void conductionSystemDomain::initialiseOutputControls()
     }
     else
     {
+        DynamicList<word> unknown;
+
+        for (const word& var : userExport)
+        {
+            if (!purkinjeModelIO::networkTokenNames().found(var))
+            {
+                unknown.append(var);
+            }
+        }
+
+        if (!unknown.empty())
+        {
+            ionicVariableCompatibility::reportUnknownVariables
+            (
+                "Purkinje network",
+                unknown,
+                purkinjeModelIO::networkTokenNames()
+            );
+        }
+
         exportVars_ = userExport;
     }
 
@@ -387,6 +414,25 @@ void conductionSystemDomain::initialiseOutputControls()
         "debug",
         wordList()
     );
+
+    const wordList debugNames({"Vm", "Iion"});
+    DynamicList<word> unknownDebug;
+
+    for (const word& var : debugVars_)
+    {
+        if (!debugNames.found(var))
+        {
+            unknownDebug.append(var);
+        }
+    }
+
+    if (!unknownDebug.empty())
+    {
+        ionicVariableCompatibility::reportUnknownVariables
+        (
+            "Purkinje network debug", unknownDebug, debugNames
+        );
+    }
 }
 
 

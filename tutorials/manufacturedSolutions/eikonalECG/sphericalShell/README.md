@@ -109,7 +109,7 @@ The outer residual history is the `Initial residual` of the
 ## ECG (`-ecg`)
 
 The `ecgDomains` block of `constant/electroProperties` is read only when
-`local/ecg` sets `ecg yes;`. `eikonalECG` reconstructs
+`local/ecg` sets `_ecg yes;`. `eikonalECG` reconstructs
 `Vm = U(t - psi)` from the computed activation time and sums
 `G grad Vm . (x - e)/|x - e|^3 V` over the cells, with
 `grad Vm = -U'(t - psi) grad psi` and `grad psi` the cell gradient of
