@@ -238,9 +238,9 @@ support sharpens the source), and the far field scales with `h^2` alone
 
 ### Sealed curved wall, tetrahedra (shell)
 
-Least-squares orders over all levels of the three seeds (linear, cosine,
-suppressed) or of seed 1 (uniform, gaussian); values at `N = 28` (mean over
-seeds); the seed-to-seed spread at `N = 28` is 1-5%.
+`T = 0.1`. Least-squares orders over all levels of the three seeds (linear,
+cosine, suppressed) or of seed 1 (uniform, gaussian); values at `N = 28`
+(mean over seeds); the seed-to-seed spread at `N = 28` is 1-5%.
 
 | kernel | support L2 | junction current | graph `V1D` at the terminal | far field |
 |---|---|---|---|---|
@@ -252,8 +252,14 @@ seeds); the seed-to-seed spread at `N = 28` is 1-5%.
 
 With the support cut by the curved wall the linear kernel has the smallest
 errors and the highest orders; the cosine kernel loses its box order. The
-graph terminal voltage and the far field converge at the sealed-shell
-tetrahedral operator's own orders, with or without the junction. The
+graph terminal voltage and the far field converge at the same orders with or
+without the junction. These shell orders are for `T = 0.1`; the tissue
+operator's order on these meshes depends on the window. With the junction
+suppressed, seed 1 and the per-level `dt` of the
+[sphericalShell tetConvergence](../../../../monodomainPseudoECG/sphericalShell/setup/studies/tetConvergence/README.md)
+study, this case reproduces that study's whole-domain `Vm` L2 errors to
+1.4e-7 relative: pairwise orders 1.66, 1.64, 1.87 at `T = 0.2` and 2.38,
+1.98, 1.95 at `T = 2`, against 1.39, 1.49, 1.75 at `T = 0.1`. The
 mesh-integrated normalisation exceeds the exact one by 2.0e-2 (`N = 10`) to
 2.8e-3 (`N = 28`), about second order: the flat facets place part of the
 mesh inside the true cavity sphere. On 4 ranks the `N = 14` run reproduces
