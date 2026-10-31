@@ -3,9 +3,9 @@
 
     python figures.py [--outdir DIR] [--draft] [--mesh-case NAME=PATH ...]
 
-The analytic figures use bidomain_reference.py (FDA cube, and the sealed shell
-through generators/shell_bidomain_mms.py).  Mesh figures read
-constant/polyMesh of a meshed case the author supplies:
+The analytic figures use bidomain_reference.py (FDA cube through
+reference/fda_bidomain.py, sealed shell through shell_bidomain_mms.py).  Mesh
+figures read constant/polyMesh of a meshed case the author supplies:
 
     fda_cube_hex, fda_cube_tet, shell_hex, shell_tet
 """

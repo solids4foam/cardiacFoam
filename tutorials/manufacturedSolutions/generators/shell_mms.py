@@ -12,6 +12,16 @@ self-checks used by test_shell_mms.py, and writes the C++ reference header
 (namespace Foam::shellTransmissionMMS) with the function names and signatures
 of the oblique-slab header.
 
+--emit writes the LaTeX fragments latex/shell_transmission_*.tex of the
+lead-field document: the bath conductivity, f-hat, h-hat, the interface
+corrections g_j, m_j and their blends, the common mode, the zone formulas of
+phi and phi_i, V_m, the sources and the parameters.  The transmural
+coordinate, omega, the fibre frame, the wall normals and the tensors are the
+shared fragments of shell_monodomain_mms.py and shell_bidomain_mms.py;
+check_shared_construction asserts that this solution uses the same ones.
+
+    python shell_mms.py --emit
+    python shell_mms.py --self-check
     python shell_mms.py --write ../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H
     python shell_mms.py --check ../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H
 """
@@ -20,6 +30,7 @@ import argparse
 import copy
 import functools
 import math
+import os
 import sys
 
 import mpmath as mp
@@ -27,7 +38,10 @@ import numpy as np
 import sympy as sp
 
 import mms_codegen as codegen
+from mms_common.latex_emit import (emit_cases_fragment, emit_latex_fragment,
+                                   emit_parameter_fragment, format_value)
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 HEADER_NAME = "manufacturedShellTransmissionBathBidomainReference.H"
 SAMPLE_DPS = 30
 
@@ -151,6 +165,59 @@ def _ionic_G():
     return 1 + sp.Rational(1, 4)*sp.sin(k*x + sp.Rational(1, 5))*sp.cos(k*y - sp.Rational(1, 3))*sp.cos(k*z)
 
 
+def _radial(rho, r1, r2):
+    """lambda (0 on the inner, 1 on the outer sphere) and omega (zero on both) of rho = |x|^2."""
+    lam = (rho - r1**2)/(r2**2 - r1**2)
+    om = (rho - r1**2)*(rho - r2**2)/((r2**2 - r1**2)*(r1 + r2))
+    return lam, om
+
+
+def _sigma_hat():
+    k = P["k"]
+    return (sp.sin(k*x + sp.Rational(1, 5))*sp.cos(k*y)
+            * (1 + sp.Rational(1, 2)*sp.sin(k*z)))
+
+
+def _fhat():
+    a = [P["fA%d" % i] for i in range(4)]
+    k = P["k"]
+    return (a[0]*x + a[1]*y*z
+            + a[2]*sp.sin(k*x)*(1 + sp.Rational(1, 2)*y)
+            + a[3]*sp.cos(k*y + sp.Rational(3, 10))*sp.exp(sp.Rational(2, 5)*z))
+
+
+def _hhat():
+    b = [P["hA%d" % i] for i in range(3)]
+    k = P["k"]
+    return (b[0]*z + b[1]*sp.cos(k*y)*(1 - sp.Rational(3, 10)*x**2)
+            + b[2]*sp.sin(k*z)*x)
+
+
+def _f2():
+    k = P["k"]
+    return sp.Rational(1, 5)*sp.cos(k*x) + sp.Rational(1, 10)*y + sp.Rational(1, 10)*z**2
+
+
+def _flux_correction(n_jump_grad_f, n_Ge_n, d):
+    """g_j = n_j.(sigma_B,j I - Ge) grad f/((n_j.Ge n_j) d_j): the jump of the
+    extracellular flux that omega g_j removes on sphere j."""
+    return n_jump_grad_f/(n_Ge_n*d)
+
+
+def _seal_correction(n_Gi_grad_h, n_Gi_n, d):
+    """m_j = -(n_j.Gi grad h)/((n_j.Gi n_j) d_j): seals phi_i on sphere j."""
+    return -n_Gi_grad_h/(n_Gi_n*d)
+
+
+def _blend(lam, a1, a2):
+    return (1 - lam)*a1 + lam*a2
+
+
+def _closure(n_Ge_grad_f2, n_Gi_grad_f2, n_Ge_n, D, n_grad_f2, sigma):
+    """r_j of the common mode in the bath zone of sphere j."""
+    return (n_Ge_grad_f2 - n_Gi_grad_f2*n_Ge_n/D - sigma*n_grad_f2)/sigma
+
+
 def _heart_exports(phiE, phiI, Gi, Ge):
     Vm = phiI - phiE
     G = _ionic_G()
@@ -189,24 +256,16 @@ def expressions(solution):
     rho = x**2 + y**2 + z**2
     E = {0: {}, 1: {}, 2: {}}
 
-    lam = (rho - r1**2)/(r2**2 - r1**2)
-    om = (rho - r1**2)*(rho - r2**2)/((r2**2 - r1**2)*(r1 + r2))
+    lam, om = _radial(rho, r1, r2)
     GiH, GeH = _tensors(th0 + th1*lam)
     GiL, GeL = _tensors(th0)
     GiR, GeR = _tensors(th0 + th1)
-    sighat = (sp.sin(k*x + sp.Rational(1, 5))*sp.cos(k*y)
-              * (1 + sp.Rational(1, 2)*sp.sin(k*z)))
+    sighat = _sigma_hat()
     sig = {0: p["sigma0In"]*(1 + p["sigmaEps"]*sighat),
            2: p["sigma0Out"]*(1 + p["sigmaEps"]*sighat)}
-    a = [p["fA%d" % i] for i in range(4)]
-    b = [p["hA%d" % i] for i in range(3)]
-    fhat = (a[0]*x + a[1]*y*z
-            + a[2]*sp.sin(k*x)*(1 + sp.Rational(1, 2)*y)
-            + a[3]*sp.cos(k*y + sp.Rational(3, 10))*sp.exp(sp.Rational(2, 5)*z))
-    hhat = (b[0]*z + b[1]*sp.cos(k*y)*(1 - sp.Rational(3, 10)*x**2)
-            + b[2]*sp.sin(k*z)*x)
+    fhat, hhat = _fhat(), _hhat()
     f, h = St_*fhat, St_*hhat
-    f2 = sp.Rational(1, 5)*sp.cos(k*x) + sp.Rational(1, 10)*y + sp.Rational(1, 10)*z**2
+    f2 = _f2()
 
     # unit normals on their own sphere, pointing from the heart into the bath zone
     n = {1: -XYZ/r1, 2: XYZ/r2}
@@ -215,12 +274,13 @@ def expressions(solution):
     gj, mj, qj = {}, {}, {}
     for j in (1, 2):
         nj = n[j]
-        gj[j] = _dot(nj, (sigj[j]*sp.eye(3) - GeH)*_grad(f))/(_dot(nj, GeH*nj)*d[j])
-        mj[j] = -_dot(nj, GiH*_grad(h))/(_dot(nj, GiH*nj)*d[j])
-        qj[j] = -_dot(nj, GiH*_grad(f2))/(_dot(nj, GiH*nj)*d[j])
-    g = (1 - lam)*gj[1] + lam*gj[2]
-    m = (1 - lam)*mj[1] + lam*mj[2]
-    q = (1 - lam)*qj[1] + lam*qj[2]
+        gj[j] = _flux_correction(_dot(nj, (sigj[j]*sp.eye(3) - GeH)*_grad(f)),
+                                 _dot(nj, GeH*nj), d[j])
+        mj[j] = _seal_correction(_dot(nj, GiH*_grad(h)), _dot(nj, GiH*nj), d[j])
+        qj[j] = _seal_correction(_dot(nj, GiH*_grad(f2)), _dot(nj, GiH*nj), d[j])
+    g = _blend(lam, gj[1], gj[2])
+    m = _blend(lam, mj[1], mj[2])
+    q = _blend(lam, qj[1], qj[2])
     pcm = f2 + om*q
     phiEH = f + om*g + Tt_*pcm
     phiI = h + om*m + Tt_*pcm
@@ -235,8 +295,8 @@ def expressions(solution):
 
     def r_closed(nt, Gi, Ge, Dj, sigma):
         gf2 = _grad(f2)
-        return (_dot(nt, Ge*gf2) - _dot(nt, Gi*gf2)*_dot(nt, Ge*nt)/Dj
-                - sigma*_dot(nt, gf2))/sigma
+        return _closure(_dot(nt, Ge*gf2), _dot(nt, Gi*gf2), _dot(nt, Ge*nt), Dj,
+                        _dot(nt, gf2), sigma)
 
     beta = {0: (r1**2 - rho)/(2*r1), 2: (rho - r2**2)/(2*r2)}
     for zn, j, Gi, Ge in ((0, 1, GiL, GeL), (2, 2, GiR, GeR)):
@@ -615,7 +675,35 @@ def check_ionic_closure():
 # the slab's 0.8
 RICHNESS_FRACTION = 0.7
 
-SELF_CHECKS = (check_all_interfaces, check_sources_match_fd, check_bounded_and_finite,
+def check_shared_construction():
+    """lambda, omega, the frame, the wall normals, Gi, Ge, h-hat and f-hat are
+    those of shell_monodomain_mms.py and shell_bidomain_mms.py, whose
+    fragments the lead-field document prints."""
+    import shell_bidomain_mms as sbm
+    import shell_monodomain_mms as smm
+    rho, theta = sp.symbols("rho theta", real=True)
+    r1, r2 = P["r1"], P["r2"]
+
+    def same(a, b):
+        d = sp.Matrix(a) - sp.Matrix(b) if isinstance(a, (tuple, list, sp.MatrixBase)) \
+            else sp.Matrix([a - b])
+        return all(sp.simplify(e) == 0 for e in d)
+
+    _require(same(_radial(rho, r1, r2), smm._radial(rho, r1, r2)), "lambda, omega")
+    Rz, Rx = smm._rotations()
+    Q = Rz*Rx
+    _require(same(sp.Matrix.hstack(*_frame()), Q), "frame")
+    n, d = smm._walls(XYZ, r1, r2)
+    _require(same(n[1], -XYZ/r1) and same(n[2], XYZ/r2), "wall normals")
+    _require(same([d[1], d[2]], [2*r1/(r1 + r2), 2*r2/(r1 + r2)]), "d_j")
+    Gi, Ge = _tensors(theta)
+    _require(same(Gi, smm._conductivity(theta)), "Gi")
+    _require(same(Ge, sbm._tensor(P["gel"], P["get"], P["gen"], theta)), "Ge")
+    _require(same(_hhat(), smm._hhat()), "h-hat")
+    _require(same(_fhat(), sbm.expressions()["ehat"]), "f-hat")
+
+
+SELF_CHECKS = (check_shared_construction, check_all_interfaces, check_sources_match_fd, check_bounded_and_finite,
                check_denominators, check_richness, check_common_mode_keeps_vm,
                check_ionic_closure)
 
@@ -777,12 +865,166 @@ def header_matches(path, text=None):
     return codegen.header_matches(__file__, generate_header, path, text)
 
 
+
+# ---------------------------------------------------------------------------
+# LaTeX fragments of the lead-field document
+# ---------------------------------------------------------------------------
+
+# LaTeX names of the parameters: those of the bidomain shell, with the bath
+# conductivity and the common mode
+SHELL_TEX = {"r1": "r_1", "r2": "r_2", "gamma1": r"\gamma_1", "gamma2": r"\gamma_2",
+             "k": "k", "theta0": r"\theta_0", "theta1": r"\theta_1",
+             "gil": r"\sigma_{i,f}", "git": r"\sigma_{i,s}", "gin": r"\sigma_{i,n}",
+             "gel": r"\sigma_{e,f}", "get": r"\sigma_{e,s}", "gen": r"\sigma_{e,n}",
+             "sigma0In": r"\sigma_{0,\mathrm{in}}", "sigma0Out": r"\sigma_{0,\mathrm{out}}",
+             "sigmaEps": r"\varepsilon", "cmAmplitude": "A_T",
+             "cmOmega": r"\nu",
+             "hA0": "a_1", "hA1": "a_2", "hA2": "a_3",
+             "fA0": "b_1", "fA1": "b_2", "fA2": "b_3", "fA3": "b_4"}
+LATEX_PREFIX = "shell_transmission_"
+
+
+def _names(extra=()):
+    names = {P[n]: tex for n, tex in SHELL_TEX.items()}
+    names.update(dict(extra))
+    return names
+
+
+def latex_fragments():
+    out = {}
+    sh, lam, om, rho, S, T = sp.symbols("sh lam om rho S T", real=True)
+    base = [(sh, r"\hat\sigma"), (lam, r"\lambda"), (om, r"\omega"),
+            (rho, r"\lvert\mathbf x\rvert^2"), (S, "S"), (T, "T")]
+    names = _names(base)
+    out["sigmahat"] = emit_latex_fragment(r"\hat\sigma", _sigma_hat(), names)
+    out["sigmaB"] = emit_cases_fragment(r"\sigma_B", [
+        (P["sigma0In"]*(1 + P["sigmaEps"]*sh), r"\lvert\mathbf x\rvert<r_1"),
+        (P["sigma0Out"]*(1 + P["sigmaEps"]*sh), r"\lvert\mathbf x\rvert>r_2")], names)
+    out["fhat"] = emit_latex_fragment(r"\hat f", _fhat(), names)
+    out["hhat"] = emit_latex_fragment(r"\hat h", _hhat(), names)
+    fh, hh = sp.symbols("fh hh", real=True)
+    names.update({fh: r"\hat f", hh: r"\hat h"})
+    out["f"] = emit_latex_fragment("f", S*fh, names)
+    out["h"] = emit_latex_fragment("h", S*hh, names)
+    out["S"] = emit_latex_fragment("S", sp.sqrt(1 + t), names)
+    out["T"] = emit_latex_fragment("T", P["cmAmplitude"]*sp.sin(P["cmOmega"]*t), names)
+    out["f2"] = emit_latex_fragment("f_2", _f2(), names)
+
+    a, b, dj, a1, a2 = sp.symbols("a b dj a1 a2", real=True)
+    corr = [(dj, "d_j")]
+    nf = _names(base + corr + [
+        (a, r"\mathbf n_j\cdot\left(\sigma_{B,j}\mathbf I-\mathbf G_e\right)\nabla f"),
+        (b, r"\left(\mathbf n_j\cdot\mathbf G_e\mathbf n_j\right)")])
+    out["gj"] = emit_latex_fragment("g_j", _flux_correction(a, b, dj), nf)
+    for tag, field in (("mj", "h"), ("qj", "f_2")):
+        ns = _names(base + corr + [
+            (a, r"\left(\mathbf n_j\cdot\mathbf G_i\nabla %s\right)" % field),
+            (b, r"\left(\mathbf n_j\cdot\mathbf G_i\mathbf n_j\right)")])
+        out[tag] = emit_latex_fragment(tag[0] + "_j", _seal_correction(a, b, dj), ns)
+    for tag in ("g", "m", "q"):
+        nb = _names(base + [(a1, tag + "_1"), (a2, tag + "_2")])
+        out[tag] = emit_latex_fragment(tag, _blend(lam, a1, a2), nb)
+
+    f, h, f2, g, m, q, beta_j, r_j = sp.symbols("f h f2 g m q beta_j r_j", real=True)
+    nz = _names(base + [(f, "f"), (h, "h"), (f2, "f_2"), (g, "g"), (m, "m"), (q, "q"),
+                        (beta_j, r"\beta_j"), (r_j, "r_j")])
+    out["phi"] = emit_cases_fragment(r"\phi", [
+        (f + T*(f2 + beta_j*r_j), r"\lvert\mathbf x\rvert<r_1\ (j=1),\ "
+                                  r"\lvert\mathbf x\rvert>r_2\ (j=2)"),
+        (f + om*g + T*(f2 + om*q), r"r_1\le\lvert\mathbf x\rvert\le r_2")], nz)
+    out["phiI"] = emit_latex_fragment(r"\phi_i", h + om*m + T*(f2 + om*q), nz)
+    phi, phii = sp.symbols("phi phii", real=True)
+    nv = _names(base + [(phi, r"\phi"), (phii, r"\phi_i")])
+    out["Vm"] = emit_latex_fragment("V_m", phii - phi, nv)
+
+    r1, r2 = P["r1"], P["r2"]
+    out["kappa"] = emit_latex_fragment(
+        r"\kappa", 1/(1/P["gil"] + 1/P["git"] + 1/P["gin"]), names)
+    xG1, xG2, kap = sp.symbols("xG1 xG2 kappa", real=True)
+    nd = _names(base + [(xG1, r"\mathbf x\cdot\mathbf G_i^{(1)}\mathbf x"),
+                        (xG2, r"\mathbf x\cdot\mathbf G_i^{(2)}\mathbf x"),
+                        (kap, r"\kappa")])
+    out["D1"] = emit_latex_fragment("D_1", (xG1 + kap*(r1**2 - rho))/r1**2, nd)
+    out["D2"] = emit_latex_fragment("D_2", xG2/r2**2, nd)
+    out["beta1"] = emit_latex_fragment(r"\beta_1", (r1**2 - rho)/(2*r1), names)
+    out["beta2"] = emit_latex_fragment(r"\beta_2", (rho - r2**2)/(2*r2), names)
+    c1, c2, c3, c4, Dj, sj = sp.symbols("c1 c2 c3 c4 Dj sj", real=True)
+    nr = _names(base + [(c1, r"\left(\mathbf n_j\cdot\mathbf G_e^{(j)}\nabla f_2\right)"),
+                        (c2, r"\left(\mathbf n_j\cdot\mathbf G_i^{(j)}\nabla f_2\right)"),
+                        (c3, r"\left(\mathbf n_j\cdot\mathbf G_e^{(j)}\mathbf n_j\right)"),
+                        (Dj, "D_j"), (c4, r"\left(\mathbf n_j\cdot\nabla f_2\right)"),
+                        (sj, r"\sigma_B")])
+    out["rj"] = emit_latex_fragment("r_j", _closure(c1, c2, c3, Dj, c4, sj), nr)
+
+    dGi, dGe, dsB, gout = sp.symbols("dGi dGe dsB gout", real=True)
+    ns = _names([(dGi, r"\nabla\!\cdot\!\left(\mathbf G_i\nabla\phi_i\right)"),
+                 (dGe, r"\nabla\!\cdot\!\left(\mathbf G_e\nabla\phi\right)"),
+                 (dsB, r"\nabla\!\cdot\!\left(\sigma_B\nabla\phi\right)"),
+                 (gout, r"\sigma_B\,\mathbf n\cdot\nabla\phi")])
+    out["sources"] = emit_cases_fragment("S", [
+        (dGi + dGe, r"\text{in }\Omega_H\ (S_H)"),
+        (dsB, r"\text{in }\Omega_T\ (S_T)")], ns)
+    out["gout"] = emit_latex_fragment(r"g_{\mathrm{out}}", gout, ns)
+
+    p = default_params()
+    pairs = []
+    for name in SCALAR_PARAMS + TAIL_PARAMS:
+        v = p[name]
+        if name in ANGLE_PARAMS:
+            v = r"%s^\circ" % format_value(float(v))
+        pairs.append((SHELL_TEX[name], v))
+    pairs += [(SHELL_TEX["hA%d" % i], v) for i, v in enumerate(p["hA"])]
+    pairs += [(SHELL_TEX["fA%d" % i], v) for i, v in enumerate(p["fA"])]
+    out["params"] = emit_parameter_fragment(pairs, per_row=5)
+    return {"latex/%s%s.tex" % (LATEX_PREFIX, k_): v for k_, v in out.items()}
+
+
+def render_outputs():
+    """{path relative to this folder: text} of every emitted file."""
+    return latex_fragments()
+
+
+def write_outputs(root=HERE):
+    outputs = render_outputs()
+    for rel, text in outputs.items():
+        path = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as fh:
+            fh.write(text)
+    return sorted(outputs)
+
+
+def outputs_match(root=HERE):
+    for rel, text in render_outputs().items():
+        path = os.path.join(root, rel)
+        if not os.path.exists(path):
+            return False
+        with open(path) as fh:
+            if fh.read() != text:
+                return False
+    return True
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--write", metavar="PATH")
     g.add_argument("--check", metavar="PATH")
+    g.add_argument("--emit", action="store_true")
+    g.add_argument("--self-check", action="store_true")
     args = ap.parse_args(argv)
+    if args.self_check or args.emit:
+        try:
+            run_self_checks()
+        except AssertionError as err:
+            print("self-check failed%s: %s" % (", nothing emitted" if args.emit else "", err))
+            return 1
+        if args.emit:
+            for rel in write_outputs():
+                print("wrote %s" % rel)
+        else:
+            print("self-checks passed")
+        return 0
     if args.write:
         try:
             run_self_checks()

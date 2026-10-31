@@ -4,9 +4,7 @@ subtitle: "Construction of the exact torso potentials, electrodes and compared q
 author:
   - name: "Simão Castro"
     affiliation: "University College Dublin"
-bibliography:
-  - ../_common/references.bib
-  - leadField_references.bib
+bibliography: ../_common/references.bib
 link-citations: true
 format:
   pdf:

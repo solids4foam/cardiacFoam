@@ -77,3 +77,13 @@ def emit_parameter_fragment(pairs, per_row=4):
     else:
         body = "\\begin{gathered}\n" + ",\\\\\n".join(rows) + "\n\\end{gathered}"
     return "$$\n%s\n$$\n" % body
+
+
+def emit_cases_fragment(lhs, branches, symbol_names):
+    """One displayed equation `lhs = {expr_1, cond_1; ...}` of a piecewise
+    field; branches is [(expr, condition LaTeX)], the condition written by the
+    caller (e.g. r"x\\le0" or r"\\lvert\\mathbf x\\rvert<r_1")."""
+    rows = [r"%s, & %s" % (sp.latex(e, symbol_names=dict(symbol_names)), cond)
+            for e, cond in branches]
+    body = "\\begin{cases}\n" + ",\\\\\n".join(rows) + ".\n\\end{cases}"
+    return "$$\n%s = %s\n$$\n" % (lhs, body)

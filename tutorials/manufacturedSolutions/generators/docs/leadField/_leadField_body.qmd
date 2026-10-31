@@ -9,9 +9,11 @@ The document gives, for each problem, the geometry and its regions, the
 conductivities, the exact heart transmembrane potential and torso potential,
 the electrodes, the reference point that fixes the constant of the
 potential, the meshes, and the quantities the verifier compares. It states
-the problems only; it contains no solver output. A reader with this document,
-the generator folder and the tutorial cases can rebuild each problem in
-another code.
+the problems only; it contains no solver output. Every displayed field,
+conductivity, source and constant of the exact solutions is printed by the
+sympy generator of its problem, `slab_leadfield_mms.py` or `shell_mms.py`. A
+reader with this document, the generator folder and the tutorial cases can
+rebuild each problem in another code.
 
 ## Domain and governing equations
 
@@ -30,12 +32,13 @@ $$
 \phi\ \text{continuous},\quad
 \mathbf n\cdot\mathbf G_w\nabla\phi
 &=\mathbf n\cdot\sigma\nabla\phi&&\text{on }\Gamma,\\
-\mathbf n\cdot\sigma\nabla\phi&=g&&\text{on }\partial\Omega_T\setminus\Gamma,
+\mathbf n\cdot\sigma\nabla\phi&=g_{\mathrm{out}}&&\text{on }\partial\Omega_T\setminus\Gamma,
 \end{aligned}
 \right.
 $$
 
-where $S_H$, $S_T$ and $g$ are manufactured data (zero in ordinary runs).
+where $S_H$, $S_T$ and $g_{\mathrm{out}}$ are manufactured data (zero in
+ordinary runs).
 The heart source is assembled with no wall flux of $\mathbf G_i\nabla V_m$.
 The heart-side wall conductivity $\mathbf G_w$ is the conductor's choice: with
 a monodomain myocardium, whose $V_m$ is sealed
@@ -74,30 +77,51 @@ exponential and square-root functions are dimensionless.
 
 ## Reading and regenerating {#sec-lf-regenerate}
 
-The exact potentials come from two sources. The slab and layered potentials
-(@sec-slab) are closed forms in one variable, written in the cardiacFoam
-header `manufacturedLeadFieldECGReference.H` of
-`src/verificationModels/ecgVerification/`; this folder holds their NumPy
-transcription, `docs/leadField/leadfield_reference.py`, which follows the
-header branch by branch. The curved-conductor potential (@sec-shell) is the
-transmission solution of the sympy generator `shell_mms.py` of
-`tutorials/manufacturedSolutions/generators/`, which writes the C++ header
-`manufacturedShellTransmissionBathBidomainReference.H` of
+The generators live in `tutorials/manufacturedSolutions/generators/` of the
+cardiacFoam repository. The slab and layered potentials (@sec-slab) are
+closed forms in one variable, built by `slab_leadfield_mms.py`, which writes
+`reference/slab_leadfield.py` and `latex/leadfield_*.tex`. The
+curved-conductor potential (@sec-shell) is the transmission solution of
+`shell_mms.py`, which writes `latex/shell_transmission_*.tex` and the C++
+header `manufacturedShellTransmissionBathBidomainReference.H` of
 `src/verificationModels/bathBidomainVerification/`.
 
-From the generator folder, with the environment of `requirements.txt`:
+Set up the environment once and run a generator from that folder:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python slab_leadfield_mms.py --emit
+.venv/bin/python slab_leadfield_mms.py --self-check
+```
+
+`--emit` runs the self-checks first and writes nothing if one fails;
+`--self-check` runs them alone. `shell_mms.py` also takes `--check PATH` and
+`--write PATH`, which compare or rewrite its C++ header and are needed only by
+cardiacFoam developers. `docs/leadField/leadfield_reference.py` holds what
+depends on the tutorial cases and on finished runs:
 
 ```bash
 python docs/leadField/leadfield_reference.py --self-check
 python docs/leadField/leadfield_reference.py --check-run RUN
-python docs/leadField/figures.py [--mesh-case NAME=PATH ...]
+```
+
+`--self-check` asserts that the electrodes and reference points of the cases
+lie where @sec-slab and @sec-shell place them. `--check-run RUN` reads a
+finished run of a lead-field tutorial (its `log.cardiacFoam`,
+`postProcessing/manufacturedLeadFieldECG_ECG.dat` and `constant/polyMesh`)
+and compares the exact columns written by the verifier with the exact
+potentials (@sec-slab-checks, @sec-shell-checks). The document is built with
+
+```bash
 quarto render docs/leadField/leadField_mms.qmd --to pdf
 ```
 
-`--check-run RUN` reads a finished run of a lead-field tutorial (its
-`log.cardiacFoam`, `postProcessing/manufacturedLeadFieldECG_ECG.dat` and
-`constant/polyMesh`) and compares the exact columns written by the verifier
-with the NumPy module (@sec-slab-checks, @sec-shell-checks).
+and its figures with `python docs/leadField/figures.py`, which takes
+`--draft`, `--outdir DIR` and `--mesh-case NAME=PATH` (names `slab_hex`,
+`slab_tet`, `layered_hex`, `layered_tet`, `shell_hex`, `shell_tet`) as the
+monodomain figure script does.
+
+{{< include ../_common/creating.qmd >}}
 
 # Insulated slab and layered torso {#sec-slab}
 
@@ -150,8 +174,8 @@ depends on the $xx$ entries only, so it is the same for the options
 `-conductivity anisotropic`, `isotropic` and `unequal` of the tutorial; the
 three differ in what the static error measures (tutorial README).
 
-- `slab`: torso conductivity $\sigma=0.0230827345$ in the cellZone `bath`;
-  every outer face insulated ($g=0$); $S_H=S_T=0$.
+- `slab`: torso conductivity $\sigma$ in the cellZone `bath`; every outer
+  face insulated ($g_{\mathrm{out}}=0$); $S_H=S_T=0$.
 - `layered`: the torso slabs split at $x_L=-0.5$ and $x_R=1.5$ into the
   cellZones `torsoInner` ($x_L<x<0$ and $1<x<x_R$, $\sigma_1=0.1$) and
   `torsoOuter` ($x<x_L$ and $x>x_R$, $\sigma_2=0.02$); surface currents
@@ -159,11 +183,17 @@ three differ in what the static error measures (tutorial README).
   $+\alpha$ on `xMax` ($x=2$), $\alpha=0.01$ (`-alpha`); the faces `sides`
   insulated. The current density $-\sigma\nabla\phi=-\alpha\,\mathbf e_x$ is
   the same in every layer.
-- Reference point $\mathbf r_{\mathrm{ref}}=(-0.9013,\,0.0437,\,0.0437)$ in
-  the left torso (the outer layer in `layered`), $\phi_{\mathrm{ref}}=0$. The
+- Reference point $\mathbf r_{\mathrm{ref}}$ in the left torso (the outer
+  layer in `layered`), with the value $\phi_{\mathrm{ref}}$. The
   bidomain myocardium also pins its own heart potential at
   $(0.1137,\,0.0437,\,0.0437)$; that pin belongs to the heart solve and not
   to the conductor of the ECG domain.
+- The constants:
+
+{{< include ../../latex/leadfield_slab_params.tex >}}
+
+{{< include ../../latex/leadfield_layered_params.tex >}}
+
 - Electrodes: eight on the body surface, $0.003$ inside the outer faces of the
   torso slabs (two on each end face $x=-1$, $x=2$ and one on each of the four
   side faces), and five interior probes. None lies on a hexahedral face at
@@ -236,39 +266,28 @@ conductor pins. The constant $C$ of the formulas therefore cancels.
 
 ## Exact solution
 
-$$
-V_m=S\cos(\pi x)\quad(0\le x\le1),\qquad S=\sqrt{1+t},
-\qquad k=\frac{G_{i,xx}}{G_{i,xx}+G_{e,xx}},
-$$
+{{< include ../../latex/leadfield_S.tex >}}
 
-$$
-\phi^\ast_{\mathrm{slab}}(x,t)=
-\begin{cases}
--kS+C, & x\le0,\\
--kS\cos(\pi x)+C, & 0<x\le1,\\
-kS+C, & x>1,
-\end{cases}
-\qquad C=kS,
-$$
+{{< include ../../latex/leadfield_k.tex >}}
 
-so that, gauged in the left torso, $\phi=0$ for $x\le0$,
-$\phi=kS(1-\cos\pi x)$ in the heart and $\phi=2kS$ for $x\ge1$: the exact ECG
-between the right and the left torso is $2kS$. In the layered problem
+{{< include ../../latex/leadfield_slab_Vm.tex >}}
 
-$$
-\phi^\ast_{\mathrm{layered}}(x,t)=\phi^\ast_{\mathrm{slab}}(x,t)+\alpha R(x),
-$$
+in the heart $0\le x\le1$, and
 
-$$
-R(x)=
-\begin{cases}
-\dfrac{x_L}{\sigma_1}+\dfrac{x-x_L}{\sigma_2}, & x\le x_L,\\[1ex]
-\dfrac{x}{\sigma_1}, & x_L<x\le0,\\[1ex]
-\dfrac{x}{(G_i+G_e)_{xx}}, & 0<x\le1,\\[1ex]
-\dfrac{1}{(G_i+G_e)_{xx}}+\dfrac{x-1}{\sigma_1}, & 1<x\le x_R,\\[1ex]
-\dfrac{1}{(G_i+G_e)_{xx}}+\dfrac{x_R-1}{\sigma_1}+\dfrac{x-x_R}{\sigma_2}, & x>x_R.
-\end{cases}
-$$
+{{< include ../../latex/leadfield_slab_phi.tex >}}
+
+{{< include ../../latex/leadfield_slab_C.tex >}}
+
+so that, gauged in the left torso,
+
+{{< include ../../latex/leadfield_slab_phi_gauged.tex >}}
+
+and the exact ECG between the right and the left torso is $2kS$. In the
+layered problem
+
+{{< include ../../latex/leadfield_layered_phi.tex >}}
+
+{{< include ../../latex/leadfield_layered_R.tex >}}
 
 The verifier takes $\alpha$ from the surface currents and the four layer
 conductivities from the torso cells, and stops with a fatal error when a torso
@@ -278,7 +297,12 @@ a net current, or when a current is combined with the bidomain conductor.
 With $\alpha=0$ the layered potential equals the slab's for any $\sigma_1$,
 $\sigma_2$.
 
-In code, the functions of `manufacturedLeadFieldECGReference.H`:
+The full expressions are `fields()` of `slab_leadfield_mms.py` and `Vm`,
+`phi_slab`, `resistance` and `phi_layered` of `reference/slab_leadfield.py`,
+whose layer arguments carry each side separately (`sigmaOuterLeft`,
+`sigmaInnerLeft`, `sigmaHeart`, `sigmaInnerRight`, `sigmaOuterRight`) as the
+C++ structure does; `PARAMS` holds the values of the tutorial. In code, the
+functions of `manufacturedLeadFieldECGReference.H`:
 
 - `manufacturedLeadFieldSlabVm`;
 - `manufacturedLeadFieldSlabPhi`, which calls `manufacturedFDABathPhiEAt`
@@ -286,16 +310,34 @@ In code, the functions of `manufacturedLeadFieldECGReference.H`:
 - `manufacturedLeadFieldLayeredResistance`;
 - `manufacturedLeadFieldLayeredPhi`;
 
-and in NumPy `slab_vm`, `slab_phi_raw`, `layered_resistance`,
-`layered_phi_raw` and `gauged` of `leadfield_reference.py`.
+and their transcription `slab_vm`, `slab_phi_raw`, `layered_resistance`,
+`layered_phi_raw` and `gauged` of `docs/leadField/leadfield_reference.py`,
+which follows the header branch by branch.
 
 ## Self-checks {#sec-slab-checks}
 
-`leadfield_reference.py --self-check` asserts that $k=1/\sqrt2$ to $10^{-11}$;
-that $\phi^\ast_{\mathrm{slab}}$ is $0$ on the left, $2kS$ on the right and
-continuous at $x=0$ and $x=1$; that $R$ is continuous with
-$\sigma R'=1$ (central differences, $10^{-8}$) on both sides of each of
-$x_L$, $0$, $1$, $x_R$; and that the electrodes of the case are
+`slab_leadfield_mms.py --self-check` asserts, symbolically:
+
+- in the heart $(G_i+G_e)_{xx}\,\phi''=-G_{i,xx}V_m''$ with
+  $k(G_i+G_e)_{xx}=G_{i,xx}$, and $V_m'$ vanishes at $x=0$ and $x=1$;
+- $\phi^\ast_{\mathrm{slab}}$ is continuous at $x=0$ and $x=1$ and linear in
+  each torso slab, and, gauged in the left torso, $0$ on the left and $2kS$
+  on the right;
+- $R$ is continuous at $x_L$, $0$, $1$, $x_R$, $R(0)=0$, and $\sigma R'=1$ in
+  every layer, so the normal current is continuous;
+- the surface currents are $-\alpha$ on $x=-1$ and $+\alpha$ on $x=2$;
+- with $\alpha=0$ the layered potential equals the slab's;
+- $k=1/\sqrt2$ to $10^{-8}$ for both conductivity pairs of the tutorial;
+- the printed constants round-trip.
+
+`test_slab_leadfield_mms.py` compares `reference/slab_leadfield.py` with
+`leadfield_reference.py`, the transcription of the C++ header, to
+$10^{-15}$ on $-1\le x\le2$ at three times, and the constants with the
+dictionaries of the tutorial. `leadfield_reference.py --self-check` asserts
+that $k=1/\sqrt2$ to $10^{-11}$; that $\phi^\ast_{\mathrm{slab}}$ is $0$ on
+the left, $2kS$ on the right and continuous at $x=0$ and $x=1$; that $R$ is
+continuous with $\sigma R'=1$ (central differences, $10^{-8}$) on both sides of
+each of $x_L$, $0$, $1$, $x_R$; and that the electrodes of the case are
 `surface1` to `surface8`, $0.003$ from the outer boundary, and probes
 farther inside, all in the torso and none on a hexahedral face at
 $N=10,20,40,80$.
@@ -341,6 +383,8 @@ Meshes of the tutorial `leadFieldECG` at its default $N=10$, coloured by cellZon
 ## Regeneration
 
 ```bash
+python slab_leadfield_mms.py --emit
+python slab_leadfield_mms.py --self-check
 python docs/leadField/leadfield_reference.py --self-check
 python docs/leadField/leadfield_reference.py --check-run SLAB_RUN \
     --check-run LAYERED_RUN
@@ -349,10 +393,12 @@ python docs/leadField/figures.py --mesh-case slab_hex=SLAB_HEX \
     --mesh-case layered_tet=LAYERED_TET
 ```
 
-A run is a copy of the tutorial outside the repository after
-`./Allrun [-problem layered] -mesh hex|tet -N 10`. The C++ reference is
-hand-written; there is no generator to compare it with, and the run check
-above is the comparison.
+`--emit` writes `reference/slab_leadfield.py` and `latex/leadfield_*.tex`. A
+run is a copy of the tutorial outside the repository after
+`./Allrun [-problem layered] -mesh hex|tet -N 10`. The C++ functions are
+hand-written and carry no generated regions, so the generator has no
+`--check`; the comparison of the NumPy module with their transcription and
+the run check above are the comparisons.
 
 # Curved conductor {#sec-shell}
 
@@ -383,17 +429,11 @@ surface-current patches are refused.
 
 ## Problem instance
 
-| parameter | value | parameter | value |
-|:--|:--|:--|:--|
-| $r_1,\ r_2,\ r_3$ | $0.5,\ 1,\ 1.5$ | $\gamma_1,\ \gamma_2$ | $20^\circ,\ 50^\circ$ |
-| $\sigma_{il},\ \sigma_{it},\ \sigma_{in}$ | $0.17,\ 0.019,\ 0.01$ | $\theta_0,\ \theta_1$ | $-20^\circ,\ 90^\circ$ |
-| $\sigma_{el},\ \sigma_{et},\ \sigma_{en}$ | $0.62,\ 0.12,\ 0.08$ | $k$ | $\pi$ |
-| $\sigma_{0,\mathrm{in}},\ \sigma_{0,\mathrm{out}},\ \varepsilon$ | $0.6,\ 0.25,\ 0.2$ | $a_0,\dots,a_3$ | $0.3,\ 0.2,\ 0.4,\ 0.15$ |
-| $A_{\mathrm{cm}}$ | $0$ | $b_0,\ b_1,\ b_2$ | $-0.1,\ 0.3,\ 0.25$ |
+{{< include ../../latex/shell_transmission_params.tex >}}
 
 These are `default_params()` of `shell_mms.py` and `defaultParams()` of the
-header. The outer sphere $r_3$ is the extent of the mesh; the formulas hold
-everywhere. Conductivities are in S m$^{-1}$, angles in degrees.
+header. The outer sphere $r_3=1.5$ is the extent of the mesh; the formulas
+hold everywhere. Conductivities are in S m$^{-1}$.
 
 - Reference point $\mathbf r_{\mathrm{ref}}=(1.3137,\,0.0371,\,0.0459)$ in the
   outer bath, $\phi_{\mathrm{ref}}=0$. The bidomain heart solve pins its own
@@ -437,26 +477,27 @@ In cardiacFoam:
 
 ## Construction
 
-*Transmural coordinate and tensors.* As in the sealed monodomain shell, with
-$\rho=\lvert\mathbf x\rvert^2$,
+*Transmural coordinate and tensors.* The coordinate $\lambda$, the fibre
+angle $\theta$, the function $\omega$, the fixed frame
+$(\mathbf e_a,\mathbf e_b,\mathbf n_s)$, the fibre $\mathbf f$, the sheet
+$\mathbf s$ and the two tensors are those of the sealed monodomain and
+bidomain shells, with $r_1$, $r_2$ the radii of the heart:
 
-$$
-\lambda=\frac{\rho-r_1^2}{r_2^2-r_1^2},\qquad
-\theta=\theta_0+\theta_1\lambda,\qquad
-\omega=\frac{(\rho-r_1^2)(\rho-r_2^2)}{(r_2^2-r_1^2)(r_1+r_2)},
-$$
+{{< include ../../latex/shell_lambda.tex >}}
 
-$$
-[\mathbf e_a\ \mathbf e_b\ \mathbf e_c]=R_z(\gamma_1)R_x(\gamma_2),\qquad
-\mathbf f=\cos\theta\,\mathbf e_a+\sin\theta\,\mathbf e_b,\qquad
-\mathbf s=-\sin\theta\,\mathbf e_a+\cos\theta\,\mathbf e_b,
-$$
+{{< include ../../latex/shell_theta.tex >}}
 
-$$
-\mathbf G_i=\sigma_{il}\,\mathbf f\otimes\mathbf f+\sigma_{it}\,\mathbf s\otimes\mathbf s+\sigma_{in}\,\mathbf e_c\otimes\mathbf e_c,
-\qquad
-\mathbf G_e=\sigma_{el}\,\mathbf f\otimes\mathbf f+\sigma_{et}\,\mathbf s\otimes\mathbf s+\sigma_{en}\,\mathbf e_c\otimes\mathbf e_c .
-$$
+{{< include ../../latex/shell_omega.tex >}}
+
+{{< include ../../latex/shell_frame.tex >}}
+
+{{< include ../../latex/shell_fibre.tex >}}
+
+{{< include ../../latex/shell_sheet.tex >}}
+
+{{< include ../../latex/shell_bidomain_Gi.tex >}}
+
+{{< include ../../latex/shell_bidomain_Ge.tex >}}
 
 $\mathbf G_i$ and $\mathbf G_e$ share one frame and one fibre angle. A fixed
 frame is used because a fibre field tangent to a sphere vanishes somewhere
@@ -464,45 +505,52 @@ on it.
 
 *Bath conductivity.*
 
-$$
-\hat\sigma=\sin\!\left(kx+\tfrac15\right)\cos(ky)\left(1+\tfrac12\sin kz\right),\qquad
-\sigma_B=
-\begin{cases}
-\sigma_{0,\mathrm{in}}(1+\varepsilon\hat\sigma), & |\mathbf x|<r_1,\\
-\sigma_{0,\mathrm{out}}(1+\varepsilon\hat\sigma), & |\mathbf x|>r_2 .
-\end{cases}
-$$
+{{< include ../../latex/shell_transmission_sigmahat.tex >}}
 
-*Smooth fields.* With $S=\sqrt{1+t}$, $f=S\hat f$ and $h=S\hat h$,
+{{< include ../../latex/shell_transmission_sigmaB.tex >}}
 
-$$
-\hat f=a_0x+a_1yz+a_2\sin(kx)\left(1+\tfrac12y\right)+a_3\cos\!\left(ky+\tfrac3{10}\right)e^{2z/5},
-$$
+*Smooth fields.* With
 
-$$
-\hat h=b_0z+b_1\cos(ky)\left(1-\tfrac3{10}x^2\right)+b_2x\sin(kz).
-$$
+{{< include ../../latex/shell_transmission_S.tex >}}
+
+the smooth extracellular and intracellular fields are
+
+{{< include ../../latex/shell_transmission_fhat.tex >}}
+
+{{< include ../../latex/shell_transmission_hhat.tex >}}
+
+{{< include ../../latex/shell_transmission_f.tex >}}
+
+{{< include ../../latex/shell_transmission_h.tex >}}
+
+$\hat f$ is the field $\hat h_e$ and $\hat h$ the field $\hat h_i$ of the
+bidomain shell.
 
 *Interface corrections.* On sphere $j$ ($j=1$: $|\mathbf x|=r_1$, $j=2$:
-$|\mathbf x|=r_2$) the unit normal out of the heart is
-$\mathbf n_1=-\mathbf x/r_1$, $\mathbf n_2=\mathbf x/r_2$, and
-$\nabla\omega=d_j\mathbf n_j$ with $d_1=2r_1/(r_1+r_2)$,
-$d_2=2r_2/(r_1+r_2)$. With $\sigma_{B,1}$ the bath-ball formula and
-$\sigma_{B,2}$ the outer-bath formula of $\sigma_B$, evaluated at
-$\mathbf x$,
+$|\mathbf x|=r_2$) the unit normal out of the heart is $\mathbf n_j$ and
+$\nabla\omega=d_j\mathbf n_j$:
 
-$$
-g_j=\frac{\mathbf n_j\cdot(\sigma_{B,j}\mathbf I-\mathbf G_e)\nabla f}{(\mathbf n_j\cdot\mathbf G_e\mathbf n_j)\,d_j},
-\qquad
-m_j=-\frac{\mathbf n_j\cdot\mathbf G_i\nabla h}{(\mathbf n_j\cdot\mathbf G_i\mathbf n_j)\,d_j},
-$$
+{{< include ../../latex/shell_n1.tex >}}
 
-$$
-g=(1-\lambda)g_1+\lambda g_2,\qquad m=(1-\lambda)m_1+\lambda m_2 .
-$$
+{{< include ../../latex/shell_n2.tex >}}
 
-The heart extracellular and intracellular potentials are
-$\phi=f+\omega g$ and $\phi_i=h+\omega m$, and the bath potential is
+{{< include ../../latex/shell_d1.tex >}}
+
+{{< include ../../latex/shell_d2.tex >}}
+
+With $\sigma_{B,1}$ the bath-ball formula and $\sigma_{B,2}$ the outer-bath
+formula of $\sigma_B$, evaluated at $\mathbf x$, and $\mathbf G_i$,
+$\mathbf G_e$ the heart tensors at $\mathbf x$,
+
+{{< include ../../latex/shell_transmission_gj.tex >}}
+
+{{< include ../../latex/shell_transmission_mj.tex >}}
+
+{{< include ../../latex/shell_transmission_g.tex >}}
+
+{{< include ../../latex/shell_transmission_m.tex >}}
+
+In the heart $\phi=f+\omega g$ and $\phi_i=h+\omega m$, and in the bath
 $\phi=f$. On sphere $j$, $\omega=0$ and $\nabla(\omega g)=g_jd_j\mathbf n_j$,
 so
 
@@ -514,51 +562,80 @@ The denominators are positive because the tensors are positive definite, so
 every zone formula extends smoothly beyond its sphere, where polyhedral faces
 put cell centres.
 
-*Common mode.* The generator also adds $T(t)$ times a common term to
-$\phi$ and $\phi_i$ (leaving $V_m$ unchanged), with
-$T(t)=A_{\mathrm{cm}}\sin(\Omega_{\mathrm{cm}}t)$. The case uses
-$A_{\mathrm{cm}}=0$, so the term vanishes; the alternate parameters of the
-generator switch it on for the header self-test.
+*Common mode.* The generator adds to $\phi$ and $\phi_i$ the same term,
+$T$ times a field built on
+
+{{< include ../../latex/shell_transmission_T.tex >}}
+
+{{< include ../../latex/shell_transmission_f2.tex >}}
+
+so that $V_m$ is unchanged. In the heart the term is $T(f_2+\omega q)$, with
+$q$ sealing it with respect to $\mathbf G_i$:
+
+{{< include ../../latex/shell_transmission_qj.tex >}}
+
+{{< include ../../latex/shell_transmission_q.tex >}}
+
+In the bath zone of sphere $j$ it is $T(f_2+\beta_jr_j)$, with $\beta_j$ zero
+on the sphere and $r_j$ the correction that keeps the extracellular flux
+continuous, built with the heart tensors $\mathbf G_i^{(j)}$,
+$\mathbf G_e^{(j)}$ of the sphere ($\theta=\theta_0$ for $j=1$,
+$\theta=\theta_0+\theta_1$ for $j=2$) and the denominator $D_j$, positive in
+the whole zone, the origin included:
+
+{{< include ../../latex/shell_transmission_beta1.tex >}}
+
+{{< include ../../latex/shell_transmission_beta2.tex >}}
+
+{{< include ../../latex/shell_transmission_rj.tex >}}
+
+{{< include ../../latex/shell_transmission_kappa.tex >}}
+
+{{< include ../../latex/shell_transmission_D1.tex >}}
+
+{{< include ../../latex/shell_transmission_D2.tex >}}
+
+The case uses $A_T=0$, so $T=0$ and the term vanishes; the
+alternate parameters of the generator switch it on for the header self-test.
 
 *Data.* The sources are the residuals of the exact fields,
 
-$$
-S_H=\nabla\cdot(\mathbf G_i\nabla\phi_i)+\nabla\cdot(\mathbf G_e\nabla\phi)\ \ \text{in }\Omega_H,
-\qquad
-S_T=\nabla\cdot(\sigma_B\nabla\phi)\ \ \text{in }\Omega_T,
-$$
+{{< include ../../latex/shell_transmission_sources.tex >}}
 
 which is the heart equation of @sec-lf-problem with $V_m=\phi_i-\phi$, and
 the outer boundary carries the exact outward current
-$g_{\mathrm{out}}=\sigma_B\,\mathbf n\cdot\nabla\phi$ evaluated at each outer
-face centre with the outer-bath formula.
+
+{{< include ../../latex/shell_transmission_gout.tex >}}
+
+evaluated at each outer face centre with the outer-bath formula.
 
 ## Exact solution
 
-$$
-\phi=
-\begin{cases}
-S\hat f, & |\mathbf x|<r_1\ \text{and}\ |\mathbf x|>r_2,\\
-S\hat f+\omega g, & r_1\le|\mathbf x|\le r_2,
-\end{cases}
-\qquad
-V_m=S(\hat h-\hat f)+\omega(m-g)\quad\text{in }\Omega_H,
-$$
+{{< include ../../latex/shell_transmission_phi.tex >}}
 
-with $g$ and $m$ linear in $S$. The verifier evaluates $\phi$ with the
-formula of the zone that contains the point (`zoneOf`), gauged as in
-@sec-slab at the centroid $\mathbf x_{\mathrm{ref}}$ of the pinned cell. In
-code: `Vm`, `phiE`, `phiI`, `gradPhiE`, `Gi`, `Ge`, `sigmaB`,
-`divGiGradPhiI` and `phiESource` (the source $S_H$ or $S_T$ of the zone) of
-the namespace `shellTransmissionMMS`; in Python `Model.eval_xyz(zone, name,
-points, t)` of `shell_mms.py`, and `shell_eval`, `shell_phi` of
-`leadfield_reference.py`.
+{{< include ../../latex/shell_transmission_phiI.tex >}}
+
+{{< include ../../latex/shell_transmission_Vm.tex >}}
+
+in the heart, with $g$ and $m$ linear in $S$. The verifier evaluates $\phi$
+with the formula of the zone that contains the point (`zoneOf`), gauged as in
+@sec-slab at the centroid $\mathbf x_{\mathrm{ref}}$ of the pinned cell. The
+sources are not printed: they are `phiESource` of the zone in
+`expressions("levelSet")` of `shell_mms.py`. In code: `Vm`, `phiE`, `phiI`,
+`gradPhiE`, `Gi`, `Ge`, `sigmaB`, `divGiGradPhiI` and `phiESource` (the source
+$S_H$ or $S_T$ of the zone) of the namespace `shellTransmissionMMS`; in Python
+`Model.eval_xyz(zone, name, points, t)` of `shell_mms.py`, and `shell_eval`,
+`shell_phi` of `leadfield_reference.py`.
 
 ## Self-checks {#sec-shell-checks}
 
-`shell_mms.py` runs, before it writes the header, and `test_shell_mms.py`
-repeats:
+`shell_mms.py --self-check` runs, as `--emit` and `--write` do before they
+write, and `test_shell_mms.py` repeats:
 
+- shared construction: $\lambda$, $\omega$, the frame, the wall normals,
+  $d_j$, $\mathbf G_i$, $\mathbf G_e$, $\hat h$ and $\hat f$ equal those of
+  `shell_monodomain_mms.py` and `shell_bidomain_mms.py`, whose fragments are
+  printed above (symbolic);
 - interface conditions: continuity of $\phi$, of the extracellular flux and
   the sealing of $\phi_i$ below $10^{-12}$ at 24 points of each sphere and
   three times, in 30-digit arithmetic, for the default and the alternate
@@ -609,6 +686,8 @@ Meshes of the tutorial `leadFieldECG/sphericalShell` at $N=8$ (the tutorial defa
 ## Regeneration
 
 ```bash
+python shell_mms.py --emit
+python shell_mms.py --self-check
 H=../../../src/verificationModels/bathBidomainVerification
 python shell_mms.py --check $H/manufacturedShellTransmissionBathBidomainReference.H
 python -m pytest test_shell_mms.py
@@ -617,10 +696,13 @@ python docs/leadField/figures.py --mesh-case shell_hex=SHELL_HEX \
     --mesh-case shell_tet=SHELL_TET
 ```
 
-`--write PATH` rewrites the whole header, including a table of self-test
-samples that the cardiacFoam verifiers compare with their compiled functions.
-The generator emits no NumPy module and no LaTeX fragments; the formulas above
-are transcribed from `expressions()` of `shell_mms.py`.
+`--emit` writes `latex/shell_transmission_*.tex`; the shared fragments
+`latex/shell_*.tex` and `latex/shell_bidomain_G*.tex` are those of
+`shell_monodomain_mms.py` and `shell_bidomain_mms.py`. The generator emits no
+NumPy module: `leadfield_reference.py` evaluates the fields through
+`Model.eval_xyz` of `shell_mms.py`. `--write PATH` rewrites the whole header,
+including a table of self-test samples that the cardiacFoam verifiers compare
+with their compiled functions.
 
 # The lead-field identity and the static rows {#sec-identity}
 

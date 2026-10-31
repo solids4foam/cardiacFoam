@@ -6,12 +6,11 @@ equations used by cardiacFoam is built. In the method of manufactured solutions
 make them satisfy the equations are derived from them. The document gives the
 exact potentials, the sources, the gauge of the extracellular potential and the
 checks that each construction passes. It states the problems only; it contains
-no solver output. The displayed fields, tensors, sources and coefficients are
-printed by `docs/bidomain/bidomain_reference.py`, which takes the shell
-construction from the sympy generator `shell_bidomain_mms.py` (the generator of
-the cardiacFoam reference header) and the FDA spatial factors from
-`reference/fda_monodomain.py`. A reader with this document and the generator
-folder can rebuild each problem in another code.
+no solver output. Every displayed field, tensor, source and coefficient below
+is printed by the sympy generator of its problem, `fda_bidomain_mms.py` or
+`shell_bidomain_mms.py`, which also writes the NumPy reference module and, for
+the shell, the C++ reference header of cardiacFoam. A reader with this document
+and the generator folder can rebuild each problem in another code.
 
 ## Domain and governing equations
 
@@ -125,22 +124,31 @@ $L_2=(\sum_cV_ce_c^2/\sum_cV_c)^{1/2}$, $L_\infty=\max_c|e_c|$.
 
 ## Reading and regenerating {#sec-regenerate}
 
-The files live in `tutorials/manufacturedSolutions/generators/` of the
-cardiacFoam repository. `docs/bidomain/bidomain_reference.py` holds the NumPy
-functions of the FDA cube, an adapter to the shell generator, the checks of
-both problems and the emitter of the fragments `docs/bidomain/latex/*.tex`
-printed here:
+The generators live in `tutorials/manufacturedSolutions/generators/` of the
+cardiacFoam repository. Each problem has one sympy generator `<case>_mms.py`
+that writes
+
+- `reference/<case>.py`, a NumPy-only module with the exact fields and
+  sources;
+- `latex/<case>_*.tex`, the fragments printed in this document.
+
+Set up the environment once and run a generator from that folder:
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/python docs/bidomain/bidomain_reference.py --emit
-.venv/bin/python docs/bidomain/bidomain_reference.py --self-check
+.venv/bin/python fda_bidomain_mms.py --emit
+.venv/bin/python fda_bidomain_mms.py --self-check
 ```
 
 `--emit` runs the self-checks first and writes nothing if one fails;
-`--self-check` runs them alone. `--run-check KIND=CASE ...` (`KIND` is `fda`
-or `shell`) compares the exact fields with a finished run (@sec-fda-checks,
-@sec-shell-checks) and writes nothing. The document is built with
+`--self-check` runs them alone. `shell_bidomain_mms.py` also takes
+`--check PATH` and `--write PATH`, which compare or rewrite its C++ header and
+are needed only by cardiacFoam developers. `docs/bidomain/bidomain_reference.py`
+holds what depends on the tutorial cases: `--self-check` asserts that their
+dictionaries carry the conductivities and reference points of the generators,
+and `--run-check KIND=CASE ...` (`KIND` is `fda` or `shell`) compares the
+exact fields with a finished run (@sec-fda-checks, @sec-shell-checks) and
+writes nothing. The document is built with
 
 ```bash
 quarto render docs/bidomain/bidomain_mms.qmd --to pdf
@@ -191,23 +199,23 @@ $$
 
 and relative to $k_d$, the size of $\nabla\cdot(\mathbf G_i\nabla V_m)/V_m$,
 
-{{< include latex/fda_bidomain_residual_relative.tex >}}
+{{< include ../../latex/fda_bidomain_residual_relative.tex >}}
 
 ## Problem instance
 
 Unit cube $[0,1]^d$, all faces sealed, the diagonal conductivities
 
-{{< include latex/fda_bidomain_Gi.tex >}}
+{{< include ../../latex/fda_bidomain_Gi.tex >}}
 
-{{< include latex/fda_bidomain_Ge.tex >}}
+{{< include ../../latex/fda_bidomain_Ge.tex >}}
 
 the constants, with $\kappa$ and $\beta_d$ computed from the dictionary values,
 
-{{< include latex/fda_bidomain_params.tex >}}
+{{< include ../../latex/fda_bidomain_params.tex >}}
 
 and the gauge
 
-{{< include latex/fda_bidomain_ref.tex >}}
+{{< include ../../latex/fda_bidomain_ref.tex >}}
 
 In cardiacFoam:
 
@@ -226,7 +234,7 @@ In cardiacFoam:
 The spatial factor $F_d$ of the FDA monodomain problem is an eigenfunction of
 the diagonal operator, $\nabla\cdot(\mathbf G_i\nabla F_d)=-k_dF_d$ with
 
-{{< include latex/fda_bidomain_kd.tex >}}
+{{< include ../../latex/fda_bidomain_kd.tex >}}
 
 ($\mathbf G_i$ is the conductivity of the monodomain FDA problem, so $k_d$ is
 the eigenvalue of that document). With $\phi_e=-\kappa V_m+c$ and
@@ -243,13 +251,13 @@ $\nabla\cdot(\mathbf G_i\nabla\phi_i)=(1-\kappa)\nabla\cdot(\mathbf G_i\nabla V_
 =-(1-\kappa)k_dV_m$, and $(1-\kappa)G_{i,mm}=H_{mm}$, the harmonic combination
 of the two diagonals. The ionic model sets
 
-{{< include latex/fda_bidomain_beta.tex >}}
+{{< include ../../latex/fda_bidomain_beta.tex >}}
 
 so that $-\beta_dV_m$ from the ionic term (@sec-ionic) cancels the diffusion
 term and no applied current is needed ($I_{\mathrm{app}}=0$). The constant $c$
 makes $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$ at every time:
 
-{{< include latex/fda_bidomain_c.tex >}}
+{{< include ../../latex/fda_bidomain_c.tex >}}
 
 ## Exact solution
 
@@ -261,11 +269,11 @@ makes $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$ at every time:
 
 {{< include ../../latex/fda_Vm.tex >}}
 
-{{< include latex/fda_bidomain_kappa.tex >}}
+{{< include ../../latex/fda_bidomain_kappa.tex >}}
 
-{{< include latex/fda_bidomain_phiE.tex >}}
+{{< include ../../latex/fda_bidomain_phiE.tex >}}
 
-{{< include latex/fda_bidomain_phiI.tex >}}
+{{< include ../../latex/fda_bidomain_phiI.tex >}}
 
 with the auxiliary states $u_1$, $u_2$, $u_3$ and the factors $G_d$ of the
 monodomain FDA problem:
@@ -278,16 +286,16 @@ monodomain FDA problem:
 
 {{< include ../../latex/fda_u3.tex >}}
 
-($G_1=x+1$, $G_2=xy^2+1$.) The NumPy functions are `Vm`, `phiE`, `phiI`,
-`shift`, `u1`, `u2`, `Jion`, `kappa` and `beta` of `bidomain_reference.py`,
-each with the dimension as first argument; they follow
-`manufacturedFDABidomainReference.H` and `bidomainFDAManufactured.C` of
-cardiacFoam.
+($G_1=x+1$, $G_2=xy^2+1$.) The full expressions are `fields(d)` of
+`fda_bidomain_mms.py` and `Vm_d<d>`, `phiE_d<d>`, `phiI_d<d>`, `shift_d<d>`
+(the constant $c$), `u1_d<d>`, `u2_d<d>`, `u3_d<d>`, `Iion_d<d>` (the current
+$J_{\mathrm{ion}}$), `F_d<d>`, `G_d<d>` of `reference/fda_bidomain.py`, whose
+`PARAMS` holds $\kappa$, $\beta_d$, the diagonals and the gauge.
 
 ## Self-checks {#sec-fda-checks}
 
-`--self-check` asserts, for $d=1,2,3$, in exact rational arithmetic on the
-decimals of the tutorial dictionary:
+`fda_bidomain_mms.py --self-check` asserts, for $d=1,2,3$, in exact rational
+arithmetic on the decimals of the conductivities:
 
 - $\partial_tu_1$ and $\partial_tu_2$ equal the ionic rates on the exact fields;
 - the residuals of both equations are constant multiples $\rho_pV_m$,
@@ -298,11 +306,14 @@ decimals of the tutorial dictionary:
 - $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$;
 - the ratios $G_{i,mm}/(G_{i,mm}+G_{e,mm})$ agree with $\kappa$ to
   $10^{-6}\kappa$, the tolerance of the ionic model;
-- the conductivities and `phiERefPoint` equal those of the tutorial
-  `constant/electroProperties`.
+- the printed constants round-trip.
 
-*Comparison with a run.* `--run-check fda=CASE` reads the cell centres and
-volumes (from `constant/polyMesh`, by the face-triangle and face-pyramid
+`docs/bidomain/bidomain_reference.py --self-check` asserts that the
+conductivities and `phiERefPoint` of the tutorial `constant/electroProperties`
+equal those of the generator.
+
+*Comparison with a run.* `bidomain_reference.py --run-check fda=CASE` reads
+the cell centres and volumes (from `constant/polyMesh`, by the face-triangle and face-pyramid
 decomposition OpenFOAM uses), the computed `Vm` and `phiE` of the last time and
 `postProcessing/<d>D_<n>_cells.dat`, and recomputes from the exact fields above
 the `Vm`, `phiE`, `phiE_gauge` and `phiI_gauge` norms and $\delta_e$. On the
@@ -326,17 +337,20 @@ Meshes of the unit cube from the tutorial `manufacturedSolutions/bidomain` (`-di
 ## Regeneration
 
 ```bash
-python docs/bidomain/bidomain_reference.py --emit
+python fda_bidomain_mms.py --emit
+python fda_bidomain_mms.py --self-check
 python docs/bidomain/bidomain_reference.py --self-check
 R=../bidomain/setup/studies/cartesianConvergence/results
 python docs/bidomain/bidomain_reference.py --run-check fda=$R/3D_N10
 ```
 
-`--emit` writes `docs/bidomain/latex/fda_bidomain_*.tex`. The FDA spatial
-factors and auxiliary states come from `reference/fda_monodomain.py`, emitted
-by `fda_monodomain_mms.py`; the bidomain functions of the cardiacFoam headers
-(`manufacturedFDABidomainReference.H`, the constants of
-`bidomainFDAManufactured.C`) are hand-written.
+`--emit` writes `reference/fda_bidomain.py` and `latex/fda_bidomain_*.tex`.
+The spatial factors, the auxiliary states and the ionic closure are those of
+`fda_monodomain_mms.py`, imported. The bidomain functions of cardiacFoam
+(`manufacturedFDABidomainReference.H` and the constants of
+`bidomainFDAManufactured.C`) are hand-written and carry no generated regions,
+so the generator has no `--check`; the run comparison above is the
+comparison.
 
 # Sealed spherical shell {#sec-shell}
 
@@ -364,11 +378,11 @@ and $\mathbf G_e$ differ is not detected.
 
 The parameters are
 
-{{< include latex/shell_bidomain_params.tex >}}
+{{< include ../../latex/shell_bidomain_params.tex >}}
 
 with $\chi=3$, $C_m=2$, and the gauge and reaction coefficient
 
-{{< include latex/shell_bidomain_ref.tex >}}
+{{< include ../../latex/shell_bidomain_ref.tex >}}
 
 The inner sphere is the patch `endocardium` and the outer sphere the patch
 `epicardium`. In cardiacFoam:
@@ -402,9 +416,9 @@ shell:
 
 Both tensors are built on this frame with their own eigenvalues:
 
-{{< include latex/shell_bidomain_Gi.tex >}}
+{{< include ../../latex/shell_bidomain_Gi.tex >}}
 
-{{< include latex/shell_bidomain_Ge.tex >}}
+{{< include ../../latex/shell_bidomain_Ge.tex >}}
 
 $\mathbf G_i$ is the conductivity $\boldsymbol\sigma$ of the monodomain shell.
 The eigenvalue ratios are $17:1.9:1$ for $\mathbf G_i$ and $7.75:1.5:1$ for
@@ -427,19 +441,19 @@ the heart:
 
 For the intracellular factor, with $\mathbf G_i$,
 
-{{< include latex/shell_bidomain_mj_i.tex >}}
+{{< include ../../latex/shell_bidomain_mj_i.tex >}}
 
-{{< include latex/shell_bidomain_m_i.tex >}}
+{{< include ../../latex/shell_bidomain_m_i.tex >}}
 
-{{< include latex/shell_bidomain_Fi.tex >}}
+{{< include ../../latex/shell_bidomain_Fi.tex >}}
 
 and for the extracellular factor, with $\mathbf G_e$,
 
-{{< include latex/shell_bidomain_mj_e.tex >}}
+{{< include ../../latex/shell_bidomain_mj_e.tex >}}
 
-{{< include latex/shell_bidomain_m_e.tex >}}
+{{< include ../../latex/shell_bidomain_m_e.tex >}}
 
-{{< include latex/shell_bidomain_Fe.tex >}}
+{{< include ../../latex/shell_bidomain_Fe.tex >}}
 
 so that $\mathbf n_j\cdot\mathbf G_i\nabla F_i=0$ and
 $\mathbf n_j\cdot\mathbf G_e\nabla F_e=0$ on both spheres. $F_i$ equals the
@@ -449,7 +463,7 @@ field $F$ of the monodomain shell.
 $\phi_e=\sqrt{1+t}\,F_e+c$, so $V_m=\sqrt{1+t}\,(F_i-F_e)$ carries no constant,
 and $c$ makes $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$:
 
-{{< include latex/shell_bidomain_c.tex >}}
+{{< include ../../latex/shell_bidomain_c.tex >}}
 
 *Ionic closure and sources.* The auxiliary states use the positive function
 $g$ of the monodomain shell, so the ionic rates hold exactly and the ionic term
@@ -457,9 +471,9 @@ leaves $-\beta V_m$ in the $V_m$ equation (@sec-ionic). The applied current is
 the remainder of the $V_m$ equation and $s_e$ is the residual of the $\phi_e$
 equation with no source:
 
-{{< include latex/shell_bidomain_Is.tex >}}
+{{< include ../../latex/shell_bidomain_Is.tex >}}
 
-{{< include latex/shell_bidomain_se.tex >}}
+{{< include ../../latex/shell_bidomain_se.tex >}}
 
 Both fluxes $\mathbf G_i\nabla F_i$ and $\mathbf G_e\nabla F_e$ have zero
 normal component on both spheres, so by the divergence theorem
@@ -469,32 +483,32 @@ tensors.
 
 ## Exact solution
 
-{{< include latex/shell_bidomain_hhat_i.tex >}}
+{{< include ../../latex/shell_bidomain_hhat_i.tex >}}
 
-{{< include latex/shell_bidomain_hhat_e.tex >}}
+{{< include ../../latex/shell_bidomain_hhat_e.tex >}}
 
-{{< include latex/shell_bidomain_phiI.tex >}}
+{{< include ../../latex/shell_bidomain_phiI.tex >}}
 
-{{< include latex/shell_bidomain_phiE.tex >}}
+{{< include ../../latex/shell_bidomain_phiE.tex >}}
 
-{{< include latex/shell_bidomain_Vm.tex >}}
+{{< include ../../latex/shell_bidomain_Vm.tex >}}
 
 {{< include ../../latex/shell_monodomain_g.tex >}}
 
-{{< include latex/shell_bidomain_u1.tex >}}
+{{< include ../../latex/shell_bidomain_u1.tex >}}
 
-{{< include latex/shell_bidomain_u2.tex >}}
+{{< include ../../latex/shell_bidomain_u2.tex >}}
 
 with $u_3=0$. The divergences are not printed: they are
 `expressions()["divGiGradFi"]` and `expressions()["divGeGradFe"]` of
-`shell_bidomain_mms.py`, which also holds `Fi`, `Fe`, `gradFi`, `gradFe`, `Gi`,
-`Ge` and `g`; `evaluate(name, points)` evaluates any of them with the default
-parameters. The cardiacFoam header `manufacturedShellBidomainReference.H` is
-written whole by the generator.
+`shell_bidomain_mms.py` and `divGiGradFi`, `divGeGradFe` of
+`reference/shell_bidomain.py`, which also holds `Fi`, `Fe`, `gradFi`,
+`gradFe`, `Gi`, `Ge` and `g`. The cardiacFoam header
+`manufacturedShellBidomainReference.H` is written whole by the generator.
 
 ## Self-checks {#sec-shell-checks}
 
-`--self-check` runs the checks of `shell_bidomain_mms.py`:
+`shell_bidomain_mms.py --self-check` asserts:
 
 - sealing: $\max|\mathbf n\cdot\mathbf G_i\nabla F_i|$ and
   $\max|\mathbf n\cdot\mathbf G_e\nabla F_e|$ below $10^{-25}$ at 200 points of
@@ -511,9 +525,6 @@ written whole by the generator.
   $\cos\vartheta$, 120 in the azimuth) is below $10^{-12}$ times the integral
   of its absolute value;
 - $F_i$ equals the monodomain shell field to $10^{-13}$ at 200 points;
-
-and adds:
-
 - $\mathbf G_i$ and $\mathbf G_e$ commute to $10^{-14}$ (one frame) at 500
   points, and the relative distance of $\mathbf G_e$ from the multiples of
   $\mathbf G_i$ is at least 0.1 at every point (it is 0.104 at least);
@@ -521,10 +532,13 @@ and adds:
 - the residual of the $V_m$ equation and of the two ionic rates vanish
   symbolically, with $F_i$, $F_e$, $g$, $\beta$ and
   $\nabla\cdot(\mathbf G_i\nabla F_i)$ as symbols;
-- `phiERefPoint` of the tutorial lies inside the shell.
+- the reference point $\mathbf x_{\mathrm{ref}}$ lies inside the shell.
 
-*Comparison with a run.* `--run-check shell=CASE` recomputes, from the cell
-centres and volumes of `constant/polyMesh`, the tensors and the `Vm` and
+`docs/bidomain/bidomain_reference.py --self-check` asserts that `phiERefPoint`
+and the ionic model of the tutorial equal those of the generator.
+
+*Comparison with a run.* `bidomain_reference.py --run-check shell=CASE`
+recomputes, from the cell centres and volumes of `constant/polyMesh`, the tensors and the `Vm` and
 `phiE_gauge` norms of a finished run and compares them with
 `0/ConductivityIntracellular`, `0/ConductivityExtracellular` and
 `postProcessing/3D_<hex|tet>_<N>_cells.dat`. On the runs `sealed_hex_N8_s1`
@@ -551,14 +565,16 @@ Meshes of the shell from the tutorial `manufacturedSolutions/bidomain/sphericalS
 ## Regeneration
 
 ```bash
-python docs/bidomain/bidomain_reference.py --emit
-python docs/bidomain/bidomain_reference.py --self-check
+python shell_bidomain_mms.py --emit
+python shell_bidomain_mms.py --self-check
 H=../../../src/verificationModels/bidomainVerification
 python shell_bidomain_mms.py --check $H/manufacturedShellBidomainReference.H
 R=../bidomain/sphericalShell/setup/studies/hexConvergence/results
 python docs/bidomain/bidomain_reference.py --run-check shell=$R/sealed_hex_N8_s1
 ```
 
-`--emit` writes `docs/bidomain/latex/shell_bidomain_*.tex`. `shell_bidomain_mms.py
---write` writes the whole cardiacFoam header, including a table of self-test
-samples that the verifier compares with its compiled functions at start-up.
+`--emit` writes `reference/shell_bidomain.py` and `latex/shell_bidomain_*.tex`;
+the shared fragments `latex/shell_*.tex` are those of
+`shell_monodomain_mms.py`. `--write` writes the whole cardiacFoam header,
+including a table of self-test samples that the verifier compares with its
+compiled functions at start-up.

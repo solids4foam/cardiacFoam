@@ -1,30 +1,19 @@
 #!/usr/bin/env python3
-"""Bidomain manufactured solutions: exact fields, LaTeX fragments and checks.
+"""Bidomain manufactured solutions: case checks, run comparisons and figure helpers.
 
-    python bidomain_reference.py --emit
     python bidomain_reference.py --self-check
     python bidomain_reference.py --run-check fda=CASE ... shell=CASE ...
 
-FDA cube.  The field is that of the FDA monodomain problem
-(reference/fda_monodomain.py: F_d, G_d, u1, u2, u3) with phiE = -kappa Vm + c
-and phiI = Vm + phiE, kappa = Gi_xx/(Gi_xx + Ge_xx).  The NumPy functions below
-follow src/verificationModels/bidomainVerification/
-manufacturedFDABidomainReference.H and the constants of
-src/ionicModels/verificationModels/bidomainFDAManufactured: beta_d is the sum
-over the first d axes of -Gm_mm (m pi)^2 with Gm = Gi Ge/(Gi + Ge) entry by
-entry, and c makes phiE equal phiEReferenceValue at phiERefPoint.
+The exact fields come from the generators: reference/fda_bidomain.py, emitted
+by fda_bidomain_mms.py, for the FDA cube, and shell_bidomain_mms.py for the
+sealed shell.  This module adds what depends on the tutorial cases.
 
-Sealed shell.  The fields, tensors and sources are those of
-generators/shell_bidomain_mms.py (imported); this module adds its LaTeX
-fragments, the checks of the bidomain equations on the exact fields and the
-comparison with a run.
-
---emit runs the self-checks and writes latex/*.tex next to this file only if
-they pass.  --run-check reads the cell centres (computed from
+--self-check asserts that the conductivities and phiERefPoint of the
+tutorials manufacturedSolutions/bidomain and bidomain/sphericalShell equal
+those of the generators.  --run-check reads the cell centres (computed from
 constant/polyMesh as OpenFOAM does), the fields of the last time directory
-and postProcessing/*.dat of finished runs and checks that the exact fields of
-this module reproduce the errors the cardiacFoam verifier reported; it
-writes nothing.
+and postProcessing/*.dat of finished runs and checks that the exact fields
+reproduce the errors the cardiacFoam verifier reported; it writes nothing.
 """
 
 import argparse
@@ -36,7 +25,6 @@ import re
 import sys
 
 import numpy as np
-import sympy as sp
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GENERATORS = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -44,9 +32,6 @@ TUTORIAL = os.path.abspath(os.path.join(GENERATORS, "..", "bidomain"))
 sys.path.insert(0, GENERATORS)
 
 import shell_bidomain_mms as sbm  # noqa: E402
-import shell_monodomain_mms as smm  # noqa: E402
-from mms_common.latex_emit import (emit_latex_fragment,  # noqa: E402
-                                   emit_parameter_fragment)
 
 
 def _load(name):
@@ -57,142 +42,42 @@ def _load(name):
     return module
 
 
-FDA = _load("fda_monodomain")
+FDA = _load("fda_bidomain")
 
 # ------------------------------------------------------------------ FDA cube ----
 
-# Diagonals of the tutorial dictionary (constant/electroProperties of bidomain/)
-GI = (0.111453302, 0.121585420, 0.030396355)
-GE = (0.046165469, 0.050362330, 0.012590582)
-CHI = 3.0
-CM = 2.0
-PHIE_REF_POINT = (0.125, 0.05, 0.05)
-PHIE_REF_VALUE = 0.0
+GI = tuple(FDA.PARAMS["GI_DIAG"])
+GE = tuple(FDA.PARAMS["GE_DIAG"])
+PHIE_REF_POINT = tuple(FDA.PARAMS["PHIE_REF_POINT"])
+PHIE_REF_VALUE = FDA.PARAMS["PHIE_REF_VALUE"]
 
 
 def kappa():
-    """Gi_xx/(Gi_xx + Ge_xx), the k of bidomainFDABenchmarkConstants."""
-    return GI[0]/(GI[0] + GE[0])
+    return FDA.PARAMS["KAPPA"]
 
 
 def beta(d):
-    """Reaction coefficient of bidomainFDAManufactured in dimension d."""
-    return -sum(GI[m]*GE[m]/(GI[m] + GE[m])*((m + 1)*math.pi)**2 for m in range(d))
+    return FDA.PARAMS["BETA"][d]
 
 
-def F(d, x, y, z):
-    return getattr(FDA, "F_d%d" % d)(x, y, z, 0.0)
-
-
-def gradF(d, x, y, z):
-    x, y, z = np.broadcast_arrays(*(np.asarray(v, float) for v in (x, y, z)))
-    pi = math.pi
-    c = [np.cos(pi*x), np.cos(2*pi*y), np.cos(3*pi*z)]
-    s = [-pi*np.sin(pi*x), -2*pi*np.sin(2*pi*y), -3*pi*np.sin(3*pi*z)]
-    g = []
-    for a in range(3):
-        if a >= d:
-            g.append(np.zeros_like(x))
-            continue
-        term = s[a]
-        for b in range(d):
-            if b != a:
-                term = term*c[b]
-        g.append(term)
-    return np.stack(g, -1)
+def _field(name, d, x, y, z, t):
+    return getattr(FDA, "%s_d%d" % (name, d))(x, y, z, t)
 
 
 def Vm(d, x, y, z, t):
-    return np.sqrt(1 + t)*F(d, x, y, z)
-
-
-def shift(d, t, point=PHIE_REF_POINT, value=PHIE_REF_VALUE):
-    """manufacturedFDABidomainShift: the constant c of phiE = -kappa Vm + c."""
-    return value + kappa()*math.sqrt(1 + t)*float(F(d, *point))
+    return _field("Vm", d, x, y, z, t)
 
 
 def phiE(d, x, y, z, t):
-    return -kappa()*np.sqrt(1 + t)*F(d, x, y, z) + shift(d, t)
+    return _field("phiE", d, x, y, z, t)
 
 
 def phiI(d, x, y, z, t):
-    return Vm(d, x, y, z, t) + phiE(d, x, y, z, t)
+    return _field("phiI", d, x, y, z, t)
 
 
 def u1(d, x, y, z, t):
-    return getattr(FDA, "u1_d%d" % d)(x, y, z, t)
-
-
-def u2(d, x, y, z, t):
-    return getattr(FDA, "u2_d%d" % d)(x, y, z, t)
-
-
-def Jion(d, V, a1, a2, a3):
-    """ALGEBRAIC[BidomainIion] of bidomainFDAManufactured_2014.H."""
-    return -0.5*CM*(a1 + a3 - V)*a2**2*(V - a3) + beta(d)*(V - a3)/CHI
-
-
-# Symbolic form, for the checks and the printed fragments
-x_, y_, z_, t_ = sp.symbols("x y z t", real=True)
-XYZ_ = (x_, y_, z_)
-
-
-def _sym_constants():
-    gi = [sp.Rational(repr(v)) for v in GI]
-    ge = [sp.Rational(repr(v)) for v in GE]
-    return gi, ge
-
-
-def _sym_F(d):
-    return sp.Mul(*[sp.cos((m + 1)*sp.pi*XYZ_[m]) for m in range(d)])
-
-
-def _sym_G(d):
-    return 1 + sp.Mul(*[XYZ_[m]**(m + 1) for m in range(d)])
-
-
-def fda_residuals(d):
-    """Coefficients rho_p, rho_e with residual_p = rho_p V_m and
-    residual_e = rho_e V_m on the exact fields (exact rational arithmetic on
-    the dictionary decimals); the scales are the coefficients of
-    div(Gi grad V_m) and of the time derivative term."""
-    gi, ge = _sym_constants()
-    kap = gi[0]/(gi[0] + ge[0])
-    bet = -sum(gi[m]*ge[m]/(gi[m] + ge[m])*((m + 1)*sp.pi)**2 for m in range(d))
-    Fd = _sym_F(d)
-    Gd = _sym_G(d)
-    S = sp.sqrt(1 + t_)
-    V = S*Fd
-    pe = -kap*V
-    pi_ = V + pe
-    a1 = Gd*(1 + t_) + V
-    a2 = 1/(sp.sqrt(Gd)*(1 + t_))
-    a3 = sp.Integer(0)
-
-    def div(g, u):
-        return sum(sp.diff(g[m]*sp.diff(u, XYZ_[m]), XYZ_[m]) for m in range(d))
-
-    chi, cm = sp.Integer(3), sp.Integer(2)
-    assert (float(chi), float(cm)) == (CHI, CM)
-    J = -sp.Rational(1, 2)*cm*(a1 + a3 - V)*a2**2*(V - a3) + bet*(V - a3)/chi
-    I = J/cm
-    res_p = chi*cm*sp.diff(V, t_) - (div(gi, pi_) - chi*cm*I)
-    gsum = [gi[m] + ge[m] for m in range(d)]
-    res_e = div(gi, V) + div(gsum, pe)
-    rho_p = sp.simplify(res_p/V)
-    rho_e = sp.simplify(res_e/V)
-    assert rho_p.free_symbols == set() and rho_e.free_symbols == set()
-    rate1 = a2**2*(a1 + a3 - V)**2 + sp.Rational(1, 2)*(a1 + a3 - V)*a2**2*(V - a3)
-    rate2 = -(a1 + a3 - V)*a2**3
-    rates = (sp.simplify(sp.diff(a1, t_) - rate1), sp.simplify(sp.diff(a2, t_) - rate2))
-    scale = sum(gi[m]*((m + 1)*sp.pi)**2 for m in range(d))
-    walls = []
-    for m in range(d):
-        for face in (0, 1):
-            for u, g in ((V, gi), (pe, ge), (pi_, gi)):
-                walls.append(sp.simplify((g[m]*sp.diff(u, XYZ_[m])).subs(XYZ_[m], face)))
-    return {"rho_p": rho_p, "rho_e": rho_e, "scale": scale, "rates": rates,
-            "walls": walls, "kappa": kap, "beta": bet}
+    return _field("u1", d, x, y, z, t)
 
 
 def read_dictionary_conductivities(path):
@@ -206,32 +91,12 @@ def read_dictionary_conductivities(path):
     return out
 
 
-def fda_self_checks(verbose=True):
-    report = {}
-    for d in (1, 2, 3):
-        r = fda_residuals(d)
-        assert all(sp.simplify(v) == 0 for v in r["rates"]), "ionic rates d=%d" % d
-        assert all(v == 0 for v in r["walls"]), "wall flux d=%d" % d
-        rel_p = float(abs(r["rho_p"])/r["scale"])
-        rel_e = float(abs(r["rho_e"])/r["scale"])
-        assert rel_p <= 1e-8 and rel_e <= 1e-8, "residual d=%d" % d
-        assert abs(float(r["kappa"]) - kappa()) < 1e-15
-        assert abs(float(r["beta"]) - beta(d)) < 1e-12*abs(beta(d))
-        report[d] = (rel_p, rel_e)
-        # gauge
-        assert abs(phiE(d, *PHIE_REF_POINT, 0.37) - PHIE_REF_VALUE) < 1e-15
-    gi = np.array(GI)
-    ge = np.array(GE)
-    assert np.max(np.abs(gi/(gi + ge) - kappa())) <= 1e-6*kappa(), "Ge proportional to Gi"
+def fda_case_checks():
     case = read_dictionary_conductivities(os.path.join(TUTORIAL, "constant", "electroProperties"))
     gi6, ge6 = case["conductivityIntracellular"], case["conductivityExtracellular"]
     assert gi6 == [GI[0], 0, 0, GI[1], 0, GI[2]], "Gi of the tutorial"
     assert ge6 == [GE[0], 0, 0, GE[1], 0, GE[2]], "Ge of the tutorial"
     assert case["phiERefPoint"] == PHIE_REF_POINT, "phiERefPoint of the tutorial"
-    if verbose:
-        for d, (p, e) in report.items():
-            print("FDA d=%d: |rho_p|/k = %.2e, |rho_e|/k = %.2e" % (d, p, e))
-    return report
 
 
 # ------------------------------------------------------------- sealed shell ----
@@ -280,57 +145,6 @@ def shell_volume_mean(name, nr=40, nc=40, nphi=80):
     return float((W*sbm.evaluate(name, pts)).sum()/W.sum())
 
 
-def shell_frame_check(n=500):
-    """Gi and Ge share the eigenvectors (f, s, n_s); their eigenvalue ratios
-    differ, so Gi + Ge is not a multiple of Gi.  Returns the largest commutator
-    and the smallest distance of Ge from the span of Gi."""
-    pts = sbm._shell_points(n, 0.0, seed=7)
-    Gi = sbm._full(sbm.evaluate("Gi", pts))
-    Ge = sbm._full(sbm.evaluate("Ge", pts))
-    comm = np.abs(Gi @ Ge - Ge @ Gi).max()
-    c = np.einsum("pij,pij->p", Ge, Gi)/np.einsum("pij,pij->p", Gi, Gi)
-    off = np.linalg.norm(Ge - c[:, None, None]*Gi, axis=(1, 2))/np.linalg.norm(Ge, axis=(1, 2))
-    mono = np.abs(Gi - sbm._full(smm.evaluate("G", pts))).max()
-    return float(comm), float(off.min()), float(mono)
-
-
-def shell_vm_equation_residual():
-    """Residual of the Vm equation on the exact fields with the ionic closure
-    of monodomainFDAManufactured and the source I_s of the verifier, written
-    with the spatial factors as symbols."""
-    t = sp.Symbol("t", positive=True)
-    Fi, Fe, g, b, dGi = sp.symbols("Fi Fe g beta dGi", real=True)
-    chi, cm = sp.symbols("chi C_m", positive=True)
-    S = sp.sqrt(1 + t)
-    V = S*(Fi - Fe)
-    a1 = (1 + t)*g + V
-    a2 = 1/((1 + t)*sp.sqrt(g))
-    J = -sp.Rational(1, 2)*cm*a2**2*V*(a1 - V) + b*V/chi
-    Is = S*(b*(Fi - Fe) - dGi)
-    res = chi*cm*sp.diff(V, t) - (S*dGi - chi*cm*J/cm + Is)
-    rate1 = a2**2*(a1 - V)**2 + sp.Rational(1, 2)*(a1 - V)*a2**2*V
-    rate2 = -(a1 - V)*a2**3
-    return [sp.simplify(res), sp.simplify(sp.diff(a1, t) - rate1),
-            sp.simplify(sp.diff(a2, t) - rate2)]
-
-
-def shell_self_checks(verbose=True):
-    sbm.run_self_checks()
-    comm, off, mono = shell_frame_check()
-    assert comm < 1e-14, "Gi and Ge share the frame"
-    assert off > 0.1, "Ge is not proportional to Gi"
-    assert mono < 1e-14, "Gi equals sigma of the monodomain shell"
-    assert all(v == 0 for v in shell_vm_equation_residual()), "Vm equation"
-    case = read_shell_dictionary()
-    p = sbm.default_params()
-    rref = float(np.linalg.norm(case["phiERefPoint"]))
-    assert p["r1"] < rref < p["r2"], "phiERefPoint inside the shell"
-    if verbose:
-        mean, absolute = sbm.phiE_source_mean()
-        print("shell: [Gi, Ge] max %.1e; min |Ge - c Gi|/|Ge| = %.3f; "
-              "phiE source mean %.1e of %.3f" % (comm, off, mean, absolute))
-
-
 def read_shell_dictionary():
     text = open(os.path.join(TUTORIAL, "sphericalShell", "constant", "electroProperties")).read()
     m = re.search(r"phiERefPoint\s*\(([^)]*)\)", text)
@@ -338,146 +152,16 @@ def read_shell_dictionary():
             "ionicModel": re.search(r"ionicModel\s+(\w+)", text).group(1)}
 
 
-# ------------------------------------------------------------ LaTeX output ----
-
-def _fda_fragments():
-    gi, ge = _sym_constants()
-    out = {}
-    Gi = sp.diag(*[sp.Float(v, 9) for v in GI])
-    Ge = sp.diag(*[sp.Float(v, 8) for v in GE])
-    out["fda_bidomain_Gi.tex"] = emit_latex_fragment(r"\mathbf G_i", Gi, {})
-    out["fda_bidomain_Ge.tex"] = emit_latex_fragment(r"\mathbf G_e", Ge, {})
-    gxx, exx, V, c, Fd, t = sp.symbols("gxx exx V c F_d t", real=True)
-    names = {gxx: r"G_{i,xx}", exx: r"G_{e,xx}", V: "V_m", c: "c"}
-    kap = sp.Symbol("kappa", real=True)
-    names[kap] = r"\kappa"
-    out["fda_bidomain_kappa.tex"] = emit_latex_fragment(
-        r"\kappa", gxx/(gxx + exx), names)
-    out["fda_bidomain_phiE.tex"] = emit_latex_fragment(r"\phi_e", -kap*V + c, names)
-    out["fda_bidomain_phiI.tex"] = emit_latex_fragment(r"\phi_i", V*(1 - kap) + c, names)
-    xr, ve = sp.symbols("xr ve", real=True)
-    names.update({xr: r"V_m(\mathbf x_{\mathrm{ref}},t)", ve: r"\phi_{e,\mathrm{ref}}"})
-    out["fda_bidomain_c.tex"] = emit_latex_fragment("c", ve + kap*xr, names)
-    out["fda_bidomain_beta.tex"] = (
-        "$$\n\\beta_d = -\\sum_{m=1}^{d} H_{mm}\\,(m\\pi)^2,\\qquad "
-        "H_{mm} = \\frac{G_{i,mm}\\,G_{e,mm}}{G_{i,mm}+G_{e,mm}}\n$$\n")
-    out["fda_bidomain_kd.tex"] = (
-        "$$\nk_d = \\sum_{m=1}^{d} G_{i,mm}\\,(m\\pi)^2\n$$\n")
-    pairs = [(r"C_m", 2), (r"\chi", 3), (r"\kappa", sp.Float(kappa(), 12))]
-    pairs += [(r"\beta_%d" % d, sp.Float(beta(d), 10)) for d in (1, 2, 3)]
-    out["fda_bidomain_params.tex"] = emit_parameter_fragment(pairs, per_row=3)
-    pairs = [(r"\mathbf x_{\mathrm{ref}}", sp.Matrix(PHIE_REF_POINT)),
-             (r"\phi_{e,\mathrm{ref}}", 0)]
-    out["fda_bidomain_ref.tex"] = emit_parameter_fragment(pairs)
-    rows = []
-    for d, (p, e) in fda_self_checks(verbose=False).items():
-        rows.append(r"d=%d:\ \ \frac{|\rho_p|}{k_d} = %s,\quad \frac{|\rho_e|}{k_d} = %s"
-                    % (d, _sci(p), _sci(e)))
-    out["fda_bidomain_residual_relative.tex"] = (
-        "$$\n\\begin{gathered}\n" + ",\\\\\n".join(rows) + "\n\\end{gathered}\n$$\n")
-    return out
-
-
-def _sci(v):
-    if v == 0:
-        return "0"
-    m, e = ("%.1e" % v).split("e")
-    return r"%s\times10^{%d}" % (m, int(e))
-
-
-SHELL_TEX = dict(smm.SHELL_SYMBOLS)
-SHELL_TEX.update({"gil": r"\sigma_{i,f}", "git": r"\sigma_{i,s}", "gin": r"\sigma_{i,n}",
-                  "gel": r"\sigma_{e,f}", "get": r"\sigma_{e,s}", "gen": r"\sigma_{e,n}",
-                  "fA0": "b_1", "fA1": "b_2", "fA2": "b_3", "fA3": "b_4"})
-
-
-def _shell_names(extra=()):
-    names = {sbm.P[n]: tex for n, tex in SHELL_TEX.items() if n in sbm.P}
-    names[sp.Symbol("k", real=True)] = "k"
-    names.update(dict(extra))
-    return names
-
-
-def _shell_fragments():
-    out = {}
-    ff, ss, nn = sp.symbols("ff ss nn", real=True)
-    nm = _shell_names([(ff, r"\mathbf f\otimes\mathbf f"), (ss, r"\mathbf s\otimes\mathbf s"),
-                       (nn, r"\mathbf n_s\otimes\mathbf n_s")])
-    for tag, (l, tr, n) in (("Gi", ("gil", "git", "gin")), ("Ge", ("gel", "get", "gen"))):
-        out["shell_bidomain_%s.tex" % tag] = emit_latex_fragment(
-            r"\mathbf G_%s" % tag[1], sbm.P[l]*ff + sbm.P[tr]*ss + sbm.P[n]*nn, nm)
-    names = _shell_names()
-    out["shell_bidomain_hhat_e.tex"] = emit_latex_fragment(
-        r"\hat h_e", sbm.expressions()["ehat"], names)
-    out["shell_bidomain_hhat_i.tex"] = emit_latex_fragment(r"\hat h_i", smm._hhat(), names)
-    for tag, tens in (("i", r"\mathbf G_i"), ("e", r"\mathbf G_e")):
-        a, b, dj, lam, m1, m2, hh, om, m = sp.symbols("a b dj lam m1 m2 hh om m", real=True)
-        nmj = _shell_names([
-            (a, r"\left(\mathbf n_j\cdot %s\nabla\hat h_%s\right)" % (tens, tag)),
-            (b, r"\left(\mathbf n_j\cdot %s\,\mathbf n_j\right)" % tens),
-            (dj, "d_j"), (lam, r"\lambda"), (m1, "m_{%s,1}" % tag), (m2, "m_{%s,2}" % tag),
-            (hh, r"\hat h_%s" % tag), (om, r"\omega"), (m, "m_%s" % tag)])
-        out["shell_bidomain_mj_%s.tex" % tag] = emit_latex_fragment(
-            "m_{%s,j}" % tag, smm._wall_correction(a, b, dj), nmj)
-        out["shell_bidomain_m_%s.tex" % tag] = emit_latex_fragment(
-            "m_%s" % tag, smm._blend(lam, m1, m2), nmj)
-        out["shell_bidomain_F%s.tex" % tag] = emit_latex_fragment(
-            "F_%s" % tag, hh + om*m, nmj)
-    t, Fi, Fe, g, b, Vm, dGi, dGe, shift = sp.symbols(
-        "t Fi Fe g beta Vm dGi dGe shift", real=True)
-    nf = _shell_names([(Fi, "F_i"), (Fe, "F_e"), (g, "g"), (b, r"\beta"), (Vm, "V_m"),
-                       (dGi, r"\nabla\!\cdot\!\left(\mathbf G_i\nabla F_i\right)"),
-                       (dGe, r"\nabla\!\cdot\!\left(\mathbf G_e\nabla F_e\right)"),
-                       (shift, "c")])
-    S = sp.sqrt(1 + t)
-    out["shell_bidomain_phiI.tex"] = emit_latex_fragment(r"\phi_i", S*Fi + shift, nf)
-    xr, ve = sp.symbols("xr ve", real=True)
-    nf.update({xr: r"F_e(\mathbf x_{\mathrm{ref}})", ve: r"\phi_{e,\mathrm{ref}}"})
-    out["shell_bidomain_c.tex"] = emit_latex_fragment("c", ve - S*xr, nf)
-    out["shell_bidomain_phiE.tex"] = emit_latex_fragment(r"\phi_e", S*Fe + shift, nf)
-    out["shell_bidomain_Vm.tex"] = emit_latex_fragment("V_m", S*(Fi - Fe), nf)
-    out["shell_bidomain_u1.tex"] = emit_latex_fragment("u_1", (1 + t)*g + Vm, nf)
-    out["shell_bidomain_u2.tex"] = emit_latex_fragment("u_2", g**sp.Rational(-1, 2)/(1 + t), nf)
-    out["shell_bidomain_Is.tex"] = emit_latex_fragment(
-        r"I_{\mathrm{app}}", S*(b*(Fi - Fe) - dGi), nf)
-    out["shell_bidomain_se.tex"] = emit_latex_fragment(r"s_e", S*(dGi + dGe), nf)
-    p = sbm.default_params()
-    pairs = []
-    for name in sbm.SCALAR_PARAMS:
-        v = p[name]
-        if name in sbm.ANGLE_PARAMS:
-            v = r"%g^\circ" % v
-        pairs.append((SHELL_TEX[name], v))
-    pairs += [("a_%d" % (i + 1), v) for i, v in enumerate(p["hA"])]
-    pairs += [("b_%d" % (i + 1), v) for i, v in enumerate(p["fA"])]
-    out["shell_bidomain_params.tex"] = emit_parameter_fragment(pairs, per_row=5)
-    ref = read_shell_dictionary()["phiERefPoint"]
-    out["shell_bidomain_ref.tex"] = emit_parameter_fragment(
-        [(r"\mathbf x_{\mathrm{ref}}", sp.Matrix(ref)), (r"\phi_{e,\mathrm{ref}}", 0),
-         (r"\beta", FDA.PARAMS["BETA"][3])])
-    return out
-
-
-def latex_fragments():
-    out = _fda_fragments()
-    out.update(_shell_fragments())
-    return out
-
-
-def emit():
-    run_self_checks()
-    outdir = os.path.join(HERE, "latex")
-    os.makedirs(outdir, exist_ok=True)
-    for name, text in sorted(latex_fragments().items()):
-        with open(os.path.join(outdir, name), "w") as fh:
-            fh.write(text)
-        print("wrote latex/" + name)
+def shell_case_checks():
+    case = read_shell_dictionary()
+    assert case["phiERefPoint"] == sbm.PHIE_REF_POINT, "phiERefPoint of the shell tutorial"
+    assert case["ionicModel"] == "monodomainFDAManufactured", "ionic model of the shell tutorial"
 
 
 def run_self_checks():
-    fda_self_checks()
-    shell_self_checks()
-    print("self-checks passed")
+    fda_case_checks()
+    shell_case_checks()
+    print("the tutorial dictionaries match the generators")
 
 
 # ------------------------------------------------------- comparison with runs ----
@@ -677,14 +361,10 @@ def run_check_shell(case):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     grp = ap.add_mutually_exclusive_group(required=True)
-    grp.add_argument("--emit", action="store_true")
     grp.add_argument("--self-check", action="store_true")
     grp.add_argument("--run-check", nargs="+", metavar="KIND=CASE",
                      help="KIND is fda or shell; CASE a finished run")
     args = ap.parse_args(argv)
-    if args.emit:
-        emit()
-        return 0
     if args.self_check:
         run_self_checks()
         return 0
