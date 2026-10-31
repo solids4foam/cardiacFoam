@@ -44,9 +44,11 @@ Its error, the **alpha part**, is reported for two groups of probes:
 | mesh | N | cells |
 |---|---|---|
 | hex | 10, 20, 40 | 3000, 24000, 192000 |
-| tet (gmsh 4.15.2, seed 1, `layered_box.geo.template`) | 10, 14, 20, 28 | 15443, 39418, 112979, 302837 |
+| tet (gmsh 4.15.2, seed 1, `layered_box.geo.template`), `layered` and `layeredAlpha0` | 10, 14, 20, 28, 40 | 15443, 39418, 112979, 302837, 875170 |
+| tet (gmsh 4.15.2, seed 1), `slab` | 10, 14, 20, 28 | 14792, 39131, 111482, 299957 |
 
-All runs are serial, monodomain with `corrected` snGrad, and use
+The tetrahedral `N = 40` runs use two ranks (the `parallel` argument of
+`Allrun`); every other run is serial. All runs are monodomain with `corrected` snGrad, and use
 `-endTime 0.02` (two samples, `dt = 0.01`). Each run builds 13 lead fields,
 one per electrode. The fixed points stop at the `leadFieldFixedPoint`
 tolerance of `system/fvSolution`. On hexahedra the lead fields need 5 or 6
@@ -81,6 +83,8 @@ do
     run layeredAlpha0_tet_N$n -problem layered -alpha 0 -mesh tet -N $n
     run slab_tet_N$n -problem slab -mesh tet -N $n
 done
+run layered_tet_N40 parallel -problem layered -mesh tet -N 40
+run layeredAlpha0_tet_N40 parallel -problem layered -alpha 0 -mesh tet -N 40
 python3 ../summarize.py results
 ```
 
@@ -163,6 +167,7 @@ the surface group on `Vm_h` (`gap dyn`) and on the exact `Vm`
 | 14 | 0.04238 | 1.574e-10 | 1.652e-10 | 3.2807e-03 | 2.14 | 3.2807e-03 | 2.14 | 2.1773e-03 | 1.99 | 6.4399e-03 | 1.53 |
 | 20 | 0.02983 | 2.578e-11 | 2.632e-11 | 1.7302e-03 | 1.82 | 1.7302e-03 | 1.82 | 1.1382e-03 | 1.85 | 4.5193e-03 | 1.01 |
 | 28 | 0.02148 | 4.978e-11 | 4.917e-11 | 9.5604e-04 | 1.80 | 9.5604e-04 | 1.80 | 6.2835e-04 | 1.81 | 2.5761e-03 | 1.71 |
+| 40 | 0.01508 | 2.385e-11 | 2.388e-11 | 4.7978e-04 | 1.95 | 4.7978e-04 | 1.95 | 3.1108e-04 | 1.99 | 1.8483e-03 | 0.94 |
 
 Body surface with `-alpha 0`:
 
@@ -172,6 +177,7 @@ Body surface with `-alpha 0`:
 | 14 | 3.1477e-03 | 2.00 | 2.0408e-03 | 1.99 | 3.2037e-03 | 1.94 |
 | 20 | 1.5821e-03 | 1.96 | 1.0324e-03 | 1.94 | 1.5850e-03 | 2.01 |
 | 28 | 8.3668e-04 | 1.94 | 5.4473e-04 | 1.95 | 8.4103e-04 | 1.93 |
+| 40 | 4.0991e-04 | 2.02 | 2.6720e-04 | 2.01 | 4.2167e-04 | 1.95 |
 
 Probes, `torso` reciprocity gap and lead-field errors:
 
@@ -181,6 +187,7 @@ Probes, `torso` reciprocity gap and lead-field errors:
 | 14 | 1.294e-10 | 1.361e-10 | 3.4584e-03 | 1.94 | 3.4239e-03 | 2.15 |
 | 20 | 2.640e-11 | 2.796e-11 | 1.6333e-03 | 2.14 | 1.6639e-03 | 2.06 |
 | 28 | 3.978e-11 | 3.929e-11 | 9.0280e-04 | 1.80 | 9.2805e-04 | 1.78 |
+| 40 | 1.148e-11 | 2.468e-11 | 4.6697e-04 | 1.86 | 4.0645e-04 | 2.33 |
 
 Static errors at the electrode point (with `-alpha 0` they equal the
 centroid errors):
@@ -191,6 +198,7 @@ centroid errors):
 | 14 | 1.1292e-02 | 2.35 | 1.5392e-02 | 1.08 | 1.9968e-03 | 3.53 |
 | 20 | 7.7774e-03 | 1.06 | 2.7442e-03 | 4.91 | 6.6563e-04 | 3.13 |
 | 28 | 8.1147e-03 | -0.13 | 4.7860e-03 | -1.69 | 5.3771e-04 | 0.65 |
+| 40 | 5.9738e-03 | 0.87 | 2.2523e-03 | 2.13 | 1.5214e-03 | -2.94 |
 
 Alpha part (the lead field and the direct solve give the same values):
 
@@ -200,29 +208,40 @@ Alpha part (the lead field and the direct solve give the same values):
 | 14 | 2.2056e-04 | 2.21 | 3.1302e-04 | 1.13 |
 | 20 | 4.2193e-05 | 4.71 | 9.9369e-05 | 3.27 |
 | 28 | 2.9254e-05 | 1.11 | 9.7180e-05 | 0.07 |
+| 40 | 2.0407e-05 | 1.02 | 5.6939e-05 | 1.51 |
 
 - **Lead field and direct solve.** The reciprocity gap is at the level of the
   fixed-point tolerances (at most 2.7e-10 over every group, `layered` and
   `layeredAlpha0`), and the lead field equals the direct solve in every
   row, alpha part included.
-- **Total error.** The body-surface ECG converges at about second order,
-  slightly below it at the finer levels, and the RMS over the surface cells
-  follows it. With `-alpha 0` the surface group and both surface field rows
+- **Total error.** The body-surface ECG converges below second order at the
+  intermediate levels (1.82, 1.80) and at second order between `N = 28` and
+  `40` (1.95), and the RMS over the surface cells follows it (1.99 at
+  `N = 40`). With `-alpha 0` the surface group and both surface field rows
   converge at second order.
-- **Surface maximum.** With the current, the largest error of the field lies
-  in a surface cell at every level (the maxima over all cells and over the
-  surface cells coincide), where the layer interface `x = 1.5` meets a side
-  face of the box; it converges with erratic orders between 1 and 1.7.
-  With `-alpha 0` the surface maximum is second order, so this error comes
-  with the current, at the layer interface next to the outer boundary.
+- **Local first-order maximum.** With the current, the largest error of the
+  field lies in a surface cell at every level (the maxima over all cells and
+  over the surface cells coincide), where the layer interface `x = 1.5`
+  meets a side face of the box, at `(1.49557 0.2875 0.00541266)` at
+  `N = 40`. It converges at about first order, with erratic pairwise orders
+  between 0.94 and 1.71. With `-alpha 0` the surface maximum is second
+  order, so this local error comes with the current, at the layer interface
+  next to the outer boundary. Its cause is not established. A possible
+  cause is the explicit non-orthogonal correction across the layer
+  conductivity jump at the wall: the faces between the torso layers carry
+  the scalar distance-weighted harmonic conductivity, the correction uses
+  the standard cell gradient, and the jump-aware gradient of
+  `conormalHarmonic` applies only to heart-torso faces.
 - **Probes.** The `torso` and `near` probes converge at about second order
   with scatter between levels, consistent with the surface group.
 - **Point errors.** The point-evaluated electrode errors converge with
   erratic level-to-level orders in every group, through the `O(h)`
   localisation of each electrode in its cell.
-- **Alpha part.** It falls by an order of magnitude over the ladder at
-  `left` and by less at `right`, with erratic level-to-level orders at both.
-  No order is measured, and the cause of the scatter is not established.
+- **Alpha part.** It keeps decreasing to `N = 40`, by a factor of about 20
+  over the ladder at `left` and about 8 at `right`, with erratic
+  level-to-level orders at both. At `N = 40` it is 4% (`left`) and 12%
+  (`right`) of the surface error. No order is measured, and the cause of the
+  scatter is not established.
 
 ### Invariance: `-alpha 0` against the slab
 
@@ -245,7 +264,8 @@ from the static channel, and each channel's error against the exact
   three, the same `h`), and the ECG does not move with the layer
   conductivities: the difference is round-off.
 - **Tetrahedra.** The layered mesh has two more internal planes, so the two
-  cases are different meshes. Both ECGs converge to `2 k S`, and their
+  cases are different meshes. The comparison ends at `N = 28`, the last slab
+  level. Both ECGs converge to `2 k S`, and their
   difference, 1e-4 to 2e-5, is 1 to 3% of either error.
 
 ### Linear interpolation of the layer conductivity
