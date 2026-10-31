@@ -18,7 +18,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalECG.H"
-#include "IFstream.H"
 
 #include "dimVoltage.H"
 #include "ecgDomain.H"
@@ -27,9 +26,7 @@ License
 #include "fvc.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
-#include "ionicHeterogeneity.H"
 #include "IOdictionary.H"
-#include "stimulusIO.H"
 #include "tissueTemplates.H"
 #include "manufacturedTemplate.H"
 
@@ -124,96 +121,7 @@ eikonalECG::eikonalECG(const dictionary& dict)
                 << exit(FatalError);
         }
 
-        if (!personalizedTemplatesDict_.found("ionicModelConfig"))
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates requires an "
-                << "ionicModelConfig sub-dictionary: an eikonal-only case "
-                << "has no ionic model to inherit one from."
-                << exit(FatalError);
-        }
-
-        const dictionary& ionicModelConfig =
-            personalizedTemplatesDict_.subDict("ionicModelConfig");
-
-        if (!ionicModelConfig.found("ionicModel"))
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates.ionicModelConfig "
-                << "requires an 'ionicModel' entry."
-                << exit(FatalError);
-        }
-
-        if (!ionicModelConfig.found("singleCellStimulus"))
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates.ionicModelConfig "
-                << "requires a 'singleCellStimulus' sub-dictionary defining "
-                << "the S1 pacing protocol."
-                << exit(FatalError);
-        }
-
-        const label nBeats = templateBeats();
-        const scalar duration =
-            personalizedTemplatesDict_.get<scalar>("duration");
-
-        const word timeOrigin
-        (
-            personalizedTemplatesDict_.lookupOrDefault<word>
-            (
-                "timeOrigin", "stimulus"
-            )
-        );
-        if (timeOrigin != "stimulus" && timeOrigin != "upstroke")
-        {
-            FatalIOErrorInFunction(personalizedTemplatesDict_)
-                << "eikonalECG personalizedTemplates.timeOrigin must be "
-                << "'stimulus' or 'upstroke'; got '" << timeOrigin << "'."
-                << exit(FatalIOError);
-        }
-        const scalar generationDt =
-            personalizedTemplatesDict_.get<scalar>("dt");
-
-        if (nBeats < 1)
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates.nBeats must be >= 1; "
-                << "got " << nBeats << "."
-                << exit(FatalError);
-        }
-
-        if (duration <= 0.0 || generationDt <= 0.0)
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates.duration and .dt must "
-                << "both be positive; got duration=" << duration
-                << ", dt=" << generationDt << "."
-                << exit(FatalError);
-        }
-
-        const StimulusProtocol stim =
-            stimulusIO::loadStimulusProtocol(ionicModelConfig);
-
-        if (duration > 1e-3*stim.stimPeriodS1)
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates.duration (" << duration
-                << " s) must not exceed one S1 period ("
-                << 1e-3*stim.stimPeriodS1 << " s, from ionicModelConfig."
-                << "singleCellStimulus.stim_period_S1=" << stim.stimPeriodS1
-                << " ms): capture must stay within the final S1 beat."
-                << exit(FatalError);
-        }
-
-        if (stim.nStim2 != 0)
-        {
-            FatalErrorInFunction
-                << "eikonalECG personalizedTemplates does not support S2 "
-                << "pacing (ionicModelConfig.singleCellStimulus.nstim2 must "
-                << "be 0); capture must contain exactly one unambiguous "
-                << "final S1 response."
-                << exit(FatalError);
-        }
+        ionicTemplates::checkControls(personalizedTemplatesDict_);
     }
 }
 
@@ -366,33 +274,6 @@ void eikonalECG::calculateLeadVectors(const ecgDomain& domain)
     leadVectorsCalculated_ = true;
 }
 
-const dictionary* eikonalECG::findHeterogeneityDict
-(
-    const dictionary& electroProperties
-) const
-{
-    const dictionary* hetDictPtr =
-        electroProperties.findDict("ionicHeterogeneity");
-
-    if (!hetDictPtr && electroProperties.found("myocardiumSolver"))
-    {
-        const word myocardiumSolver
-        (
-            electroProperties.get<word>("myocardiumSolver")
-        );
-        const dictionary* solverDictPtr =
-            electroProperties.findDict(myocardiumSolver + "Coeffs");
-
-        if (solverDictPtr)
-        {
-            hetDictPtr = solverDictPtr->findDict("ionicHeterogeneity");
-        }
-    }
-
-    return hetDictPtr;
-}
-
-
 void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 {
     const fvMesh& mesh = domain.mesh();
@@ -415,7 +296,8 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
         )
     );
 
-    const dictionary* hetDictPtr = findHeterogeneityDict(electroProperties);
+    const dictionary* hetDictPtr =
+        ionicTemplates::findHeterogeneityDict(electroProperties);
 
     if (!hetDictPtr)
     {
@@ -454,205 +336,7 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    if (mode == "cellZoneRegions")
-    {
-        const List<ionicHeterogeneity::NamedCellZoneRegion> czRegions =
-            ionicHeterogeneity::parseNamedCellZoneRegions
-            (
-                hetDict.subDict("regions")
-            );
-
-        const label nCzRegions = czRegions.size();
-        regionWeights_.setSize(nCzRegions);
-        forAll(regionWeights_, i)
-        {
-            regionWeights_[i].setSize(mesh.nCells(), 0.0);
-        }
-
-        boolList claimed(mesh.nCells(), false);
-
-        forAll(czRegions, regionIndex)
-        {
-            const word& zoneName = czRegions[regionIndex].cellZone;
-            const label zoneId = mesh.cellZones().findZoneID(zoneName);
-
-            if (zoneId < 0)
-            {
-                FatalErrorInFunction
-                    << "eikonalECG personalizedTemplates: cellZone '"
-                    << zoneName << "' (region '"
-                    << czRegions[regionIndex].name << "') not found in "
-                    << "this mesh."
-                    << exit(FatalError);
-            }
-
-            const labelList& zoneCells = mesh.cellZones()[zoneId];
-
-            forAll(zoneCells, i)
-            {
-                const label cellI = zoneCells[i];
-
-                if (claimed[cellI])
-                {
-                    FatalErrorInFunction
-                        << "eikonalECG personalizedTemplates: cell " << cellI
-                        << " is claimed by more than one cellZoneRegions "
-                        << "entry."
-                        << exit(FatalError);
-                }
-
-                claimed[cellI] = true;
-                regionWeights_[regionIndex][cellI] = 1.0;
-            }
-        }
-
-        forAll(claimed, cellI)
-        {
-            if (!claimed[cellI])
-            {
-                FatalErrorInFunction
-                    << "eikonalECG personalizedTemplates: cell " << cellI
-                    << " is not claimed by any cellZoneRegions entry. "
-                    << "Every mesh cell must belong to exactly one named "
-                    << "cell zone."
-                    << exit(FatalError);
-            }
-        }
-
-        return;
-    }
-
-    if (!hetDict.found("transitionMode"))
-    {
-        FatalErrorInFunction
-            << "eikonalECG ionicHeterogeneity mode namedRegions requires a "
-            << "'transitionMode' entry. Supported: blend, hard."
-            << exit(FatalError);
-    }
-
-    const word transitionMode(hetDict.get<word>("transitionMode"));
-
-    word smoothing;
-    scalar transitionWidth = 0.0;
-
-    if (transitionMode == "blend")
-    {
-        if (!hetDict.found("transitionWidth") || !hetDict.found("smoothing"))
-        {
-            FatalErrorInFunction
-                << "eikonalECG ionicHeterogeneity mode namedRegions with "
-                << "transitionMode blend requires both 'transitionWidth' "
-                << "and 'smoothing' entries."
-                << exit(FatalError);
-        }
-
-        transitionWidth = hetDict.get<scalar>("transitionWidth");
-        smoothing = hetDict.get<word>("smoothing");
-    }
-    else if (transitionMode != "hard")
-    {
-        FatalErrorInFunction
-            << "Unsupported eikonalECG ionicHeterogeneity transitionMode '"
-            << transitionMode << "'. Supported: blend, hard."
-            << exit(FatalError);
-    }
-
-    const List<ionicHeterogeneity::NamedFieldRegion> regions =
-        ionicHeterogeneity::parseNamedFieldRegions
-        (
-            hetDict.subDict("regions")
-        );
-
-    if (!hetDict.found("field"))
-    {
-        FatalErrorInFunction
-            << "eikonalECG ionicHeterogeneity mode namedRegions requires a "
-            << "'field' entry."
-            << exit(FatalError);
-    }
-
-    const word fieldName(hetDict.get<word>("field"));
-    autoPtr<volScalarField> tReadPtr;
-    const volScalarField* tPtr = mesh.cfindObject<volScalarField>(fieldName);
-
-    if (!tPtr)
-    {
-        // Transmural-distance fields are static anatomical inputs stored in
-        // the latest time directory that contains the field.
-        const word fieldInstance =
-            mesh.time().findInstance(fileName::null, fieldName);
-
-        tReadPtr.reset
-        (
-            new volScalarField
-            (
-                IOobject
-                (
-                    fieldName,
-                    fieldInstance,
-                    mesh,
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE
-                ),
-                mesh
-            )
-        );
-        tPtr = &tReadPtr();
-    }
-
-    if (!tPtr)
-    {
-        FatalErrorInFunction
-            << "Could not find transmural distance field '" << fieldName << "'."
-            << exit(FatalError);
-    }
-
-    const scalarField& tField = tPtr->primitiveField();
-
-    const label nRegions = regions.size();
-    regionWeights_.setSize(nRegions);
-    forAll(regionWeights_, i)
-    {
-        regionWeights_[i].setSize(mesh.nCells(), 0.0);
-    }
-
-    // Small, fixed-size lookup built once, not per-cell.
-    List<word> regionNames(nRegions);
-    forAll(regions, i)
-    {
-        regionNames[i] = regions[i].name;
-    }
-
-    forAll(tField, cellI)
-    {
-        const List<ionicHeterogeneity::NamedRegionWeight> sparse =
-            ionicHeterogeneity::namedRegionWeightsAt
-            (
-                tField[cellI], regions, transitionWidth, smoothing, transitionMode
-            );
-
-        forAll(sparse, s)
-        {
-            forAll(regionNames, i)
-            {
-                if (regionNames[i] == sparse[s].name)
-                {
-                    regionWeights_[i][cellI] = sparse[s].weight;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-
-label eikonalECG::templateBeats() const
-{
-    if (personalizedTemplatesDict_.found("regionStates"))
-    {
-        return personalizedTemplatesDict_.lookupOrDefault<label>("nBeats", 1);
-    }
-    return personalizedTemplatesDict_.get<label>("nBeats");
+    regionWeights_ = ionicTemplates::regionWeights(mesh, hetDict);
 }
 
 
@@ -672,7 +356,8 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
         )
     );
 
-    const dictionary* hetDictPtr = findHeterogeneityDict(electroProperties);
+    const dictionary* hetDictPtr =
+        ionicTemplates::findHeterogeneityDict(electroProperties);
 
     if (!hetDictPtr)
     {
@@ -705,51 +390,12 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
             << exit(FatalError);
     }
 
-    const dictionary& ionicModelConfig =
-        personalizedTemplatesDict_.subDict("ionicModelConfig");
-
-    const label nBeats = templateBeats();
-    const scalar duration = personalizedTemplatesDict_.get<scalar>("duration");
-    const scalar generationDt = personalizedTemplatesDict_.get<scalar>("dt");
-    const bool alignUpstroke =
-        personalizedTemplatesDict_.lookupOrDefault<word>("timeOrigin", "stimulus")
-     == "upstroke";
-
-    // Region states in the setIonicRestartStateDict format
-    autoPtr<dictionary> regionStatesPtr;
-    if (personalizedTemplatesDict_.found("regionStates"))
-    {
-        fileName mapPath
-        (
-            personalizedTemplatesDict_.get<fileName>("regionStates")
-        );
-        mapPath.expand();
-        if (!mapPath.isAbsolute())
-        {
-            mapPath = mesh.time().globalPath()/mapPath;
-        }
-        IFstream is(mapPath);
-        if (!is.good())
-        {
-            FatalIOErrorInFunction(personalizedTemplatesDict_)
-                << "Cannot read personalizedTemplates.regionStates file "
-                << mapPath << exit(FatalIOError);
-        }
-        const dictionary mapDict(is);
-        regionStatesPtr.reset(new dictionary(mapDict.subDict("regionStates")));
-    }
-
     personalizedTemplates_ =
-        eikonalECG_templates::generatePersonalizedTemplates
+        ionicTemplates::generate
         (
-            ionicModelConfig,
+            personalizedTemplatesDict_,
             hetDict,
-            nBeats,
-            duration,
-            generationDt,
-            regionStatesPtr.get(),
-            mesh.time().globalPath(),
-            alignUpstroke
+            mesh.time()
         );
 
     personalizedTemplatesGenerated_ = true;

@@ -208,11 +208,11 @@ Concrete implementations of `ecgSolver`.
 | `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
 | `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
 
-`eikonalTemplateGenerator.C/H` and `tissueTemplates.H`, beside `eikonalECG`,
-build those single-cell templates: pacing a single-cell ionic model to
-steady state, capturing its action potential after a chosen stimulus (S1),
-and synthesizing the endo/mid/epi (or manufactured) templates `eikonalECG`
-samples from.
+`tissueTemplates.H`, beside `eikonalECG`, holds the compiled endo/mid/epi
+templates. Templates generated from an ionic model, one per
+`ionicHeterogeneity` region, come from `ionicModels/ionicTemplates`, which
+`eikonalECG` uses for Vm and `sequentialElectroMechanical` uses for the active
+tension Cai.
 
 ---
 

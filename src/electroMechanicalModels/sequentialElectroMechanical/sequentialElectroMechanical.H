@@ -37,6 +37,7 @@ SourceFiles
 #include "activeTensionModel.H"
 #include "myocardiumPrePacing.H"
 #include "electromechanicalVerificationModel.H"
+#include "templateSignalProvider.H"
 #include "overrideTypeName.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -80,6 +81,14 @@ class sequentialElectroMechanical
 
         //- Cached requirements declared by the active tension model at construction
         activeTensionModel::Requirements activeTensionRequirements_;
+
+        //- Active tension signal from templates (activeTensionSignal templates)
+        autoPtr<templateSignalProvider> templateProviderPtr_;
+
+        //- Template signals with eikonal tissue: activation solved once, controlDict deltaT
+        bool staticActivation_;
+
+        bool activationSolved_;
 
 
     // Private Member Functions
@@ -127,6 +136,9 @@ public:
     // Member Functions
 
         // Edit
+
+            //- Electro deltaT unless the activation is static
+            virtual void setDeltaT(Time& runTime) override;
 
             //- Evolve the electro-mechanical model
             virtual bool evolve() override;
