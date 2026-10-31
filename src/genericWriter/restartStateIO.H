@@ -232,6 +232,61 @@ inline void checkValue(const scalar value, const fileName& statePath)
     }
 }
 
+
+//- State vector of a single-cell state file; stride < 0 accepts any size
+inline scalarField readSingleCellState
+(
+    const fileName& statePath,
+    const word& model,
+    label& stride
+)
+{
+    std::ifstream is(statePath.c_str(), std::ios::binary);
+    if (!is)
+    {
+        FatalErrorInFunction
+            << "Cannot open state file " << statePath
+            << exit(FatalError);
+    }
+
+    const Header header = readHeader(is, statePath);
+
+    if (header.model != model)
+    {
+        FatalErrorInFunction
+            << "State file " << statePath << " is for ionic model '"
+            << header.model << "', but the case uses '" << model << "'."
+            << exit(FatalError);
+    }
+
+    if (header.rows != 1)
+    {
+        FatalErrorInFunction
+            << "State file " << statePath << " holds " << header.rows
+            << " cells; a single-cell state file is required."
+            << exit(FatalError);
+    }
+
+    if (stride >= 0 && header.stride != stride)
+    {
+        FatalErrorInFunction
+            << "State file " << statePath << " has " << header.stride
+            << " states per cell; the other region files have " << stride
+            << "."
+            << exit(FatalError);
+    }
+    stride = header.stride;
+
+    scalarField state(stride);
+    forAll(state, stateI)
+    {
+        state[stateI] = readScalar(is, statePath);
+        checkValue(state[stateI], statePath);
+    }
+
+    return state;
+}
+
 inline bool readStates
 (
     const fvMesh& mesh,

@@ -45,8 +45,9 @@ namespace eikonalECG_templates
 //- Local time zero is the final S1 stimulus onset.
 struct DynamicTemplate
 {
-    scalarField times;      // s, starts exactly at final S1 onset
+    scalarField times;      // s; 0 = final S1 onset, or the steepest upstroke (timeOrigin upstroke)
     scalarField valuesMv;   // mV, direct ionicModel::signal(VM) output
+    scalarField valuesCai;  // mM, direct ionicModel::signal(CAI) output
 };
 
 //- nBeats overrides ionicModelConfig.singleCellStimulus.nstim1; neither
@@ -55,13 +56,17 @@ struct DynamicTemplate
 //  ionicHeterogeneity::parseNamedFieldRegions()'s own order) or mode
 //  cellZoneRegions (in the order 'regions' declares them). Fatals on any
 //  other heterogeneityDict.mode.
+//- One template per region; regionStates seeds each region's cell from its single-cell state file
 List<DynamicTemplate> generatePersonalizedTemplates
 (
     const dictionary& ionicModelConfig,
     const dictionary& heterogeneityDict,
     label nBeats,
     scalar captureDuration,
-    scalar dt
+    scalar dt,
+    const dictionary* regionStates = nullptr,
+    const fileName& stateRoot = fileName::null,
+    bool alignUpstroke = false
 );
 
 } // End namespace eikonalECG_templates

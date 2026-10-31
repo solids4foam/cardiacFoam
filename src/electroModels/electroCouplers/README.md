@@ -13,6 +13,10 @@ The couplers that pass data between electrical domains, and the interfaces the d
     network node loses that current from its volume `π ρ² L`, where `ρ` is `purkinjeFibreRadius` (default 20 µm) and `L` the node's control
     length, and the tissue receives the same current, so charge is conserved by construction. The
     [architecture notes](../ARCHITECTURE.md) give the equations.
+  - `pvjDelay` (s, default 0): the anterograde junction delay. `eikonalPvjCoupler` seeds the tissue at a junction at the
+    terminal's activation time plus `pvjDelay`; `eikonalMonodomainPvjCoupler` starts the Purkinje action-potential
+    template that much later. `reactionDiffusionPvjCoupler` refuses a non-zero value: its delay comes from `rPvj` and
+    the junction load. Measured delays are about 3–13 ms (rabbit, dog).
 
 The bath has no coupler: `extracellularPotentialDomain` shares `phiE` with the myocardium directly.
 

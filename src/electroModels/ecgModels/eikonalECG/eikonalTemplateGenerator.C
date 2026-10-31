@@ -23,6 +23,7 @@ Author
 #include "ionicModel.H"
 #include "ionicHeterogeneity.H"
 #include "stimulusIO.H"
+#include "restartStateIO.H"
 
 #include <cmath>
 
@@ -250,7 +251,10 @@ List<DynamicTemplate> generatePersonalizedTemplates
     const dictionary& heterogeneityDict,
     const label nBeats,
     const scalar captureDuration,
-    const scalar dt
+    const scalar dt,
+    const dictionary* regionStates,
+    const fileName& stateRoot,
+    const bool alignUpstroke
 )
 {
     if (nBeats < 1 || captureDuration <= 0.0 || dt <= 0.0)
@@ -325,6 +329,38 @@ List<DynamicTemplate> generatePersonalizedTemplates
         modelDict.subDict("ionicHeterogeneity")
     );
 
+    if (regionStates)
+    {
+        const word modelName(modelDict.get<word>("ionicModel"));
+        label stride = -1;
+        List<scalarField> states(nPoints);
+        forAll(anchorNames, p)
+        {
+            if (!regionStates->found(anchorNames[p]))
+            {
+                FatalIOErrorInFunction(*regionStates)
+                    << "regionStates has no state file for region '"
+                    << anchorNames[p] << "'. Regions: " << anchorNames
+                    << exit(FatalIOError);
+            }
+            fileName statePath(regionStates->get<fileName>(anchorNames[p]));
+            statePath.expand();
+            if (!statePath.isAbsolute())
+            {
+                statePath = stateRoot/statePath;
+            }
+            states[p] =
+                restartStateIO::readSingleCellState(statePath, modelName, stride);
+        }
+        if (!model.setStates(states))
+        {
+            FatalErrorInFunction
+                << "Ionic model " << modelName << " did not accept the region "
+                << "states from regionStates (" << stride << " states per cell)."
+                << exit(FatalError);
+        }
+    }
+
     scalarField Vm(nPoints, 0.0);
     scalarField Im(nPoints, 0.0);
 
@@ -352,9 +388,11 @@ List<DynamicTemplate> generatePersonalizedTemplates
     {
         result[p].times.setSize(nSamples);
         result[p].valuesMv.setSize(nSamples);
+        result[p].valuesCai.setSize(nSamples);
         result[p].times[0] = 0.0;
         // mV, not V -- unit conversion is the caller's job.
         result[p].valuesMv[0] = model.signal(p, CouplingSignal::VM);
+        result[p].valuesCai[0] = model.signal(p, CouplingSignal::CAI);
     }
 
     for (label k = 1; k < nSamples; ++k)
@@ -366,6 +404,27 @@ List<DynamicTemplate> generatePersonalizedTemplates
         {
             result[p].times[k] = scalar(k)*dt;
             result[p].valuesMv[k] = model.signal(p, CouplingSignal::VM);
+            result[p].valuesCai[k] = model.signal(p, CouplingSignal::CAI);
+        }
+    }
+
+    if (alignUpstroke)
+    {
+        // Time origin at the steepest upstroke
+        for (label p = 0; p < nPoints; ++p)
+        {
+            const scalarField& v = result[p].valuesMv;
+            label kUp = 0;
+            for (label k = 1; k < v.size() - 1; ++k)
+            {
+                if (v[k + 1] - v[k] > v[kUp + 1] - v[kUp])
+                {
+                    kUp = k;
+                }
+            }
+            const scalar tUp =
+                0.5*(result[p].times[kUp] + result[p].times[kUp + 1]);
+            result[p].times -= tUp;
         }
     }
 

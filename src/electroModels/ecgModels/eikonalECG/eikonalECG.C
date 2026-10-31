@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalECG.H"
+#include "IFstream.H"
 
 #include "dimVoltage.H"
 #include "ecgDomain.H"
@@ -152,9 +153,24 @@ eikonalECG::eikonalECG(const dictionary& dict)
                 << exit(FatalError);
         }
 
-        const label nBeats = personalizedTemplatesDict_.get<label>("nBeats");
+        const label nBeats = templateBeats();
         const scalar duration =
             personalizedTemplatesDict_.get<scalar>("duration");
+
+        const word timeOrigin
+        (
+            personalizedTemplatesDict_.lookupOrDefault<word>
+            (
+                "timeOrigin", "stimulus"
+            )
+        );
+        if (timeOrigin != "stimulus" && timeOrigin != "upstroke")
+        {
+            FatalIOErrorInFunction(personalizedTemplatesDict_)
+                << "eikonalECG personalizedTemplates.timeOrigin must be "
+                << "'stimulus' or 'upstroke'; got '" << timeOrigin << "'."
+                << exit(FatalIOError);
+        }
         const scalar generationDt =
             personalizedTemplatesDict_.get<scalar>("dt");
 
@@ -630,6 +646,16 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 }
 
 
+label eikonalECG::templateBeats() const
+{
+    if (personalizedTemplatesDict_.found("regionStates"))
+    {
+        return personalizedTemplatesDict_.lookupOrDefault<label>("nBeats", 1);
+    }
+    return personalizedTemplatesDict_.get<label>("nBeats");
+}
+
+
 void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
 {
     const fvMesh& mesh = domain.mesh();
@@ -682,9 +708,36 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
     const dictionary& ionicModelConfig =
         personalizedTemplatesDict_.subDict("ionicModelConfig");
 
-    const label nBeats = personalizedTemplatesDict_.get<label>("nBeats");
+    const label nBeats = templateBeats();
     const scalar duration = personalizedTemplatesDict_.get<scalar>("duration");
     const scalar generationDt = personalizedTemplatesDict_.get<scalar>("dt");
+    const bool alignUpstroke =
+        personalizedTemplatesDict_.lookupOrDefault<word>("timeOrigin", "stimulus")
+     == "upstroke";
+
+    // Region states in the setIonicRestartStateDict format
+    autoPtr<dictionary> regionStatesPtr;
+    if (personalizedTemplatesDict_.found("regionStates"))
+    {
+        fileName mapPath
+        (
+            personalizedTemplatesDict_.get<fileName>("regionStates")
+        );
+        mapPath.expand();
+        if (!mapPath.isAbsolute())
+        {
+            mapPath = mesh.time().globalPath()/mapPath;
+        }
+        IFstream is(mapPath);
+        if (!is.good())
+        {
+            FatalIOErrorInFunction(personalizedTemplatesDict_)
+                << "Cannot read personalizedTemplates.regionStates file "
+                << mapPath << exit(FatalIOError);
+        }
+        const dictionary mapDict(is);
+        regionStatesPtr.reset(new dictionary(mapDict.subDict("regionStates")));
+    }
 
     personalizedTemplates_ =
         eikonalECG_templates::generatePersonalizedTemplates
@@ -693,7 +746,10 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
             hetDict,
             nBeats,
             duration,
-            generationDt
+            generationDt,
+            regionStatesPtr.get(),
+            mesh.time().globalPath(),
+            alignUpstroke
         );
 
     personalizedTemplatesGenerated_ = true;

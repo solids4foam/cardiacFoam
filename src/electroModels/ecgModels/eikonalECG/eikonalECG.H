@@ -85,6 +85,11 @@ class eikonalECG
     void calculateLeadVectors(const ecgDomain& domain);
     void calculateTransmuralWeights(const ecgDomain& domain);
 
+    //- nBeats, 1 by default when regionStates is given
+
+    label templateBeats() const;
+
+
     void generatePersonalizedTemplates(const ecgDomain& domain);
 
     //- Analytic dVm/dx = -dU/ds(t-tau) * dTau/dx, reusing tau's own gradient
