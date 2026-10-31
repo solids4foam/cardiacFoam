@@ -43,10 +43,10 @@ namespace Foam
 namespace ionicTemplates
 {
 
-//- Local time zero is the final S1 stimulus onset.
+//- Time zero is the steepest upstroke of the final S1 beat.
 struct DynamicTemplate
 {
-    scalarField times;      // s; 0 = final S1 onset, or the steepest upstroke (timeOrigin upstroke)
+    scalarField times;      // s; 0 = steepest upstroke
     scalarField valuesMv;   // mV, direct ionicModel::signal(VM) output
     scalarField valuesCai;  // mM, direct ionicModel::signal(CAI) output
 };
@@ -66,8 +66,7 @@ List<DynamicTemplate> generatePersonalizedTemplates
     scalar captureDuration,
     scalar dt,
     const dictionary* regionStates = nullptr,
-    const fileName& stateRoot = fileName::null,
-    bool alignUpstroke = false
+    const fileName& stateRoot = fileName::null
 );
 
 //- Keys and controls of a personalizedTemplates dictionary

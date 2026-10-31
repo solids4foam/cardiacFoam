@@ -17,7 +17,6 @@ sequentialElectroMechanicalCoeffs
     {
         ionicModelConfig { ionicModel TNNP; tissue epicardialCells; solver RKF45; singleCellStimulus { ... } }
         nBeats     1;
-        timeOrigin upstroke;
         duration   0.5;
         dt         1e-5;
     }

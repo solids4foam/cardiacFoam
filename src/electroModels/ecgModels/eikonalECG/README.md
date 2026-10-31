@@ -13,20 +13,18 @@ It writes `postProcessing/eikonalECG.dat`, with one column per electrode, sample
 ## Templates from converged states
 
 `personalizedTemplates` makes one template per `ionicHeterogeneity` region by pacing a single cell of the chosen model.
-By default each cell starts from the model's initial state and is paced for `nBeats`. Two entries change that:
+Each template records Vm and Cai, and its time zero is the steepest upstroke of the last beat, so a cell activated at time τ
+depolarises at τ. By default each cell starts from the model's initial state and is paced for `nBeats`.
 
-- `regionStates` names a file in the `setIonicRestartState` map format
-  (`regionStates { <region> "<Model>State file"; }`). Each region's cell starts from its converged single-cell state,
-  and `nBeats` defaults to 1. The same file seeds a monodomain run with `setIonicRestartState`, so both use the same cells.
-- `timeOrigin` is `stimulus` (default) or `upstroke`. With `upstroke` the template's time zero is its steepest
-  upstroke, so a cell activated at time τ by the eikonal solve depolarises at τ rather than a stimulus latency later.
+`regionStates` names a file in the `setIonicRestartState` map format (`regionStates { <region> "<Model>State file"; }`).
+Each region's cell then starts from its converged single-cell state, and `nBeats` defaults to 1. The same file seeds a
+monodomain run with `setIonicRestartState`, so both use the same cells.
 
 ```cpp
 personalizedTemplates
 {
     ionicModelConfig { ionicModel Gaur; tissue myocyte; solver RKF45; singleCellStimulus { ... } }
     regionStates  "system/setIonicRestartStateDict";
-    timeOrigin    upstroke;
     duration      0.5;
     dt            1e-4;
 }

@@ -256,8 +256,7 @@ List<DynamicTemplate> generatePersonalizedTemplates
     const scalar captureDuration,
     const scalar dt,
     const dictionary* regionStates,
-    const fileName& stateRoot,
-    const bool alignUpstroke
+    const fileName& stateRoot
 )
 {
     if (nBeats < 1 || captureDuration <= 0.0 || dt <= 0.0)
@@ -411,24 +410,21 @@ List<DynamicTemplate> generatePersonalizedTemplates
         }
     }
 
-    if (alignUpstroke)
+    // Time origin at the steepest upstroke
+    for (label p = 0; p < nPoints; ++p)
     {
-        // Time origin at the steepest upstroke
-        for (label p = 0; p < nPoints; ++p)
+        const scalarField& v = result[p].valuesMv;
+        label kUp = 0;
+        for (label k = 1; k < v.size() - 1; ++k)
         {
-            const scalarField& v = result[p].valuesMv;
-            label kUp = 0;
-            for (label k = 1; k < v.size() - 1; ++k)
+            if (v[k + 1] - v[k] > v[kUp + 1] - v[kUp])
             {
-                if (v[k + 1] - v[k] > v[kUp + 1] - v[kUp])
-                {
-                    kUp = k;
-                }
+                kUp = k;
             }
-            const scalar tUp =
-                0.5*(result[p].times[kUp] + result[p].times[kUp + 1]);
-            result[p].times -= tUp;
         }
+        const scalar tUp =
+            0.5*(result[p].times[kUp] + result[p].times[kUp + 1]);
+        result[p].times -= tUp;
     }
 
     for (label p = 0; p < nPoints; ++p)
@@ -444,8 +440,7 @@ void checkControls(const dictionary& templatesDict)
 {
     const wordList keys
     ({
-        "dt", "duration", "nBeats", "ionicModelConfig", "regionStates",
-        "timeOrigin"
+        "dt", "duration", "nBeats", "ionicModelConfig", "regionStates"
     });
     wordRes allowed(keys.size());
     forAll(keys, i)
@@ -478,14 +473,6 @@ void checkControls(const dictionary& templatesDict)
             << "'singleCellStimulus' sub-dictionary defining the S1 pacing "
             << "protocol." << exit(FatalIOError);
     }
-
-    dictionaryKeyCheck::getWord
-    (
-        templatesDict,
-        "timeOrigin",
-        "stimulus",
-        wordList({"stimulus", "upstroke"})
-    );
 
     const label nBeats = templateBeats(templatesDict);
     const scalar duration = templatesDict.get<scalar>("duration");
@@ -549,11 +536,6 @@ List<DynamicTemplate> generate
 {
     checkControls(templatesDict);
 
-    const word timeOrigin
-    (
-        templatesDict.lookupOrDefault<word>("timeOrigin", "stimulus")
-    );
-
     // Region states in the setIonicRestartStateDict format
     autoPtr<dictionary> regionStatesPtr;
     if (templatesDict.found("regionStates"))
@@ -583,8 +565,7 @@ List<DynamicTemplate> generate
         templatesDict.get<scalar>("duration"),
         templatesDict.get<scalar>("dt"),
         regionStatesPtr.get(),
-        runTime.globalPath(),
-        timeOrigin == "upstroke"
+        runTime.globalPath()
     );
 }
 

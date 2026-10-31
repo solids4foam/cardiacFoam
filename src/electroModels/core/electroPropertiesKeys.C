@@ -268,7 +268,7 @@ void checkECGDomains(const dictionary& ecgDomains)
         dictionaryKeyCheck::checkKeys
         (
             *templatesPtr,
-            keys({"dt", "duration", "nBeats", "ionicModelConfig", "regionStates", "timeOrigin"})
+            keys({"dt", "duration", "nBeats", "ionicModelConfig", "regionStates"})
         );
 
         const wordList stimulusKey({"singleCellStimulus"});

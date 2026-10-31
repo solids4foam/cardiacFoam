@@ -14,6 +14,13 @@ z = [0.0030, 0.0060] m
 
 `monodomainSolverCoeffs.ionicHeterogeneity` (`mode namedRegions;`) classifies cells into `endocardialCells`/`mCells`/`epicardialCells` regions (`range (0 0.3)`/`range (0.3 0.7)`/`range (0.7 1)`) from a field that must be 0 at the endocardium and 1 at the epicardium — the opposite of this mesh's `tm` convention. `system/electro/setExprFieldsDict` derives `t = 1 - tm` for it to read; `Allrun` runs `setExprFields -region electro` for this.
 
+## Variants
+
+`./Allrun` runs the `monodomain` variant; `./Allrun eikonal` runs the `eikonal` variant. `Allrun` links `constant/electro/electroProperties` and `constant/electroMechanicalProperties` to the chosen variant's `.monodomain` or `.eikonal` files.
+
+- `monodomain`: `monodomainSolver` tissue; the active tension reads `Cai` from the TNNP ionic model in each cell.
+- `eikonal`: `eikonalSolver` tissue with the same mesh, conductivity, `c0` as `../electroHeart` and the same apical box, where the activation time is 0. The activation is solved once in the first step. With `activeTensionSignal templates;` the active tension reads `Cai` from TNNP single-cell templates, one per `ionicHeterogeneity` region, at `t - activationTime`. The templates' time zero is their upstroke. `stim_start 0` makes the first template sample TNNP's initial state, the resting state the monodomain variant starts from. The eikonal variant activates the apex at 0 ms, the monodomain variant at 3.2 ms (stimulus at 2 ms).
+
 ## Mechanical boundary conditions
 
 `BASE` has zero displacement. `EPI`, `ENDO_LV`, and `ENDO_RV` are traction-free in this first, unloaded activation/contraction case. This is an intentional benchmark simplification: it provides a stable reference configuration and removes rigid-body modes, but omits cavity pressure and pericardial restraint.
@@ -26,7 +33,7 @@ The isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test ap
 
 ## Run prerequisites
 
-This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun parallel`). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live in `../mesh/` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
+This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun eikonal`, and `parallel` for either). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live in `../mesh/` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
 
 ## Notes on dictionary entries
 

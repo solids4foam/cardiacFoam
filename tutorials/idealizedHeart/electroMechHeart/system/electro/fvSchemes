@@ -21,12 +21,15 @@ ddtSchemes
 gradSchemes
 {
     default         leastSquares;
+    grad(activationTime)   Gauss linear;
+    limitedGrad     cellMDLimited leastSquares 1;
 }
 
 divSchemes
 {
     default         none;
     div(phiU,psi)   Gauss linear;
+    div(phiU,activationTime)   Gauss linearUpwind limitedGrad;
 }
 
 laplacianSchemes
