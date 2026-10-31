@@ -8,11 +8,10 @@
   "sweep": {
     "mode": "zip",
     "independent": {
-      "system/fvSchemes:gradSchemes.default": ["leastSquares", "leastSquares", "Gauss linear", "Gauss linear", "leastSquares", "leastSquares", "Gauss linear", "Gauss linear"],
-      "system/fvSolution:solvers.\"phiE|phiEFinal|phiI|phiIFinal\".tolerance": [1e-06, 1e-15, 1e-06, 1e-15, 1e-06, 1e-15, 1e-06, 1e-15],
-      "tetNumberCells": [40, 40, 40, 40, 80, 80, 80, 80],
-      "system/controlDict:deltaT": [0.000560538, 0.000560538, 0.000560538, 0.000560538, 0.000140174, 0.000140174, 0.000140174, 0.000140174],
-      "caseId": ["leastSquares_tol1e-6_tet_N40", "leastSquares_tol1e-15_tet_N40", "GaussLinear_tol1e-6_tet_N40", "GaussLinear_tol1e-15_tet_N40", "leastSquares_tol1e-6_tet_N80", "leastSquares_tol1e-15_tet_N80", "GaussLinear_tol1e-6_tet_N80", "GaussLinear_tol1e-15_tet_N80"]
+      "system/fvSchemes:gradSchemes.default": ["leastSquares", "leastSquares", "Gauss linear", "Gauss linear"],
+      "system/fvSolution:solvers.\"phiE|phiEFinal|phiI|phiIFinal\".tolerance": [1e-06, 1e-15, 1e-06, 1e-15],
+      "tetNumberCells": [40, 40, 40, 40],
+      "caseId": ["leastSquares_tol1e-6_tet_N40", "leastSquares_tol1e-15_tet_N40", "GaussLinear_tol1e-6_tet_N40", "GaussLinear_tol1e-15_tet_N40"]
     }
   }
 }

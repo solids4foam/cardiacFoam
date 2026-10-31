@@ -29,6 +29,7 @@ Description
 #include "electroVerificationModel.H"
 #include "eikonalVerificationModel.H"
 #include "dimVoltage.H"
+#include "ecgVerification/manufacturedLeadFieldShellFields.H"
 
 using namespace Foam;
 
@@ -58,7 +59,40 @@ int main(int argc, char *argv[])
 
     const word modelType(electroVerificationModel::selectedType(coeffs));
 
-    if (eikonalVerificationModel::dictionaryConstructorTable(modelType))
+    // An ECG domain verified against the sphericalShell lead-field reference
+    // takes the conductivities of that solution
+    bool shellLeadField = false;
+    if (const dictionary* ecgPtr = coeffs.findDict("ecgDomains"))
+    {
+        for (const entry& domain : *ecgPtr)
+        {
+            const dictionary* verifierPtr =
+                domain.isDict()
+              ? domain.dict().findDict("verificationModel")
+              : nullptr;
+            if
+            (
+                verifierPtr
+             && verifierPtr->getOrDefault<word>("type", "")
+             == "manufacturedLeadFieldECGVerifier"
+             && verifierPtr->getOrDefault<word>("reference", "")
+             == "sphericalShell"
+            )
+            {
+                shellLeadField = true;
+            }
+        }
+    }
+    if (shellLeadField)
+    {
+        writeManufacturedLeadFieldShellFields(mesh);
+    }
+
+    if (shellLeadField && (modelType.empty() || modelType == "none"))
+    {
+        // The myocardium has no manufactured solution of its own
+    }
+    else if (eikonalVerificationModel::dictionaryConstructorTable(modelType))
     {
         // The verifier reads the conductivity only once the solver uses it
         const volTensorField conductivity

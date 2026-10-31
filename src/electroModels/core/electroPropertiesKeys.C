@@ -242,7 +242,9 @@ void checkECGDomains(const dictionary& ecgDomains)
         ({
             "ecgSolver", "electrodePositions", "sampling",
             "sigmaExtracellular", "torsoSurface", "verificationModel",
-            "ecgVerificationModel", "personalizedTemplates", "coupling"
+            "ecgVerificationModel", "personalizedTemplates", "coupling",
+            "torso", "conductivitySource", "conductivityIntracellular",
+            "conductivityExtracellular"
         }),
         wordRes(),
         wordList({"electrodePositions"})
@@ -256,6 +258,17 @@ void checkECGDomains(const dictionary& ecgDomains)
         }
 
         checkSubDict(e.dict(), "sampling", keys({"start", "end", "deltaT"}));
+        checkSubDict
+        (
+            e.dict(),
+            "torso",
+            keys
+            ({
+                "bathCellZones", "bathConductivityField",
+                "interfaceConductivityInterpolation", "groundPatches",
+                "surfaceCurrentPatches", "phiERefPoint", "phiEReferenceValue"
+            })
+        );
 
         const dictionary* templatesPtr =
             e.dict().findDict("personalizedTemplates");

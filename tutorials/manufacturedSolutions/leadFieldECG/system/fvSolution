@@ -1,0 +1,77 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "Vm|VmFinal|u|uFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-15;
+        relTol          0.0;
+    }
+
+    // phiE: the bidomain heart potential and the verifier's direct
+    // forward solve
+    "phiE|phiEFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-15;
+        relTol          0.0;
+        maxIter         100000;
+    }
+
+    // buildLeadFields: leadField for the passes of the fixed point,
+    // leadFieldFinal for the passes after it has converged
+    leadField
+    {
+        solver          PCG;
+        preconditioner
+        {
+            preconditioner  GAMG;
+            smoother        DICGaussSeidel;
+        }
+        tolerance       1e-15;
+        relTol          0.01;
+    }
+
+    leadFieldFinal
+    {
+        $leadField;
+        relTol          0;
+    }
+}
+
+// Lead-field fixed point (buildLeadFields) and the verifier's direct
+// forward solve: relative change between passes, and the pass limit
+leadFieldFixedPoint
+{
+    tolerance       1e-10;
+    maxPasses       100;
+
+    #includeIfPresent "<case>/local/fixedPoint"
+}
+
+PIMPLE
+{
+    nOuterCorrectors         1;
+    nNonOrthogonalCorrectors 0;
+}
+
+
+// ************************************************************************* //

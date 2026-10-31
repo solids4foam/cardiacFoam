@@ -15,6 +15,17 @@ ionic closure with F = Fi - Fe and the positive function g.  The phiE equation
 carries the source sqrt(1 + t) (div(Gi grad Fi) + div(Ge grad Fe)), whose
 integral over the shell is zero.
 
+--emit writes reference/shell_bidomain.py (Fi, gradFi, Fe, gradFe,
+divGiGradFi, divGeGradFe, Gi, Ge and g as NumPy functions of x, y, z and the
+parameters, with PARAMS and field()) and the LaTeX fragments
+latex/shell_bidomain_*.tex: the tensors Gi and Ge, hhat_i, hhat_e, the wall
+corrections and blends of both potentials, Fi, Fe, phi_i, phi_e, V_m, the
+gauge constant c, u_1, u_2, the applied current of the V_m equation, the
+phi_e source and the parameters.  The shared geometry fragments
+latex/shell_*.tex are written by shell_monodomain_mms.py.
+
+    python shell_bidomain_mms.py --emit
+    python shell_bidomain_mms.py --self-check
     python shell_bidomain_mms.py --write ../../../src/verificationModels/bidomainVerification/manufacturedShellBidomainReference.H
     python shell_bidomain_mms.py --check ../../../src/verificationModels/bidomainVerification/manufacturedShellBidomainReference.H
 """
@@ -22,14 +33,23 @@ integral over the shell is zero.
 import argparse
 import functools
 import math
+import os
 import sys
 
 import mpmath as mp
 import numpy as np
 import sympy as sp
 
+import fda_monodomain_mms as fmm
 import mms_codegen as codegen
 import shell_monodomain_mms as smm
+from mms_common.latex_emit import emit_latex_fragment, emit_parameter_fragment
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+REFERENCE_NAME = "shell_bidomain"
+# phiERefPoint of the tutorial manufacturedSolutions/bidomain/sphericalShell
+PHIE_REF_POINT = (0.6, 0.3, 0.2)
+PHIE_REF_VALUE = 0
 
 HEADER_NAME = "manufacturedShellBidomainReference.H"
 HEADER_PATH = "../../../src/verificationModels/bidomainVerification/" + HEADER_NAME
@@ -331,6 +351,41 @@ def max_difference_to_monodomain_F(n=200):
     return float(np.abs(smm.evaluate("F", pts) - evaluate("Fi", pts)).max())
 
 
+def frame_check(n=500):
+    """Gi and Ge share the eigenvectors (f, s, n_s); their eigenvalue ratios
+    differ, so Gi + Ge is not a multiple of Gi.  Returns the largest commutator
+    [Gi, Ge], the smallest relative distance of Ge from the multiples of Gi, and
+    the largest difference between Gi and sigma of shell_monodomain_mms."""
+    pts = _shell_points(n, 0.0, seed=7)
+    Gi = _full(evaluate("Gi", pts))
+    Ge = _full(evaluate("Ge", pts))
+    comm = np.abs(Gi @ Ge - Ge @ Gi).max()
+    c = np.einsum("pij,pij->p", Ge, Gi)/np.einsum("pij,pij->p", Gi, Gi)
+    off = np.linalg.norm(Ge - c[:, None, None]*Gi, axis=(1, 2))/np.linalg.norm(Ge, axis=(1, 2))
+    mono = np.abs(Gi - _full(smm.evaluate("G", pts))).max()
+    return float(comm), float(off.min()), float(mono)
+
+
+def vm_equation_residual():
+    """Residuals of the V_m equation and of the two ionic rates on the exact
+    fields, with the ionic closure of monodomainFDAManufactured and the
+    applied current of the verifier, the spatial factors written as symbols."""
+    t = sp.Symbol("t", positive=True)
+    Fi, Fe, g, b, dGi = sp.symbols("Fi Fe g beta dGi", real=True)
+    chi, cm = sp.symbols("chi C_m", positive=True)
+    S = sp.sqrt(1 + t)
+    V = S*(Fi - Fe)
+    a1 = (1 + t)*g + V
+    a2 = 1/((1 + t)*sp.sqrt(g))
+    J = -sp.Rational(1, 2)*cm*a2**2*V*(a1 - V) + b*V/chi
+    Is = S*(b*(Fi - Fe) - dGi)
+    res = chi*cm*sp.diff(V, t) - (S*dGi - chi*cm*J/cm + Is)
+    rate1 = a2**2*(a1 - V)**2 + sp.Rational(1, 2)*(a1 - V)*a2**2*V
+    rate2 = -(a1 - V)*a2**3
+    return [sp.simplify(res), sp.simplify(sp.diff(a1, t) - rate1),
+            sp.simplify(sp.diff(a2, t) - rate2)]
+
+
 SOURCE_MEAN_TOLERANCE = 1e-12
 
 
@@ -343,6 +398,14 @@ def run_self_checks():
     mean, absolute = phiE_source_mean()
     assert abs(mean) < SOURCE_MEAN_TOLERANCE*absolute, "phiE source mean"
     assert max_difference_to_monodomain_F() < 1e-13, "monodomain F"
+    comm, off, mono = frame_check()
+    assert comm < 1e-14, "Gi and Ge share the frame"
+    assert off > 0.1, "Ge is not proportional to Gi"
+    assert mono < 1e-14, "Gi equals sigma of the monodomain shell"
+    assert all(v == 0 for v in vm_equation_residual()), "V_m equation"
+    r = math.sqrt(sum(c*c for c in PHIE_REF_POINT))
+    p = default_params()
+    assert p["r1"] < r < p["r2"], "reference point inside the shell"
 
 
 def printed_check_context():
@@ -366,6 +429,114 @@ def self_test_samples():
                 for comp in range(N_COMPONENTS[vkind]):
                     rows.append((idx, param, 0, 1, comp, pt[0], pt[1], pt[2], 0.0, float(vals[comp])))
     return rows
+
+
+# ------------------------------------------------------------------ LaTeX ----
+
+# LaTeX names of the shell parameters: those of the monodomain shell, with the
+# eigenvalues of Gi and Ge and the coefficients of hhat_e
+SHELL_TEX = dict(smm.SHELL_SYMBOLS)
+SHELL_TEX.update({"gil": r"\sigma_{i,f}", "git": r"\sigma_{i,s}", "gin": r"\sigma_{i,n}",
+                  "gel": r"\sigma_{e,f}", "get": r"\sigma_{e,s}", "gen": r"\sigma_{e,n}",
+                  "fA0": "b_1", "fA1": "b_2", "fA2": "b_3", "fA3": "b_4"})
+
+
+def _shell_names(extra=()):
+    names = {P[n]: tex for n, tex in SHELL_TEX.items() if n in P}
+    names[sp.Symbol("k", real=True)] = "k"
+    names.update(dict(extra))
+    return names
+
+
+def latex_fragments():
+    out = {}
+    ff, ss, nn = sp.symbols("ff ss nn", real=True)
+    nm = _shell_names([(ff, r"\mathbf f\otimes\mathbf f"), (ss, r"\mathbf s\otimes\mathbf s"),
+                       (nn, r"\mathbf n_s\otimes\mathbf n_s")])
+    for tag, (l, tr, n) in (("Gi", ("gil", "git", "gin")), ("Ge", ("gel", "get", "gen"))):
+        out["shell_bidomain_%s.tex" % tag] = emit_latex_fragment(
+            r"\boldsymbol\sigma_%s" % tag[1], P[l]*ff + P[tr]*ss + P[n]*nn, nm)
+    names = _shell_names()
+    out["shell_bidomain_hhat_e.tex"] = emit_latex_fragment(
+        r"\hat h_e", expressions()["ehat"], names)
+    out["shell_bidomain_hhat_i.tex"] = emit_latex_fragment(r"\hat h_i", smm._hhat(), names)
+    for tag, tens in (("i", r"\boldsymbol\sigma_i"), ("e", r"\boldsymbol\sigma_e")):
+        a, b, dj, lam, m1, m2, hh, om, m = sp.symbols("a b dj lam m1 m2 hh om m", real=True)
+        nmj = _shell_names([
+            (a, r"\left(\mathbf n_j\cdot %s\nabla\hat h_%s\right)" % (tens, tag)),
+            (b, r"\left(\mathbf n_j\cdot %s\,\mathbf n_j\right)" % tens),
+            (dj, "d_j"), (lam, r"\lambda"), (m1, "m_{%s,1}" % tag), (m2, "m_{%s,2}" % tag),
+            (hh, r"\hat h_%s" % tag), (om, r"\omega"), (m, "m_%s" % tag)])
+        out["shell_bidomain_mj_%s.tex" % tag] = emit_latex_fragment(
+            "m_{%s,j}" % tag, smm._wall_correction(a, b, dj), nmj)
+        out["shell_bidomain_m_%s.tex" % tag] = emit_latex_fragment(
+            "m_%s" % tag, smm._blend(lam, m1, m2), nmj)
+        out["shell_bidomain_F%s.tex" % tag] = emit_latex_fragment(
+            "F_%s" % tag, hh + om*m, nmj)
+    t, Fi, Fe, g, b, Vm, dGi, dGe, shift = sp.symbols(
+        "t Fi Fe g beta Vm dGi dGe shift", real=True)
+    nf = _shell_names([(Fi, "F_i"), (Fe, "F_e"), (g, "g"), (b, r"\beta"), (Vm, "V_m"),
+                       (dGi, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_i\nabla F_i\right)"),
+                       (dGe, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_e\nabla F_e\right)"),
+                       (shift, "c")])
+    S = sp.sqrt(1 + t)
+    out["shell_bidomain_phiI.tex"] = emit_latex_fragment(r"\phi_i", S*Fi + shift, nf)
+    xr, ve = sp.symbols("xr ve", real=True)
+    nf.update({xr: r"F_e(\mathbf x_{\mathrm{ref}})", ve: r"\phi_{e,\mathrm{ref}}"})
+    out["shell_bidomain_c.tex"] = emit_latex_fragment("c", ve - S*xr, nf)
+    out["shell_bidomain_phiE.tex"] = emit_latex_fragment(r"\phi_e", S*Fe + shift, nf)
+    out["shell_bidomain_Vm.tex"] = emit_latex_fragment("V_m", S*(Fi - Fe), nf)
+    out["shell_bidomain_u1.tex"] = emit_latex_fragment("u_1", (1 + t)*g + Vm, nf)
+    out["shell_bidomain_u2.tex"] = emit_latex_fragment("u_2", g**sp.Rational(-1, 2)/(1 + t), nf)
+    out["shell_bidomain_Is.tex"] = emit_latex_fragment(
+        r"I_{\mathrm{app}}", S*(b*(Fi - Fe) - dGi), nf)
+    out["shell_bidomain_se.tex"] = emit_latex_fragment(r"s_e", S*(dGi + dGe), nf)
+    p = default_params()
+    pairs = []
+    for name in SCALAR_PARAMS:
+        v = p[name]
+        if name in ANGLE_PARAMS:
+            v = r"%g^\circ" % v
+        pairs.append((SHELL_TEX[name], v))
+    pairs += [("a_%d" % (i + 1), v) for i, v in enumerate(p["hA"])]
+    pairs += [("b_%d" % (i + 1), v) for i, v in enumerate(p["fA"])]
+    out["shell_bidomain_params.tex"] = emit_parameter_fragment(pairs, per_row=5)
+    out["shell_bidomain_ref.tex"] = emit_parameter_fragment(
+        [(r"\mathbf x_{\mathrm{ref}}", sp.Matrix(PHIE_REF_POINT)),
+         (r"\phi_{e,\mathrm{ref}}", PHIE_REF_VALUE), (r"\beta", fmm.BETA[3])])
+    return {"latex/" + k: v for k, v in out.items()}
+
+
+def numpy_module():
+    e = expressions()
+    functions = {"Fi": e["Fi"], "gradFi": sp.Matrix(e["gradFi"]), "Fe": e["Fe"],
+                 "gradFe": sp.Matrix(e["gradFe"]), "divGiGradFi": e["divGiGradFi"],
+                 "divGeGradFe": e["divGeGradFe"], "Gi": e["Gimat"], "Ge": e["Gemat"],
+                 "g": e["g"]}
+    doc = ("Heart-only bidomain manufactured solution on the spherical shell r1 < |x| < r2: "
+           "Fi, Fe, their gradients (shape (3, ...)), divGiGradFi = div(Gi grad Fi), "
+           "divGeGradFe = div(Ge grad Fe), Gi and Ge (shape (3, 3, ...)) and the ionic "
+           "function g, each a function of (x, y, z, *PARAM_ORDER) with angles in radians; "
+           "phi_i = sqrt(1 + t) Fi + c, phi_e = sqrt(1 + t) Fe + c, V_m = sqrt(1 + t) "
+           "(Fi - Fe).  PARAMS holds the default and alternate parameters; "
+           "field(name, x, y, z, **overrides) evaluates with them.  Generated by "
+           "shell_bidomain_mms.py.")
+    return smm.reference_module(_THIS, functions, doc)
+
+
+def render_outputs():
+    """{path relative to this folder: text} of every emitted file."""
+    out = {"reference/%s.py" % REFERENCE_NAME: numpy_module()}
+    out.update(latex_fragments())
+    return out
+
+
+def write_outputs(root=HERE):
+    return smm.write_outputs(render_outputs, root)
+
+
+def outputs_match(root=HERE):
+    return smm.outputs_match(render_outputs, root)
 
 
 LICENSE = """\
@@ -434,7 +605,26 @@ def main(argv=None):
     grp = ap.add_mutually_exclusive_group(required=True)
     grp.add_argument("--write", metavar="PATH")
     grp.add_argument("--check", metavar="PATH")
+    grp.add_argument("--emit", action="store_true")
+    grp.add_argument("--self-check", action="store_true")
     args = ap.parse_args(argv)
+    if args.self_check:
+        try:
+            run_self_checks()
+        except AssertionError as err:
+            print("self-check failed: %s" % err)
+            return 1
+        print("self-checks passed")
+        return 0
+    if args.emit:
+        try:
+            run_self_checks()
+        except AssertionError as err:
+            print("self-check failed, nothing emitted: %s" % err)
+            return 1
+        for rel in write_outputs():
+            print("wrote %s" % rel)
+        return 0
     if args.write:
         try:
             run_self_checks()

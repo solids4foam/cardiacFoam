@@ -162,8 +162,7 @@ void Foam::sealedWallLeastSquaresVectors::calcVectors()
 
     vectors_.setSize(wallCells_.size());
 
-    // A wall-cell normal matrix is numerically rank deficient when its
-    // smallest eigenvalue is within the rounding error of its largest
+    // Numerically rank deficient: lambda_min <= 3 eps lambda_max
     const scalar rankTol = 3*std::numeric_limits<scalar>::epsilon();
 
     scalar minRatio = 1;

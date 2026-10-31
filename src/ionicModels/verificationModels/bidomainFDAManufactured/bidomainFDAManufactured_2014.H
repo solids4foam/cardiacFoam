@@ -47,34 +47,14 @@ bidomainFDAManufacturedInitConsts
     double* CONSTANTS,
     double* RATES,
     double* STATES,
-    int dimension,
-    double k
+    double Cm,
+    double Chi,
+    double Beta
 )
 {
-    CONSTANTS[BidomainCm] = 2.0;
-    CONSTANTS[BidomainChi] = 3.0;
-
-    double betaBase = 0.0;
-
-    if (dimension == 1)
-    {
-        betaBase = -1.1;
-    }
-    else if (dimension == 2)
-    {
-        betaBase = -5.9;
-    }
-    else if (dimension == 3)
-    {
-        betaBase = -8.6;
-    }
-    else
-    {
-        FatalErrorInFunction
-            << "Invalid mesh dimension detected!" << exit(Foam::FatalError);
-    }
-
-    CONSTANTS[BidomainBeta] = betaBase*(1.0 - k);
+    CONSTANTS[BidomainCm] = Cm;
+    CONSTANTS[BidomainChi] = Chi;
+    CONSTANTS[BidomainBeta] = Beta;
 }
 
 

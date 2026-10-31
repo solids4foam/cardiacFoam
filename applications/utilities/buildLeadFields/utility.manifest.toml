@@ -1,0 +1,70 @@
+# applications/utilities/buildLeadFields/utility.manifest.toml
+
+name = "buildLeadFields"
+description = "Solve the discrete adjoint heart+torso problem of each electrode of a leadFieldECG domain and write its lead field."
+category = "field-setup"
+
+purpose = """
+For each electrode of a leadFieldECG ecgDomains entry, solves the discrete
+adjoint A^T z = e of the forward heart+torso operator A of passiveConductor,
+with e the unit vector of the electrode cell, so that z^T b equals the
+electrode value of the converged forward solve A phi = b. A = M + C: M is the
+implicit matrix, assembled once; C, the explicit corrections, is stored by
+coloured probing of the same assembly and applied transposed in the fixed
+point M z = e - C^T z. Ground patches are fixedValue 0, other non-coupled
+patches zeroGradient; without ground patches the phiERefPoint cell is pinned
+to 0. The unknown is named phiE on the base mesh and the heart sub-mesh, so
+the forward's fvSchemes entries apply. The fixed point repeats until the
+relative change of z between passes is below the tolerance of the
+fvSolution dictionary leadFieldFixedPoint (tolerance, maxPasses): with the
+fvSolution entry leadField until the change first falls below it, then with
+leadFieldFinal (relTol 0, tight tolerance) until it falls below it again.
+The build checks the linearity of C, the probed C, the transpose, the
+symmetry of M, and each lead field's residual and reference pin, each fatal
+above its tolerance. Writes one lead field per electrode and the conductor
+signature that leadFieldECG checks at load.
+"""
+
+inputs = [
+  "constant/electroProperties",
+  "constant/polyMesh",
+  "system/fvSchemes",
+  "system/fvSolution",
+  "<torso conductivity field, e.g. bodyAndOrgansConductivity>",
+]
+
+outputs = [
+  "constant/leadField_<electrode>",
+  "constant/leadFieldSignature",
+]
+
+requires_mesh = true
+example = "buildLeadFields -case ./bathTorso"
+
+[[flags]]
+name = "-region"
+description = "Mesh region (default: region0)."
+takes_value = true
+argument_kind = "word"
+
+[[flags]]
+name = "-ecgDomain"
+description = "ecgDomains entry with ecgSolver leadFieldECG to build (default: the only one; fatal when there are none or several)."
+takes_value = true
+argument_kind = "word"
+
+[[produces]]
+artifact_id = "lead_fields"
+path_pattern = "constant/leadField_*"
+format = "openfoam_log"
+description = "One volScalarField lead field per electrode on the base mesh."
+produced_by = "buildLeadFields"
+time_indexed = false
+
+[[produces]]
+artifact_id = "lead_field_signature"
+path_pattern = "constant/leadFieldSignature"
+format = "openfoam_log"
+description = "Decomposition-independent conductor signature the lead fields were built for."
+produced_by = "buildLeadFields"
+time_indexed = false

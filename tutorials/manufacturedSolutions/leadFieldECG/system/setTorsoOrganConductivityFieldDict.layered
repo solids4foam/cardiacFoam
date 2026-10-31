@@ -1,0 +1,24 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      setTorsoOrganConductivityFieldDict;
+}
+
+fieldName bodyAndOrgansConductivity;
+
+// Torso layers with a jump of 5 at x = -0.5 and x = 1.5; the myocardium
+// value is not used by the conductor (its cells take Gi + Ge)
+cellZones
+{
+    torsoInner  0.1;
+    torsoOuter  0.02;
+    myocardium  0.1;
+}
+
+// ************************************************************************* //

@@ -151,6 +151,13 @@ bidomainSolver::bidomainSolver
     ),
     verifierPtr_(nullptr)
 {
+    if (electroProperties.found("phiEReferenceValue") && !hasPhiEReferencePoint_)
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "phiEReferenceValue is set but phiERefPoint is not; the value "
+            << "is applied at the cell containing phiERefPoint"
+            << exit(FatalIOError);
+    }
     if
     (
         bathHeartPhiETrace_ != "zeroGradient"
@@ -201,21 +208,16 @@ label bidomainSolver::referenceCell() const
 
     const label refCell = phiE_.mesh().findCell(phiEReferencePoint_);
 
-    if (Pstream::parRun())
+    label ownerCount = refCell >= 0 ? 1 : 0;
+    reduce(ownerCount, sumOp<label>());
+
+    if (ownerCount != 1)
     {
-        const label localOwnsReference = refCell >= 0 ? 1 : 0;
-        label ownerCount = localOwnsReference;
-
-        reduce(ownerCount, sumOp<label>());
-
-        if (ownerCount != 1)
-        {
-            FatalErrorInFunction
-                << "phiERefPoint " << phiEReferencePoint_
-                << " must be owned by exactly one processor in parallel, but "
-                << ownerCount << " processors reported a containing cell."
-                << exit(FatalError);
-        }
+        FatalErrorInFunction
+            << "phiERefPoint " << phiEReferencePoint_
+            << " must lie in exactly one cell of one processor, but "
+            << ownerCount << " processors reported a containing cell."
+            << exit(FatalError);
     }
 
     return refCell;

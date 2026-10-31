@@ -26,6 +26,7 @@ flowchart TB
         TC["setTorsoOrganConductivityField<br/><i>torso and bath cases</i>"]
         SD["setFieldDimensions<br/><i>fix dimensions after an import</i>"]
         SM["setManufacturedFields<br/><i>verification cases</i>"]
+        LF["buildLeadFields<br/><i>lead-field ECG</i>"]
     end
     subgraph MESH["Mesh"]
         V["newVtkUnstructuredToFoam<br/><i>VTK mesh to OpenFOAM</i>"]
@@ -62,6 +63,7 @@ flowchart TB
 | sweep a cell model's currents | `sweepCurrents` | [README](sweepCurrents/README.md) |
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |
+| build the lead fields of a `leadFieldECG` domain | `buildLeadFields` | [README](buildLeadFields/README.md) |
 | measure bath–bidomain interface fluxes | `bathBidomainInterfaceMetrics` | [README](bathBidomainInterfaceMetrics/README.md) |
 | test the sealed-wall cell gradient on a shell mesh | `wallGradientProbe` | [README](wallGradientProbe/README.md) |
 | write the conductivity fields a manufactured solution prescribes | `setManufacturedFields` | [README](setManufacturedFields/README.md) |

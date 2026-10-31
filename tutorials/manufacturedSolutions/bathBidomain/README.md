@@ -60,7 +60,7 @@ The `sides` patches carry no current.
 - bath: `bathPotentialDomain` (cellZones `myocardium` and `bath`,
   `bathConductivityField bodyAndOrgansConductivity`), `heartAssembly
   matchedSubmesh`, `interfaceConductivityInterpolation`
-  `distanceWeightedHarmonic` or `unweightedHarmonic` (`-interface`)
+  `distanceWeightedHarmonic` or `conormalHarmonic` (`-interface`)
 - bath coupling: `bathPredictorCorrector yes` or `no` (`-predictorCorrector`),
   `nOuterCorrectors 1`, `nNonOrthogonalCorrectors 0`
 - ionic model: `bathBidomainFDAManufactured`
@@ -104,7 +104,7 @@ Every option writes a file in `local/`, which the dictionaries include;
 | `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
 | `-variant groundElectrode\|electrodePair` | bath boundary variant | groundElectrode |
 | `-predictorCorrector yes\|no` | `bathPredictorCorrector` | yes |
-| `-interface distanceWeightedHarmonic\|unweightedHarmonic` | `interfaceConductivityInterpolation` | distanceWeightedHarmonic |
+| `-interface distanceWeightedHarmonic\|conormalHarmonic` | `interfaceConductivityInterpolation` | distanceWeightedHarmonic |
 | `-gradient leastSquares\|GaussLinear` | cell-gradient reconstruction | leastSquares |
 | `-snGrad corrected\|limited\|orthogonal` | laplacian and snGrad correction (`limited` is `limited 0.5`) | corrected |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |

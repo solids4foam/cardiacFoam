@@ -31,6 +31,7 @@ same    monodomainExplicit                   monodomainPseudoECG                
 same    bidomain                             bidomainPseudoECG                                0.005/Vm
 same    eikonal                              eikonalECG                                       1/activationTime
 same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE
+same    bathBidomain                         bathLeadFieldECG                                 0.00336323/phiE
 
 # Parallel runs must reproduce the serial ones up to round-off: rtol covers
 # the 8 significant digits written, atol the round-off in values near zero
@@ -46,6 +47,10 @@ close:1e-6:1e-12  eikonalPurkinje                      eikonalPurkinjeParallel  
 close:1e-6:1e-12  monodomainPseudoECG                  monodomainPseudoECGParallel                  .
 close:1e-6:1e-12  eikonalECG                           eikonalECGParallel                           .
 close:1e-6:1e-12  bathTorsoECG                         bathTorsoECGParallel                         .
+close:1e-6:1e-12  bathLeadFieldECG                     bathLeadFieldECGParallel                     .
+# The parallel monodomain cellZone run leaves its ionic state
+# (BuenoOrovioState) in processor*/, so only the ECG is compared
+close:1e-6:1e-12  leadFieldBox                         leadFieldBoxParallel                         postProcessing/leadFieldECG.dat
 close:1e-6:1e-12  monodomainPeriodicFieldConductivity  monodomainPeriodicFieldConductivityParallel  .
 
 # recomputePseudoECG must reproduce the pseudo-ECG the solver wrote (both

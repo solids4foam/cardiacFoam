@@ -81,3 +81,11 @@ def test_printed_constant_round_trips_or_raises():
             assert "round-trip" in str(err)
         else:
             raise AssertionError("%r printed to %d digits did not raise" % (value, digits))
+
+
+def test_cases_fragment():
+    from mms_common.latex_emit import emit_cases_fragment
+    x, k = sp.symbols("x k")
+    text = emit_cases_fragment("f", [(k*x, r"x\le0"), (x**2, r"x>0")], {k: r"\kappa"})
+    assert text == ("$$\nf = \\begin{cases}\n\\kappa x, & x\\le0,\\\\\nx^{2}, & x>0.\n"
+                    "\\end{cases}\n$$\n")

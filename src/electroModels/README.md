@@ -9,7 +9,7 @@ The electrophysiology part of the core: the core itself, the domains it builds (
 | Tissue solvers | `monodomainSolver`, `bidomainSolver`, `eikonalSolver` |
 | Single cell | `singleCellSolver` |
 | Purkinje solvers | `monodomain1DSolver`, `eikonalSolver1D`, `restitutionEikonalSolver1D` |
-| ECG models | `pseudoECG` (class `pseudoECGSolver`), `torsoECG`, `eikonalECG` |
+| ECG models | `pseudoECG` (class `pseudoECGSolver`), `torsoECG`, `leadFieldECG`, `eikonalECG` |
 | Bath | `extracellularPotentialDomain`: a global `phiE` over heart and bath |
 | Purkinje–muscle junction couplers | `eikonalPvjCoupler`, `eikonalMonodomainPvjCoupler`, `reactionDiffusionPvjCoupler` |
 | Advance scheme | `staggeredElectrophysicsAdvanceScheme` |

@@ -32,7 +32,8 @@ set -u
 # dictionary configuration on a small base case. A "pass" check must run to
 # completion and write exactly the files listed in
 # regression/manifests/<name>; a "fail:<text>" check must stop with a FOAM
-# FATAL error whose message contains <text>. Then ./comparisons checks that
+# FATAL error whose message contains <text>, in cardiacFoam or in the case
+# preparation (Allprepare). Then ./comparisons checks that
 # options change (or leave unchanged) the results they should.
 #
 # Usage: regression/regressionTest.sh [--update-manifests] [check ...]
@@ -85,9 +86,11 @@ isSelected()
     return 1
 }
 
-# Apply "path=value" (set) and "path!" (remove) edits to electroProperties.
-# The run options "np=N", "post=<script>" and "skip=<version>" are handled
-# by runCheck and skipped here.
+# Apply "path=value" (set) and "path!" (remove) edits to electroProperties,
+# after the case preparation, so that a preparation step such as
+# buildLeadFields sees the variant's own dictionary. The run options "np=N",
+# "post=<script>" and "skip=<version>" are handled by runCheck and skipped
+# here.
 applyEdits()
 {
     local edit
@@ -96,13 +99,13 @@ applyEdits()
             || "${edit}" == skip=* ]]; then
             continue
         elif [[ "${edit}" == *'!' ]]; then
-            foamDictionary constant/electroProperties \
+            foamDictionary -precision 17 constant/electroProperties \
                 -entry "${edit%!}" -remove > /dev/null
         else
             # A value cannot hold a space in the checks file, so it is
             # written as ~, as in fail:<text>
             local value="${edit#*=}"
-            foamDictionary constant/electroProperties \
+            foamDictionary -precision 17 constant/electroProperties \
                 -entry "${edit%%=*}" -set "${value//\~/ }" > /dev/null
         fi
     done
@@ -140,9 +143,13 @@ runCheck()
 
     (
         cd "${runDir}"
-        applyEdits "$@"
         ./Allprepare > log.Allprepare 2>&1
     ) || {
+        if [[ "${expect}" == fail:* ]]; then
+            # The preparation's applications write their own logs
+            expectFatal "${name}" "${expect}" "${runDir}"/log.*
+            return
+        fi
         echo "FAIL: ${name}: case preparation failed"
         regressionDumpLog "${runDir}/log.Allprepare"
         return 1
@@ -171,6 +178,11 @@ DICT
             set +eu
             cd "${runDir}"
             runApplication decomposePar > /dev/null || exit 1
+            # A case's Allprepare.parallel prepares the decomposed case
+            if [[ -x Allprepare.parallel ]]; then
+                ./Allprepare.parallel > log.Allprepare.parallel 2>&1 || exit 5
+            fi
+            applyEdits "$@"
             runParallel cardiacFoam > /dev/null || exit 2
             runApplication reconstructPar > /dev/null || exit 3
             runApplication redistributeRestartState > /dev/null || exit 4
@@ -182,8 +194,17 @@ DICT
             regressionDumpLog "${runDir}/log.redistributeRestartState"
             return 1
         fi
+        if (( rc == 5 )); then
+            echo "FAIL: ${name}: Allprepare.parallel failed"
+            regressionDumpLog "${runDir}/log.Allprepare.parallel"
+            return 1
+        fi
     else
-        (cd "${runDir}" && cardiacFoam > log.cardiacFoam 2>&1) || rc=$?
+        (
+            cd "${runDir}" || exit 1
+            applyEdits "$@"
+            cardiacFoam > log.cardiacFoam 2>&1
+        ) || rc=$?
     fi
 
     if [[ "${expect}" == pass ]]; then
@@ -192,8 +213,12 @@ DICT
             regressionDumpLog "${runDir}/log.cardiacFoam"
             return 1
         fi
-        local logs=(log.cardiacFoam)
+        local logs=(log.cardiacFoam) log
         (( nProcs > 1 )) && logs+=(log.decomposePar log.reconstructPar log.redistributeRestartState)
+        # Lead fields built in the case preparation, serial and parallel
+        for log in "${runDir}"/log.buildLeadFields*; do
+            [[ -f "${log}" ]] && logs+=("${log##*/}")
+        done
 
         # Post-processing utility run on the result, from post/<script>
         if [[ -n "${post}" ]]; then
@@ -232,25 +257,36 @@ DICT
         return 0
     fi
 
-    local text="${expect#fail:}"
-    text="${text//\~/ }"
     if (( rc == 0 )); then
         echo "FAIL: ${name}: cardiacFoam succeeded, expected a fatal error"
         return 1
     fi
-    if ! grep -aq 'FOAM FATAL' "${runDir}/log.cardiacFoam"; then
-        echo "FAIL: ${name}: cardiacFoam failed without a FOAM FATAL error"
-        regressionDumpLog "${runDir}/log.cardiacFoam"
+    expectFatal "${name}" "${expect}" "${runDir}/log.cardiacFoam"
+}
+
+# expectFatal <name> <fail:text> <log>...: one of the logs holds a FOAM
+# FATAL error mentioning text
+expectFatal()
+{
+    local name="$1" expect="$2"
+    shift 2
+    local text="${expect#fail:}" log
+    text="${text//\~/ }"
+    if ! grep -aqs 'FOAM FATAL' "$@"; then
+        echo "FAIL: ${name}: failed without a FOAM FATAL error"
+        for log in "$@"; do regressionDumpLog "${log}"; done
         return 1
     fi
-    if ! tr -d '\000' < "${runDir}/log.cardiacFoam" \
-        | sed -n '/FOAM FATAL/,$p' | grep -qF -- "${text}"; then
-        echo "FAIL: ${name}: fatal error does not mention '${text}'"
-        regressionDumpLog "${runDir}/log.cardiacFoam"
-        return 1
-    fi
-    echo "PASS: ${name} (fails as expected, mentions '${text}')"
-    return 0
+    for log in "$@"; do
+        if tr -d '\000' < "${log}" \
+            | sed -n '/FOAM FATAL/,$p' | grep -qF -- "${text}"; then
+            echo "PASS: ${name} (fails as expected, mentions '${text}')"
+            return 0
+        fi
+    done
+    echo "FAIL: ${name}: fatal error does not mention '${text}'"
+    for log in "$@"; do regressionDumpLog "${log}"; done
+    return 1
 }
 
 echo "============================================================"

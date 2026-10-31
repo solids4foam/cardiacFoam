@@ -6,10 +6,11 @@
   "sweep": {
     "mode": "zip",
     "independent": {
-      "dimension": ["1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D"],
-      "numberCells": [10, 10, 10, 20, 20, 20, 40, 40, 40, 80, 80, 80],
-      "system/controlDict:deltaT": [0.00892857, 0.00892857, 0.00892857, 0.00224215, 0.00224215, 0.00224215, 0.000560538, 0.000560538, 0.000560538, 0.000140174, 0.000140174, 0.000140174],
-      "caseId": ["1D_N10", "2D_N10", "3D_N10", "1D_N20", "2D_N20", "3D_N20", "1D_N40", "2D_N40", "3D_N40", "1D_N80", "2D_N80", "3D_N80"]
+      "dimension": ["1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D", "1D", "2D", "3D", "3D", "3D", "3D"],
+      "numberCells": [10, 10, 10, 20, 20, 20, 40, 40, 40, 80, 80, 80, 10, 20, 40],
+      "parallel": [false, false, false, false, false, false, false, false, false, false, false, false, true, true, true],
+      "system/fvSchemes:gradSchemes.default": ["leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "leastSquares", "Gauss linear", "Gauss linear", "Gauss linear"],
+      "caseId": ["1D_N10", "2D_N10", "3D_N10", "1D_N20", "2D_N20", "3D_N20", "1D_N40", "2D_N40", "3D_N40", "1D_N80", "2D_N80", "3D_N80", "GaussLinear_3D_N10", "GaussLinear_3D_N20", "GaussLinear_3D_N40"]
     }
   }
 }

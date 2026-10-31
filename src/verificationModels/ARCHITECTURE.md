@@ -30,7 +30,7 @@ input. Five of the six live in `electroModels/core/verificationModels/`; only
 |---|---|---|
 | `electroVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedFDAMonodomainVerifier`, `manufacturedAnisotropicMonodomainVerifier`, `manufacturedFDABidomainVerifier`, `manufacturedFDABathBidomainVerifier` |
 | `eikonalVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedEikonalVerifier` |
-| `ecgVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier` |
+| `ecgVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier`, `manufacturedLeadFieldECGVerifier` |
 | `couplingVerificationModel` | `electroModels/core/verificationModels/` | `coupled1D3DMonodomainVerifier` |
 | `graphVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedGraphVerifier` |
 | `electromechanicalVerificationModel` | `verificationModels/electromechanicsVerification/` (local) | `manufacturedElectromechanicsVerifier` |

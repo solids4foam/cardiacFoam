@@ -1,0 +1,808 @@
+# The problem {#sec-lf-problem}
+
+This document describes the manufactured problems with which cardiacFoam
+verifies the lead-field ECG: the ECG domain `leadFieldECG`, whose channels
+are built from the lead fields of the utility `buildLeadFields`. In the
+method of manufactured solutions [@roache2002code] an exact field is chosen
+first and the data that make it satisfy the equations are derived from it.
+The document gives, for each problem, the geometry and its regions, the
+conductivities, the exact heart transmembrane potential and torso potential,
+the electrodes, the reference point that fixes the constant of the
+potential, the meshes, and the quantities the verifier compares. It states
+the problems only; it contains no solver output. Every displayed field,
+conductivity, source and constant of the exact solutions is printed by the
+sympy generator of its problem, `slab_leadfield_mms.py` or `shell_mms.py`. A
+reader with this document, the generator folder and the tutorial cases can
+rebuild each problem in another code.
+
+## Domain and governing equations
+
+The conductor is the heart $\Omega_H$ (the cellZone `myocardium`) and the
+torso $\Omega_B$ (the bath cellZones of the ECG domain), with the interface
+$\Gamma_{HB}=\partial\Omega_H\cap\partial\Omega_B$ and the outer boundary
+$\Gamma_B=\partial\Omega_B\setminus\Gamma_{HB}$. For a given transmembrane
+potential $V_m$ in the heart, the passive potential $\phi$ solves
+
+$$
+\left\{
+\begin{aligned}
+\nabla\cdot\big((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi\big)
+&=-\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)+S_H
+&&\text{in }\Omega_H,\\
+\nabla\cdot(\sigma_b\nabla\phi)&=S_B&&\text{in }\Omega_B,\\
+\phi\ \text{continuous},\quad
+\mathbf n\cdot\boldsymbol\sigma_w\nabla\phi
+&=\mathbf n\cdot\sigma_b\nabla\phi&&\text{on }\Gamma_{HB},\\
+\mathbf n\cdot\sigma_b\nabla\phi&=g_{\mathrm{out}}&&\text{on }\Gamma_B,
+\end{aligned}
+\right.
+$$
+
+where $S_H$, $S_B$ and $g_{\mathrm{out}}$ are manufactured data (zero in
+ordinary runs).
+The heart source is assembled with no wall flux of $\boldsymbol\sigma_i\nabla V_m$.
+The heart-side wall conductivity $\boldsymbol\sigma_w$ is the conductor's choice: with
+a monodomain myocardium, whose $V_m$ is sealed
+($\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m=0$), the wall carries the total
+conductivity, $\boldsymbol\sigma_w=\boldsymbol\sigma_i+\boldsymbol\sigma_e$; with a bidomain
+myocardium the intracellular potential is sealed,
+$\mathbf n\cdot\boldsymbol\sigma_i\nabla(\phi+V_m)=0$, and
+$\boldsymbol\sigma_w=\boldsymbol\sigma_e$. The problem is of pure Neumann
+type; the constant of $\phi$ is fixed by a reference point
+$\mathbf r_{\mathrm{ref}}$ in the torso (`phiERefPoint` of the torso
+dictionary), whose cell is pinned to the reference value
+$\phi_{\mathrm{ref}}=0$.
+
+The ECG of electrode $e$ at $\mathbf r_e$ is the value of $\phi$ in the cell
+$c(e)$ that contains $\mathbf r_e$. The lead-field ECG computes it from the
+lead field of the electrode, the solution of the adjoint discrete problem,
+without solving for $\phi$ at each sample [@geselowitz1967bioelectric];
+@sec-identity states the identity and what is compared. Electrodes lie in the
+torso: `buildLeadFields` and `leadFieldECG` stop with a fatal error when an
+electrode cell is a heart cell. Each case has two kinds of electrode, recorded
+in the same way. The eight body-surface electrodes `surface1` to `surface8`
+lie just inside the outer boundary of the conductor, in cells with a face on
+it; they are the ECG. The interior probes lie inside the torso, in the bath
+ball or next to the heart, and test the same channel where the potential and
+its error differ from those at the surface.
+
+The equations use SI units with lengths and times normalised by
+$1\,\mathrm m$ and $1\,\mathrm s$, so the arguments of the trigonometric,
+exponential and square-root functions are dimensionless.
+
+## Nomenclature
+
+{{< include ../_common/nomenclature.qmd >}}
+
+{{< include ../_common/nomenclature_leadField.qmd >}}
+
+## Reading and regenerating {#sec-lf-regenerate}
+
+The generators live in `tutorials/manufacturedSolutions/generators/` of the
+cardiacFoam repository. The slab and layered potentials (@sec-slab) are
+closed forms in one variable, built by `slab_leadfield_mms.py`, which writes
+`reference/slab_leadfield.py` and `latex/leadfield_*.tex`. The
+curved-conductor potential (@sec-shell) is the transmission solution of
+`shell_mms.py`, which writes `latex/shell_transmission_*.tex` and the C++
+header `manufacturedShellTransmissionBathBidomainReference.H` of
+`src/verificationModels/bathBidomainVerification/`.
+
+Set up the environment once and run a generator from that folder:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python slab_leadfield_mms.py --emit
+.venv/bin/python slab_leadfield_mms.py --self-check
+```
+
+`--emit` runs the self-checks first and writes nothing if one fails;
+`--self-check` runs them alone. `shell_mms.py` also takes `--check PATH` and
+`--write PATH`, which compare or rewrite its C++ header and are needed only by
+cardiacFoam developers. `docs/leadField/leadfield_reference.py` holds what
+depends on the tutorial cases and on finished runs:
+
+```bash
+python docs/leadField/leadfield_reference.py --self-check
+python docs/leadField/leadfield_reference.py --check-run RUN
+```
+
+`--self-check` asserts that the electrodes and reference points of the cases
+lie where @sec-slab and @sec-shell place them. `--check-run RUN` reads a
+finished run of a lead-field tutorial (its `log.cardiacFoam`,
+`postProcessing/manufacturedLeadFieldECG_ECG.dat` and `constant/polyMesh`)
+and compares the exact columns written by the verifier with the exact
+potentials (@sec-slab-checks, @sec-shell-checks). The document is built with
+
+```bash
+quarto render docs/leadField/leadField_mms.qmd --to pdf
+```
+
+and its figures with `python docs/leadField/figures.py`, which takes
+`--draft`, `--outdir DIR` and `--mesh-case NAME=PATH` (names `slab_hex`,
+`slab_tet`, `layered_hex`, `layered_tet`, `shell_hex`, `shell_tet`) as the
+monodomain figure script does.
+
+{{< include ../_common/creating.qmd >}}
+
+# Insulated slab and layered torso {#sec-slab}
+
+## Description and limitations
+
+A heart slab between two torso slabs, with a one-dimensional exact solution
+along $x$. The tutorial is `manufacturedSolutions/leadFieldECG`, with two
+exact solutions selected by `-problem`:
+
+- `slab`: every outer face is insulated. The torso potential is constant in
+  each torso slab, so the ECG between the slabs is known exactly and does not
+  depend on the torso conductivity. These are the fields of the FDA bath slab
+  of the bath-bidomain tutorial with the bath current set to zero.
+- `layered`: each torso slab is split into two layers of different
+  conductivity, and a uniform current density crosses the whole box along
+  $x$. The potential is then piecewise linear in the torso, with a change of
+  slope at each layer interface and at each heart wall.
+
+The heart runs the one-dimensional FDA monodomain or bidomain manufactured
+field [@pathmanathan2013verification] on the three-dimensional heart mesh
+(`dimension "1D"`), so the computed $V_m$ approximates the exact $V_m$
+below and the lead-field and direct channels can be compared on it.
+
+The problems exercise the heart source $-\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)$,
+the heart and torso operators, two plane heart--torso interfaces and, in the
+layered problem, two plane torso--torso interfaces with a conductivity ratio
+of 5 and a current through all of them. They do not exercise a curved
+interface, a varying torso conductivity, an off-diagonal conductivity or
+an electrode where the exact potential varies across the slab's $y$ and $z$.
+In the slab problem the exact torso potential is constant, so the point and
+the centroid values of an electrode are equal and the torso conductivity does
+not enter. The layered problem with a current needs the monodomain
+myocardium: at the walls the exact heart slope $\alpha/(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}$
+carries the intracellular flux $\alpha \sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})$, which the
+sealed intracellular potential of the bidomain conductor does not admit.
+
+## Problem instance
+
+Box $[-1,2]\times[0,1]^2$: torso $-1\le x\le0$, heart $0\le x\le1$, torso
+$1\le x\le2$ (@fig-slab-geometry). The heart conductivities are uniform and
+diagonal (S m$^{-1}$):
+
+| myocardium | conductivity | ECG domain $\boldsymbol\sigma_i$ | ECG domain $\boldsymbol\sigma_e$ |
+|:------|:--------------------------|:--------|:--------|
+| `monodomain` | $\boldsymbol\sigma=\mathrm{diag}(0.111453302,\,0.121585420,\,0.030396355)$ | $(2+\sqrt2)\,\boldsymbol\sigma$ | $\sqrt2\,\boldsymbol\sigma$ |
+| `bidomain` | $\boldsymbol\sigma_i=\mathrm{diag}(0.111453302,\,0.121585420,\,0.030396355)$, $\boldsymbol\sigma_e=\mathrm{diag}(0.046165469,\,0.050362330,\,0.012590582)$ | the solver's | the solver's |
+
+In both rows $\kappa=\sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})=1/\sqrt2$. The exact solution
+depends on the $xx$ entries only, so it is the same for the options
+`-conductivity anisotropic`, `isotropic` and `unequal` of the tutorial; the
+three differ in what the static error measures (tutorial README).
+
+- `slab`: torso conductivity $\sigma_b$ in the cellZone `bath`; every outer
+  face insulated ($g_{\mathrm{out}}=0$); $S_H=S_B=0$.
+- `layered`: the torso slabs split at $x_L=-0.5$ and $x_R=1.5$ into the
+  cellZones `torsoInner` ($x_L<x<0$ and $1<x<x_R$, $\sigma_{b,1}=0.1$) and
+  `torsoOuter` ($x<x_L$ and $x>x_R$, $\sigma_{b,2}=0.02$); surface currents
+  $\mathbf n\cdot\sigma_b\nabla\phi=-\alpha$ on the face `xMin` ($x=-1$) and
+  $+\alpha$ on `xMax` ($x=2$), $\alpha=0.01$ (`-alpha`); the faces `sides`
+  insulated. The current density $-\sigma\nabla\phi=-\alpha\,\mathbf e_x$ is
+  the same in every layer.
+- Reference point $\mathbf r_{\mathrm{ref}}$ in the left torso (the outer
+  layer in `layered`), with the value $\phi_{\mathrm{ref}}$. The
+  bidomain myocardium also pins its own heart potential at
+  $(0.1137,\,0.0437,\,0.0437)$; that pin belongs to the heart solve and not
+  to the conductor of the ECG domain.
+- The constants:
+
+{{< include ../../latex/leadfield_slab_params.tex >}}
+
+{{< include ../../latex/leadfield_layered_params.tex >}}
+
+- Electrodes: eight on the body surface, $0.003$ inside the outer faces of the
+  torso slabs (two on each end face $x=-1$, $x=2$ and one on each of the four
+  side faces), and five interior probes. None lies on a hexahedral face at
+  $N=10,20,40,80$.
+
+| electrode | $\mathbf r_e$ | region (`slab`; `layered`) | exact $\phi$, `slab` |
+|:--------|:------------------|:--------------------------|:------|
+| `surface1` | $(-0.997,\,0.3137,\,0.6871)$ | face $x=-1$; `torsoOuter` (pinned layer) | 0 |
+| `surface2` | $(-0.997,\,0.7213,\,0.2419)$ | face $x=-1$; `torsoOuter` (pinned layer) | 0 |
+| `surface3` | $(1.997,\,0.4127,\,0.5813)$ | face $x=2$; `torsoOuter` | $2\kappa S$ |
+| `surface4` | $(1.997,\,0.8317,\,0.1733)$ | face $x=2$; `torsoOuter` | $2\kappa S$ |
+| `surface5` | $(-0.3713,\,0.003,\,0.4419)$ | face $y=0$, left torso; `torsoInner` | 0 |
+| `surface6` | $(-0.6871,\,0.5371,\,0.997)$ | face $z=1$, left torso; `torsoOuter` (pinned layer) | 0 |
+| `surface7` | $(1.3317,\,0.997,\,0.6137)$ | face $y=1$, right torso; `torsoInner` | $2\kappa S$ |
+| `surface8` | $(1.7219,\,0.2713,\,0.003)$ | face $z=0$, right torso; `torsoOuter` | $2\kappa S$ |
+| `torsoLeftFar` | $(-0.8713,\,0.2311,\,0.7129)$ | left torso; `torsoOuter` (pinned layer) | 0 |
+| `torsoLeft` | $(-0.4567,\,0.4137,\,0.5871)$ | left torso; `torsoInner` | 0 |
+| `nearLeft` | $(-0.0213,\,0.4521,\,0.5317)$ | left torso next to the heart; `torsoInner` | 0 |
+| `nearRight` | $(1.0187,\,0.3719,\,0.4613)$ | right torso next to the heart; `torsoInner` | $2\kappa S$ |
+| `torsoRight` | $(1.5433,\,0.6173,\,0.3311)$ | right torso; `torsoOuter` | $2\kappa S$ |
+
+- Time: $\Delta t=0.01$, end time $0.05$; the verifier samples every step.
+
+In cardiacFoam:
+
+- tutorial `manufacturedSolutions/leadFieldECG`, options `-problem slab|layered`,
+  `-alpha`, `-mesh hex|tet`, `-N`, `-myocardium monodomain|bidomain`;
+- ECG domain `leadFieldECG` with the `torso` sub-dictionary: the
+  `bathCellZones`, the field `bodyAndOrgansConductivity`, the interface
+  interpolation `distanceWeightedHarmonic`, the reference point, and for
+  `layered` the `surfaceCurrentPatches`;
+- verifier `manufacturedLeadFieldECGVerifier` with `reference slab`, or
+  `reference layered` and `layerInterfaces (-0.5 1.5)`.
+
+## Construction
+
+*Slab.* With $S=\sqrt{1+t}$, the heart field is the FDA field of $d=1$,
+$V_m=S\cos(\pi x)$. Its derivative vanishes at $x=0$ and $x=1$, so no
+current leaves the heart through $\Gamma_{HB}$ whichever wall conductivity the
+conductor uses. In the heart, $\phi=-\kappa V_m+C$ solves
+$\nabla\cdot((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi)=-\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)$
+because $\phi$ and $V_m$ depend on $x$ only and
+$(\sigma_{i,xx}+\sigma_{e,xx})\,\kappa=\sigma_{i,xx}$. Its slope vanishes at both walls, so the
+torso potential is constant on each side and continuity fixes it to the wall
+value: $-\kappa S+C$ on the left and $\kappa S+C$ on the right. The torso conductivity
+does not enter.
+
+*Layered.* A uniform current density $-\alpha\,\mathbf e_x$ through layers
+of conductivity $\sigma(x)$ ($\sigma_{b,2}$, $\sigma_{b,1}$,
+$(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}$, $\sigma_{b,1}$, $\sigma_{b,2}$ from left to right) has the
+potential $\alpha R(x)$ with $R'=1/\sigma$. $R$ is continuous and
+$\sigma R'=1$ in every layer, so the potential and the normal current are
+continuous at $x=x_L,0,1,x_R$; on `xMin` the outward normal is
+$-\mathbf e_x$ and $\mathbf n\cdot\sigma\nabla(\alpha R)=-\alpha$, on `xMax`
+it is $+\alpha$. Adding $\alpha R$ to the slab potential leaves the heart
+equation unchanged, because $R$ is linear in the heart, and $V_m$ is the
+slab's. The sides stay insulated because the potential depends on $x$ only
+and no tensor has $xy$ or $xz$ entries.
+
+*Gauge.* The verifier evaluates the exact potential at a point
+$\mathbf x$ as
+
+$$
+\phi(\mathbf x,t)=\phi^{\ast}(\mathbf x,t)-\phi^{\ast}(\mathbf x_{\mathrm{ref}},t)+\phi_{\mathrm{ref}},
+$$
+
+with $\phi^\ast$ the formula below and $\mathbf x_{\mathrm{ref}}$ the
+centroid of the cell that contains $\mathbf r_{\mathrm{ref}}$, the cell the
+conductor pins. The constant $C$ of the formulas therefore cancels.
+
+## Exact solution
+
+{{< include ../../latex/leadfield_S.tex >}}
+
+{{< include ../../latex/leadfield_k.tex >}}
+
+{{< include ../../latex/leadfield_slab_Vm.tex >}}
+
+in the heart $0\le x\le1$, and
+
+{{< include ../../latex/leadfield_slab_phi.tex >}}
+
+{{< include ../../latex/leadfield_slab_C.tex >}}
+
+so that, gauged in the left torso,
+
+{{< include ../../latex/leadfield_slab_phi_gauged.tex >}}
+
+and the exact ECG between the right and the left torso is $2\kappa S$. In the
+layered problem
+
+{{< include ../../latex/leadfield_layered_phi.tex >}}
+
+{{< include ../../latex/leadfield_layered_R.tex >}}
+
+The verifier takes $\alpha$ from the surface currents and the four layer
+conductivities from the torso cells, and stops with a fatal error when a torso
+cell crosses a layer interface, when a layer has more than one or an
+anisotropic conductivity, when the surface currents are not along $x$ or carry
+a net current, or when a current is combined with the bidomain conductor.
+With $\alpha=0$ the layered potential equals the slab's for any $\sigma_{b,1}$,
+$\sigma_{b,2}$.
+
+The full expressions are `fields()` of `slab_leadfield_mms.py` and `Vm`,
+`phi_slab`, `resistance` and `phi_layered` of `reference/slab_leadfield.py`,
+whose layer arguments carry each side separately (`sigmaOuterLeft`,
+`sigmaInnerLeft`, `sigmaHeart`, `sigmaInnerRight`, `sigmaOuterRight`) as the
+C++ structure does; `PARAMS` holds the values of the tutorial. In code, the
+functions of `manufacturedLeadFieldECGReference.H`:
+
+- `manufacturedLeadFieldSlabVm`;
+- `manufacturedLeadFieldSlabPhi`, which calls `manufacturedFDABathPhiEAt`
+  with the bath current 0 and $\sigma_e=1$;
+- `manufacturedLeadFieldLayeredResistance`;
+- `manufacturedLeadFieldLayeredPhi`;
+
+and their transcription `slab_vm`, `slab_phi_raw`, `layered_resistance`,
+`layered_phi_raw` and `gauged` of `docs/leadField/leadfield_reference.py`,
+which follows the header branch by branch.
+
+## Self-checks {#sec-slab-checks}
+
+`slab_leadfield_mms.py --self-check` asserts, symbolically:
+
+- in the heart $(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}\,\phi''=-\sigma_{i,xx}V_m''$ with
+  $\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}=\sigma_{i,xx}$, and $V_m'$ vanishes at $x=0$ and $x=1$;
+- $\phi^\ast_{\mathrm{slab}}$ is continuous at $x=0$ and $x=1$ and linear in
+  each torso slab, and, gauged in the left torso, $0$ on the left and $2\kappa S$
+  on the right;
+- $R$ is continuous at $x_L$, $0$, $1$, $x_R$, $R(0)=0$, and $\sigma R'=1$ in
+  every layer, so the normal current is continuous;
+- the surface currents are $-\alpha$ on $x=-1$ and $+\alpha$ on $x=2$;
+- with $\alpha=0$ the layered potential equals the slab's;
+- $\kappa=1/\sqrt2$ to $10^{-8}$ for both conductivity pairs of the tutorial;
+- the printed constants round-trip.
+
+`test_slab_leadfield_mms.py` compares `reference/slab_leadfield.py` with
+`leadfield_reference.py`, the transcription of the C++ header, to
+$10^{-15}$ on $-1\le x\le2$ at three times, and the constants with the
+dictionaries of the tutorial. `leadfield_reference.py --self-check` asserts
+that $\kappa=1/\sqrt2$ to $10^{-11}$; that $\phi^\ast_{\mathrm{slab}}$ is $0$ on
+the left, $2\kappa S$ on the right and continuous at $x=0$ and $x=1$; that $R$ is
+continuous with $\sigma R'=1$ (central differences, $10^{-8}$) on both sides of
+each of $x_L$, $0$, $1$, $x_R$; and that the electrodes of the case are
+`surface1` to `surface8`, $0.003$ from the outer boundary, and probes
+farther inside, all in the torso and none on a hexahedral face at
+$N=10,20,40,80$.
+
+`--check-run RUN` reads the verifier line of `log.cardiacFoam` (reference,
+$\kappa$, $\alpha$ and the layer conductivities, which must equal the values of
+@sec-slab to the printed precision) and, at every sample, asserts to
+$10^{-12}$ that:
+
+- $\phi^\ast(\mathbf r_e,t)-\phi_{\mathrm{exactPoint},e}$ is one constant over
+  the electrodes, the gauge;
+- the gauge equals $\phi^\ast(\mathbf x_{\mathrm{ref}},t)$, with
+  $\mathbf x_{\mathrm{ref}}$ the centroid of the cell that contains
+  $\mathbf r_{\mathrm{ref}}$;
+- $\phi^\ast(\mathbf x_{c(e)},t)$ minus the gauge equals the column
+  `exactCentroid` of each electrode.
+
+The centroids are computed from the cell vertices in double precision; this
+is exact for the axis-aligned hexahedra and for tetrahedra. On the meshes of
+the figures below the largest differences are $3\times10^{-15}$ (`slab`,
+hex), $6\times10^{-14}$ (`slab`, tet), $3\times10^{-15}$ (`layered`, hex)
+and $6\times10^{-14}$ (`layered`, tet).
+
+## Figures
+
+![Slab geometry. (a) The box with the torso slabs (cellZone `bath`), the heart slab (`myocardium`), the eight body-surface electrodes (triangles, labelled 1 to 8 for `surface1` to `surface8`), the five interior probes (circles, labelled by name) and the reference point (square); dotted lines drop each point to $z=0$. (b) The same, seen along $z$. (c) The layered problem: the layers `torsoOuter` and `torsoInner` with their conductivities, the heart, the electrodes and probes, and the current density $-\sigma\nabla\phi=-\alpha\,\mathbf e_x$, which enters through `xMax` and leaves through `xMin`.](figures/slab_geometry.png){#fig-slab-geometry width=100%}
+
+![Exact potentials along $x$ (they do not depend on $y$, $z$), gauged to 0 at the reference point $\mathbf r_{\mathrm{ref}}$ (square); the verifier gauges at the centroid of its cell, which shifts every curve by the same constant. Triangles mark the body-surface electrodes at their $x$ (labelled by number; `surface1` and `surface2`, and `surface3` and `surface4`, share an $x$ and a label), circles the interior probes. (a) Slab: $\phi$ and the heart $V_m$ at $t=0$ and $t=0.05$; $\phi$ is constant in each torso slab. (b) Layered, $t=0$: $\phi=\phi_{\mathrm{slab}}+\alpha R$ with $\alpha=0.01$ and with $\alpha=0$; the slope changes at the layer interfaces (dotted) and at the heart walls.](figures/slab_potential.png){#fig-slab-potential width=100%}
+
+::: {#fig-slab-mesh layout-ncol=2}
+
+![`slab`, hex: `-mesh hex -N 10`](figures/mesh_slab_hex.png){#fig-slab-mesh-hex}
+
+![`slab`, tet: `-mesh tet -N 10`](figures/mesh_slab_tet.png){#fig-slab-mesh-tet}
+
+![`layered`, hex: `-problem layered -mesh hex -N 10`](figures/mesh_layered_hex.png){#fig-layered-mesh-hex}
+
+![`layered`, tet: `-problem layered -mesh tet -N 10`](figures/mesh_layered_tet.png){#fig-layered-mesh-tet}
+
+Meshes of the tutorial `leadFieldECG` at its default $N=10$, coloured by cellZone, made by its `Allrun`: (a) `blockMesh`, three blocks of $N^3$ cells; (b) `gmsh` Delaunay tetrahedra of size $1/N$, seed 1, with the planes $x=0$ and $x=1$ as shared internal faces, converted by `gmshToFoam`; (c) `blockMesh`, five blocks with $N/2$ cells along $x$ in each torso layer, so the layer interfaces are mesh faces; (d) as (b) with the planes $x=x_L$, $x=x_R$ also shared. `topoSet` builds the cellZones. The octant facing the viewer is removed cell by cell.
+:::
+
+## Regeneration
+
+```bash
+python slab_leadfield_mms.py --emit
+python slab_leadfield_mms.py --self-check
+python docs/leadField/leadfield_reference.py --self-check
+python docs/leadField/leadfield_reference.py --check-run SLAB_RUN \
+    --check-run LAYERED_RUN
+python docs/leadField/figures.py --mesh-case slab_hex=SLAB_HEX \
+    --mesh-case slab_tet=SLAB_TET --mesh-case layered_hex=LAYERED_HEX \
+    --mesh-case layered_tet=LAYERED_TET
+```
+
+`--emit` writes `reference/slab_leadfield.py` and `latex/leadfield_*.tex`. A
+run is a copy of the tutorial outside the repository after
+`./Allrun [-problem layered] -mesh hex|tet -N 10`. The C++ functions are
+hand-written and carry no generated regions, so the generator has no
+`--check`; the comparison of the NumPy module with their transcription and
+the run check above are the comparisons.
+
+# Curved conductor {#sec-shell}
+
+## Description and limitations
+
+A heart shell $r_1<|\mathbf x|<r_2$ between a bath ball $|\mathbf x|<r_1$
+(cellZone `bloodPool`) and an outer bath $r_2<|\mathbf x|<r_3$ (cellZone
+`bath`), with the transmission solution of `shell_mms.py`. The current
+generated in the heart crosses both curved interfaces into the torso. The
+heart conductivities are full tensors whose fibre and sheet rotate through
+the wall, and the bath conductivity varies in space. The exact potential has
+non-zero normal and tangential gradients on both spheres; it is continuous
+across them, the extracellular flux is continuous and the intracellular
+potential is sealed, all exactly.
+
+The problem exercises the heart source with a full, varying $\boldsymbol\sigma_i$, the
+anisotropic heart operator, two curved heart--torso interfaces crossed by
+polyhedral faces, a varying torso conductivity, and the bidomain wall
+condition. It also needs data that an ordinary run does not have: a source
+in every zone and a current through the outer boundary. These enter both
+channels as one extra cell source (@sec-identity), so the problem verifies
+the conductor and the lead fields with the manufactured data included. The
+verifier uses the exact $V_m$ at the heart cell centres only; the myocardium
+of the case runs one step of `BuenoOrovio`, whose $V_m$ is uniform, and the
+channel on the computed $V_m$ is a check of reciprocity, not of accuracy.
+The solution needs the bidomain conductor and the reference point; ground and
+surface-current patches are refused.
+
+## Problem instance
+
+{{< include ../../latex/shell_transmission_params.tex >}}
+
+These are `default_params()` of `shell_mms.py` and `defaultParams()` of the
+header. The outer sphere $r_3=1.5$ is the extent of the mesh; the formulas
+hold everywhere. Conductivities are in S m$^{-1}$.
+
+- Reference point $\mathbf r_{\mathrm{ref}}=(1.3137,\,0.0371,\,0.0459)$ in the
+  outer bath, $\phi_{\mathrm{ref}}=0$. The bidomain heart solve pins its own
+  potential at $(0.7413,\,0.0317,\,0.0291)$, in the heart; that pin does not
+  enter the conductor.
+- Electrodes: eight on the body surface, spread over the outer sphere at
+  $\lvert\mathbf x\rvert=1.495$, inside its faceted surface at every level
+  and off the coordinate planes and the block seams of the cubed sphere, and
+  four interior probes:
+
+| electrode | $\mathbf r_e$ | $\lvert\mathbf r_e\rvert$ | zone |
+|:--------|:------------------|:------|:--------------------|
+| `surface1` | $(1.2436,\,0.8151,\,-0.1553)$ | 1.495 | `bath`, body surface |
+| `surface2` | $(0.2050,\,0.6740,\,1.3186)$ | 1.495 | `bath`, body surface |
+| `surface3` | $(1.1945,\,-0.8631,\,-0.2517)$ | 1.495 | `bath`, body surface |
+| `surface4` | $(-0.2551,\,1.4080,\,-0.4329)$ | 1.495 | `bath`, body surface |
+| `surface5` | $(-0.3258,\,-0.8777,\,1.1656)$ | 1.495 | `bath`, body surface |
+| `surface6` | $(0.1488,\,-0.3633,\,-1.4425)$ | 1.495 | `bath`, body surface |
+| `surface7` | $(-1.4160,\,0.4317,\,0.2089)$ | 1.495 | `bath`, body surface |
+| `surface8` | $(-0.8375,\,-1.1858,\,-0.3569)$ | 1.495 | `bath`, body surface |
+| `outerNear` | $(0.0517,\,1.0713,\,0.0811)$ | 1.076 | `bath`, next to the heart |
+| `outerSide` | $(-1.2117,\,-0.4313,\,0.6271)$ | 1.431 | `bath` |
+| `outerFar` | $(0.9113,\,0.8121,\,-0.6730)$ | 1.394 | `bath` |
+| `pool` | $(0.1131,\,-0.0733,\,0.2117)$ | 0.251 | `bloodPool` |
+
+- One time step, $\Delta t=10^{-3}$; at that time $S=\sqrt{1.001}$.
+
+In cardiacFoam:
+
+- tutorial `manufacturedSolutions/leadFieldECG/sphericalShell`, options
+  `-mesh hex|tet`, `-N`, `-seed`;
+- `setManufacturedFields` writes `0/ConductivityIntracellular`,
+  `0/ConductivityExtracellular` and `0/bodyAndOrgansConductivity` from the
+  solution at the cell centres; every cell takes $\boldsymbol\sigma_i$ and
+  $\boldsymbol\sigma_e$ of the heart formula, and the torso cells $\sigma_b$ of their
+  zone;
+- ECG domain `leadFieldECG`, torso cellZones `bloodPool` and `bath`,
+  `distanceWeightedHarmonic`; myocardium `bidomainSolver` with
+  `sealedHeartBoundary true` and `conductivitySource field`;
+- verifier `manufacturedLeadFieldECGVerifier`, `reference sphericalShell`.
+
+## Construction
+
+*Transmural coordinate and tensors.* The coordinate $\lambda$, the fibre
+angle $\theta$, the function $\omega$, the fixed frame
+$(\mathbf e_a,\mathbf e_b,\mathbf n_s)$, the fibre $\mathbf f$, the sheet
+$\mathbf s$ and the two tensors are those of the sealed monodomain and
+bidomain shells, with $r_1$, $r_2$ the radii of the heart:
+
+{{< include ../../latex/shell_lambda.tex >}}
+
+{{< include ../../latex/shell_theta.tex >}}
+
+{{< include ../../latex/shell_omega.tex >}}
+
+{{< include ../../latex/shell_frame.tex >}}
+
+{{< include ../../latex/shell_fibre.tex >}}
+
+{{< include ../../latex/shell_sheet.tex >}}
+
+{{< include ../../latex/shell_bidomain_Gi.tex >}}
+
+{{< include ../../latex/shell_bidomain_Ge.tex >}}
+
+$\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ share one frame and one fibre angle. A fixed
+frame is used because a fibre field tangent to a sphere vanishes somewhere
+on it.
+
+*Bath conductivity.*
+
+{{< include ../../latex/shell_transmission_sigmahat.tex >}}
+
+{{< include ../../latex/shell_transmission_sigmaB.tex >}}
+
+*Smooth fields.* With
+
+{{< include ../../latex/shell_transmission_S.tex >}}
+
+the smooth extracellular and intracellular fields are
+
+{{< include ../../latex/shell_transmission_fhat.tex >}}
+
+{{< include ../../latex/shell_transmission_hhat.tex >}}
+
+{{< include ../../latex/shell_transmission_f.tex >}}
+
+{{< include ../../latex/shell_transmission_h.tex >}}
+
+$\hat f$ is the field $\hat h_e$ and $\hat h$ the field $\hat h_i$ of the
+bidomain shell.
+
+*Interface corrections.* On sphere $j$ ($j=1$: $|\mathbf x|=r_1$, $j=2$:
+$|\mathbf x|=r_2$) the unit normal out of the heart is $\mathbf n_j$ and
+$\nabla\omega=d_j\mathbf n_j$:
+
+{{< include ../../latex/shell_n1.tex >}}
+
+{{< include ../../latex/shell_n2.tex >}}
+
+{{< include ../../latex/shell_d1.tex >}}
+
+{{< include ../../latex/shell_d2.tex >}}
+
+With $\sigma_{b,1}$ the bath-ball formula and $\sigma_{b,2}$ the outer-bath
+formula of $\sigma_b$, evaluated at $\mathbf x$, and $\boldsymbol\sigma_i$,
+$\boldsymbol\sigma_e$ the heart tensors at $\mathbf x$,
+
+{{< include ../../latex/shell_transmission_gj.tex >}}
+
+{{< include ../../latex/shell_transmission_mj.tex >}}
+
+{{< include ../../latex/shell_transmission_g.tex >}}
+
+{{< include ../../latex/shell_transmission_m.tex >}}
+
+In the heart $\phi=f+\omega g$ and $\phi_i=h+\omega m$, and in the bath
+$\phi=f$. On sphere $j$, $\omega=0$ and $\nabla(\omega g)=g_jd_j\mathbf n_j$,
+so
+
+- $\phi$ is continuous ($f$ on both sides);
+- $\mathbf n_j\cdot\boldsymbol\sigma_e\nabla\phi=\mathbf n_j\cdot\boldsymbol\sigma_e\nabla f+\mathbf n_j\cdot(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_e)\nabla f=\mathbf n_j\cdot\sigma_b\nabla\phi$;
+- $\mathbf n_j\cdot\boldsymbol\sigma_i\nabla\phi_i=\mathbf n_j\cdot\boldsymbol\sigma_i\nabla h-\mathbf n_j\cdot\boldsymbol\sigma_i\nabla h=0$.
+
+The denominators are positive because the tensors are positive definite, so
+every zone formula extends smoothly beyond its sphere, where polyhedral faces
+put cell centres.
+
+*Common mode.* The generator adds to $\phi$ and $\phi_i$ the same term,
+$T$ times a field built on
+
+{{< include ../../latex/shell_transmission_T.tex >}}
+
+{{< include ../../latex/shell_transmission_f2.tex >}}
+
+so that $V_m$ is unchanged. In the heart the term is $T(f_2+\omega q)$, with
+$q$ sealing it with respect to $\boldsymbol\sigma_i$:
+
+{{< include ../../latex/shell_transmission_qj.tex >}}
+
+{{< include ../../latex/shell_transmission_q.tex >}}
+
+In the bath zone of sphere $j$ it is $T(f_2+\beta_jr_j)$, with $\beta_j$ zero
+on the sphere and $r_j$ the correction that keeps the extracellular flux
+continuous, built with the heart tensors $\boldsymbol\sigma_i^{(j)}$,
+$\boldsymbol\sigma_e^{(j)}$ of the sphere ($\theta=\theta_0$ for $j=1$,
+$\theta=\theta_0+\theta_1$ for $j=2$) and the denominator $D_j$, positive in
+the whole zone, the origin included:
+
+{{< include ../../latex/shell_transmission_beta1.tex >}}
+
+{{< include ../../latex/shell_transmission_beta2.tex >}}
+
+{{< include ../../latex/shell_transmission_rj.tex >}}
+
+{{< include ../../latex/shell_transmission_kappa.tex >}}
+
+{{< include ../../latex/shell_transmission_D1.tex >}}
+
+{{< include ../../latex/shell_transmission_D2.tex >}}
+
+The case uses $A_T=0$, so $T=0$ and the term vanishes; the
+alternate parameters of the generator switch it on for the header self-test.
+
+*Data.* The sources are the residuals of the exact fields,
+
+{{< include ../../latex/shell_transmission_sources.tex >}}
+
+which is the heart equation of @sec-lf-problem with $V_m=\phi_i-\phi$, and
+the outer boundary carries the exact outward current
+
+{{< include ../../latex/shell_transmission_gout.tex >}}
+
+evaluated at each outer face centre with the outer-bath formula.
+
+## Exact solution
+
+{{< include ../../latex/shell_transmission_phi.tex >}}
+
+{{< include ../../latex/shell_transmission_phiI.tex >}}
+
+{{< include ../../latex/shell_transmission_Vm.tex >}}
+
+in the heart, with $g$ and $m$ linear in $S$. The verifier evaluates $\phi$
+with the formula of the zone that contains the point (`zoneOf`), gauged as in
+@sec-slab at the centroid $\mathbf x_{\mathrm{ref}}$ of the pinned cell. The
+sources are not printed: they are `phiESource` of the zone in
+`expressions("levelSet")` of `shell_mms.py`. In code: `Vm`, `phiE`, `phiI`,
+`gradPhiE`, `Gi`, `Ge`, `sigmaB`, `divGiGradPhiI` and `phiESource` (the source
+$S_H$ or $S_B$ of the zone) of the namespace `shellTransmissionMMS`; in Python
+`Model.eval_xyz(zone, name, points, t)` of `shell_mms.py`, and `shell_eval`,
+`shell_phi` of `leadfield_reference.py`.
+
+## Self-checks {#sec-shell-checks}
+
+`shell_mms.py --self-check` runs, as `--emit` and `--write` do before they
+write, and `test_shell_mms.py` repeats:
+
+- shared construction: $\lambda$, $\omega$, the frame, the wall normals,
+  $d_j$, $\boldsymbol\sigma_i$, $\boldsymbol\sigma_e$, $\hat h$ and $\hat f$ equal those of
+  `shell_monodomain_mms.py` and `shell_bidomain_mms.py`, whose fragments are
+  printed above (symbolic);
+- interface conditions: continuity of $\phi$, of the extracellular flux and
+  the sealing of $\phi_i$ below $10^{-12}$ at 24 points of each sphere and
+  three times, in 30-digit arithmetic, for the default and the alternate
+  parameters;
+- sources and gradients: against fourth-order central differences
+  ($h=10^{-3}$) to $10^{-6}$ relative at 40 random points, a point next to
+  the origin and the origin, at two times, and with each zone formula
+  evaluated $0.025$ beyond its sphere;
+- boundedness and positive denominators over the zones widened by $0.05$;
+- richness: on each sphere and for each tensor, the tangential part of
+  $\boldsymbol\sigma\mathbf n$ applied to the gradient ($\nabla\phi$ for
+  $\boldsymbol\sigma_e$, $\nabla\phi_i$ for $\boldsymbol\sigma_i$) has an RMS of at least 0.2
+  times that of the reference flux ($\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi$,
+  $\lvert\boldsymbol\sigma_i\nabla\phi_i\rvert$), and reaches 0.2 of it over at least
+  70% of the area;
+- the common mode leaves $V_m$, $\nabla V_m$ unchanged ($10^{-14}$), and the
+  manufactured ionic closure of the heart holds ($10^{-13}$).
+
+The verifier stops when a cell centre lies farther than its own size outside
+the radial range of its cellZone, when the case conductivities differ from the
+solution's at the cell centres by more than $10^{-10}$ relative, or when an
+electrode lies in the heart. `leadfield_reference.py --self-check` asserts
+that the twelve electrodes and the reference point lie in the zones of the
+table above and that the body-surface electrodes lie at
+$\lvert\mathbf x\rvert=1.495$, and `figures.py` that $\boldsymbol\sigma_i$ and
+$\boldsymbol\sigma_e$ have the same eigenvectors. `--check-run` compares the run with
+`shell_mms.py` as in @sec-slab-checks. On the tetrahedra of the figures the
+gauge and the centroid values agree to $3\times10^{-16}$. On the cubed sphere
+the cells are not affine and their outer faces are curved: the pinned-cell
+centroid is not recomputed, and the centroid values are checked at the
+six-digit centroids of the log, to $3\times10^{-6}$ at $N=8$ and $N=12$.
+
+## Figures
+
+![Curved conductor. (a) Cut-away of the bath ball `bloodPool` and the heart shell `myocardium` with the quarter $-90^\circ<\arctan(y/x)<0$ removed, inside the whole outer bath `bath` (translucent); the eight body-surface electrodes on the outer sphere (spheres, labelled 1 to 8 for `surface1` to `surface8`), the four interior probes (octahedra, labelled by name) and the reference point (cube). `pool` lies in the bath ball, inside the removed quarter. The view direction is chosen so that no opaque zone hides any part of a marker, and each label is placed in the direction farthest from the other markers and labels. (b) The fibre, sheet and sheet-normal directions of $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ (one frame) at six sites through the wall on a cut face, the fibre shaded from the inner (light) to the outer (dark) sphere.](figures/shell_regions.png){#fig-shell-regions width=100%}
+
+![Exact fields on the plane $z=0$; circles at $r_1$, $r_2$, $r_3$. (a) $\phi$ at $t=0$ in all zones, gauged to 0 at the reference point (square, $0.046$ above the plane). (b) $\sigma_b$ in the bath ball and the outer bath. (c) $V_m$ at $t=0$ in the heart, the input of the lead-field channel.](figures/shell_fields.png){#fig-shell-fields width=100%}
+
+::: {#fig-shell-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_shell_hex.png){#fig-shell-mesh-hex}
+
+![tet: `-mesh tet -N 8`](figures/mesh_shell_tet.png){#fig-shell-mesh-tet}
+
+Meshes of the tutorial `leadFieldECG/sphericalShell` at $N=8$ (the tutorial default is $N=12$), coloured by cellZone, made by its `Allrun`: (a) the `blockMesh` cubed sphere, an inner cube and three six-block layers with the faces at $r_1$, $r_2$, $r_3$ projected onto the spheres, $3N/4$ cells along a cube-face edge and $N/2$ radially per layer; (b) `gmsh` Delaunay tetrahedra of size $1/N$, seed 1, with both spheres as shared internal faces, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell.
+:::
+
+## Regeneration
+
+```bash
+python shell_mms.py --emit
+python shell_mms.py --self-check
+H=../../../src/verificationModels/bathBidomainVerification
+python shell_mms.py --check $H/manufacturedShellTransmissionBathBidomainReference.H
+python -m pytest test_shell_mms.py
+python docs/leadField/leadfield_reference.py --check-run SHELL_RUN
+python docs/leadField/figures.py --mesh-case shell_hex=SHELL_HEX \
+    --mesh-case shell_tet=SHELL_TET
+```
+
+`--emit` writes `latex/shell_transmission_*.tex`; the shared fragments
+`latex/shell_*.tex` and `latex/shell_bidomain_G*.tex` are those of
+`shell_monodomain_mms.py` and `shell_bidomain_mms.py`. The generator emits no
+NumPy module: `leadfield_reference.py` evaluates the fields through
+`Model.eval_xyz` of `shell_mms.py`. `--write PATH` rewrites the whole header,
+including a table of self-test samples that the cardiacFoam verifiers compare
+with their compiled functions.
+
+# The lead-field identity and the static rows {#sec-identity}
+
+## Description and limitations
+
+Both problems compare the lead-field channel with a direct solve of the same
+discrete conductor, and both with the exact potential. The comparison with
+the direct solve is algebraic: it holds on any mesh to the tolerance of the
+fixed points, and it checks the adjoint, not the discretisation. The
+comparison with the exact potential measures the discretisation of the
+conductor and the recording at a cell.
+
+## The identity
+
+The finite-volume conductor is a linear system $\mathbf A\boldsymbol\phi=\mathbf b(V_m)$
+over all cells, with the reference cell pinned to $\phi_{\mathrm{ref}}$ and
+$\mathbf b=-\nabla_h\cdot(\boldsymbol\sigma_i\nabla_hV_m)$ in heart cells and zero in
+torso cells, both per unit volume. $\mathbf A=\mathbf M+\mathbf C$, with $\mathbf M$ the implicit symmetric
+part and $\mathbf C$ the explicit corrections (cross diffusion, non-orthogonal and
+interface terms). For electrode $e$, `buildLeadFields` solves the adjoint
+problem
+
+$$
+\mathbf A^{\mathsf T}\mathbf z_e=\mathbf e_{c(e)},
+\qquad\text{as the fixed point}\quad \mathbf M\mathbf z_e=\mathbf e_{c(e)}-\mathbf C^{\mathsf T}\mathbf z_e,
+$$
+
+and the channel is
+
+$$
+\Phi_e^{\mathrm{LF},h}=\sum_c z_{e,c}\,V_c\,b_c(V_m)+c_e
+=\phi_{c(e)}\quad\text{of the converged forward solve},
+$$
+
+with $c_e$ the constant contribution of ground values, surface currents
+(the layered problem) and a non-zero reference value. In the curved
+conductor the manufactured data enter as one more cell source,
+
+$$
+s_c=S_c-\frac1{V_c}\sum_{f\in\partial c\cap\Gamma_B}g_{\mathrm{out},f}\lvert\mathbf S_f\rvert,
+\qquad
+s\leftarrow s-\frac{\sum_cV_cs_c}{\sum_cV_c},
+$$
+
+with $S_c$ the zone source $S_H$ or $S_B$ at the cell centre and the
+outer-face current moved into the owner cell; its volume mean is removed so
+that the pure-Neumann problem is consistent. The direct solve adds $s$ to
+$\mathbf b$ and the channel adds $\sum_cz_{e,c}V_cs_c$.
+
+## What is compared
+
+At each sample the verifier writes, per electrode (the body-surface
+electrodes and the interior probes alike):
+
+| column | meaning |
+|:--|:--|
+| `leadField` | the channel $\Phi_e^{\mathrm{LF},h}$ on the computed $V_m$ |
+| `direct` | the forward solve of the same conductor on the computed $V_m$, assembly and solve repeated until the relative change is below `leadFieldFixedPoint tolerance`, in cell $c(e)$ |
+| `exactPoint` | $\phi(\mathbf r_e,t)$, gauged at $\mathbf x_{\mathrm{ref}}$ |
+| `exactCentroid` | $\phi(\mathbf x_{c(e)},t)$, gauged at $\mathbf x_{\mathrm{ref}}$ |
+| `leadFieldStatic` | the channel on the exact $V_m$ at the heart cell centres (plus $\mathbf s$ in the curved conductor) |
+| `directStatic` | the direct solve on the same exact $V_m$ (and $\mathbf s$) |
+
+and the summary rows (L1, L2 and maximum over the samples, per electrode and
+as the maximum over the electrodes):
+
+- `leadField-direct` and `leadField-direct_relative` (divided by the largest
+  $|$`direct`$|$): the reciprocity gap;
+- `leadFieldStatic-directStatic`: the same gap on the exact $V_m$;
+- `leadFieldStatic-exactPoint`, `leadFieldStatic-exactCentroid`,
+  `directStatic-exactPoint`, `directStatic-exactCentroid`: the error against
+  the exact potential at the electrode point and at the electrode-cell
+  centroid, in the gauge of the conductor's reference point;
+- `localisation` $=$ `exactPoint` $-$ `exactCentroid`: the part of the point
+  error that comes from recording a cell value at a point inside the cell. It
+  is zero in the slab (constant torso potential) and first order in the cell
+  size otherwise;
+- `phiStatic`, `phiStatic_heart`, `phiStatic_torso`,
+  `phiStatic_interfaceBand`, `phiStatic_surface`: mean, volume-weighted RMS
+  and maximum of `directStatic` against the exact potential at every cell
+  centre, over all cells, the heart, the torso, the cells with a
+  heart--torso face and the cells with a face on the outer boundary of the
+  conductor. The last region holds the cells of the body-surface electrodes,
+  so `phiStatic_surface` is the error of the direct solve over the whole body
+  surface, of which the electrodes sample eight cells.
+
+The static rows use the exact $V_m$, so their error is that of the passive
+conductor and of the recording alone, not of the myocardium solve. The
+verifier treats every electrode alike; the summarisers of the studies
+(`setup/studies/summarize.py` of each case) report the body-surface
+electrodes, the interior probes and `phiStatic_surface` as separate groups.
+
+## Checks
+
+`buildLeadFields` stops with a fatal error when the probed explicit operator
+is not linear or does not reproduce the assembled one ($10^{-11}$), when
+$\langle\mathbf z,\mathbf C\boldsymbol\psi\rangle\ne\langle\mathbf C^{\mathsf T}\mathbf z,\boldsymbol\psi\rangle$
+or $\mathbf M$ is not symmetric ($10^{-12}$), when the residual of a lead field
+exceeds $10^{-8}$, or when the pinned row is not satisfied ($10^{-8}$); it
+refuses nonlinear schemes. `leadFieldECG` stops when the signature of the
+lead fields (mesh, conductivities, schemes, electrodes, reference) differs
+from the case.

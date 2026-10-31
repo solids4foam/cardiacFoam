@@ -11,7 +11,9 @@
 #     For every configuration it prints Vm, gauge-shifted phiE and phiI, u1
 #     and u2 L2 and Linf, and the order of Vm and phiE between consecutive
 #     levels (of h = 1/n for hexahedra, the verifier's h on tetrahedra, or
-#     dt).
+#     dt); the L2 rows of the boundary band and of the gradient
+#     reconstruction of the exact fields; and, from log.cardiacFoam, the
+#     largest iteration count and final residual of each linear solve.
 #
 # Usage
 #     python3 summarize.py cartesianConvergence/results
@@ -25,6 +27,11 @@ import re
 from pathlib import Path
 
 FIELDS = ("Vm", "phiE_gauge", "phiI_gauge", "u1", "u2")
+DIAGNOSTIC_RE = re.compile(r"_boundary$|^gradRecon")
+SOLVE_RE = re.compile(
+    r"Solving for (\w+), Initial residual = \S+, "
+    r"Final residual = ([0-9.eE+-]+), No Iterations (\d+)"
+)
 N_RE = re.compile(r"(?:^|_)N(\d+)(?=_|$)")
 DT_RE = re.compile(r"(?:^|_)dt([0-9.eE+-]+?)(?=_|$)")
 
@@ -40,6 +47,16 @@ def read_rows(path: Path) -> dict[str, list[float]]:
         except ValueError:
             continue
     return rows
+
+
+def read_solves(run: Path) -> dict[str, tuple[int, float]]:
+    """Largest iteration count and final residual of each solved field."""
+    solves: dict[str, tuple[int, float]] = {}
+    for log in sorted(run.glob("log.cardiacFoam*")):
+        for field, residual, iterations in SOLVE_RE.findall(log.read_text()):
+            its, res = solves.get(field, (0, 0.0))
+            solves[field] = (max(its, int(iterations)), max(res, float(residual)))
+    return solves
 
 
 def read_spacing(path: Path) -> float | None:
@@ -63,7 +80,9 @@ def load(results: Path) -> dict[str, list[tuple]]:
         else:
             continue
         config = config.strip("_") or "default"
-        groups.setdefault(config, []).append((level, spacing, read_rows(summaries[0])))
+        groups.setdefault(config, []).append(
+            (level, spacing, read_rows(summaries[0]), read_solves(run))
+        )
     return groups
 
 
@@ -81,19 +100,50 @@ def table(runs: list[tuple]) -> str:
     header += ["order Vm L2", "order Vm Linf", "order phiE L2"]
     lines = ["| " + " | ".join(header) + " |", "|" + "---|"*len(header)]
     previous = None
-    for level, spacing, rows in runs:
+    for level, spacing, rows, _ in runs:
         cells = [str(level), f"{spacing:.6g}"]
         for f in FIELDS:
             cells += [f"{rows[f][1]:.4e}", f"{rows[f][2]:.4e}"] if f in rows else ["", ""]
         if previous:
-            _, h0, rows0 = previous
+            _, h0, rows0, _ = previous
             cells += [order(rows0["Vm"][1], rows["Vm"][1], h0, spacing),
                       order(rows0["Vm"][2], rows["Vm"][2], h0, spacing),
                       order(rows0["phiE_gauge"][1], rows["phiE_gauge"][1], h0, spacing)]
         else:
             cells += ["", "", ""]
         lines.append("| " + " | ".join(cells) + " |")
-        previous = (level, spacing, rows)
+        previous = (level, spacing, rows, None)
+    return "\n".join(lines)
+
+
+def diagnostics_table(runs: list[tuple]) -> str:
+    runs = sorted(runs, key=lambda r: -r[1])
+    names = sorted({n for r in runs for n in r[2] if DIAGNOSTIC_RE.search(n)})
+    if not names:
+        return ""
+    lines = ["| level | " + " | ".join(f"{n} L2" for n in names) + " |",
+             "|" + "---|"*(len(names) + 1)]
+    for level, _, rows, _ in runs:
+        cells = [f"{rows[n][1]:.4e}" if n in rows else "" for n in names]
+        lines.append(f"| {level} | " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def solver_table(runs: list[tuple]) -> str:
+    runs = sorted(runs, key=lambda r: -r[1])
+    fields = sorted({f for r in runs for f in r[3]})
+    if not fields:
+        return ""
+    header = ["level"]
+    for f in fields:
+        header += [f"{f} max iterations", f"{f} max final residual"]
+    lines = ["| " + " | ".join(header) + " |", "|" + "---|"*len(header)]
+    for level, _, _, solves in runs:
+        cells = [str(level)]
+        for f in fields:
+            its, res = solves.get(f, (None, None))
+            cells += ["", ""] if its is None else [str(its), f"{res:.2e}"]
+        lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -106,6 +156,9 @@ def main() -> None:
     for config in sorted(groups):
         print(f"\n### {config}\n")
         print(table(groups[config]))
+        for extra in (diagnostics_table(groups[config]), solver_table(groups[config])):
+            if extra:
+                print("\n" + extra)
 
 
 if __name__ == "__main__":

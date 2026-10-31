@@ -382,9 +382,9 @@ void configureECGDomains
 
     HashTable<ecgDomain*> ecgDomainsByName(ecgDomainNames.size());
 
-    // The output file (pseudoECG.dat, torsoECG.dat, eikonalECG.dat) is named
-    // after the ecgSolver, not the domain: two domains with the same ecgSolver
-    // write the same file
+    // The output file (pseudoECG.dat, torsoECG.dat, eikonalECG.dat,
+    // leadFieldECG.dat) is named after the ecgSolver, not the domain: two
+    // domains with the same ecgSolver write the same file
     HashTable<word> ecgDomainBySolverType(ecgDomainNames.size());
 
     forAll(ecgDomainNames, i)
@@ -477,13 +477,17 @@ void configureECGDomains
 
             stateProviderPtr = potentialStateProviderPtr;
         }
+        else if (ecgSolverType == "leadFieldECG")
+        {
+            stateProviderPtr = &myocardiumStateProvider;
+        }
         else
         {
             FatalErrorInFunction
                 << "ECG domain '" << domainName
                 << "' selects ecgSolver '" << ecgSolverType
                 << "', but provider routing is only defined for "
-                << "pseudoECG, eikonalECG, and torsoECG."
+                << "pseudoECG, eikonalECG, torsoECG and leadFieldECG."
                 << exit(FatalError);
         }
 

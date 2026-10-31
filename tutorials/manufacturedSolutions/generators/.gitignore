@@ -9,3 +9,5 @@ docs/**/*_files/
 docs/**/.quarto/
 docs/monodomain/*.tex
 docs/eikonal/*.tex
+docs/bidomain/*.tex
+docs/leadField/*.tex

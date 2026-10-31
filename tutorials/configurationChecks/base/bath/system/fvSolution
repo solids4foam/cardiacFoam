@@ -33,6 +33,33 @@ solvers
         relTol          0.0;
         maxIter         5000;
     }
+
+    // buildLeadFields
+    leadField
+    {
+        solver          PCG;
+        preconditioner
+        {
+            preconditioner  GAMG;
+            smoother        DICGaussSeidel;
+        }
+        tolerance       1e-15;
+        relTol          0.01;
+    }
+
+    leadFieldFinal
+    {
+        $leadField;
+        relTol          0;
+    }
+}
+
+// Lead-field fixed point (buildLeadFields) and the verifier's direct
+// forward solve: relative change between passes, and the pass limit
+leadFieldFixedPoint
+{
+    tolerance       1e-10;
+    maxPasses       100;
 }
 
 PIMPLE

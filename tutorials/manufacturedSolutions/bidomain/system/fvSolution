@@ -23,6 +23,7 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+        maxIter         5000;
     }
 
     "phiE|phiEFinal|phiI|phiIFinal"
@@ -31,6 +32,7 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+        maxIter         5000;
 
         #includeIfPresent "<case>/local/phiTolerance"
     }
