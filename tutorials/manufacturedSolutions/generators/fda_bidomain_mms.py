@@ -196,11 +196,11 @@ def _sci(v):
 def latex_fragments():
     out = {}
     out["fda_bidomain_Gi.tex"] = emit_latex_fragment(
-        r"\mathbf G_i", sp.diag(*[printed_constant(v, 9) for v in GI_DIAG]), {})
+        r"\boldsymbol\sigma_i", sp.diag(*[printed_constant(v, 9) for v in GI_DIAG]), {})
     out["fda_bidomain_Ge.tex"] = emit_latex_fragment(
-        r"\mathbf G_e", sp.diag(*[printed_constant(v, 8) for v in GE_DIAG]), {})
+        r"\boldsymbol\sigma_e", sp.diag(*[printed_constant(v, 8) for v in GE_DIAG]), {})
     gxx, exx, V, c, kap, xr, ve = sp.symbols("gxx exx V c kappa xr ve", real=True)
-    names = {gxx: r"G_{i,xx}", exx: r"G_{e,xx}", V: "V_m", c: "c", kap: r"\kappa",
+    names = {gxx: r"\sigma_{i,xx}", exx: r"\sigma_{e,xx}", V: "V_m", c: "c", kap: r"\kappa",
              xr: r"V_m(\mathbf x_{\mathrm{ref}},t)", ve: r"\phi_{e,\mathrm{ref}}"}
     out["fda_bidomain_kappa.tex"] = emit_latex_fragment(r"\kappa", gxx/(gxx + exx), names)
     out["fda_bidomain_phiE.tex"] = emit_latex_fragment(r"\phi_e", -kap*V + c, names)
@@ -208,9 +208,9 @@ def latex_fragments():
     out["fda_bidomain_c.tex"] = emit_latex_fragment("c", ve + kap*xr, names)
     out["fda_bidomain_beta.tex"] = (
         "$$\n\\beta_d = -\\sum_{m=1}^{d} H_{mm}\\,(m\\pi)^2,\\qquad "
-        "H_{mm} = \\frac{G_{i,mm}\\,G_{e,mm}}{G_{i,mm}+G_{e,mm}}\n$$\n")
+        "H_{mm} = \\frac{\\sigma_{i,mm}\\,\\sigma_{e,mm}}{\\sigma_{i,mm}+\\sigma_{e,mm}}\n$$\n")
     out["fda_bidomain_kd.tex"] = (
-        "$$\nk_d = \\sum_{m=1}^{d} G_{i,mm}\\,(m\\pi)^2\n$$\n")
+        "$$\nk_d = \\sum_{m=1}^{d} \\sigma_{i,mm}\\,(m\\pi)^2\n$$\n")
     pairs = [(r"C_m", CM), (r"\chi", CHI), (r"\kappa", sp.Float(float(kappa()), 12))]
     pairs += [(r"\beta_%d" % d, sp.Float(float(beta(d)), 10)) for d in DIMENSIONS]
     out["fda_bidomain_params.tex"] = emit_parameter_fragment(pairs, per_row=3)

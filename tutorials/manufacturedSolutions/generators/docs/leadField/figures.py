@@ -196,8 +196,8 @@ def slab_geometry(settings, outdir):
     ax = fig.add_subplot(gs[0, 1])
     _plan(ax, LAYERED_REGIONS, electrodes, pin, labels=False)
     for x0, x1, _, name in LAYERED_REGIONS:
-        sig = {"torsoOuter": r"$\sigma_2=0.02$", "torsoInner": r"$\sigma_1=0.1$",
-               "myocardium": r"$(G_i+G_e)_{xx}$"}[name]
+        sig = {"torsoOuter": r"$\sigma_{b,2}=0.02$", "torsoInner": r"$\sigma_{b,1}=0.1$",
+               "myocardium": r"$(\boldsymbol{\sigma}_i+\boldsymbol{\sigma}_e)_{xx}$"}[name]
         ax.text(0.5 * (x0 + x1), 0.88, sig, ha="center", fontsize=8, color="#333333")
     for x in (lf.X_LEFT, lf.X_RIGHT):
         ax.plot([x, x], [0, 1], color=fs.DOMAIN, lw=1.4)
@@ -258,7 +258,7 @@ def slab_potential(settings, outdir):
     phi0 = lambda q: float(lf.gauged(lf.slab_phi_raw, q, pin[0], 0.0))  # noqa: E731
     _mark(ax, electrodes, pin, phi0, SLAB_POTENTIAL_OFFSET)
     ax.axhline(2 * lf.K, color=fs.GREY, lw=0.6, ls=":")
-    ax.text(1.18, 2 * lf.K + 0.06, r"$2k$", ha="center", color=fs.GREY)
+    ax.text(1.18, 2 * lf.K + 0.06, r"$2\kappa$", ha="center", color=fs.GREY)
     ax.set_xlim(-1.05, 2.05)
     ax.set_ylim(-1.25, 1.85)
     ax.set_xlabel(XL)
@@ -279,8 +279,8 @@ def slab_potential(settings, outdir):
     ax.plot(x, off(x), "--", color=fs.ECG_LIGHT)
     _mark(ax, electrodes, pin, lambda q: float(on(q)), LAYERED_POTENTIAL_OFFSET)
     for x0, x1, _, name in LAYERED_REGIONS:
-        sig = {"torsoOuter": r"$\sigma_2$", "torsoInner": r"$\sigma_1$",
-               "myocardium": r"$(G_i+G_e)_{xx}$"}[name]
+        sig = {"torsoOuter": r"$\sigma_{b,2}$", "torsoInner": r"$\sigma_{b,1}$",
+               "myocardium": r"$(\boldsymbol{\sigma}_i+\boldsymbol{\sigma}_e)_{xx}$"}[name]
         ax.text(0.5 * (x0 + x1), -1.15, sig, ha="center", fontsize=9, color="#333333")
     ax.set_xlim(-1.05, 2.05)
     ax.set_ylim(-1.3, 2.3)
@@ -480,7 +480,7 @@ def shell_regions(settings, outdir):
                         ("body-surface electrode (labelled 1 to 8)", SURFACE, "o"),
                         ("interior probe", PROBE, "D"), ("reference point", PIN, "s")],
               ncol=2)
-    fs.panel(fig, axes[1], img_g, title=r"frame of $G_i$ and $G_e$ in the wall", tag="(b)")
+    fs.panel(fig, axes[1], img_g, title=r"frame of $\boldsymbol{\sigma}_i$ and $\boldsymbol{\sigma}_e$ in the wall", tag="(b)")
     fs.legend(axes[1], [("fibre (light: endo, dark: epi)", fs.FIBRE),
                         ("sheet", fs.SHEET), ("sheet normal", fs.NORMAL)], ncol=1)
     fs.save(fig, outdir, "shell_regions.png", settings)
@@ -530,8 +530,8 @@ def shell_fields(settings, outdir):
     _image(fig, axes[0], X, Y, phi.reshape(X.shape), r"$\phi$",
            r"(a) exact $\phi$ on $z=0$, $t=0$")
     axes[0].plot([pin[0]], [pin[1]], "s", color=PIN, mec="k", mew=0.4, ms=6)
-    _image(fig, axes[1], X, Y, sig.reshape(X.shape), r"$\sigma_B$",
-           r"(b) $\sigma_B$ on $z=0$ (torso zones)")
+    _image(fig, axes[1], X, Y, sig.reshape(X.shape), r"$\sigma_b$",
+           r"(b) $\sigma_b$ on $z=0$ (torso zones)")
     _image(fig, axes[2], X, Y, vm.reshape(X.shape), r"$V_m$",
            r"(c) exact $V_m$ on $z=0$, $t=0$ (heart)")
     assert np.all(zones[np.isfinite(vm)] == 1)

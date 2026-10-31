@@ -14,24 +14,24 @@ and the generator folder can rebuild each problem in another code.
 
 ## Domain and governing equations
 
-In the myocardium $\Omega\subset\mathbb R^d$, $d\in\{1,2,3\}$, with sealed
-boundary $\partial\Omega$ and outward unit normal $\mathbf n$, the bidomain
-equations for the intracellular and extracellular potentials $\phi_i$,
-$\phi_e$ and the transmembrane potential $V_m=\phi_i-\phi_e$ are
+In the myocardium $\Omega_H\subset\mathbb R^d$, $d\in\{1,2,3\}$, with sealed
+boundary $\Gamma_N=\partial\Omega_H$ and outward unit normal $\mathbf n$, the
+bidomain equations for the intracellular and extracellular potentials
+$\phi_i$, $\phi_e$ and the transmembrane potential $V_m=\phi_i-\phi_e$ are
 
 $$
 \left\{
 \begin{aligned}
 \chi C_m \frac{\partial V_m}{\partial t}
-&=\nabla\cdot\left(\mathbf G_i\nabla\phi_i\right)
+&=\nabla\cdot\left(\boldsymbol\sigma_i\nabla\phi_i\right)
 -\chi C_m I_{\mathrm{ion}}+I_{\mathrm{app}}
-&&\text{in }\Omega,\\
-0&=\nabla\cdot\left(\mathbf G_i\nabla\phi_i\right)
-+\nabla\cdot\left(\mathbf G_e\nabla\phi_e\right)-s_e
-&&\text{in }\Omega,\\
-\mathbf n\cdot\mathbf G_i\nabla\phi_i=0,\quad
-\mathbf n\cdot\mathbf G_e\nabla\phi_e&=0
-&&\text{on }\partial\Omega,
+&&\text{in }\Omega_H,\\
+0&=\nabla\cdot\left(\boldsymbol\sigma_i\nabla\phi_i\right)
++\nabla\cdot\left(\boldsymbol\sigma_e\nabla\phi_e\right)-s_e
+&&\text{in }\Omega_H,\\
+\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i=0,\quad
+\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e&=0
+&&\text{on }\Gamma_N,
 \end{aligned}
 \right.
 $$
@@ -44,17 +44,17 @@ solves the system in the unknowns $V_m$ and $\phi_e$:
 $$
 \begin{aligned}
 \chi C_m \frac{\partial V_m}{\partial t}
-&=\nabla\cdot\left(\mathbf G_i\nabla V_m\right)
-+\nabla\cdot\left(\mathbf G_i\nabla\phi_e\right)
+&=\nabla\cdot\left(\boldsymbol\sigma_i\nabla V_m\right)
++\nabla\cdot\left(\boldsymbol\sigma_i\nabla\phi_e\right)
 -\chi C_m I_{\mathrm{ion}}+I_{\mathrm{app}},\\
-\nabla\cdot\left((\mathbf G_i+\mathbf G_e)\nabla\phi_e\right)
-&=-\nabla\cdot\left(\mathbf G_i\nabla V_m\right)+s_e .
+\nabla\cdot\left((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi_e\right)
+&=-\nabla\cdot\left(\boldsymbol\sigma_i\nabla V_m\right)+s_e .
 \end{aligned}
 $$
 
 The second equation with the two sealed walls is a pure Neumann problem:
 $\phi_e$ is fixed up to a constant, and a solution exists only if
-$\int_\Omega s_e\,\mathrm dV=0$. Every problem below prescribes the exact
+$\int_{\Omega_H} s_e\,\mathrm dV=0$. Every problem below prescribes the exact
 fields at $t=0$ as initial data, and both sealed-wall conditions are satisfied
 by the exact potentials themselves. The units are those of the monodomain
 document: SI units for the continuum equations, and fields written in case
@@ -105,10 +105,10 @@ value of the reference cell. The rows `phiE_gauge` and `phiI_gauge` compare
 with the exact field shifted by the volume mean of the $\phi_e$ error,
 
 $$
-\delta_e=\frac{\sum_c V_c\left(\phi_{e,c}-\phi_e(\mathbf x_c)\right)}{\sum_c V_c},
+\bar e=\frac{\sum_c V_c\left(\phi_{e,c}-\phi_e(\mathbf x_c)\right)}{\sum_c V_c},
 \qquad
-\phi_e^{\mathrm{gauge}}=\phi_e+\delta_e,\quad
-\phi_i^{\mathrm{gauge}}=\phi_i+\delta_e ,
+\phi_e^{\mathrm{gauge}}=\phi_e+\bar e,\quad
+\phi_i^{\mathrm{gauge}}=\phi_i+\bar e ,
 $$
 
 with $V_c$ and $\mathbf x_c$ the volume and centre of cell $c$; the gauge rows
@@ -170,13 +170,13 @@ regulatory science tool for cardiac electrophysiology [@fda2023eprst], on the
 unit cube $[0,1]^d$, $d=1,2,3$. The transmembrane potential is the FDA
 monodomain field and the extracellular potential is a fixed multiple of it.
 The case exercises the elliptic $\phi_e$ solve, the parabolic $V_m$ solve,
-their coupling through $\nabla\cdot(\mathbf G_i\nabla\phi_e)$ and
-$\nabla\cdot(\mathbf G_i\nabla V_m)$, the gauge of $\phi_e$, the ionic coupling
+their coupling through $\nabla\cdot(\boldsymbol\sigma_i\nabla\phi_e)$ and
+$\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)$, the gauge of $\phi_e$, the ionic coupling
 and the time integration, on hexahedra in one, two and three dimensions and on
 Delaunay tetrahedra in three.
 
-Both tensors are diagonal and $\mathbf G_e$ is proportional to $\mathbf G_i$,
-so $\mathbf G_i+\mathbf G_e$ is a multiple of $\mathbf G_i$, $\phi_e$ is a
+Both tensors are diagonal and $\boldsymbol\sigma_e$ is proportional to $\boldsymbol\sigma_i$,
+so $\boldsymbol\sigma_i+\boldsymbol\sigma_e$ is a multiple of $\boldsymbol\sigma_i$, $\phi_e$ is a
 multiple of $V_m$ at every time and the elliptic equation needs no source.
 The exact field has a zero normal derivative on every face and the face
 normals are eigenvectors of both tensors, so both conormal fluxes vanish
@@ -185,19 +185,19 @@ ratios, off-diagonal conductivity, a $\phi_e$ source or its compatibility, or
 a wall flux reconstruction; the sealed shell (@sec-shell) does.
 
 The residual of the equations is not zero. The tutorial dictionary gives
-$\mathbf G_e$ to the nine decimals of $\mathbf G_i$, so the ratio
-$G_{i,mm}/(G_{i,mm}+G_{e,mm})$ equals $\kappa$ to about $10^{-9}$ on the $y$
+$\boldsymbol\sigma_e$ to the nine decimals of $\boldsymbol\sigma_i$, so the ratio
+$\sigma_{i,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ equals $\kappa$ to about $10^{-9}$ on the $y$
 and $z$ axes and exactly on the $x$ axis. On the exact fields the residuals of
 the $V_m$ and $\phi_e$ equations are $\rho_pV_m$ and $\rho_eV_m$ (both written
 as left minus right side of the forms above), with
 
 $$
-\rho_p=\sum_{m=1}^{d}\left((1-\kappa)G_{i,mm}-H_{mm}\right)(m\pi)^2,
+\rho_p=\sum_{m=1}^{d}\left((1-\kappa)\sigma_{i,mm}-H_{mm}\right)(m\pi)^2,
 \qquad
-\rho_e=\sum_{m=1}^{d}\left(\kappa\,(G_{i,mm}+G_{e,mm})-G_{i,mm}\right)(m\pi)^2 ,
+\rho_e=\sum_{m=1}^{d}\left(\kappa\,(\sigma_{i,mm}+\sigma_{e,mm})-\sigma_{i,mm}\right)(m\pi)^2 ,
 $$
 
-and relative to $k_d$, the size of $\nabla\cdot(\mathbf G_i\nabla V_m)/V_m$,
+and relative to $k_d$, the size of $\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)/V_m$,
 
 {{< include ../../latex/fda_bidomain_residual_relative.tex >}}
 
@@ -225,30 +225,30 @@ In cardiacFoam:
   `conductivitySource uniform`);
 - ionic model `bidomainFDAManufactured`, which rejects tensors with mixed
   entries between active directions and ratios
-  $G_{i,mm}/(G_{i,mm}+G_{e,mm})$ that differ from $\kappa$ by more than
+  $\sigma_{i,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ that differ from $\kappa$ by more than
   $10^{-6}\kappa$;
 - verifier `manufacturedFDABidomainVerifier`.
 
 ## Construction
 
 The spatial factor $F_d$ of the FDA monodomain problem is an eigenfunction of
-the diagonal operator, $\nabla\cdot(\mathbf G_i\nabla F_d)=-k_dF_d$ with
+the diagonal operator, $\nabla\cdot(\boldsymbol\sigma_i\nabla F_d)=-k_dF_d$ with
 
 {{< include ../../latex/fda_bidomain_kd.tex >}}
 
-($\mathbf G_i$ is the conductivity of the monodomain FDA problem, so $k_d$ is
+($\boldsymbol\sigma_i$ is the conductivity of the monodomain FDA problem, so $k_d$ is
 the eigenvalue of that document). With $\phi_e=-\kappa V_m+c$ and
-$\kappa(\mathbf G_i+\mathbf G_e)=\mathbf G_i$,
+$\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e)=\boldsymbol\sigma_i$,
 
 $$
-\nabla\cdot\left(\mathbf G_i\nabla V_m\right)
-+\nabla\cdot\left((\mathbf G_i+\mathbf G_e)\nabla\phi_e\right)
-=\nabla\cdot\left((\mathbf G_i-\kappa(\mathbf G_i+\mathbf G_e))\nabla V_m\right)=0 ,
+\nabla\cdot\left(\boldsymbol\sigma_i\nabla V_m\right)
++\nabla\cdot\left((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi_e\right)
+=\nabla\cdot\left((\boldsymbol\sigma_i-\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e))\nabla V_m\right)=0 ,
 $$
 
 so the elliptic equation holds with $s_e=0$. In the $V_m$ equation
-$\nabla\cdot(\mathbf G_i\nabla\phi_i)=(1-\kappa)\nabla\cdot(\mathbf G_i\nabla V_m)
-=-(1-\kappa)k_dV_m$, and $(1-\kappa)G_{i,mm}=H_{mm}$, the harmonic combination
+$\nabla\cdot(\boldsymbol\sigma_i\nabla\phi_i)=(1-\kappa)\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)
+=-(1-\kappa)k_dV_m$, and $(1-\kappa)\sigma_{i,mm}=H_{mm}$, the harmonic combination
 of the two diagonals. The ionic model sets
 
 {{< include ../../latex/fda_bidomain_beta.tex >}}
@@ -301,10 +301,10 @@ arithmetic on the decimals of the conductivities:
 - the residuals of both equations are constant multiples $\rho_pV_m$,
   $\rho_eV_m$ of $V_m$ with $|\rho_p|/k_d\le10^{-8}$ and
   $|\rho_e|/k_d\le10^{-8}$ (the values are printed above);
-- $\mathbf n\cdot\mathbf G_i\nabla V_m$, $\mathbf n\cdot\mathbf G_e\nabla\phi_e$
-  and $\mathbf n\cdot\mathbf G_i\nabla\phi_i$ vanish on every face;
+- $\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m$, $\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e$
+  and $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$ vanish on every face;
 - $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$;
-- the ratios $G_{i,mm}/(G_{i,mm}+G_{e,mm})$ agree with $\kappa$ to
+- the ratios $\sigma_{i,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ agree with $\kappa$ to
   $10^{-6}\kappa$, the tolerance of the ionic model;
 - the printed constants round-trip.
 
@@ -316,14 +316,14 @@ equal those of the generator.
 the cell centres and volumes (from `constant/polyMesh`, by the face-triangle and face-pyramid
 decomposition OpenFOAM uses), the computed `Vm` and `phiE` of the last time and
 `postProcessing/<d>D_<n>_cells.dat`, and recomputes from the exact fields above
-the `Vm`, `phiE`, `phiE_gauge` and `phiI_gauge` norms and $\delta_e$. On the
+the `Vm`, `phiE`, `phiE_gauge` and `phiI_gauge` norms and $\bar e$. On the
 runs `1D_N10`, `2D_N10` and `3D_N10` of the study `cartesianConvergence`
 ($t=0.2$) all agree with the reported values to the six printed digits, and the
 written initial `preProcess_u1` equals $u_1(\mathbf x_c,0)$ to $2\times10^{-15}$.
 
 ## Figures
 
-![FDA cube. (a) $V_m=F_3$ at $t=0$ on three orthogonal slices. (b) $\phi_e$ at $t=0$ on the same slices, with $c$ fixed by $\phi_e(\mathbf x_{\mathrm{ref}})=0$; the dot marks $\mathbf x_{\mathrm{ref}}$. (c) $V_m$, $\phi_e=-\kappa V_m+c$ and $\phi_i=(1-\kappa)V_m+c$ for $d=1$ at $t=0$; the dotted line is $x_{\mathrm{ref}}$, where $\phi_e=0$ and $\phi_i=V_m$. (d) The diagonals of $\mathbf G_i$ and $\mathbf G_e$, in the same ratio on each axis.](figures/fda_bidomain_cube.png){#fig-fda width=100%}
+![FDA cube. (a) $V_m=F_3$ at $t=0$ on three orthogonal slices. (b) $\phi_e$ at $t=0$ on the same slices, with $c$ fixed by $\phi_e(\mathbf x_{\mathrm{ref}})=0$; the dot marks $\mathbf x_{\mathrm{ref}}$. (c) $V_m$, $\phi_e=-\kappa V_m+c$ and $\phi_i=(1-\kappa)V_m+c$ for $d=1$ at $t=0$; the dotted line is $x_{\mathrm{ref}}$, where $\phi_e=0$ and $\phi_i=V_m$. (d) The diagonals of $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$, in the same ratio on each axis.](figures/fda_bidomain_cube.png){#fig-fda width=100%}
 
 ::: {#fig-fda-mesh layout-ncol=2}
 
@@ -359,11 +359,11 @@ comparison.
 The heart-like shell $r_1<|\mathbf x|<r_2$ of the monodomain document, both
 spheres sealed, with two full intracellular and extracellular tensors whose
 fibre and sheet rotate through the wall. The tensors share one orthonormal
-frame but have unequal eigenvalue ratios, so $\mathbf G_i+\mathbf G_e$ is not
-a multiple of $\mathbf G_i$, and both are oblique to both walls. The exact
+frame but have unequal eigenvalue ratios, so $\boldsymbol\sigma_i+\boldsymbol\sigma_e$ is not
+a multiple of $\boldsymbol\sigma_i$, and both are oblique to both walls. The exact
 $\phi_i$ and $\phi_e$ have non-zero normal and tangential gradients on both
-walls while $\mathbf n\cdot\mathbf G_i\nabla\phi_i$ and
-$\mathbf n\cdot\mathbf G_e\nabla\phi_e$ vanish there exactly. The case
+walls while $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$ and
+$\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e$ vanish there exactly. The case
 exercises the sealed-wall operators of both potentials on curved walls, a
 non-trivial $\phi_e$ source with zero integral, the pure Neumann $\phi_e$
 system with its gauge and compatibility, and spatially varying tensors whose
@@ -371,8 +371,8 @@ derivatives enter both sources.
 
 It does not exercise a bath, the ECG, a stimulus or a wall that carries
 current, and the two tensors have the same principal axes everywhere, so a
-discretisation error that appears only when the eigenvectors of $\mathbf G_i$
-and $\mathbf G_e$ differ is not detected.
+discretisation error that appears only when the eigenvectors of $\boldsymbol\sigma_i$
+and $\boldsymbol\sigma_e$ differ is not detected.
 
 ## Problem instance
 
@@ -420,9 +420,9 @@ Both tensors are built on this frame with their own eigenvalues:
 
 {{< include ../../latex/shell_bidomain_Ge.tex >}}
 
-$\mathbf G_i$ is the conductivity $\boldsymbol\sigma$ of the monodomain shell.
-The eigenvalue ratios are $17:1.9:1$ for $\mathbf G_i$ and $7.75:1.5:1$ for
-$\mathbf G_e$.
+$\boldsymbol\sigma_i$ is the conductivity $\boldsymbol\sigma$ of the monodomain shell.
+The eigenvalue ratios are $17:1.9:1$ for $\boldsymbol\sigma_i$ and $7.75:1.5:1$ for
+$\boldsymbol\sigma_e$.
 
 *Sealing.* Each potential is sealed with respect to its own tensor by the
 construction of the monodomain shell. $\omega$ vanishes on both spheres, with
@@ -439,7 +439,7 @@ the heart:
 
 {{< include ../../latex/shell_d2.tex >}}
 
-For the intracellular factor, with $\mathbf G_i$,
+For the intracellular factor, with $\boldsymbol\sigma_i$,
 
 {{< include ../../latex/shell_bidomain_mj_i.tex >}}
 
@@ -447,7 +447,7 @@ For the intracellular factor, with $\mathbf G_i$,
 
 {{< include ../../latex/shell_bidomain_Fi.tex >}}
 
-and for the extracellular factor, with $\mathbf G_e$,
+and for the extracellular factor, with $\boldsymbol\sigma_e$,
 
 {{< include ../../latex/shell_bidomain_mj_e.tex >}}
 
@@ -455,8 +455,8 @@ and for the extracellular factor, with $\mathbf G_e$,
 
 {{< include ../../latex/shell_bidomain_Fe.tex >}}
 
-so that $\mathbf n_j\cdot\mathbf G_i\nabla F_i=0$ and
-$\mathbf n_j\cdot\mathbf G_e\nabla F_e=0$ on both spheres. $F_i$ equals the
+so that $\mathbf n_j\cdot\boldsymbol\sigma_i\nabla F_i=0$ and
+$\mathbf n_j\cdot\boldsymbol\sigma_e\nabla F_e=0$ on both spheres. $F_i$ equals the
 field $F$ of the monodomain shell.
 
 *Potentials and gauge.* $\phi_i=\sqrt{1+t}\,F_i+c$ and
@@ -475,9 +475,9 @@ equation with no source:
 
 {{< include ../../latex/shell_bidomain_se.tex >}}
 
-Both fluxes $\mathbf G_i\nabla F_i$ and $\mathbf G_e\nabla F_e$ have zero
+Both fluxes $\boldsymbol\sigma_i\nabla F_i$ and $\boldsymbol\sigma_e\nabla F_e$ have zero
 normal component on both spheres, so by the divergence theorem
-$\int_\Omega s_e\,\mathrm dV=0$: the $\phi_e$ problem is compatible in the
+$\int_{\Omega_H} s_e\,\mathrm dV=0$: the $\phi_e$ problem is compatible in the
 continuum. The divergences include the derivatives of the spatially varying
 tensors.
 
@@ -510,28 +510,28 @@ with $u_3=0$. The divergences are not printed: they are
 
 `shell_bidomain_mms.py --self-check` asserts:
 
-- sealing: $\max|\mathbf n\cdot\mathbf G_i\nabla F_i|$ and
-  $\max|\mathbf n\cdot\mathbf G_e\nabla F_e|$ below $10^{-25}$ at 200 points of
+- sealing: $\max|\mathbf n\cdot\boldsymbol\sigma_i\nabla F_i|$ and
+  $\max|\mathbf n\cdot\boldsymbol\sigma_e\nabla F_e|$ below $10^{-25}$ at 200 points of
   each sphere, in 30-digit arithmetic on the exact sphere;
 - sources: both divergences agree with central differences of the fluxes to
   $10^{-6}$ at 40 points of the shell;
-- positivity: every $\mathbf n_j\cdot\mathbf G\,\mathbf n_j>0$ and $g>0.5$ over
+- positivity: every $\mathbf n_j\cdot\boldsymbol\sigma\,\mathbf n_j>0$ and $g>0.5$ over
   4000 points of the shell widened by 0.05 on each side;
 - richness of the walls: on each wall the means of the tangential parts of
-  $\mathbf G_i\mathbf n/\sigma_{i,f}$, $\mathbf G_e\mathbf n/\sigma_{e,f}$,
+  $\boldsymbol\sigma_i\mathbf n/\sigma_{i,f}$, $\boldsymbol\sigma_e\mathbf n/\sigma_{e,f}$,
   $\nabla F_i$, $\nabla F_e$ and $\nabla(F_i-F_e)$ exceed $10^{-2}$;
 - compatibility: the Gauss--Legendre integral of
   $s_e/\sqrt{1+t}$ over the shell ($60\times60$ points in $|\mathbf x|$ and
   $\cos\vartheta$, 120 in the azimuth) is below $10^{-12}$ times the integral
   of its absolute value;
 - $F_i$ equals the monodomain shell field to $10^{-13}$ at 200 points;
-- $\mathbf G_i$ and $\mathbf G_e$ commute to $10^{-14}$ (one frame) at 500
-  points, and the relative distance of $\mathbf G_e$ from the multiples of
-  $\mathbf G_i$ is at least 0.1 at every point (it is 0.104 at least);
-- $\mathbf G_i$ equals $\boldsymbol\sigma$ of `shell_monodomain_mms.py`;
+- $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ commute to $10^{-14}$ (one frame) at 500
+  points, and the relative distance of $\boldsymbol\sigma_e$ from the multiples of
+  $\boldsymbol\sigma_i$ is at least 0.1 at every point (it is 0.104 at least);
+- $\boldsymbol\sigma_i$ equals $\boldsymbol\sigma$ of `shell_monodomain_mms.py`;
 - the residual of the $V_m$ equation and of the two ionic rates vanish
   symbolically, with $F_i$, $F_e$, $g$, $\beta$ and
-  $\nabla\cdot(\mathbf G_i\nabla F_i)$ as symbols;
+  $\nabla\cdot(\boldsymbol\sigma_i\nabla F_i)$ as symbols;
 - the reference point $\mathbf x_{\mathrm{ref}}$ lies inside the shell.
 
 `docs/bidomain/bidomain_reference.py --self-check` asserts that `phiERefPoint`
@@ -549,9 +549,9 @@ $u_1(\mathbf x_c,0)$ to $10^{-15}$.
 
 ## Figures
 
-![Sealed shell. (a) $V_m=F_i-F_e$ at $t=0$ on a cut-away of the shell. (b) $\phi_e$ at $t=0$ with its volume mean over the shell removed, the gauge of the `phiE_gauge` rows. (c) The frame common to $\mathbf G_i$ and $\mathbf G_e$ at six sites through the wall on the cut face, the fibre shaded from the inner (light) to the outer (dark) wall, with the eigenvalues of each tensor along each direction.](figures/shell_bidomain.png){#fig-shell width=100%}
+![Sealed shell. (a) $V_m=F_i-F_e$ at $t=0$ on a cut-away of the shell. (b) $\phi_e$ at $t=0$ with its volume mean over the shell removed, the gauge of the `phiE_gauge` rows. (c) The frame common to $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ at six sites through the wall on the cut face, the fibre shaded from the inner (light) to the outer (dark) wall, with the eigenvalues of each tensor along each direction.](figures/shell_bidomain.png){#fig-shell width=100%}
 
-![Sources and walls of the shell. (a) $s_e/\sqrt{1+t}$, the source of the $\phi_e$ equation. (b) The diffusion term of $I_{\mathrm{app}}/\sqrt{1+t}$, $-\nabla\cdot(\mathbf G_i\nabla F_i)$. (c), (d) On the great circle of each sphere in the plane $y=0$: the normal derivatives $\mathbf n\cdot\nabla F_i$ and $\mathbf n\cdot\nabla F_e$ (solid) are non-zero, the conormal fluxes $\mathbf n\cdot\mathbf G_i\nabla F_i$ and $\mathbf n\cdot\mathbf G_e\nabla F_e$ (broken) vanish to rounding ($\mathbf n$ out of the heart).](figures/shell_bidomain_sources.png){#fig-shell-sources width=100%}
+![Sources and walls of the shell. (a) $s_e/\sqrt{1+t}$, the source of the $\phi_e$ equation. (b) The diffusion term of $I_{\mathrm{app}}/\sqrt{1+t}$, $-\nabla\cdot(\boldsymbol\sigma_i\nabla F_i)$. (c), (d) On the great circle of each sphere in the plane $y=0$: the normal derivatives $\mathbf n\cdot\nabla F_i$ and $\mathbf n\cdot\nabla F_e$ (solid) are non-zero, the conormal fluxes $\mathbf n\cdot\boldsymbol\sigma_i\nabla F_i$ and $\mathbf n\cdot\boldsymbol\sigma_e\nabla F_e$ (broken) vanish to rounding ($\mathbf n$ out of the heart).](figures/shell_bidomain_sources.png){#fig-shell-sources width=100%}
 
 ::: {#fig-shell-mesh layout-ncol=2}
 

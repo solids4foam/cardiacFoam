@@ -455,12 +455,12 @@ def latex_fragments():
                        (nn, r"\mathbf n_s\otimes\mathbf n_s")])
     for tag, (l, tr, n) in (("Gi", ("gil", "git", "gin")), ("Ge", ("gel", "get", "gen"))):
         out["shell_bidomain_%s.tex" % tag] = emit_latex_fragment(
-            r"\mathbf G_%s" % tag[1], P[l]*ff + P[tr]*ss + P[n]*nn, nm)
+            r"\boldsymbol\sigma_%s" % tag[1], P[l]*ff + P[tr]*ss + P[n]*nn, nm)
     names = _shell_names()
     out["shell_bidomain_hhat_e.tex"] = emit_latex_fragment(
         r"\hat h_e", expressions()["ehat"], names)
     out["shell_bidomain_hhat_i.tex"] = emit_latex_fragment(r"\hat h_i", smm._hhat(), names)
-    for tag, tens in (("i", r"\mathbf G_i"), ("e", r"\mathbf G_e")):
+    for tag, tens in (("i", r"\boldsymbol\sigma_i"), ("e", r"\boldsymbol\sigma_e")):
         a, b, dj, lam, m1, m2, hh, om, m = sp.symbols("a b dj lam m1 m2 hh om m", real=True)
         nmj = _shell_names([
             (a, r"\left(\mathbf n_j\cdot %s\nabla\hat h_%s\right)" % (tens, tag)),
@@ -476,8 +476,8 @@ def latex_fragments():
     t, Fi, Fe, g, b, Vm, dGi, dGe, shift = sp.symbols(
         "t Fi Fe g beta Vm dGi dGe shift", real=True)
     nf = _shell_names([(Fi, "F_i"), (Fe, "F_e"), (g, "g"), (b, r"\beta"), (Vm, "V_m"),
-                       (dGi, r"\nabla\!\cdot\!\left(\mathbf G_i\nabla F_i\right)"),
-                       (dGe, r"\nabla\!\cdot\!\left(\mathbf G_e\nabla F_e\right)"),
+                       (dGi, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_i\nabla F_i\right)"),
+                       (dGe, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_e\nabla F_e\right)"),
                        (shift, "c")])
     S = sp.sqrt(1 + t)
     out["shell_bidomain_phiI.tex"] = emit_latex_fragment(r"\phi_i", S*Fi + shift, nf)

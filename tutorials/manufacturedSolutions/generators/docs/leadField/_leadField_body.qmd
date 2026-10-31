@@ -18,35 +18,36 @@ rebuild each problem in another code.
 ## Domain and governing equations
 
 The conductor is the heart $\Omega_H$ (the cellZone `myocardium`) and the
-torso $\Omega_T$ (the bath cellZones of the ECG domain), with the interface
-$\Gamma=\partial\Omega_H\cap\partial\Omega_T$. For a given transmembrane
+torso $\Omega_B$ (the bath cellZones of the ECG domain), with the interface
+$\Gamma_{HB}=\partial\Omega_H\cap\partial\Omega_B$ and the outer boundary
+$\Gamma_B=\partial\Omega_B\setminus\Gamma_{HB}$. For a given transmembrane
 potential $V_m$ in the heart, the passive potential $\phi$ solves
 
 $$
 \left\{
 \begin{aligned}
-\nabla\cdot\big((\mathbf G_i+\mathbf G_e)\nabla\phi\big)
-&=-\nabla\cdot(\mathbf G_i\nabla V_m)+S_H
+\nabla\cdot\big((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi\big)
+&=-\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)+S_H
 &&\text{in }\Omega_H,\\
-\nabla\cdot(\sigma\nabla\phi)&=S_T&&\text{in }\Omega_T,\\
+\nabla\cdot(\sigma_b\nabla\phi)&=S_B&&\text{in }\Omega_B,\\
 \phi\ \text{continuous},\quad
-\mathbf n\cdot\mathbf G_w\nabla\phi
-&=\mathbf n\cdot\sigma\nabla\phi&&\text{on }\Gamma,\\
-\mathbf n\cdot\sigma\nabla\phi&=g_{\mathrm{out}}&&\text{on }\partial\Omega_T\setminus\Gamma,
+\mathbf n\cdot\boldsymbol\sigma_w\nabla\phi
+&=\mathbf n\cdot\sigma_b\nabla\phi&&\text{on }\Gamma_{HB},\\
+\mathbf n\cdot\sigma_b\nabla\phi&=g_{\mathrm{out}}&&\text{on }\Gamma_B,
 \end{aligned}
 \right.
 $$
 
-where $S_H$, $S_T$ and $g_{\mathrm{out}}$ are manufactured data (zero in
+where $S_H$, $S_B$ and $g_{\mathrm{out}}$ are manufactured data (zero in
 ordinary runs).
-The heart source is assembled with no wall flux of $\mathbf G_i\nabla V_m$.
-The heart-side wall conductivity $\mathbf G_w$ is the conductor's choice: with
+The heart source is assembled with no wall flux of $\boldsymbol\sigma_i\nabla V_m$.
+The heart-side wall conductivity $\boldsymbol\sigma_w$ is the conductor's choice: with
 a monodomain myocardium, whose $V_m$ is sealed
-($\mathbf n\cdot\mathbf G_i\nabla V_m=0$), the wall carries the total
-conductivity, $\mathbf G_w=\mathbf G_i+\mathbf G_e$; with a bidomain
+($\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m=0$), the wall carries the total
+conductivity, $\boldsymbol\sigma_w=\boldsymbol\sigma_i+\boldsymbol\sigma_e$; with a bidomain
 myocardium the intracellular potential is sealed,
-$\mathbf n\cdot\mathbf G_i\nabla(\phi+V_m)=0$, and
-$\mathbf G_w=\mathbf G_e$. The problem is of pure Neumann
+$\mathbf n\cdot\boldsymbol\sigma_i\nabla(\phi+V_m)=0$, and
+$\boldsymbol\sigma_w=\boldsymbol\sigma_e$. The problem is of pure Neumann
 type; the constant of $\phi$ is fixed by a reference point
 $\mathbf r_{\mathrm{ref}}$ in the torso (`phiERefPoint` of the torso
 dictionary), whose cell is pinned to the reference value
@@ -145,7 +146,7 @@ field [@pathmanathan2013verification] on the three-dimensional heart mesh
 (`dimension "1D"`), so the computed $V_m$ approximates the exact $V_m$
 below and the lead-field and direct channels can be compared on it.
 
-The problems exercise the heart source $-\nabla\cdot(\mathbf G_i\nabla V_m)$,
+The problems exercise the heart source $-\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)$,
 the heart and torso operators, two plane heart--torso interfaces and, in the
 layered problem, two plane torso--torso interfaces with a conductivity ratio
 of 5 and a current through all of them. They do not exercise a curved
@@ -154,8 +155,8 @@ an electrode where the exact potential varies across the slab's $y$ and $z$.
 In the slab problem the exact torso potential is constant, so the point and
 the centroid values of an electrode are equal and the torso conductivity does
 not enter. The layered problem with a current needs the monodomain
-myocardium: at the walls the exact heart slope $\alpha/(\mathbf G_i+\mathbf G_e)_{xx}$
-carries the intracellular flux $\alpha G_{i,xx}/(G_{i,xx}+G_{e,xx})$, which the
+myocardium: at the walls the exact heart slope $\alpha/(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}$
+carries the intracellular flux $\alpha \sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})$, which the
 sealed intracellular potential of the bidomain conductor does not admit.
 
 ## Problem instance
@@ -164,22 +165,22 @@ Box $[-1,2]\times[0,1]^2$: torso $-1\le x\le0$, heart $0\le x\le1$, torso
 $1\le x\le2$ (@fig-slab-geometry). The heart conductivities are uniform and
 diagonal (S m$^{-1}$):
 
-| myocardium | conductivity | ECG domain $\mathbf G_i$ | ECG domain $\mathbf G_e$ |
+| myocardium | conductivity | ECG domain $\boldsymbol\sigma_i$ | ECG domain $\boldsymbol\sigma_e$ |
 |:------|:--------------------------|:--------|:--------|
-| `monodomain` | $\mathbf G_m=\mathrm{diag}(0.111453302,\,0.121585420,\,0.030396355)$ | $(2+\sqrt2)\,\mathbf G_m$ | $\sqrt2\,\mathbf G_m$ |
-| `bidomain` | $\mathbf G_i=\mathrm{diag}(0.111453302,\,0.121585420,\,0.030396355)$, $\mathbf G_e=\mathrm{diag}(0.046165469,\,0.050362330,\,0.012590582)$ | the solver's | the solver's |
+| `monodomain` | $\boldsymbol\sigma=\mathrm{diag}(0.111453302,\,0.121585420,\,0.030396355)$ | $(2+\sqrt2)\,\boldsymbol\sigma$ | $\sqrt2\,\boldsymbol\sigma$ |
+| `bidomain` | $\boldsymbol\sigma_i=\mathrm{diag}(0.111453302,\,0.121585420,\,0.030396355)$, $\boldsymbol\sigma_e=\mathrm{diag}(0.046165469,\,0.050362330,\,0.012590582)$ | the solver's | the solver's |
 
-In both rows $k=G_{i,xx}/(G_{i,xx}+G_{e,xx})=1/\sqrt2$. The exact solution
+In both rows $\kappa=\sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})=1/\sqrt2$. The exact solution
 depends on the $xx$ entries only, so it is the same for the options
 `-conductivity anisotropic`, `isotropic` and `unequal` of the tutorial; the
 three differ in what the static error measures (tutorial README).
 
-- `slab`: torso conductivity $\sigma$ in the cellZone `bath`; every outer
-  face insulated ($g_{\mathrm{out}}=0$); $S_H=S_T=0$.
+- `slab`: torso conductivity $\sigma_b$ in the cellZone `bath`; every outer
+  face insulated ($g_{\mathrm{out}}=0$); $S_H=S_B=0$.
 - `layered`: the torso slabs split at $x_L=-0.5$ and $x_R=1.5$ into the
-  cellZones `torsoInner` ($x_L<x<0$ and $1<x<x_R$, $\sigma_1=0.1$) and
-  `torsoOuter` ($x<x_L$ and $x>x_R$, $\sigma_2=0.02$); surface currents
-  $\mathbf n\cdot\sigma\nabla\phi=-\alpha$ on the face `xMin` ($x=-1$) and
+  cellZones `torsoInner` ($x_L<x<0$ and $1<x<x_R$, $\sigma_{b,1}=0.1$) and
+  `torsoOuter` ($x<x_L$ and $x>x_R$, $\sigma_{b,2}=0.02$); surface currents
+  $\mathbf n\cdot\sigma_b\nabla\phi=-\alpha$ on the face `xMin` ($x=-1$) and
   $+\alpha$ on `xMax` ($x=2$), $\alpha=0.01$ (`-alpha`); the faces `sides`
   insulated. The current density $-\sigma\nabla\phi=-\alpha\,\mathbf e_x$ is
   the same in every layer.
@@ -203,17 +204,17 @@ three differ in what the static error measures (tutorial README).
 |:--------|:------------------|:--------------------------|:------|
 | `surface1` | $(-0.997,\,0.3137,\,0.6871)$ | face $x=-1$; `torsoOuter` (pinned layer) | 0 |
 | `surface2` | $(-0.997,\,0.7213,\,0.2419)$ | face $x=-1$; `torsoOuter` (pinned layer) | 0 |
-| `surface3` | $(1.997,\,0.4127,\,0.5813)$ | face $x=2$; `torsoOuter` | $2kS$ |
-| `surface4` | $(1.997,\,0.8317,\,0.1733)$ | face $x=2$; `torsoOuter` | $2kS$ |
+| `surface3` | $(1.997,\,0.4127,\,0.5813)$ | face $x=2$; `torsoOuter` | $2\kappa S$ |
+| `surface4` | $(1.997,\,0.8317,\,0.1733)$ | face $x=2$; `torsoOuter` | $2\kappa S$ |
 | `surface5` | $(-0.3713,\,0.003,\,0.4419)$ | face $y=0$, left torso; `torsoInner` | 0 |
 | `surface6` | $(-0.6871,\,0.5371,\,0.997)$ | face $z=1$, left torso; `torsoOuter` (pinned layer) | 0 |
-| `surface7` | $(1.3317,\,0.997,\,0.6137)$ | face $y=1$, right torso; `torsoInner` | $2kS$ |
-| `surface8` | $(1.7219,\,0.2713,\,0.003)$ | face $z=0$, right torso; `torsoOuter` | $2kS$ |
+| `surface7` | $(1.3317,\,0.997,\,0.6137)$ | face $y=1$, right torso; `torsoInner` | $2\kappa S$ |
+| `surface8` | $(1.7219,\,0.2713,\,0.003)$ | face $z=0$, right torso; `torsoOuter` | $2\kappa S$ |
 | `torsoLeftFar` | $(-0.8713,\,0.2311,\,0.7129)$ | left torso; `torsoOuter` (pinned layer) | 0 |
 | `torsoLeft` | $(-0.4567,\,0.4137,\,0.5871)$ | left torso; `torsoInner` | 0 |
 | `nearLeft` | $(-0.0213,\,0.4521,\,0.5317)$ | left torso next to the heart; `torsoInner` | 0 |
-| `nearRight` | $(1.0187,\,0.3719,\,0.4613)$ | right torso next to the heart; `torsoInner` | $2kS$ |
-| `torsoRight` | $(1.5433,\,0.6173,\,0.3311)$ | right torso; `torsoOuter` | $2kS$ |
+| `nearRight` | $(1.0187,\,0.3719,\,0.4613)$ | right torso next to the heart; `torsoInner` | $2\kappa S$ |
+| `torsoRight` | $(1.5433,\,0.6173,\,0.3311)$ | right torso; `torsoOuter` | $2\kappa S$ |
 
 - Time: $\Delta t=0.01$, end time $0.05$; the verifier samples every step.
 
@@ -232,18 +233,18 @@ In cardiacFoam:
 
 *Slab.* With $S=\sqrt{1+t}$, the heart field is the FDA field of $d=1$,
 $V_m=S\cos(\pi x)$. Its derivative vanishes at $x=0$ and $x=1$, so no
-current leaves the heart through $\Gamma$ whichever wall conductivity the
-conductor uses. In the heart, $\phi=-kV_m+C$ solves
-$\nabla\cdot((\mathbf G_i+\mathbf G_e)\nabla\phi)=-\nabla\cdot(\mathbf G_i\nabla V_m)$
+current leaves the heart through $\Gamma_{HB}$ whichever wall conductivity the
+conductor uses. In the heart, $\phi=-\kappa V_m+C$ solves
+$\nabla\cdot((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi)=-\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)$
 because $\phi$ and $V_m$ depend on $x$ only and
-$(G_{i,xx}+G_{e,xx})\,k=G_{i,xx}$. Its slope vanishes at both walls, so the
+$(\sigma_{i,xx}+\sigma_{e,xx})\,\kappa=\sigma_{i,xx}$. Its slope vanishes at both walls, so the
 torso potential is constant on each side and continuity fixes it to the wall
-value: $-kS+C$ on the left and $kS+C$ on the right. The torso conductivity
+value: $-\kappa S+C$ on the left and $\kappa S+C$ on the right. The torso conductivity
 does not enter.
 
 *Layered.* A uniform current density $-\alpha\,\mathbf e_x$ through layers
-of conductivity $\sigma(x)$ ($\sigma_2$, $\sigma_1$,
-$(G_i+G_e)_{xx}$, $\sigma_1$, $\sigma_2$ from left to right) has the
+of conductivity $\sigma(x)$ ($\sigma_{b,2}$, $\sigma_{b,1}$,
+$(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}$, $\sigma_{b,1}$, $\sigma_{b,2}$ from left to right) has the
 potential $\alpha R(x)$ with $R'=1/\sigma$. $R$ is continuous and
 $\sigma R'=1$ in every layer, so the potential and the normal current are
 continuous at $x=x_L,0,1,x_R$; on `xMin` the outward normal is
@@ -282,7 +283,7 @@ so that, gauged in the left torso,
 
 {{< include ../../latex/leadfield_slab_phi_gauged.tex >}}
 
-and the exact ECG between the right and the left torso is $2kS$. In the
+and the exact ECG between the right and the left torso is $2\kappa S$. In the
 layered problem
 
 {{< include ../../latex/leadfield_layered_phi.tex >}}
@@ -294,8 +295,8 @@ conductivities from the torso cells, and stops with a fatal error when a torso
 cell crosses a layer interface, when a layer has more than one or an
 anisotropic conductivity, when the surface currents are not along $x$ or carry
 a net current, or when a current is combined with the bidomain conductor.
-With $\alpha=0$ the layered potential equals the slab's for any $\sigma_1$,
-$\sigma_2$.
+With $\alpha=0$ the layered potential equals the slab's for any $\sigma_{b,1}$,
+$\sigma_{b,2}$.
 
 The full expressions are `fields()` of `slab_leadfield_mms.py` and `Vm`,
 `phi_slab`, `resistance` and `phi_layered` of `reference/slab_leadfield.py`,
@@ -318,24 +319,24 @@ which follows the header branch by branch.
 
 `slab_leadfield_mms.py --self-check` asserts, symbolically:
 
-- in the heart $(G_i+G_e)_{xx}\,\phi''=-G_{i,xx}V_m''$ with
-  $k(G_i+G_e)_{xx}=G_{i,xx}$, and $V_m'$ vanishes at $x=0$ and $x=1$;
+- in the heart $(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}\,\phi''=-\sigma_{i,xx}V_m''$ with
+  $\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}=\sigma_{i,xx}$, and $V_m'$ vanishes at $x=0$ and $x=1$;
 - $\phi^\ast_{\mathrm{slab}}$ is continuous at $x=0$ and $x=1$ and linear in
-  each torso slab, and, gauged in the left torso, $0$ on the left and $2kS$
+  each torso slab, and, gauged in the left torso, $0$ on the left and $2\kappa S$
   on the right;
 - $R$ is continuous at $x_L$, $0$, $1$, $x_R$, $R(0)=0$, and $\sigma R'=1$ in
   every layer, so the normal current is continuous;
 - the surface currents are $-\alpha$ on $x=-1$ and $+\alpha$ on $x=2$;
 - with $\alpha=0$ the layered potential equals the slab's;
-- $k=1/\sqrt2$ to $10^{-8}$ for both conductivity pairs of the tutorial;
+- $\kappa=1/\sqrt2$ to $10^{-8}$ for both conductivity pairs of the tutorial;
 - the printed constants round-trip.
 
 `test_slab_leadfield_mms.py` compares `reference/slab_leadfield.py` with
 `leadfield_reference.py`, the transcription of the C++ header, to
 $10^{-15}$ on $-1\le x\le2$ at three times, and the constants with the
 dictionaries of the tutorial. `leadfield_reference.py --self-check` asserts
-that $k=1/\sqrt2$ to $10^{-11}$; that $\phi^\ast_{\mathrm{slab}}$ is $0$ on
-the left, $2kS$ on the right and continuous at $x=0$ and $x=1$; that $R$ is
+that $\kappa=1/\sqrt2$ to $10^{-11}$; that $\phi^\ast_{\mathrm{slab}}$ is $0$ on
+the left, $2\kappa S$ on the right and continuous at $x=0$ and $x=1$; that $R$ is
 continuous with $\sigma R'=1$ (central differences, $10^{-8}$) on both sides of
 each of $x_L$, $0$, $1$, $x_R$; and that the electrodes of the case are
 `surface1` to `surface8`, $0.003$ from the outer boundary, and probes
@@ -343,7 +344,7 @@ farther inside, all in the torso and none on a hexahedral face at
 $N=10,20,40,80$.
 
 `--check-run RUN` reads the verifier line of `log.cardiacFoam` (reference,
-$k$, $\alpha$ and the layer conductivities, which must equal the values of
+$\kappa$, $\alpha$ and the layer conductivities, which must equal the values of
 @sec-slab to the printed precision) and, at every sample, asserts to
 $10^{-12}$ that:
 
@@ -414,7 +415,7 @@ non-zero normal and tangential gradients on both spheres; it is continuous
 across them, the extracellular flux is continuous and the intracellular
 potential is sealed, all exactly.
 
-The problem exercises the heart source with a full, varying $\mathbf G_i$, the
+The problem exercises the heart source with a full, varying $\boldsymbol\sigma_i$, the
 anisotropic heart operator, two curved heart--torso interfaces crossed by
 polyhedral faces, a varying torso conductivity, and the bidomain wall
 condition. It also needs data that an ordinary run does not have: a source
@@ -467,8 +468,8 @@ In cardiacFoam:
   `-mesh hex|tet`, `-N`, `-seed`;
 - `setManufacturedFields` writes `0/ConductivityIntracellular`,
   `0/ConductivityExtracellular` and `0/bodyAndOrgansConductivity` from the
-  solution at the cell centres; every cell takes $\mathbf G_i$ and
-  $\mathbf G_e$ of the heart formula, and the torso cells $\sigma_B$ of their
+  solution at the cell centres; every cell takes $\boldsymbol\sigma_i$ and
+  $\boldsymbol\sigma_e$ of the heart formula, and the torso cells $\sigma_b$ of their
   zone;
 - ECG domain `leadFieldECG`, torso cellZones `bloodPool` and `bath`,
   `distanceWeightedHarmonic`; myocardium `bidomainSolver` with
@@ -499,7 +500,7 @@ bidomain shells, with $r_1$, $r_2$ the radii of the heart:
 
 {{< include ../../latex/shell_bidomain_Ge.tex >}}
 
-$\mathbf G_i$ and $\mathbf G_e$ share one frame and one fibre angle. A fixed
+$\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ share one frame and one fibre angle. A fixed
 frame is used because a fibre field tangent to a sphere vanishes somewhere
 on it.
 
@@ -538,9 +539,9 @@ $\nabla\omega=d_j\mathbf n_j$:
 
 {{< include ../../latex/shell_d2.tex >}}
 
-With $\sigma_{B,1}$ the bath-ball formula and $\sigma_{B,2}$ the outer-bath
-formula of $\sigma_B$, evaluated at $\mathbf x$, and $\mathbf G_i$,
-$\mathbf G_e$ the heart tensors at $\mathbf x$,
+With $\sigma_{b,1}$ the bath-ball formula and $\sigma_{b,2}$ the outer-bath
+formula of $\sigma_b$, evaluated at $\mathbf x$, and $\boldsymbol\sigma_i$,
+$\boldsymbol\sigma_e$ the heart tensors at $\mathbf x$,
 
 {{< include ../../latex/shell_transmission_gj.tex >}}
 
@@ -555,8 +556,8 @@ $\phi=f$. On sphere $j$, $\omega=0$ and $\nabla(\omega g)=g_jd_j\mathbf n_j$,
 so
 
 - $\phi$ is continuous ($f$ on both sides);
-- $\mathbf n_j\cdot\mathbf G_e\nabla\phi=\mathbf n_j\cdot\mathbf G_e\nabla f+\mathbf n_j\cdot(\sigma_{B,j}\mathbf I-\mathbf G_e)\nabla f=\mathbf n_j\cdot\sigma_B\nabla\phi$;
-- $\mathbf n_j\cdot\mathbf G_i\nabla\phi_i=\mathbf n_j\cdot\mathbf G_i\nabla h-\mathbf n_j\cdot\mathbf G_i\nabla h=0$.
+- $\mathbf n_j\cdot\boldsymbol\sigma_e\nabla\phi=\mathbf n_j\cdot\boldsymbol\sigma_e\nabla f+\mathbf n_j\cdot(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_e)\nabla f=\mathbf n_j\cdot\sigma_b\nabla\phi$;
+- $\mathbf n_j\cdot\boldsymbol\sigma_i\nabla\phi_i=\mathbf n_j\cdot\boldsymbol\sigma_i\nabla h-\mathbf n_j\cdot\boldsymbol\sigma_i\nabla h=0$.
 
 The denominators are positive because the tensors are positive definite, so
 every zone formula extends smoothly beyond its sphere, where polyhedral faces
@@ -570,7 +571,7 @@ $T$ times a field built on
 {{< include ../../latex/shell_transmission_f2.tex >}}
 
 so that $V_m$ is unchanged. In the heart the term is $T(f_2+\omega q)$, with
-$q$ sealing it with respect to $\mathbf G_i$:
+$q$ sealing it with respect to $\boldsymbol\sigma_i$:
 
 {{< include ../../latex/shell_transmission_qj.tex >}}
 
@@ -578,8 +579,8 @@ $q$ sealing it with respect to $\mathbf G_i$:
 
 In the bath zone of sphere $j$ it is $T(f_2+\beta_jr_j)$, with $\beta_j$ zero
 on the sphere and $r_j$ the correction that keeps the extracellular flux
-continuous, built with the heart tensors $\mathbf G_i^{(j)}$,
-$\mathbf G_e^{(j)}$ of the sphere ($\theta=\theta_0$ for $j=1$,
+continuous, built with the heart tensors $\boldsymbol\sigma_i^{(j)}$,
+$\boldsymbol\sigma_e^{(j)}$ of the sphere ($\theta=\theta_0$ for $j=1$,
 $\theta=\theta_0+\theta_1$ for $j=2$) and the denominator $D_j$, positive in
 the whole zone, the origin included:
 
@@ -623,7 +624,7 @@ with the formula of the zone that contains the point (`zoneOf`), gauged as in
 sources are not printed: they are `phiESource` of the zone in
 `expressions("levelSet")` of `shell_mms.py`. In code: `Vm`, `phiE`, `phiI`,
 `gradPhiE`, `Gi`, `Ge`, `sigmaB`, `divGiGradPhiI` and `phiESource` (the source
-$S_H$ or $S_T$ of the zone) of the namespace `shellTransmissionMMS`; in Python
+$S_H$ or $S_B$ of the zone) of the namespace `shellTransmissionMMS`; in Python
 `Model.eval_xyz(zone, name, points, t)` of `shell_mms.py`, and `shell_eval`,
 `shell_phi` of `leadfield_reference.py`.
 
@@ -633,7 +634,7 @@ $S_H$ or $S_T$ of the zone) of the namespace `shellTransmissionMMS`; in Python
 write, and `test_shell_mms.py` repeats:
 
 - shared construction: $\lambda$, $\omega$, the frame, the wall normals,
-  $d_j$, $\mathbf G_i$, $\mathbf G_e$, $\hat h$ and $\hat f$ equal those of
+  $d_j$, $\boldsymbol\sigma_i$, $\boldsymbol\sigma_e$, $\hat h$ and $\hat f$ equal those of
   `shell_monodomain_mms.py` and `shell_bidomain_mms.py`, whose fragments are
   printed above (symbolic);
 - interface conditions: continuity of $\phi$, of the extracellular flux and
@@ -646,10 +647,10 @@ write, and `test_shell_mms.py` repeats:
   evaluated $0.025$ beyond its sphere;
 - boundedness and positive denominators over the zones widened by $0.05$;
 - richness: on each sphere and for each tensor, the tangential part of
-  $\mathbf G\mathbf n$ applied to the gradient ($\nabla\phi$ for
-  $\mathbf G_e$, $\nabla\phi_i$ for $\mathbf G_i$) has an RMS of at least 0.2
-  times that of the reference flux ($\mathbf n\cdot\mathbf G_e\nabla\phi$,
-  $\lvert\mathbf G_i\nabla\phi_i\rvert$), and reaches 0.2 of it over at least
+  $\boldsymbol\sigma\mathbf n$ applied to the gradient ($\nabla\phi$ for
+  $\boldsymbol\sigma_e$, $\nabla\phi_i$ for $\boldsymbol\sigma_i$) has an RMS of at least 0.2
+  times that of the reference flux ($\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi$,
+  $\lvert\boldsymbol\sigma_i\nabla\phi_i\rvert$), and reaches 0.2 of it over at least
   70% of the area;
 - the common mode leaves $V_m$, $\nabla V_m$ unchanged ($10^{-14}$), and the
   manufactured ionic closure of the heart holds ($10^{-13}$).
@@ -660,8 +661,8 @@ solution's at the cell centres by more than $10^{-10}$ relative, or when an
 electrode lies in the heart. `leadfield_reference.py --self-check` asserts
 that the twelve electrodes and the reference point lie in the zones of the
 table above and that the body-surface electrodes lie at
-$\lvert\mathbf x\rvert=1.495$, and `figures.py` that $\mathbf G_i$ and
-$\mathbf G_e$ have the same eigenvectors. `--check-run` compares the run with
+$\lvert\mathbf x\rvert=1.495$, and `figures.py` that $\boldsymbol\sigma_i$ and
+$\boldsymbol\sigma_e$ have the same eigenvectors. `--check-run` compares the run with
 `shell_mms.py` as in @sec-slab-checks. On the tetrahedra of the figures the
 gauge and the centroid values agree to $3\times10^{-16}$. On the cubed sphere
 the cells are not affine and their outer faces are curved: the pinned-cell
@@ -670,9 +671,9 @@ six-digit centroids of the log, to $3\times10^{-6}$ at $N=8$ and $N=12$.
 
 ## Figures
 
-![Curved conductor. (a) Cut-away of the bath ball `bloodPool` and the heart shell `myocardium` with the quarter $-90^\circ<\arctan(y/x)<0$ removed, inside the whole outer bath `bath` (translucent); the eight body-surface electrodes on the outer sphere (spheres, labelled 1 to 8 for `surface1` to `surface8`), the four interior probes (octahedra, labelled by name) and the reference point (cube). `pool` lies in the bath ball, inside the removed quarter. The view direction is chosen so that no opaque zone hides any part of a marker, and each label is placed in the direction farthest from the other markers and labels. (b) The fibre, sheet and sheet-normal directions of $\mathbf G_i$ and $\mathbf G_e$ (one frame) at six sites through the wall on a cut face, the fibre shaded from the inner (light) to the outer (dark) sphere.](figures/shell_regions.png){#fig-shell-regions width=100%}
+![Curved conductor. (a) Cut-away of the bath ball `bloodPool` and the heart shell `myocardium` with the quarter $-90^\circ<\arctan(y/x)<0$ removed, inside the whole outer bath `bath` (translucent); the eight body-surface electrodes on the outer sphere (spheres, labelled 1 to 8 for `surface1` to `surface8`), the four interior probes (octahedra, labelled by name) and the reference point (cube). `pool` lies in the bath ball, inside the removed quarter. The view direction is chosen so that no opaque zone hides any part of a marker, and each label is placed in the direction farthest from the other markers and labels. (b) The fibre, sheet and sheet-normal directions of $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ (one frame) at six sites through the wall on a cut face, the fibre shaded from the inner (light) to the outer (dark) sphere.](figures/shell_regions.png){#fig-shell-regions width=100%}
 
-![Exact fields on the plane $z=0$; circles at $r_1$, $r_2$, $r_3$. (a) $\phi$ at $t=0$ in all zones, gauged to 0 at the reference point (square, $0.046$ above the plane). (b) $\sigma_B$ in the bath ball and the outer bath. (c) $V_m$ at $t=0$ in the heart, the input of the lead-field channel.](figures/shell_fields.png){#fig-shell-fields width=100%}
+![Exact fields on the plane $z=0$; circles at $r_1$, $r_2$, $r_3$. (a) $\phi$ at $t=0$ in all zones, gauged to 0 at the reference point (square, $0.046$ above the plane). (b) $\sigma_b$ in the bath ball and the outer bath. (c) $V_m$ at $t=0$ in the heart, the input of the lead-field channel.](figures/shell_fields.png){#fig-shell-fields width=100%}
 
 ::: {#fig-shell-mesh layout-ncol=2}
 
@@ -717,23 +718,23 @@ conductor and the recording at a cell.
 
 ## The identity
 
-The finite-volume conductor is a linear system $A\boldsymbol\phi=\mathbf b(V_m)$
+The finite-volume conductor is a linear system $\mathbf A\boldsymbol\phi=\mathbf b(V_m)$
 over all cells, with the reference cell pinned to $\phi_{\mathrm{ref}}$ and
-$\mathbf b=-\nabla_h\cdot(\mathbf G_i\nabla_hV_m)$ in heart cells and zero in
-torso cells, both per unit volume. $A=M+C$, with $M$ the implicit symmetric
-part and $C$ the explicit corrections (cross diffusion, non-orthogonal and
+$\mathbf b=-\nabla_h\cdot(\boldsymbol\sigma_i\nabla_hV_m)$ in heart cells and zero in
+torso cells, both per unit volume. $\mathbf A=\mathbf M+\mathbf C$, with $\mathbf M$ the implicit symmetric
+part and $\mathbf C$ the explicit corrections (cross diffusion, non-orthogonal and
 interface terms). For electrode $e$, `buildLeadFields` solves the adjoint
 problem
 
 $$
-A^{\mathsf T}\mathbf z_e=\mathbf e_{c(e)},
-\qquad\text{as the fixed point}\quad M\mathbf z_e=\mathbf e_{c(e)}-C^{\mathsf T}\mathbf z_e,
+\mathbf A^{\mathsf T}\mathbf z_e=\mathbf e_{c(e)},
+\qquad\text{as the fixed point}\quad \mathbf M\mathbf z_e=\mathbf e_{c(e)}-\mathbf C^{\mathsf T}\mathbf z_e,
 $$
 
 and the channel is
 
 $$
-\phi_e=\sum_c z_{e,c}\,V_c\,b_c(V_m)+c_e
+\Phi_e^{\mathrm{LF},h}=\sum_c z_{e,c}\,V_c\,b_c(V_m)+c_e
 =\phi_{c(e)}\quad\text{of the converged forward solve},
 $$
 
@@ -742,12 +743,12 @@ with $c_e$ the constant contribution of ground values, surface currents
 conductor the manufactured data enter as one more cell source,
 
 $$
-s_c=S_c-\frac1{V_c}\sum_{f\in\partial c\cap\partial\Omega}g_{\mathrm{out},f}\lvert\mathbf S_f\rvert,
+s_c=S_c-\frac1{V_c}\sum_{f\in\partial c\cap\Gamma_B}g_{\mathrm{out},f}\lvert\mathbf S_f\rvert,
 \qquad
 s\leftarrow s-\frac{\sum_cV_cs_c}{\sum_cV_c},
 $$
 
-with $S_c$ the zone source $S_H$ or $S_T$ at the cell centre and the
+with $S_c$ the zone source $S_H$ or $S_B$ at the cell centre and the
 outer-face current moved into the owner cell; its volume mean is removed so
 that the pure-Neumann problem is consistent. The direct solve adds $s$ to
 $\mathbf b$ and the channel adds $\sum_cz_{e,c}V_cs_c$.
@@ -759,7 +760,7 @@ electrodes and the interior probes alike):
 
 | column | meaning |
 |:--|:--|
-| `leadField` | the channel $\phi_e$ on the computed $V_m$ |
+| `leadField` | the channel $\Phi_e^{\mathrm{LF},h}$ on the computed $V_m$ |
 | `direct` | the forward solve of the same conductor on the computed $V_m$, assembly and solve repeated until the relative change is below `leadFieldFixedPoint tolerance`, in cell $c(e)$ |
 | `exactPoint` | $\phi(\mathbf r_e,t)$, gauged at $\mathbf x_{\mathrm{ref}}$ |
 | `exactCentroid` | $\phi(\mathbf x_{c(e)},t)$, gauged at $\mathbf x_{\mathrm{ref}}$ |
@@ -799,8 +800,8 @@ electrodes, the interior probes and `phiStatic_surface` as separate groups.
 
 `buildLeadFields` stops with a fatal error when the probed explicit operator
 is not linear or does not reproduce the assembled one ($10^{-11}$), when
-$\langle\mathbf z,C\boldsymbol\psi\rangle\ne\langle C^{\mathsf T}\mathbf z,\boldsymbol\psi\rangle$
-or $M$ is not symmetric ($10^{-12}$), when the residual of a lead field
+$\langle\mathbf z,\mathbf C\boldsymbol\psi\rangle\ne\langle\mathbf C^{\mathsf T}\mathbf z,\boldsymbol\psi\rangle$
+or $\mathbf M$ is not symmetric ($10^{-12}$), when the residual of a lead field
 exceeds $10^{-8}$, or when the pinned row is not satisfied ($10^{-8}$); it
 refuses nonlinear schemes. `leadFieldECG` stops when the signature of the
 lead fields (mesh, conductivities, schemes, electrodes, reference) differs

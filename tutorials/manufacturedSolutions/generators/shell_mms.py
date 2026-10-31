@@ -876,7 +876,7 @@ SHELL_TEX = {"r1": "r_1", "r2": "r_2", "gamma1": r"\gamma_1", "gamma2": r"\gamma
              "k": "k", "theta0": r"\theta_0", "theta1": r"\theta_1",
              "gil": r"\sigma_{i,f}", "git": r"\sigma_{i,s}", "gin": r"\sigma_{i,n}",
              "gel": r"\sigma_{e,f}", "get": r"\sigma_{e,s}", "gen": r"\sigma_{e,n}",
-             "sigma0In": r"\sigma_{0,\mathrm{in}}", "sigma0Out": r"\sigma_{0,\mathrm{out}}",
+             "sigma0In": r"\bar\sigma_{\mathrm{in}}", "sigma0Out": r"\bar\sigma_{\mathrm{out}}",
              "sigmaEps": r"\varepsilon", "cmAmplitude": "A_T",
              "cmOmega": r"\nu",
              "hA0": "a_1", "hA1": "a_2", "hA2": "a_3",
@@ -893,11 +893,11 @@ def _names(extra=()):
 def latex_fragments():
     out = {}
     sh, lam, om, rho, S, T = sp.symbols("sh lam om rho S T", real=True)
-    base = [(sh, r"\hat\sigma"), (lam, r"\lambda"), (om, r"\omega"),
+    base = [(sh, r"\hat s"), (lam, r"\lambda"), (om, r"\omega"),
             (rho, r"\lvert\mathbf x\rvert^2"), (S, "S"), (T, "T")]
     names = _names(base)
-    out["sigmahat"] = emit_latex_fragment(r"\hat\sigma", _sigma_hat(), names)
-    out["sigmaB"] = emit_cases_fragment(r"\sigma_B", [
+    out["sigmahat"] = emit_latex_fragment(r"\hat s", _sigma_hat(), names)
+    out["sigmaB"] = emit_cases_fragment(r"\sigma_b", [
         (P["sigma0In"]*(1 + P["sigmaEps"]*sh), r"\lvert\mathbf x\rvert<r_1"),
         (P["sigma0Out"]*(1 + P["sigmaEps"]*sh), r"\lvert\mathbf x\rvert>r_2")], names)
     out["fhat"] = emit_latex_fragment(r"\hat f", _fhat(), names)
@@ -913,13 +913,13 @@ def latex_fragments():
     a, b, dj, a1, a2 = sp.symbols("a b dj a1 a2", real=True)
     corr = [(dj, "d_j")]
     nf = _names(base + corr + [
-        (a, r"\mathbf n_j\cdot\left(\sigma_{B,j}\mathbf I-\mathbf G_e\right)\nabla f"),
-        (b, r"\left(\mathbf n_j\cdot\mathbf G_e\mathbf n_j\right)")])
+        (a, r"\mathbf n_j\cdot\left(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_e\right)\nabla f"),
+        (b, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_e\mathbf n_j\right)")])
     out["gj"] = emit_latex_fragment("g_j", _flux_correction(a, b, dj), nf)
     for tag, field in (("mj", "h"), ("qj", "f_2")):
         ns = _names(base + corr + [
-            (a, r"\left(\mathbf n_j\cdot\mathbf G_i\nabla %s\right)" % field),
-            (b, r"\left(\mathbf n_j\cdot\mathbf G_i\mathbf n_j\right)")])
+            (a, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\nabla %s\right)" % field),
+            (b, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\mathbf n_j\right)")])
         out[tag] = emit_latex_fragment(tag[0] + "_j", _seal_correction(a, b, dj), ns)
     for tag in ("g", "m", "q"):
         nb = _names(base + [(a1, tag + "_1"), (a2, tag + "_2")])
@@ -941,29 +941,29 @@ def latex_fragments():
     out["kappa"] = emit_latex_fragment(
         r"\kappa", 1/(1/P["gil"] + 1/P["git"] + 1/P["gin"]), names)
     xG1, xG2, kap = sp.symbols("xG1 xG2 kappa", real=True)
-    nd = _names(base + [(xG1, r"\mathbf x\cdot\mathbf G_i^{(1)}\mathbf x"),
-                        (xG2, r"\mathbf x\cdot\mathbf G_i^{(2)}\mathbf x"),
+    nd = _names(base + [(xG1, r"\mathbf x\cdot\boldsymbol\sigma_i^{(1)}\mathbf x"),
+                        (xG2, r"\mathbf x\cdot\boldsymbol\sigma_i^{(2)}\mathbf x"),
                         (kap, r"\kappa")])
     out["D1"] = emit_latex_fragment("D_1", (xG1 + kap*(r1**2 - rho))/r1**2, nd)
     out["D2"] = emit_latex_fragment("D_2", xG2/r2**2, nd)
     out["beta1"] = emit_latex_fragment(r"\beta_1", (r1**2 - rho)/(2*r1), names)
     out["beta2"] = emit_latex_fragment(r"\beta_2", (rho - r2**2)/(2*r2), names)
     c1, c2, c3, c4, Dj, sj = sp.symbols("c1 c2 c3 c4 Dj sj", real=True)
-    nr = _names(base + [(c1, r"\left(\mathbf n_j\cdot\mathbf G_e^{(j)}\nabla f_2\right)"),
-                        (c2, r"\left(\mathbf n_j\cdot\mathbf G_i^{(j)}\nabla f_2\right)"),
-                        (c3, r"\left(\mathbf n_j\cdot\mathbf G_e^{(j)}\mathbf n_j\right)"),
+    nr = _names(base + [(c1, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_e^{(j)}\nabla f_2\right)"),
+                        (c2, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i^{(j)}\nabla f_2\right)"),
+                        (c3, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_e^{(j)}\mathbf n_j\right)"),
                         (Dj, "D_j"), (c4, r"\left(\mathbf n_j\cdot\nabla f_2\right)"),
-                        (sj, r"\sigma_B")])
+                        (sj, r"\sigma_b")])
     out["rj"] = emit_latex_fragment("r_j", _closure(c1, c2, c3, Dj, c4, sj), nr)
 
     dGi, dGe, dsB, gout = sp.symbols("dGi dGe dsB gout", real=True)
-    ns = _names([(dGi, r"\nabla\!\cdot\!\left(\mathbf G_i\nabla\phi_i\right)"),
-                 (dGe, r"\nabla\!\cdot\!\left(\mathbf G_e\nabla\phi\right)"),
-                 (dsB, r"\nabla\!\cdot\!\left(\sigma_B\nabla\phi\right)"),
-                 (gout, r"\sigma_B\,\mathbf n\cdot\nabla\phi")])
+    ns = _names([(dGi, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_i\nabla\phi_i\right)"),
+                 (dGe, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_e\nabla\phi\right)"),
+                 (dsB, r"\nabla\!\cdot\!\left(\sigma_b\nabla\phi\right)"),
+                 (gout, r"\sigma_b\,\mathbf n\cdot\nabla\phi")])
     out["sources"] = emit_cases_fragment("S", [
         (dGi + dGe, r"\text{in }\Omega_H\ (S_H)"),
-        (dsB, r"\text{in }\Omega_T\ (S_T)")], ns)
+        (dsB, r"\text{in }\Omega_B\ (S_B)")], ns)
     out["gout"] = emit_latex_fragment(r"g_{\mathrm{out}}", gout, ns)
 
     p = default_params()

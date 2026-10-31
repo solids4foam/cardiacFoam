@@ -183,8 +183,8 @@ def run_self_checks():
 def _names():
     sigma1, sigma2, sh, xl, xr = (sp.Symbol(n, real=True)
                                   for n in ("sigma1", "sigma2", "sH", "xL", "xR"))
-    return ({k: "k", alpha: r"\alpha", sigma1: r"\sigma_1", sigma2: r"\sigma_2",
-             sh: r"(G_i+G_e)_{xx}", xl: "x_L", xr: "x_R"},
+    return ({k: r"\kappa", alpha: r"\alpha", sigma1: r"\sigma_{b,1}", sigma2: r"\sigma_{b,2}",
+             sh: r"(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}", xl: "x_L", xr: "x_R"},
             {L["sigmaOuterLeft"]: sigma2, L["sigmaInnerLeft"]: sigma1,
              L["sigmaHeart"]: sh, L["sigmaInnerRight"]: sigma1,
              L["sigmaOuterRight"]: sigma2, L["xLeft"]: xl, L["xRight"]: xr})
@@ -210,10 +210,10 @@ def latex_fragments():
     names[Ss] = "S"
     sub = {S: Ss}
     gxx, exx = sp.symbols("gxx exx", real=True)
-    names.update({gxx: r"G_{i,xx}", exx: r"G_{e,xx}"})
+    names.update({gxx: r"\sigma_{i,xx}", exx: r"\sigma_{e,xx}"})
     out = {
         "leadfield_S.tex": emit_latex_fragment("S", S, names),
-        "leadfield_k.tex": emit_latex_fragment("k", gxx/(gxx + exx), names),
+        "leadfield_k.tex": emit_latex_fragment(r"\kappa", gxx/(gxx + exx), names),
         "leadfield_slab_Vm.tex": emit_latex_fragment("V_m", vm().subs(sub), names),
         "leadfield_slab_C.tex": emit_latex_fragment("C", slab_constant().subs(sub), names),
     }
@@ -240,14 +240,14 @@ def latex_fragments():
     out["leadfield_layered_phi.tex"] = emit_latex_fragment(
         r"\phi^\ast_{\mathrm{layered}}", phis + alpha*R, names)
     out["leadfield_slab_params.tex"] = emit_parameter_fragment(
-        [(r"\sigma", printed_constant(SIGMA_SLAB, 9)),
+        [(r"\sigma_b", printed_constant(SIGMA_SLAB, 9)),
          (r"\mathbf r_{\mathrm{ref}}",
           sp.Matrix([printed_constant(v, 4) for v in PHI_REF_POINT])),
          (r"\phi_{\mathrm{ref}}", int(PHI_REF_VALUE))], per_row=3)
     out["leadfield_layered_params.tex"] = emit_parameter_fragment(
         [("x_L", printed_constant(X_LEFT, 1)), ("x_R", printed_constant(X_RIGHT, 2)),
-         (r"\sigma_1", printed_constant(SIGMA_INNER, 1)),
-         (r"\sigma_2", printed_constant(SIGMA_OUTER, 1)),
+         (r"\sigma_{b,1}", printed_constant(SIGMA_INNER, 1)),
+         (r"\sigma_{b,2}", printed_constant(SIGMA_OUTER, 1)),
          (r"\alpha", printed_constant(ALPHA, 1))], per_row=5)
     return {"latex/" + k_: v for k_, v in out.items()}
 

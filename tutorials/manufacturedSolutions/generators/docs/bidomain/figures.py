@@ -105,13 +105,13 @@ def fda_cube(settings, outdir):
     ax.set_ylim(-1.2, 1.9)
     ax = fig.add_subplot(gs[1, 2])
     idx = np.arange(3)
-    ax.bar(idx - 0.18, br.GI, width=0.36, color=fs.VM, label=r"$G_{i,mm}$")
-    ax.bar(idx + 0.18, br.GE, width=0.36, color=PHIE, label=r"$G_{e,mm}$")
+    ax.bar(idx - 0.18, br.GI, width=0.36, color=fs.VM, label=r"$\sigma_{i,mm}$")
+    ax.bar(idx + 0.18, br.GE, width=0.36, color=PHIE, label=r"$\sigma_{e,mm}$")
     ax.set_xticks(idx, [r"$xx$", r"$yy$", r"$zz$"])
     ax.set_ylabel(r"S m$^{-1}$")
-    ax.set_title(r"(d) diagonal $\mathbf{G}_i$, $\mathbf{G}_e$", loc="left")
+    ax.set_title(r"(d) diagonal $\boldsymbol{\sigma}_i$, $\boldsymbol{\sigma}_e$", loc="left")
     ax.legend(frameon=False, fontsize=9, loc="upper right")
-    ax.text(0.02, 0.95, r"$\frac{G_{i,mm}}{G_{i,mm}+G_{e,mm}}=\kappa$", transform=ax.transAxes,
+    ax.text(0.02, 0.95, r"$\frac{\sigma_{i,mm}}{\sigma_{i,mm}+\sigma_{e,mm}}=\kappa$", transform=ax.transAxes,
             va="top", fontsize=10)
     ax.set_ylim(0, 0.17)
     fs.save(fig, outdir, "fda_bidomain_cube.png", settings)
@@ -135,7 +135,7 @@ def shell_fields(settings, outdir):
              tag="(a)")
     fs.panel(fig, axes[1], img_e, title=r"$\phi_e$ at $t=0$, zero volume mean",
              label=r"$\phi_e$", clim=e_clim, tag="(b)")
-    fs.panel(fig, axes[2], img_g, title=r"frame of $\mathbf{G}_i$ and $\mathbf{G}_e$",
+    fs.panel(fig, axes[2], img_g, title=r"frame of $\boldsymbol{\sigma}_i$ and $\boldsymbol{\sigma}_e$",
              tag="(c)")
     fs.legend(axes[2], [(r"$\mathbf{f}$: $\sigma_{i,f}=%g$, $\sigma_{e,f}=%g$"
                          % (p["gil"], p["gel"]), fs.FIBRE),
@@ -161,9 +161,9 @@ def wall_profiles(ax, radius, sign, title):
     ax.plot(deg, out["Fi"][0], color=fs.VM, label=r"$\mathbf{n}\cdot\nabla F_i$")
     ax.plot(deg, out["Fe"][0], color=PHIE, label=r"$\mathbf{n}\cdot\nabla F_e$")
     ax.plot(deg, out["Fi"][1], color=fs.VM, ls="--", lw=2.2,
-            label=r"$\mathbf{n}\cdot\mathbf{G}_i\nabla F_i$")
+            label=r"$\mathbf{n}\cdot\boldsymbol{\sigma}_i\nabla F_i$")
     ax.plot(deg, out["Fe"][1], color=PHIE, ls=":", lw=2.2,
-            label=r"$\mathbf{n}\cdot\mathbf{G}_e\nabla F_e$")
+            label=r"$\mathbf{n}\cdot\boldsymbol{\sigma}_e\nabla F_e$")
     ax.axhline(0, color=fs.GREY, lw=0.6)
     ax.set_xlim(0, 360)
     ax.set_xticks([0, 90, 180, 270, 360])
@@ -185,10 +185,10 @@ def shell_sources(settings, outdir):
     fig = plt.figure(figsize=(12.6, 9.4))
     gs = GridSpec(2, 2, figure=fig, hspace=0.32, wspace=0.25, height_ratios=[1.25, 1])
     fs.panel(fig, fig.add_subplot(gs[0, 0]), img_s, title=r"$s_e$ at $t=0$",
-             label=r"$\nabla\!\cdot(\mathbf{G}_i\nabla F_i)+\nabla\!\cdot(\mathbf{G}_e\nabla F_e)$",
+             label=r"$\nabla\!\cdot(\boldsymbol{\sigma}_i\nabla F_i)+\nabla\!\cdot(\boldsymbol{\sigma}_e\nabla F_e)$",
              clim=s_clim, tag="(a)")
     fs.panel(fig, fig.add_subplot(gs[0, 1]), img_d, title=r"diffusion term of $I_{\mathrm{app}}$ at $t=0$",
-             label=r"$-\nabla\!\cdot(\mathbf{G}_i\nabla F_i)$", clim=d_clim, tag="(b)")
+             label=r"$-\nabla\!\cdot(\boldsymbol{\sigma}_i\nabla F_i)$", clim=d_clim, tag="(b)")
     ax1 = fig.add_subplot(gs[1, 0])
     ax2 = fig.add_subplot(gs[1, 1], sharey=ax1)
     m1 = wall_profiles(ax1, p["r1"], -1, r"(c) inner sphere $|\mathbf{x}|=r_1$ (endocardium)")
