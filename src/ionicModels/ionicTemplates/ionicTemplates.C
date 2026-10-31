@@ -385,16 +385,20 @@ List<DynamicTemplate> generatePersonalizedTemplates
     const label nSamples = label(std::ceil(captureDuration/dt - 1e-9)) + 1;
 
     List<DynamicTemplate> result(nPoints);
+    const bool hasCai = model.hasSignal(CouplingSignal::CAI);
 
     for (label p = 0; p < nPoints; ++p)
     {
         result[p].times.setSize(nSamples);
         result[p].valuesMv.setSize(nSamples);
-        result[p].valuesCai.setSize(nSamples);
+        result[p].valuesCai.setSize(hasCai ? nSamples : 0);
         result[p].times[0] = 0.0;
         // mV, not V -- unit conversion is the caller's job.
         result[p].valuesMv[0] = model.signal(p, CouplingSignal::VM);
-        result[p].valuesCai[0] = model.signal(p, CouplingSignal::CAI);
+        if (hasCai)
+        {
+            result[p].valuesCai[0] = model.signal(p, CouplingSignal::CAI);
+        }
     }
 
     for (label k = 1; k < nSamples; ++k)
@@ -406,7 +410,10 @@ List<DynamicTemplate> generatePersonalizedTemplates
         {
             result[p].times[k] = scalar(k)*dt;
             result[p].valuesMv[k] = model.signal(p, CouplingSignal::VM);
-            result[p].valuesCai[k] = model.signal(p, CouplingSignal::CAI);
+            if (hasCai)
+            {
+                result[p].valuesCai[k] = model.signal(p, CouplingSignal::CAI);
+            }
         }
     }
 

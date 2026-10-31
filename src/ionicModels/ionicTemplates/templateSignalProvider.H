@@ -57,7 +57,9 @@ public:
 
     virtual bool hasSignal(const CouplingSignal s) const override
     {
-        return s == CouplingSignal::VM || s == CouplingSignal::CAI;
+        return
+            s == CouplingSignal::VM
+         || (s == CouplingSignal::CAI && !templates_[0].valuesCai.empty());
     }
 
     virtual scalar signal(const label i, const CouplingSignal s) const override;

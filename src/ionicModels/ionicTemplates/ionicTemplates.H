@@ -48,7 +48,7 @@ struct DynamicTemplate
 {
     scalarField times;      // s; 0 = steepest upstroke
     scalarField valuesMv;   // mV, direct ionicModel::signal(VM) output
-    scalarField valuesCai;  // mM, direct ionicModel::signal(CAI) output
+    scalarField valuesCai;  // mM, direct ionicModel::signal(CAI) output; empty without Cai
 };
 
 //- nBeats overrides ionicModelConfig.singleCellStimulus.nstim1; neither
