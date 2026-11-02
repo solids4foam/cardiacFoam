@@ -44,7 +44,9 @@ namespace Foam
 namespace electroPropertiesKeys
 {
 
-//- Check electroProperties and its <solverType>Coeffs block.
+//- Check electroProperties: its top-level keys, the torso block, the
+//  ecgDomains entries (the keys of each entry's ecgSolver) and the
+//  <solverType>Coeffs block.
 void check(const dictionary& electroProperties, const word& solverType);
 
 } // End namespace electroPropertiesKeys

@@ -26,9 +26,6 @@ License
 namespace Foam
 {
 
-namespace
-{
-
 autoPtr<fvMeshSubset> createMyocardiumMeshSubset
 (
     const fvMesh& supportMesh,
@@ -70,6 +67,9 @@ autoPtr<fvMeshSubset> createMyocardiumMeshSubset
     return subsetPtr;
 }
 
+
+namespace
+{
 
 const fvMesh& resolveMyocardiumMesh
 (

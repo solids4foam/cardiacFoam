@@ -1,0 +1,17 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "numberCells": [10, 20, 40, 20],
+      "myocardium": ["bidomain", "bidomain", "bidomain", "monodomain"],
+      "parallel": [false, false, false, true],
+      "caseId": ["bidomain_hex_N10", "bidomain_hex_N20", "bidomain_hex_N40", "parallel_hex_N20"]
+    }
+  }
+}

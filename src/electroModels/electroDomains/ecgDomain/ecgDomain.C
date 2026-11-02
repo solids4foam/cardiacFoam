@@ -20,6 +20,7 @@ License
 #include "ecgDomain.H"
 #include "ecgModelIO.H"
 #include "ecgVerificationModel.H"
+#include "ecgElectrodes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -36,12 +37,6 @@ defineTypeNameAndDebug(ecgDomain, 0);
 namespace
 {
 
-word selectedECGSolverType(const dictionary& dict)
-{
-    return dict.lookupOrDefault<word>("ecgSolver", "pseudoECG");
-}
-
-
 word outputFileName(const word& solverType)
 {
     if (solverType == "eikonalECG")
@@ -53,47 +48,6 @@ word outputFileName(const word& solverType)
         solverType == "torsoECG"
       ? word("torsoECG.dat")
       : word("pseudoECG.dat");
-}
-
-
-dictionary withInheritedPotentialDomain
-(
-    const dictionary& dict,
-    const dictionary* inheritedPotentialDomainPtr
-)
-{
-    dictionary merged(dict);
-
-    if (inheritedPotentialDomainPtr)
-    {
-        if
-        (
-            !merged.found("groundPatches")
-         && inheritedPotentialDomainPtr->found("groundPatches")
-        )
-        {
-            merged.add
-            (
-                "groundPatches",
-                inheritedPotentialDomainPtr->subDict("groundPatches")
-            );
-        }
-
-        if
-        (
-            !merged.found("surfaceCurrentPatches")
-         && inheritedPotentialDomainPtr->found("surfaceCurrentPatches")
-        )
-        {
-            merged.add
-            (
-                "surfaceCurrentPatches",
-                inheritedPotentialDomainPtr->subDict("surfaceCurrentPatches")
-            );
-        }
-    }
-
-    return merged;
 }
 
 
@@ -113,35 +67,12 @@ void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
 
 void ecgDomain::readElectrodes(const dictionary& dict)
 {
-    electrodeNames_.clear();
-    electrodePositions_.clear();
-
-    const dictionary* eDictPtr = dict.findDict("electrodePositions");
-
-    if (!eDictPtr)
-    {
-        eDictPtr = inheritedElectrodePositionsPtr_;
-    }
-
-    if (!eDictPtr || eDictPtr->empty())
-    {
-        FatalIOErrorInFunction(dict)
-            << "ECG domain " << dict.dictName() << " has no electrodes: "
-            << "give electrodePositions in the domain or in ecgDomains."
-            << exit(FatalIOError);
-    }
-
-    const dictionary& eDict = *eDictPtr;
-    const wordList names(eDict.toc());
-
-    electrodeNames_.setSize(names.size());
-    electrodePositions_.setSize(names.size());
-
-    forAll(names, i)
-    {
-        electrodeNames_[i]     = names[i];
-        electrodePositions_[i] = eDict.get<vector>(names[i]);
-    }
+    const ecgElectrodes electrodes
+    (
+        readEcgElectrodes(dict, inheritedElectrodePositionsPtr_)
+    );
+    electrodeNames_ = electrodes.names;
+    electrodePositions_ = electrodes.positions;
 
     Info<< "ECG electrodes (" << electrodeNames_.size() << "):" << nl;
     forAll(electrodeNames_, i)
@@ -224,20 +155,18 @@ ecgDomain::ecgDomain
     const electroStateProvider& stateProvider,
     const dictionary& dict,
     const word& domainName,
-    const dictionary* inheritedElectrodePositionsPtr,
-    const dictionary* inheritedPotentialDomainPtr
+    const dictionary* inheritedElectrodePositionsPtr
 )
 :
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
     domainName_(domainName),
-    solverType_(selectedECGSolverType(dict)),
+    solverType_(ecgSolver::selectedType(dict)),
     outputPtr_(),
     solverPtr_(ecgSolver::New(dict)),
     verificationModelPtr_(),
     numericValues_(),
     inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
-    inheritedPotentialDomainPtr_(inheritedPotentialDomainPtr),
     electrodeNames_(),
     electrodePositions_()
 {
@@ -256,10 +185,6 @@ ecgDomain::ecgDomain
         (void)activationTime();
         (void)conductivity();
     }
-    else if (solverType_ == "torsoECG")
-    {
-        (void)phiE();
-    }
 
     readElectrodes(dict);
 
@@ -275,21 +200,18 @@ ecgDomain::ecgDomain
             );
     }
 
-    const dictionary verificationDict =
-        withInheritedPotentialDomain
-        (
-            dict,
-            inheritedPotentialDomainPtr_
-        );
-
     verificationModelPtr_ = ecgVerificationModel::New
     (
         *this,
         domainName_,
-        verificationDict,
+        dict,
         electrodeNames_,
         electrodePositions_
     );
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->validateProvider();
+    }
 
     numericValues_.setSize(electrodeNames_.size(), 0.0);
 }
@@ -351,17 +273,7 @@ bool ecgDomain::read(const dictionary& dict)
         }
     }
 
-    const dictionary verificationDict =
-        withInheritedPotentialDomain
-        (
-            dict,
-            inheritedPotentialDomainPtr_
-        );
-
-    const word requestedType
-    (
-        ecgVerificationModel::selectedType(verificationDict)
-    );
+    const word requestedType(ecgVerificationModel::selectedType(dict));
 
     if (requestedType.empty())
     {
@@ -381,7 +293,7 @@ bool ecgDomain::read(const dictionary& dict)
             electrodePositions_
         );
 
-        return verificationModelPtr_->read(verificationDict);
+        return verificationModelPtr_->read(dict);
     }
 
     finalizeVerificationModel(verificationModelPtr_);
@@ -389,10 +301,14 @@ bool ecgDomain::read(const dictionary& dict)
     (
         *this,
         domainName_,
-        verificationDict,
+        dict,
         electrodeNames_,
         electrodePositions_
     );
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->validateProvider();
+    }
 
     return true;
 }

@@ -1,0 +1,104 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+
+// Layered torso: torsoInner next to the heart (xLeft < x < 0,
+// 1 < x < xRight), torsoOuter beyond it (x < xLeft, x > xRight); the layer
+// interfaces of Allrun -problem layered
+xLeft           -0.5;
+xRight          1.5;
+#includeIfPresent "<case>/local/layers"
+
+actions
+(
+    {
+        name    myocardiumCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        sourceInfo
+        {
+            box (0 -1 -1) (1 2 2);
+        }
+    }
+    {
+        name    torsoInnerCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        sourceInfo
+        {
+            box ($xLeft -1 -1) (0 2 2);
+        }
+    }
+    {
+        name    torsoInnerCells;
+        type    cellSet;
+        action  add;
+        source  boxToCell;
+        sourceInfo
+        {
+            box (1 -1 -1) ($xRight 2 2);
+        }
+    }
+    {
+        name    torsoOuterCells;
+        type    cellSet;
+        action  new;
+        source  boxToCell;
+        sourceInfo
+        {
+            box (-1.1 -1 -1) ($xLeft 2 2);
+        }
+    }
+    {
+        name    torsoOuterCells;
+        type    cellSet;
+        action  add;
+        source  boxToCell;
+        sourceInfo
+        {
+            box ($xRight -1 -1) (2.1 2 2);
+        }
+    }
+    {
+        name    myocardium;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        sourceInfo
+        {
+            set myocardiumCells;
+        }
+    }
+    {
+        name    torsoInner;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        sourceInfo
+        {
+            set torsoInnerCells;
+        }
+    }
+    {
+        name    torsoOuter;
+        type    cellZoneSet;
+        action  new;
+        source  setToCellZone;
+        sourceInfo
+        {
+            set torsoOuterCells;
+        }
+    }
+);
+
+// ************************************************************************* //

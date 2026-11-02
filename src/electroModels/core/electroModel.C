@@ -107,7 +107,13 @@ Foam::electroModel::electroModel
             )
         )
     ),
-    electroProperties_(subDict(type + "Coeffs")),
+    // The Coeffs copy keeps electroProperties as its parent, so that its
+    // readers reach the top-level blocks (torso, torsoCoupling) by topDict()
+    electroProperties_
+    (
+        static_cast<const dictionary&>(*this),
+        subDict(type + "Coeffs")
+    ),
     pimplePtr_(),
     advanceTimings_(),
     domainSystem_()
@@ -222,7 +228,7 @@ void Foam::electroModel::configureECGDomains()
         domainSystem_,
         domainSystem_.myocardium(),
         potentialStateProviderPtr,
-        electroProperties_
+        *this
     );
 }
 

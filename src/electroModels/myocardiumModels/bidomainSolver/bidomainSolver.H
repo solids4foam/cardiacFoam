@@ -31,6 +31,8 @@ Author
 #include "myocardiumSolver.H"
 #include "conductivityFieldIO.H"
 #include "overrideTypeName.H"
+#include "Enum.H"
+#include "Tuple2.H"
 #include "fvc.H"
 #include "fvm.H"
 
@@ -41,6 +43,28 @@ class bidomainSolver
 :
     public myocardiumSolver
 {
+public:
+
+    //- Heart phiE at the heart-torso wall with a bath (bathHeartPhiETrace)
+    enum class heartPhiETrace
+    {
+        //- zeroGradient heart phiE companion
+        zeroGradient,
+
+        //- The global phiE on the exposed heart faces (sealed heart only)
+        global
+    };
+
+    static const Enum<heartPhiETrace> heartPhiETraceNames;
+
+    //- bathHeartPhiETrace of the bidomainSolver Coeffs dict (required):
+    //  the single reader of the key. global requires sealedHeartBoundary
+    //  true.
+    static heartPhiETrace readBathHeartPhiETrace(const dictionary& dict);
+
+
+private:
+
     volScalarField phiE_;
     // Registered grad(phiE), looked up by name by "corrected" boundary conditions.
     volVectorField gradPhiE_;
@@ -49,13 +73,13 @@ class bidomainSolver
     volTensorField Ge_;
     volTensorField GiPlusGe_;
     Switch sealedHeartBoundary_;
-    scalar phiEReferenceValue_;
-    point phiEReferencePoint_;
-    bool hasPhiEReferencePoint_;
+    //- phiERefPoint and the value pinned at its cell; null when the bath
+    //  owns phiE (torsoCoupling bath)
+    autoPtr<Tuple2<point, scalar>> phiEReferencePtr_;
     const volScalarField* externalPhiEBasePtr_;
     const labelUList* externalPhiECellMapPtr_;
     const fvMeshSubset* meshSubsetPtr_;
-    word bathHeartPhiETrace_;
+    heartPhiETrace bathHeartPhiETrace_;
     const electroVerificationModel* verifierPtr_;
 
     tmp<volTensorField> initialiseConductivityTensor
@@ -66,6 +90,12 @@ class bidomainSolver
         const conductivityFieldSpec& spec,
         const dictionary& dict
     ) const;
+
+    //- The heart phiE trace at the heart-torso wall: readBathHeartPhiETrace
+    //  with a torso (torsoCoupling bath or leadField). Without a torso the
+    //  key is rejected and the heart wall is the outer, zeroGradient
+    //  boundary.
+    static heartPhiETrace readHeartPhiETrace(const dictionary& dict);
 
     label referenceCell() const;
 
@@ -125,21 +155,6 @@ public:
     virtual const volTensorField& explicitConductivityField() const override
     {
         return Gi_;
-    }
-
-    const volTensorField& intracellularConductivity() const
-    {
-        return Gi_;
-    }
-
-    const volTensorField& extracellularConductivity() const
-    {
-        return Ge_;
-    }
-
-    const volTensorField& totalConductivity() const
-    {
-        return GiPlusGe_;
     }
 
     virtual void bindExternalPhiE

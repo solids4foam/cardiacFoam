@@ -120,6 +120,16 @@ public:
         );
     }
 
+    virtual const fvMeshSubset* meshSubsetPtr() const override
+    {
+        return
+        (
+            meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+          ? meshSubsetPtr_.get()
+          : nullptr
+        );
+    }
+
     virtual const Time& time() const override
     {
         return mesh().time();

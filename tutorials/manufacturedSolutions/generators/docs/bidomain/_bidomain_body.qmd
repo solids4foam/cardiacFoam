@@ -1,0 +1,580 @@
+# The problem {#sec-problem}
+
+This document describes how each manufactured solution of the bidomain
+equations used by cardiacFoam is built. In the method of manufactured solutions
+[@roache2002code] the exact potentials are chosen first and the sources that
+make them satisfy the equations are derived from them. The document gives the
+exact potentials, the sources, the gauge of the extracellular potential and the
+checks that each construction passes. It states the problems only; it contains
+no solver output. Every displayed field, tensor, source and coefficient below
+is printed by the sympy generator of its problem, `fda_bidomain_mms.py` or
+`shell_bidomain_mms.py`, which also writes the NumPy reference module and, for
+the shell, the C++ reference header of cardiacFoam. A reader with this document
+and the generator folder can rebuild each problem in another code.
+
+## Domain and governing equations
+
+In the myocardium $\Omega_H\subset\mathbb R^d$, $d\in\{1,2,3\}$, with sealed
+boundary $\Gamma_N=\partial\Omega_H$ and outward unit normal $\mathbf n$, the
+bidomain equations for the intracellular and extracellular potentials
+$\phi_i$, $\phi_e$ and the transmembrane potential $V_m=\phi_i-\phi_e$ are
+
+$$
+\left\{
+\begin{aligned}
+\chi C_m \frac{\partial V_m}{\partial t}
+&=\nabla\cdot\left(\boldsymbol\sigma_i\nabla\phi_i\right)
+-\chi C_m I_{\mathrm{ion}}+I_{\mathrm{app}}
+&&\text{in }\Omega_H,\\
+0&=\nabla\cdot\left(\boldsymbol\sigma_i\nabla\phi_i\right)
++\nabla\cdot\left(\boldsymbol\sigma_e\nabla\phi_e\right)-s_e
+&&\text{in }\Omega_H,\\
+\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i=0,\quad
+\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e&=0
+&&\text{on }\Gamma_N,
+\end{aligned}
+\right.
+$$
+
+with the ionic closure $I_{\mathrm{ion}}=I(V_m,\mathbf w)$,
+$\mathrm d\mathbf w/\mathrm dt=\mathbf F(V_m,\mathbf w)$, and initial data
+$V_m(\mathbf x,0)$, $\mathbf w(\mathbf x,0)$. cardiacFoam (`bidomainSolver`)
+solves the system in the unknowns $V_m$ and $\phi_e$:
+
+$$
+\begin{aligned}
+\chi C_m \frac{\partial V_m}{\partial t}
+&=\nabla\cdot\left(\boldsymbol\sigma_i\nabla V_m\right)
++\nabla\cdot\left(\boldsymbol\sigma_i\nabla\phi_e\right)
+-\chi C_m I_{\mathrm{ion}}+I_{\mathrm{app}},\\
+\nabla\cdot\left((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi_e\right)
+&=-\nabla\cdot\left(\boldsymbol\sigma_i\nabla V_m\right)+s_e .
+\end{aligned}
+$$
+
+The second equation with the two sealed walls is a pure Neumann problem:
+$\phi_e$ is fixed up to a constant, and a solution exists only if
+$\int_{\Omega_H} s_e\,\mathrm dV=0$. Every problem below prescribes the exact
+fields at $t=0$ as initial data, and both sealed-wall conditions are satisfied
+by the exact potentials themselves. The units are those of the monodomain
+document: SI units for the continuum equations, and fields written in case
+units on the normalised coordinates $x/(1\,\mathrm m)$ and $t/(1\,\mathrm s)$.
+
+## Manufactured ionic closure {#sec-ionic}
+
+Both problems use the manufactured ionic model of
+@pathmanathan2013verification, with state $(V_m,u_1,u_2,u_3)$. The solver
+supplies $V_m$; the model advances the auxiliary states with $V_m$ held fixed,
+at the rates
+
+{{< include ../../latex/fda_rate_u1.tex >}}
+
+{{< include ../../latex/fda_rate_u2.tex >}}
+
+and $\dot u_3=0$. The model returns
+
+{{< include ../../latex/fda_Jion.tex >}}
+
+and the solver divides it by $C_m$,
+
+{{< include ../../latex/fda_Iion.tex >}}
+
+The FDA cube uses the ionic model `bidomainFDAManufactured`, whose $\beta_d$ is
+computed from the two conductivities (@sec-fda); the shell uses
+`monodomainFDAManufactured` with the rounded $\beta=\beta_3=-8.6$ of the
+monodomain document. With $u_3=0$ and auxiliary states that make
+$(u_1-V_m)u_2^2=1/(1+t)$, the ionic term of the $V_m$ equation is
+
+$$
+-\chi C_m I_{\mathrm{ion}}=\chi C_m\,\frac{V_m}{2(1+t)}-\beta V_m ,
+$$
+
+which cancels the time derivative of $V_m=\sqrt{1+t}\,F$ and leaves
+$-\beta V_m$.
+
+## Gauge of the extracellular potential {#sec-gauge}
+
+The exact potentials are defined up to a common constant $c$. Each problem
+fixes $c$ by the value $\phi_{e,\mathrm{ref}}$ (`phiEReferenceValue`, 0 in
+both tutorials) of the exact $\phi_e$ at the point $\mathbf x_{\mathrm{ref}}$
+(`phiERefPoint`); the solver sets the same value in the cell that contains
+$\mathbf x_{\mathrm{ref}}$. The verifiers report two kinds of $\phi_e$ error.
+The rows `phiE` and `phiI` (FDA cube) compare with the exact field of this
+constant; their error contains the difference between the point value and the
+value of the reference cell. The rows `phiE_gauge` and `phiI_gauge` compare
+with the exact field shifted by the volume mean of the $\phi_e$ error,
+
+$$
+\bar e=\frac{\sum_c V_c\left(\phi_{e,c}-\phi_e(\mathbf x_c)\right)}{\sum_c V_c},
+\qquad
+\phi_e^{\mathrm{gauge}}=\phi_e+\bar e,\quad
+\phi_i^{\mathrm{gauge}}=\phi_i+\bar e ,
+$$
+
+with $V_c$ and $\mathbf x_c$ the volume and centre of cell $c$; the gauge rows
+do not depend on $\mathbf x_{\mathrm{ref}}$. Every error norm is volume
+weighted: $L_1=\sum_cV_c|e_c|/\sum_cV_c$,
+$L_2=(\sum_cV_ce_c^2/\sum_cV_c)^{1/2}$, $L_\infty=\max_c|e_c|$.
+
+## Nomenclature
+
+{{< include ../_common/nomenclature.qmd >}}
+
+{{< include ../_common/nomenclature_bidomain.qmd >}}
+
+## Reading and regenerating {#sec-regenerate}
+
+The generators live in `tutorials/manufacturedSolutions/generators/` of the
+cardiacFoam repository. Each problem has one sympy generator `<case>_mms.py`
+that writes
+
+- `reference/<case>.py`, a NumPy-only module with the exact fields and
+  sources;
+- `latex/<case>_*.tex`, the fragments printed in this document.
+
+Set up the environment once and run a generator from that folder:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python fda_bidomain_mms.py --emit
+.venv/bin/python fda_bidomain_mms.py --self-check
+```
+
+`--emit` runs the self-checks first and writes nothing if one fails;
+`--self-check` runs them alone. `shell_bidomain_mms.py` also takes
+`--check PATH` and `--write PATH`, which compare or rewrite its C++ header and
+are needed only by cardiacFoam developers. `docs/bidomain/bidomain_reference.py`
+holds what depends on the tutorial cases: `--self-check` asserts that their
+dictionaries carry the conductivities and reference points of the generators,
+and `--run-check KIND=CASE ...` (`KIND` is `fda` or `shell`) compares the
+exact fields with a finished run (@sec-fda-checks, @sec-shell-checks) and
+writes nothing. The document is built with
+
+```bash
+quarto render docs/bidomain/bidomain_mms.qmd --to pdf
+```
+
+and its figures with `python docs/bidomain/figures.py`, which takes
+`--draft`, `--outdir DIR` and `--mesh-case NAME=PATH` (names `fda_cube_hex`,
+`fda_cube_tet`, `shell_hex`, `shell_tet`) as the monodomain figure script
+does.
+
+{{< include ../_common/creating.qmd >}}
+
+# FDA cube {#sec-fda}
+
+## Description and limitations
+
+The bidomain problem of @pathmanathan2013verification, part of the FDA
+regulatory science tool for cardiac electrophysiology [@fda2023eprst], on the
+unit cube $[0,1]^d$, $d=1,2,3$. The transmembrane potential is the FDA
+monodomain field and the extracellular potential is a fixed multiple of it.
+The case exercises the elliptic $\phi_e$ solve, the parabolic $V_m$ solve,
+their coupling through $\nabla\cdot(\boldsymbol\sigma_i\nabla\phi_e)$ and
+$\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)$, the gauge of $\phi_e$, the ionic coupling
+and the time integration, on hexahedra in one, two and three dimensions and on
+Delaunay tetrahedra in three.
+
+Both tensors are diagonal and $\boldsymbol\sigma_e$ is proportional to $\boldsymbol\sigma_i$,
+so $\boldsymbol\sigma_i+\boldsymbol\sigma_e$ is a multiple of $\boldsymbol\sigma_i$, $\phi_e$ is a
+multiple of $V_m$ at every time and the elliptic equation needs no source.
+The exact field has a zero normal derivative on every face and the face
+normals are eigenvectors of both tensors, so both conormal fluxes vanish
+because of the field. The case therefore does not exercise unequal anisotropy
+ratios, off-diagonal conductivity, a $\phi_e$ source or its compatibility, or
+a wall flux reconstruction; the sealed shell (@sec-shell) does.
+
+The residual of the equations is not zero. The tutorial dictionary gives
+$\boldsymbol\sigma_e$ to the nine decimals of $\boldsymbol\sigma_i$, so the ratio
+$\sigma_{i,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ equals $\kappa$ to about $10^{-9}$ on the $y$
+and $z$ axes and exactly on the $x$ axis. On the exact fields the residuals of
+the $V_m$ and $\phi_e$ equations are $\rho_pV_m$ and $\rho_eV_m$ (both written
+as left minus right side of the forms above), with
+
+$$
+\rho_p=\sum_{m=1}^{d}\left((1-\kappa)\sigma_{i,mm}-H_{mm}\right)(m\pi)^2,
+\qquad
+\rho_e=\sum_{m=1}^{d}\left(\kappa\,(\sigma_{i,mm}+\sigma_{e,mm})-\sigma_{i,mm}\right)(m\pi)^2 ,
+$$
+
+and relative to $k_d$, the size of $\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)/V_m$,
+
+{{< include ../../latex/fda_bidomain_residual_relative.tex >}}
+
+## Problem instance
+
+Unit cube $[0,1]^d$, all faces sealed, the diagonal conductivities
+
+{{< include ../../latex/fda_bidomain_Gi.tex >}}
+
+{{< include ../../latex/fda_bidomain_Ge.tex >}}
+
+the constants, with $\kappa$ and $\beta_d$ computed from the dictionary values,
+
+{{< include ../../latex/fda_bidomain_params.tex >}}
+
+and the gauge
+
+{{< include ../../latex/fda_bidomain_ref.tex >}}
+
+In cardiacFoam:
+
+- tutorial `manufacturedSolutions/bidomain`, options `-dim 1|2|3`
+  (`-mesh hex`, the default) and `-mesh tet` (three dimensions);
+- myocardium solver `bidomainSolver` (`sealedHeartBoundary false`,
+  `conductivitySource uniform`);
+- ionic model `bidomainFDAManufactured`, which rejects tensors with mixed
+  entries between active directions and ratios
+  $\sigma_{i,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ that differ from $\kappa$ by more than
+  $10^{-6}\kappa$;
+- verifier `manufacturedFDABidomainVerifier`.
+
+## Construction
+
+The spatial factor $F_d$ of the FDA monodomain problem is an eigenfunction of
+the diagonal operator, $\nabla\cdot(\boldsymbol\sigma_i\nabla F_d)=-k_dF_d$ with
+
+{{< include ../../latex/fda_bidomain_kd.tex >}}
+
+($\boldsymbol\sigma_i$ is the conductivity of the monodomain FDA problem, so $k_d$ is
+the eigenvalue of that document). With $\phi_e=-\kappa V_m+c$ and
+$\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e)=\boldsymbol\sigma_i$,
+
+$$
+\nabla\cdot\left(\boldsymbol\sigma_i\nabla V_m\right)
++\nabla\cdot\left((\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi_e\right)
+=\nabla\cdot\left((\boldsymbol\sigma_i-\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e))\nabla V_m\right)=0 ,
+$$
+
+so the elliptic equation holds with $s_e=0$. In the $V_m$ equation
+$\nabla\cdot(\boldsymbol\sigma_i\nabla\phi_i)=(1-\kappa)\nabla\cdot(\boldsymbol\sigma_i\nabla V_m)
+=-(1-\kappa)k_dV_m$, and $(1-\kappa)\sigma_{i,mm}=H_{mm}$, the harmonic combination
+of the two diagonals. The ionic model sets
+
+{{< include ../../latex/fda_bidomain_beta.tex >}}
+
+so that $-\beta_dV_m$ from the ionic term (@sec-ionic) cancels the diffusion
+term and no applied current is needed ($I_{\mathrm{app}}=0$). The constant $c$
+makes $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$ at every time:
+
+{{< include ../../latex/fda_bidomain_c.tex >}}
+
+## Exact solution
+
+{{< include ../../latex/fda_F_d1.tex >}}
+
+{{< include ../../latex/fda_F_d2.tex >}}
+
+{{< include ../../latex/fda_F_d3.tex >}}
+
+{{< include ../../latex/fda_Vm.tex >}}
+
+{{< include ../../latex/fda_bidomain_kappa.tex >}}
+
+{{< include ../../latex/fda_bidomain_phiE.tex >}}
+
+{{< include ../../latex/fda_bidomain_phiI.tex >}}
+
+with the auxiliary states $u_1$, $u_2$, $u_3$ and the factors $G_d$ of the
+monodomain FDA problem:
+
+{{< include ../../latex/fda_G_d3.tex >}}
+
+{{< include ../../latex/fda_u1.tex >}}
+
+{{< include ../../latex/fda_u2.tex >}}
+
+{{< include ../../latex/fda_u3.tex >}}
+
+($G_1=x+1$, $G_2=xy^2+1$.) The full expressions are `fields(d)` of
+`fda_bidomain_mms.py` and `Vm_d<d>`, `phiE_d<d>`, `phiI_d<d>`, `shift_d<d>`
+(the constant $c$), `u1_d<d>`, `u2_d<d>`, `u3_d<d>`, `Iion_d<d>` (the current
+$J_{\mathrm{ion}}$), `F_d<d>`, `G_d<d>` of `reference/fda_bidomain.py`, whose
+`PARAMS` holds $\kappa$, $\beta_d$, the diagonals and the gauge.
+
+## Self-checks {#sec-fda-checks}
+
+`fda_bidomain_mms.py --self-check` asserts, for $d=1,2,3$, in exact rational
+arithmetic on the decimals of the conductivities:
+
+- $\partial_tu_1$ and $\partial_tu_2$ equal the ionic rates on the exact fields;
+- the residuals of both equations are constant multiples $\rho_pV_m$,
+  $\rho_eV_m$ of $V_m$ with $|\rho_p|/k_d\le10^{-8}$ and
+  $|\rho_e|/k_d\le10^{-8}$ (the values are printed above);
+- $\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m$, $\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e$
+  and $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$ vanish on every face;
+- $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$;
+- the ratios $\sigma_{i,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ agree with $\kappa$ to
+  $10^{-6}\kappa$, the tolerance of the ionic model;
+- the printed constants round-trip.
+
+`docs/bidomain/bidomain_reference.py --self-check` asserts that the
+conductivities and `phiERefPoint` of the tutorial `constant/electroProperties`
+equal those of the generator.
+
+*Comparison with a run.* `bidomain_reference.py --run-check fda=CASE` reads
+the cell centres and volumes (from `constant/polyMesh`, by the face-triangle and face-pyramid
+decomposition OpenFOAM uses), the computed `Vm` and `phiE` of the last time and
+`postProcessing/<d>D_<n>_cells.dat`, and recomputes from the exact fields above
+the `Vm`, `phiE`, `phiE_gauge` and `phiI_gauge` norms and $\bar e$. On the
+runs `1D_N10`, `2D_N10` and `3D_N10` of the study `cartesianConvergence`
+($t=0.2$) all agree with the reported values to the six printed digits, and the
+written initial `preProcess_u1` equals $u_1(\mathbf x_c,0)$ to $2\times10^{-15}$.
+
+## Figures
+
+![FDA cube. (a) $V_m=F_3$ at $t=0$ on three orthogonal slices. (b) $\phi_e$ at $t=0$ on the same slices, with $c$ fixed by $\phi_e(\mathbf x_{\mathrm{ref}})=0$; the dot marks $\mathbf x_{\mathrm{ref}}$. (c) $V_m$, $\phi_e=-\kappa V_m+c$ and $\phi_i=(1-\kappa)V_m+c$ for $d=1$ at $t=0$; the dotted line is $x_{\mathrm{ref}}$, where $\phi_e=0$ and $\phi_i=V_m$. (d) The diagonals of $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$, in the same ratio on each axis.](figures/fda_bidomain_cube.png){#fig-fda width=100%}
+
+::: {#fig-fda-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_fda_cube_hex.png){#fig-fda-mesh-hex}
+
+![tet: `-mesh tet -N 5`](figures/mesh_fda_cube_tet.png){#fig-fda-mesh-tet}
+
+Meshes of the unit cube from the tutorial `manufacturedSolutions/bidomain` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with `system/blockMeshDict.3D` and $N=8$ cells per unit length; (b) `gmsh` Delaunay tetrahedra from `box.geo.template` of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell.
+:::
+
+## Regeneration
+
+```bash
+python fda_bidomain_mms.py --emit
+python fda_bidomain_mms.py --self-check
+python docs/bidomain/bidomain_reference.py --self-check
+R=../bidomain/setup/studies/cartesianConvergence/results
+python docs/bidomain/bidomain_reference.py --run-check fda=$R/3D_N10
+```
+
+`--emit` writes `reference/fda_bidomain.py` and `latex/fda_bidomain_*.tex`.
+The spatial factors, the auxiliary states and the ionic closure are those of
+`fda_monodomain_mms.py`, imported. The bidomain functions of cardiacFoam
+(`manufacturedFDABidomainReference.H` and the constants of
+`bidomainFDAManufactured.C`) are hand-written and carry no generated regions,
+so the generator has no `--check`; the run comparison above is the
+comparison.
+
+# Sealed spherical shell {#sec-shell}
+
+## Description and limitations
+
+The heart-like shell $r_1<|\mathbf x|<r_2$ of the monodomain document, both
+spheres sealed, with two full intracellular and extracellular tensors whose
+fibre and sheet rotate through the wall. The tensors share one orthonormal
+frame but have unequal eigenvalue ratios, so $\boldsymbol\sigma_i+\boldsymbol\sigma_e$ is not
+a multiple of $\boldsymbol\sigma_i$, and both are oblique to both walls. The exact
+$\phi_i$ and $\phi_e$ have non-zero normal and tangential gradients on both
+walls while $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$ and
+$\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e$ vanish there exactly. The case
+exercises the sealed-wall operators of both potentials on curved walls, a
+non-trivial $\phi_e$ source with zero integral, the pure Neumann $\phi_e$
+system with its gauge and compatibility, and spatially varying tensors whose
+derivatives enter both sources.
+
+It does not exercise a bath, the ECG, a stimulus or a wall that carries
+current, and the two tensors have the same principal axes everywhere, so a
+discretisation error that appears only when the eigenvectors of $\boldsymbol\sigma_i$
+and $\boldsymbol\sigma_e$ differ is not detected.
+
+## Problem instance
+
+The parameters are
+
+{{< include ../../latex/shell_bidomain_params.tex >}}
+
+with $\chi=3$, $C_m=2$, and the gauge and reaction coefficient
+
+{{< include ../../latex/shell_bidomain_ref.tex >}}
+
+The inner sphere is the patch `endocardium` and the outer sphere the patch
+`epicardium`. In cardiacFoam:
+
+- tutorial `manufacturedSolutions/bidomain/sphericalShell`, options
+  `-mesh hex|tet` and `-N`;
+- myocardium solver `bidomainSolver` (`sealedHeartBoundary true`,
+  `conductivitySource field`, the cell tensors written by
+  `setManufacturedFields` to `0/ConductivityIntracellular` and
+  `0/ConductivityExtracellular`);
+- ionic model `monodomainFDAManufactured` (`dimension "3D"`);
+- verifier `manufacturedShellBidomainVerifier`, which adds $I_{\mathrm{app}}$
+  and $s_e$ and requests the compatibility projection of the $\phi_e$ system.
+
+## Construction
+
+*Transmural coordinate and conductivities.* The coordinate $\lambda$, the
+fibre angle $\theta$, the fixed frame $(\mathbf e_a,\mathbf e_b,\mathbf n_s)$,
+the fibre $\mathbf f$ and the sheet $\mathbf s$ are those of the monodomain
+shell:
+
+{{< include ../../latex/shell_lambda.tex >}}
+
+{{< include ../../latex/shell_theta.tex >}}
+
+{{< include ../../latex/shell_frame.tex >}}
+
+{{< include ../../latex/shell_fibre.tex >}}
+
+{{< include ../../latex/shell_sheet.tex >}}
+
+Both tensors are built on this frame with their own eigenvalues:
+
+{{< include ../../latex/shell_bidomain_Gi.tex >}}
+
+{{< include ../../latex/shell_bidomain_Ge.tex >}}
+
+$\boldsymbol\sigma_i$ is the conductivity $\boldsymbol\sigma$ of the monodomain shell.
+The eigenvalue ratios are $17:1.9:1$ for $\boldsymbol\sigma_i$ and $7.75:1.5:1$ for
+$\boldsymbol\sigma_e$.
+
+*Sealing.* Each potential is sealed with respect to its own tensor by the
+construction of the monodomain shell. $\omega$ vanishes on both spheres, with
+normal derivative $d_j$ on sphere $j$ and $\mathbf n_j$ the unit normal out of
+the heart:
+
+{{< include ../../latex/shell_omega.tex >}}
+
+{{< include ../../latex/shell_n1.tex >}}
+
+{{< include ../../latex/shell_n2.tex >}}
+
+{{< include ../../latex/shell_d1.tex >}}
+
+{{< include ../../latex/shell_d2.tex >}}
+
+For the intracellular factor, with $\boldsymbol\sigma_i$,
+
+{{< include ../../latex/shell_bidomain_mj_i.tex >}}
+
+{{< include ../../latex/shell_bidomain_m_i.tex >}}
+
+{{< include ../../latex/shell_bidomain_Fi.tex >}}
+
+and for the extracellular factor, with $\boldsymbol\sigma_e$,
+
+{{< include ../../latex/shell_bidomain_mj_e.tex >}}
+
+{{< include ../../latex/shell_bidomain_m_e.tex >}}
+
+{{< include ../../latex/shell_bidomain_Fe.tex >}}
+
+so that $\mathbf n_j\cdot\boldsymbol\sigma_i\nabla F_i=0$ and
+$\mathbf n_j\cdot\boldsymbol\sigma_e\nabla F_e=0$ on both spheres. $F_i$ equals the
+field $F$ of the monodomain shell.
+
+*Potentials and gauge.* $\phi_i=\sqrt{1+t}\,F_i+c$ and
+$\phi_e=\sqrt{1+t}\,F_e+c$, so $V_m=\sqrt{1+t}\,(F_i-F_e)$ carries no constant,
+and $c$ makes $\phi_e(\mathbf x_{\mathrm{ref}},t)=\phi_{e,\mathrm{ref}}$:
+
+{{< include ../../latex/shell_bidomain_c.tex >}}
+
+*Ionic closure and sources.* The auxiliary states use the positive function
+$g$ of the monodomain shell, so the ionic rates hold exactly and the ionic term
+leaves $-\beta V_m$ in the $V_m$ equation (@sec-ionic). The applied current is
+the remainder of the $V_m$ equation and $s_e$ is the residual of the $\phi_e$
+equation with no source:
+
+{{< include ../../latex/shell_bidomain_Is.tex >}}
+
+{{< include ../../latex/shell_bidomain_se.tex >}}
+
+Both fluxes $\boldsymbol\sigma_i\nabla F_i$ and $\boldsymbol\sigma_e\nabla F_e$ have zero
+normal component on both spheres, so by the divergence theorem
+$\int_{\Omega_H} s_e\,\mathrm dV=0$: the $\phi_e$ problem is compatible in the
+continuum. The divergences include the derivatives of the spatially varying
+tensors.
+
+## Exact solution
+
+{{< include ../../latex/shell_bidomain_hhat_i.tex >}}
+
+{{< include ../../latex/shell_bidomain_hhat_e.tex >}}
+
+{{< include ../../latex/shell_bidomain_phiI.tex >}}
+
+{{< include ../../latex/shell_bidomain_phiE.tex >}}
+
+{{< include ../../latex/shell_bidomain_Vm.tex >}}
+
+{{< include ../../latex/shell_monodomain_g.tex >}}
+
+{{< include ../../latex/shell_bidomain_u1.tex >}}
+
+{{< include ../../latex/shell_bidomain_u2.tex >}}
+
+with $u_3=0$. The divergences are not printed: they are
+`expressions()["divGiGradFi"]` and `expressions()["divGeGradFe"]` of
+`shell_bidomain_mms.py` and `divGiGradFi`, `divGeGradFe` of
+`reference/shell_bidomain.py`, which also holds `Fi`, `Fe`, `gradFi`,
+`gradFe`, `Gi`, `Ge` and `g`. The cardiacFoam header
+`manufacturedShellBidomainReference.H` is written whole by the generator.
+
+## Self-checks {#sec-shell-checks}
+
+`shell_bidomain_mms.py --self-check` asserts:
+
+- sealing: $\max|\mathbf n\cdot\boldsymbol\sigma_i\nabla F_i|$ and
+  $\max|\mathbf n\cdot\boldsymbol\sigma_e\nabla F_e|$ below $10^{-25}$ at 200 points of
+  each sphere, in 30-digit arithmetic on the exact sphere;
+- sources: both divergences agree with central differences of the fluxes to
+  $10^{-6}$ at 40 points of the shell;
+- positivity: every $\mathbf n_j\cdot\boldsymbol\sigma\,\mathbf n_j>0$ and $g>0.5$ over
+  4000 points of the shell widened by 0.05 on each side;
+- richness of the walls: on each wall the means of the tangential parts of
+  $\boldsymbol\sigma_i\mathbf n/\sigma_{i,f}$, $\boldsymbol\sigma_e\mathbf n/\sigma_{e,f}$,
+  $\nabla F_i$, $\nabla F_e$ and $\nabla(F_i-F_e)$ exceed $10^{-2}$;
+- compatibility: the Gauss--Legendre integral of
+  $s_e/\sqrt{1+t}$ over the shell ($60\times60$ points in $|\mathbf x|$ and
+  $\cos\vartheta$, 120 in the azimuth) is below $10^{-12}$ times the integral
+  of its absolute value;
+- $F_i$ equals the monodomain shell field to $10^{-13}$ at 200 points;
+- $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ commute to $10^{-14}$ (one frame) at 500
+  points, and the relative distance of $\boldsymbol\sigma_e$ from the multiples of
+  $\boldsymbol\sigma_i$ is at least 0.1 at every point (it is 0.104 at least);
+- $\boldsymbol\sigma_i$ equals $\boldsymbol\sigma$ of `shell_monodomain_mms.py`;
+- the residual of the $V_m$ equation and of the two ionic rates vanish
+  symbolically, with $F_i$, $F_e$, $g$, $\beta$ and
+  $\nabla\cdot(\boldsymbol\sigma_i\nabla F_i)$ as symbols;
+- the reference point $\mathbf x_{\mathrm{ref}}$ lies inside the shell.
+
+`docs/bidomain/bidomain_reference.py --self-check` asserts that `phiERefPoint`
+and the ionic model of the tutorial equal those of the generator.
+
+*Comparison with a run.* `bidomain_reference.py --run-check shell=CASE`
+recomputes, from the cell centres and volumes of `constant/polyMesh`, the tensors and the `Vm` and
+`phiE_gauge` norms of a finished run and compares them with
+`0/ConductivityIntracellular`, `0/ConductivityExtracellular` and
+`postProcessing/3D_<hex|tet>_<N>_cells.dat`. On the runs `sealed_hex_N8_s1`
+(study `hexConvergence`) and `sealed_tet_N10_s1` (study `tetConvergence`),
+both at $t=0.2$, the tensors agree to $3\times10^{-15}$ relative, the norms to
+$5\times10^{-12}$ relative (12 printed digits), and `preProcess_u1` equals
+$u_1(\mathbf x_c,0)$ to $10^{-15}$.
+
+## Figures
+
+![Sealed shell. (a) $V_m=F_i-F_e$ at $t=0$ on a cut-away of the shell. (b) $\phi_e$ at $t=0$ with its volume mean over the shell removed, the gauge of the `phiE_gauge` rows. (c) The frame common to $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ at six sites through the wall on the cut face, the fibre shaded from the inner (light) to the outer (dark) wall, with the eigenvalues of each tensor along each direction.](figures/shell_bidomain.png){#fig-shell width=100%}
+
+![Sources and walls of the shell. (a) $s_e/\sqrt{1+t}$, the source of the $\phi_e$ equation. (b) The diffusion term of $I_{\mathrm{app}}/\sqrt{1+t}$, $-\nabla\cdot(\boldsymbol\sigma_i\nabla F_i)$. (c), (d) On the great circle of each sphere in the plane $y=0$: the normal derivatives $\mathbf n\cdot\nabla F_i$ and $\mathbf n\cdot\nabla F_e$ (solid) are non-zero, the conormal fluxes $\mathbf n\cdot\boldsymbol\sigma_i\nabla F_i$ and $\mathbf n\cdot\boldsymbol\sigma_e\nabla F_e$ (broken) vanish to rounding ($\mathbf n$ out of the heart).](figures/shell_bidomain_sources.png){#fig-shell-sources width=100%}
+
+::: {#fig-shell-mesh layout-ncol=2}
+
+![hex: `-mesh hex -N 8`](figures/mesh_shell_hex.png){#fig-shell-mesh-hex}
+
+![tet: `-mesh tet -N 5`](figures/mesh_shell_tet.png){#fig-shell-mesh-tet}
+
+Meshes of the shell from the tutorial `manufacturedSolutions/bidomain/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` Delaunay tetrahedra from `shell.geo.template` of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
+:::
+
+## Regeneration
+
+```bash
+python shell_bidomain_mms.py --emit
+python shell_bidomain_mms.py --self-check
+H=../../../src/verificationModels/bidomainVerification
+python shell_bidomain_mms.py --check $H/manufacturedShellBidomainReference.H
+R=../bidomain/sphericalShell/setup/studies/hexConvergence/results
+python docs/bidomain/bidomain_reference.py --run-check shell=$R/sealed_hex_N8_s1
+```
+
+`--emit` writes `reference/shell_bidomain.py` and `latex/shell_bidomain_*.tex`;
+the shared fragments `latex/shell_*.tex` are those of
+`shell_monodomain_mms.py`. `--write` writes the whole cardiacFoam header,
+including a table of self-test samples that the verifier compares with its
+compiled functions at start-up.

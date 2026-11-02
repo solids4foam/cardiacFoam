@@ -22,9 +22,7 @@ License
 #include "dimVoltage.H"
 #include "ecgDomain.H"
 #include "ecgModelIO.H"
-#include "mathematicalConstants.H"
 #include "fvc.H"
-#include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "IOdictionary.H"
 #include "tissueTemplates.H"
@@ -47,11 +45,9 @@ eikonalECG::eikonalECG(const dictionary& dict)
     startTime_(0.0),
     endTime_(0.0),
     deltaT_(0.0),
-    sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
     lastValues_(),
     outputPtr_(),
-    leadVectorsCalculated_(false),
-    leadVectors_(),
+    leadField_(dict),
     weightsCalculated_(false),
     personalizedTemplatesEnabled_(false),
     personalizedTemplatesGenerated_(false)
@@ -209,71 +205,6 @@ void eikonalECG::reconstructGradVm
 }
 
 
-void eikonalECG::calculatePseudoECG
-(
-    const ecgDomain& domain,
-    const volVectorField& gradVm,
-    scalarField& values
-) const
-{
-    const label nElectrodes = domain.electrodePositions().size();
-    const vectorField& gradVmValues = gradVm.primitiveField();
-
-    values.setSize(nElectrodes);
-    values = 0.0;
-
-    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
-    {
-        const List<vector>& z = leadVectors_[electrodeI];
-        scalar ecgVal = 0.0;
-
-        forAll(gradVmValues, cellI)
-        {
-            ecgVal += gradVmValues[cellI] & z[cellI];
-        }
-
-        reduce(ecgVal, sumOp<scalar>());
-
-        values[electrodeI] = ecgVal;
-    }
-}
-
-void eikonalECG::calculateLeadVectors(const ecgDomain& domain)
-{
-    const fvMesh& mesh = domain.mesh();
-    const List<vector>& electrodePositions = domain.electrodePositions();
-    const label nElectrodes = electrodePositions.size();
-
-    const scalarField& volumes = mesh.V();
-    const vectorField& cellCentres = mesh.C().primitiveField();
-    const tensorField& conductivityField =
-        domain.conductivity().primitiveField();
-
-    leadVectors_.setSize(nElectrodes);
-    forAll(leadVectors_, i)
-    {
-        leadVectors_[i].setSize(cellCentres.size(), vector::zero);
-    }
-
-    forAll(cellCentres, cellI)
-    {
-        for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
-        {
-            const vector rVec =
-                cellCentres[cellI] - electrodePositions[electrodeI];
-            const scalar r = mag(rVec);
-
-            if (r > VSMALL)
-            {
-                leadVectors_[electrodeI][cellI] =
-                    (conductivityField[cellI] & rVec)*(volumes[cellI]/(r*r*r));
-            }
-        }
-    }
-
-    leadVectorsCalculated_ = true;
-}
-
 void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 {
     const fvMesh& mesh = domain.mesh();
@@ -419,11 +350,6 @@ void eikonalECG::solve
         return;
     }
 
-    if (!leadVectorsCalculated_)
-    {
-        calculateLeadVectors(domain);
-    }
-
     if (personalizedTemplatesEnabled_ && !personalizedTemplatesGenerated_)
     {
         generatePersonalizedTemplates(domain);
@@ -471,17 +397,7 @@ void eikonalECG::solve
     while (sampleTime <= endTime_ + SMALL)
     {
         reconstructGradVm(sampleTime, activationTime, gradActivationTime, gradVm);
-        calculatePseudoECG(domain, gradVm, lastValues_);
-
-        if (sigmaE_ > VSMALL)
-        {
-            const scalar norm =
-                1.0 / (4.0 * constant::mathematical::pi * sigmaE_);
-            forAll(lastValues_, eI)
-            {
-                lastValues_[eI] *= norm;
-            }
-        }
+        leadField_.evaluate(domain, gradVm.primitiveField(), lastValues_);
 
         ecgModelIO::writeRow(outputPtr_.ref(), sampleTime, lastValues_);
         domain.recordVerification(sampleTime, lastValues_);

@@ -12,7 +12,7 @@ src/verificationModels/
 ├── bidomainVerification/     # Bidomain manufactured/reference verifiers
 ├── bathBidomainVerification/ # Bath-bidomain manufactured/reference verifiers
 ├── eikonalVerification/      # Eikonal manufactured/reference verifiers
-├── ecgVerification/          # ECG verifier family (concrete verifiers only)
+├── ecgVerification/          # ECG verifier family (concrete verifiers and their shared lead-field base)
 ├── electromechanicsVerification/ # Electromechanics verifiers
 ├── coupledVerification/      # Coupled domain verifiers
 ├── Make/
@@ -30,7 +30,7 @@ input. Five of the six live in `electroModels/core/verificationModels/`; only
 |---|---|---|
 | `electroVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedFDAMonodomainVerifier`, `manufacturedAnisotropicMonodomainVerifier`, `manufacturedFDABidomainVerifier`, `manufacturedFDABathBidomainVerifier` |
 | `eikonalVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedEikonalVerifier` |
-| `ecgVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier` |
+| `ecgVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier`, `manufacturedLeadFieldECGVerifier` and `manufacturedShellLeadFieldECGVerifier` (both on the shared channels of `leadFieldECGVerifierBase`) |
 | `couplingVerificationModel` | `electroModels/core/verificationModels/` | `coupled1D3DMonodomainVerifier` |
 | `graphVerificationModel` | `electroModels/core/verificationModels/` | `manufacturedGraphVerifier` |
 | `electromechanicalVerificationModel` | `verificationModels/electromechanicsVerification/` (local) | `manufacturedElectromechanicsVerifier` |

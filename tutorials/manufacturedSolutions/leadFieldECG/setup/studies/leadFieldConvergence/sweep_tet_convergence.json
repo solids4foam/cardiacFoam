@@ -1,0 +1,17 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02,
+    "mesh": "tet"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "tetNumberCells": [10, 14, 20, 28, 10, 14, 20, 28],
+      "conductivity": ["anisotropic", "anisotropic", "anisotropic", "anisotropic", "unequal", "unequal", "unequal", "unequal"],
+      "caseId": ["default_tet_N10", "default_tet_N14", "default_tet_N20", "default_tet_N28", "unequal_tet_N10", "unequal_tet_N14", "unequal_tet_N20", "unequal_tet_N28"]
+    }
+  }
+}

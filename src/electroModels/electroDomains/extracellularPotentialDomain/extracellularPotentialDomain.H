@@ -39,6 +39,7 @@ Author
 #include "Switch.H"
 #include "electroStateDomain.H"
 #include "myocardiumDomainInterface.H"
+#include "passiveConductor.H"
 #include "overrideTypeName.H"
 
 namespace Foam
@@ -55,51 +56,23 @@ class extracellularPotentialDomain
     // Heart-side data sources (non-owning).
     myocardiumDomainInterface& heartDomain_;
 
-    // Conductivity coefficients on the BASE mesh.
-    autoPtr<volTensorField> sigmaTotalPtr_;     // sigma_i+sigma_e in heart, sigma_b in bath
-    autoPtr<volTensorField> sigmaIglobalPtr_;   // sigma_i in heart, 0 in bath
+    // Heart Vm and the heart phiE companion of the operator.
+    const volScalarField& heartVm_;
+    volScalarField& heartPhiE_;
 
-    // Precomputed extracellular/bath face coefficient for the global phiE
-    // operator. The intracellular operator is assembled on the matched heart
-    // submesh and injected separately.
-    autoPtr<surfaceTensorField> sigmaExtracellularfPtr_;
-
-    // Face interpolation selected by bathPotentialDomain. The default is
-    // distance-weighted harmonic interpolation.
-    word interfaceConductivityInterpolation_;
+    //- Passive heart+bath operator built from the top-level torso block,
+    //  with its conductivities, boundary data, reference and heart -> base
+    //  map
+    autoPtr<passiveConductor> conductorPtr_;
 
     // Global potential and the V_m field projected to the base mesh.
     autoPtr<volScalarField> phiEPtr_;
     autoPtr<volScalarField> VmGlobalPtr_;
 
-    // Heart -> base scatter map (built once).
-    labelList heartCellToBaseCell_;
-
-    // Reference pinning.
-    point phiEReferencePoint_;
-    scalar phiEReferenceValue_;
-    bool hasPhiEReferencePoint_;
-
-    // CellZone names.
-
-    wordList bathCellZoneNames_;
-
-    word bathConductivityFieldName_;
-    wordList surfaceCurrentPatchNames_;
-    scalarList surfaceCurrentPatchValues_;
-
-    // True if any phiE patch is Dirichlet (fixedValue); when true, the
-    // linear system is already non-singular and we MUST NOT inject an
-    // additional setReference pin (it would over-determine the problem
-    // with a value that need not match the analytical phiE).
-    bool hasDirichletPatch_;
-
-
     //- Shared number of additional corrected-Laplacian assemblies, read from
-    //  PIMPLE/nNonOrthogonalCorrectors and used consistently for phiE and Vm.
+    //  PIMPLE/nNonOrthogonalCorrectors (required) and used for phiE and Vm.
     //  Zero means one equation solve.
     label nNonOrthogonalCorrectors_;
-    Switch sealedHeartBoundary_;
 
     //- Time at which manufactured data are evaluated
     scalar manufacturedEvaluationTime_;
@@ -109,19 +82,6 @@ class extracellularPotentialDomain
 
     //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
     autoPtr<volVectorField> interfaceGradientPtr_;
-
-    // Build the heart-cell -> base-cell map from the heart subset.
-    void buildHeartScatterMap();
-
-    // Assemble sigmaTotal_ and sigmaIglobal_ from heart conductivities and
-    // the bath cellZone scalar conductivities.
-    void assembleConductivities();
-
-    // Build the extracellular/bath face conductivity on all faces.
-    void buildSigmaExtracellularSurface();
-
-    // Locate the reference cell on the base mesh (parallel-safe).
-    label referenceCell() const;
 
     //- Assemble and solve the global phiE equation once.
     void solvePhiEOnce();
@@ -136,11 +96,14 @@ public:
 
     OverrideTypeName("extracellularPotentialDomain");
 
+    //- Construct on the base mesh from the bidomain heart domain and the
+    //  top-level electroProperties: its torso block and the
+    //  sealedHeartBoundary of the myocardium Coeffs
     extracellularPotentialDomain
     (
         const fvMesh& baseMesh,
         myocardiumDomainInterface& heartDomain,
-        const dictionary& dict
+        const dictionary& electroProperties
     );
 
     virtual ~extracellularPotentialDomain() = default;
@@ -161,11 +124,14 @@ public:
 
     // Direct accessors for downstream consumers (heart solver and ECG probes).
     const volScalarField& phiE() const { return phiEPtr_(); }
-    const volTensorField& sigmaTotal() const { return sigmaTotalPtr_(); }
+    const volTensorField& sigmaTotal() const
+    {
+        return conductorPtr_->sigmaTotal();
+    }
 
     virtual const volTensorField* conductivityPtr() const override
     {
-        return sigmaTotalPtr_.valid() ? &sigmaTotalPtr_() : nullptr;
+        return conductorPtr_.valid() ? &conductorPtr_->sigmaTotal() : nullptr;
     }
 
     virtual const volTensorField* intracellularConductivityPtr()

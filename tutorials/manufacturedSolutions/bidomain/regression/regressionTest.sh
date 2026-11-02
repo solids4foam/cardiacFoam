@@ -18,7 +18,7 @@ fi
 # the manufactured-solution error summary against the reference.
 
 regression_init "Bidomain manufactured-solution regression test" \
-    regression/bidomainManufactured.reference "$@"
+    regression/bidomain.reference "$@"
 
 regression_run_or_fail
 

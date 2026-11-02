@@ -1,0 +1,17 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02,
+    "mesh": "tet",
+    "problem": "slab"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "tetNumberCells": [10, 14, 20, 28],
+      "caseId": ["slab_tet_N10", "slab_tet_N14", "slab_tet_N20", "slab_tet_N28"]
+    }
+  }
+}

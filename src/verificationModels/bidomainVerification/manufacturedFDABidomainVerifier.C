@@ -23,6 +23,8 @@ License
 #include "OSspecific.H"
 #include "bidomainVerification/manufacturedFDABidomainReference.H"
 #include "ionicModel.H"
+#include "ionicSelector.H"
+#include "bidomainFDAManufactured.H"
 #include "verificationUtils.H"
 #include "addToRunTimeSelectionTable.H"
 
@@ -46,17 +48,19 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
     electroVerificationModel(dict),
     phiEPtr_(nullptr),
     errorsReported_(false),
-    k_(1.0/Foam::sqrt(2.0)),
+    k_(0),
     phiEReferenceValue_(0.0),
     phiEReferencePoint_(point::zero)
 {
     const dictionary& coeffDict = this->dict();
-    const dictionary& cfg = verificationDict();
-
-    k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
-    // phiEReferenceValue and phiERefPoint are physics parameters that belong
-    // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
-    phiEReferenceValue_ = coeffDict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
+    k_ = bidomainFDABenchmarkConstants
+    (
+        coeffDict,
+        ionicSelector::selectDimension(coeffDict, {"1D", "2D", "3D"})
+    ).k;
+    // phiEReferenceValue and phiERefPoint are the heart potential pin of the
+    // bidomainSolverCoeffs dict (the parent dict), required as by the solver
+    phiEReferenceValue_ = coeffDict.get<scalar>("phiEReferenceValue");
     phiEReferencePoint_ = coeffDict.get<point>("phiERefPoint");
 }
 

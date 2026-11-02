@@ -1,0 +1,15 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECGShell",
+    "cases_root": "tutorials",
+    "parallel": true,
+    "mesh": "tet"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "tetNumberCells": [8, 12, 16, 20],
+      "caseId": ["tet_N8", "tet_N12", "tet_N16", "tet_N20"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECGShell",
+    "cases_root": "tutorials",
+    "parallel": true
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "numberCells": [8, 12, 16, 24, 32],
+      "caseId": ["hex_N8", "hex_N12", "hex_N16", "hex_N24", "hex_N32"]
+    }
+  }
+}

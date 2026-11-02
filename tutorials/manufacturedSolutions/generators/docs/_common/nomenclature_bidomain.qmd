@@ -1,0 +1,36 @@
+| Symbol | Meaning | Unit | Code name |
+|:----|:--------|:----|:---------|
+| $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
+| $d$, $\Omega_H$, $\Gamma_N$, $\mathbf n$ | spatial dimension; the myocardium; its sealed boundary $\partial\Omega_H$; outward unit normal of $\Gamma_N$ | --; --; --; -- | `dim`, `d` |
+| $t$ | time, normalised by $1\,\mathrm s$ | s | `t` |
+| $\phi_i$, $\phi_e$ | intracellular and extracellular potentials | V | `phiI`, `phiE` |
+| $V_m$ | transmembrane potential, $\phi_i-\phi_e$ | V | `Vm` |
+| $\boldsymbol\sigma_i$, $\boldsymbol\sigma_e$ | intracellular and extracellular conductivity tensors | S m$^{-1}$ | `conductivityIntracellular`, `conductivityExtracellular`; `Gi`, `Ge` (shell generator) |
+| $\sigma_{i,mm}$, $\sigma_{e,mm}$ | diagonal entries of $\boldsymbol\sigma_i$, $\boldsymbol\sigma_e$ on axis $m$ (FDA cube) | S m$^{-1}$ | -- |
+| $H_{mm}$ | $\sigma_{i,mm}\sigma_{e,mm}/(\sigma_{i,mm}+\sigma_{e,mm})$ | S m$^{-1}$ | `Gm` (C++) |
+| $\kappa$ | $\sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})$ | -- | `k` (C++) |
+| $k_d$ | $\sum_{m\le d}\sigma_{i,mm}(m\pi)^2$, eigenvalue of $-\nabla\cdot(\boldsymbol\sigma_i\nabla\,\cdot)$ for $F_d$ | s$^{-1}$ (case units) | -- |
+| $\chi$, $C_m$ | membrane surface-to-volume ratio; capacitance per unit area | m$^{-1}$; F m$^{-2}$ | `chi`; `cm` |
+| $I_{\mathrm{ion}}$, $J_{\mathrm{ion}}$ | capacitance-normalised ionic current; current returned by the ionic model | V s$^{-1}$; A m$^{-2}$ (case units) | (solver side); `Iion` |
+| $I_{\mathrm{app}}$ | applied volumetric current of the $V_m$ equation | A m$^{-3}$ | `sourceField` |
+| $s_e$ | manufactured source of the $\phi_e$ equation | A m$^{-3}$ | `addManufacturedPhiESource` |
+| $u_1,u_2,u_3$ | auxiliary states of the manufactured ionic model | case units | `u1`, `u2`, `u3` |
+| $\beta$, $\beta_d$ | reaction coefficient of the manufactured ionic model | case units | `Beta` |
+| $F_d$, $G_d$ | spatial factors of the FDA field and of its auxiliary states | case units | `F_d<d>`, `G_d<d>` |
+| $c$ | gauge constant of $\phi_e$ and $\phi_i$ | V | `shift` |
+| $\mathbf x_{\mathrm{ref}}$, $\phi_{e,\mathrm{ref}}$ | reference point and value of $\phi_e$ | m; V | `phiERefPoint`, `phiEReferenceValue` |
+| $\bar e$ | volume mean of the $\phi_e$ error | V | `phiE gauge offset` |
+| $\rho_p$, $\rho_e$ | residual coefficients of the $V_m$ and $\phi_e$ equations (FDA cube) | s$^{-1}$ (case units) | -- |
+| $r_1$, $r_2$ | inner and outer radius of the shell | m | `r1`, `r2` |
+| $\lambda$, $\omega$ | transmural coordinate; function vanishing on both spheres | -- | `lam`, `om` |
+| $\mathbf f,\mathbf s,\mathbf n_s$ | fibre, sheet and sheet-normal directions, common to $\boldsymbol\sigma_i$ and $\boldsymbol\sigma_e$ | -- | (shell generator) |
+| $\mathbf e_a,\mathbf e_b$ | fixed frame of the shell fibre rotation | -- | (shell generator) |
+| $\sigma_{i,f},\sigma_{i,s},\sigma_{i,n}$ | eigenvalues of $\boldsymbol\sigma_i$ along $\mathbf f$, $\mathbf s$, $\mathbf n_s$ | S m$^{-1}$ | `gil`, `git`, `gin` |
+| $\sigma_{e,f},\sigma_{e,s},\sigma_{e,n}$ | eigenvalues of $\boldsymbol\sigma_e$ along $\mathbf f$, $\mathbf s$, $\mathbf n_s$ | S m$^{-1}$ | `gel`, `get`, `gen` |
+| $\theta_0,\theta_1$; $\gamma_1,\gamma_2$ | fibre angle at the inner wall and its transmural increment; rotation angles of the fixed frame | deg | `theta0`, `theta1`; `gamma1`, `gamma2` |
+| $F_i$, $F_e$ | spatial factors of $\phi_i$ and $\phi_e$ (shell) | case units | `Fi`, `Fe` |
+| $\hat h_i$, $\hat h_e$; $k$ | unsealed fields of $F_i$ and $F_e$; their wave number | case units; m$^{-1}$ | `hhat`, `ehat`; `k` |
+| $a_1,a_2,a_3$; $b_1,\dots,b_4$ | coefficients of $\hat h_i$; of $\hat h_e$ | case units | `hA[0..2]`; `fA[0..3]` |
+| $m_{i,j}$, $m_{e,j}$; $m_i$, $m_e$ | wall correction of sphere $j$; its blend | -- | (shell generator) |
+| $d_j$, $\mathbf n_j$ | $\partial_n\omega$ on sphere $j$; unit normal of sphere $j$ out of the heart | -- | (shell generator) |
+| $g$ | positive spatial factor of the shell auxiliary states | case units | `g` |

@@ -1,0 +1,16 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "numberCells": [10, 20, 40, 10, 20, 40],
+      "conductivity": ["anisotropic", "anisotropic", "anisotropic", "unequal", "unequal", "unequal"],
+      "caseId": ["default_hex_N10", "default_hex_N20", "default_hex_N40", "unequal_hex_N10", "unequal_hex_N20", "unequal_hex_N40"]
+    }
+  }
+}

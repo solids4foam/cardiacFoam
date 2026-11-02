@@ -206,15 +206,16 @@ earlier ones:
 |---|---|
 | `configureMyocardiumDomain(...)` | Instantiate myocardium domain via factory |
 | `configureAdvanceScheme(...)` | Select the runtime advance scheme |
-| `configureBathPotentialDomain(...)` | Optionally instantiate a standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`); requires the myocardium domain to already be configured |
+| `configureBathPotentialDomain(...)` | With `torsoCoupling bath`, instantiate the standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`) from the top-level `torso` block; requires the myocardium domain to already be configured |
 | `configureConductionDomains(...)` | Load the Purkinje graph, instantiate its domain, and build its PVJ couplings in the same pass |
 | `configureECGDomains(...)` | Instantiate the ECG domain(s), reading myocardium (and optionally bath) state via `electroStateProvider` |
 
 No `configure*Couplings(...)` functions exist.
 
 `configureBathPotentialDomain(...)` instantiates an optional standalone
-domain, gated on whether `bathPotentialDomain` is present in
-`electroProperties`. It builds no couplings. It requires the myocardium
+domain, gated on `torsoCoupling bath` in the top level of
+`electroProperties`, from its `torso` block; a myocardium other than
+`bidomainSolver` is then fatal. It builds no couplings. It requires the myocardium
 domain to already be configured (`system.hasMyocardium()`). It runs before
 `configureECGDomains(...)`: the potential domain it builds is one of the
 state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
@@ -222,8 +223,8 @@ state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
 Conduction (PVJ) couplings are built inside `configureConductionDomains(...)`
 from a top-level `domainCouplings` block; each entry resolves against the
 conduction domain via `conductionNetworkDomain <name>`. ECG domains take no
-coupling: an ECG reads the myocardium (or bath) state directly, and a bath
-bidomain already couples the torso.
+coupling: an ECG reads the myocardium (or bath) state directly, and
+`torsoCoupling` couples the torso.
 
 Current rules:
 
@@ -234,9 +235,11 @@ Current rules:
   (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`), not the domain, so two
   domains with the same `ecgSolver` write the same file; that is a warning
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
-- `bathPotentialDomain` is optional; when present it is read from
-  `electroProperties.subDict("bathPotentialDomain")`
-- A `coupling` entry in an `ecgDomains.<name>` entry is a fatal error
+- `torso` and `torsoCoupling` (top level) are optional and given together;
+  `torsoCoupling bath` builds the bath domain from `torso`,
+  `torsoCoupling leadField` leaves `torso` to the lead fields of `torsoECG`
+- `ecgDomains` is a top-level block; a `coupling` entry in an
+  `ecgDomains.<name>` entry is a fatal error
 
 ---
 
@@ -244,7 +247,7 @@ Current rules:
 
 ### Bath potential domain (single, optional)
 
-Build the one `bathPotentialDomain` entry if present. Independent of the
+Build the bath domain of `torsoCoupling bath`. Independent of the
 conduction and ECG passes; only depends on the myocardium domain already
 being built. Built before conduction, since a `torsoECG`-class ECG domain
 built afterwards may need it.
@@ -262,7 +265,9 @@ separate dictionary containers.
 
 Build every entry in `ecgDomains`. Each domain's `ecgSolver` (`pseudoECG`,
 `eikonalECG`, or `torsoECG`) determines which `electroStateProvider` it reads
-from; `torsoECG` requires the bath potential domain from the previous step.
+from; `torsoECG` requires the top-level `torso` and reads the bath potential
+domain of the previous step (`torsoCoupling bath`) or the myocardium
+(`torsoCoupling leadField`).
 
 ---
 

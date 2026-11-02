@@ -29,6 +29,7 @@ Author
 #define pseudoECGSolver_H
 
 #include "ecgSolver.H"
+#include "infiniteMediumLeadField.H"
 #include "OFstream.H"
 #include "autoPtr.H"
 #include "overrideTypeName.H"
@@ -42,10 +43,8 @@ class pseudoECGSolver
 :
     public ecgSolver
 {
-    scalar sigmaE_;
+    infiniteMediumLeadField leadField_;
     bool reportedConductivitySource_;
-    bool leadVectorsCalculated_;
-    List<List<vector>> leadVectors_;
 
     //- True when a 'sampling' sub-dict is present: the solver then owns its
     //  own time-series file, written at deltaT_ independently of writeInterval.
@@ -55,8 +54,6 @@ class pseudoECGSolver
     scalar deltaT_;
     scalar nextSampleTime_;
     autoPtr<OFstream> outputPtr_;
-
-    void calculateLeadVectors(const ecgDomain& domain);
 
 public:
 

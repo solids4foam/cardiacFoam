@@ -1,0 +1,23 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# error <row> <L1|L2|Linf> <expected> <tolerance>: rows of
+# postProcessing/manufacturedLeadFieldECGSummary_ECG.dat (norms over the
+# samples), for -problem layered (alpha 0.01) on the hex N 10 mesh.
+# Reciprocity gap on Vm_h (relative to the largest |direct|) and on the exact
+# Vm (absolute, exact potentials up to 1.8): zero to 1e-9.
+error    leadField-direct_relative                  Linf  0               1e-9
+error    leadFieldStatic-directStatic               Linf  0               1.4e-9
+# Left electrodes: the current crosses the torso layer interface x = -0.5,
+# whose harmonic face conductivity carries the exact flux.
+error    leadFieldStatic-exactCentroid_torsoLeft    Linf  0               1e-9
+error    leadFieldStatic-exactCentroid_nearLeft     Linf  0               1e-9
+error    directStatic-exactCentroid_torsoLeft       Linf  0               1e-9
+# Right electrodes: the current also crosses both heart walls (Gi + Ge on
+# the heart side); the error is the slab's, the current part is exact.
+error    leadFieldStatic-exactCentroid_torsoRight   L2    0.0176705555    1.8e-07
+error    leadFieldStatic-exactCentroid_nearRight    L2    0.0176705555    1.8e-07
+error    directStatic-exactCentroid_torsoRight      L2    0.0176705555    1.8e-07
+error    directStatic-exactCentroid_nearRight       L2    0.0176705555    1.8e-07
+# Body surface: an electrode on the right end face and the cells of the
+# outer boundary (direct solve)
+error    leadFieldStatic-exactCentroid_surface3     L2    0.0176705555    1.8e-07
+error    phiStatic_surface                          L2    0.0116378923    1.8e-07

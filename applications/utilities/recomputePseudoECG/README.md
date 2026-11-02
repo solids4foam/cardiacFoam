@@ -7,7 +7,7 @@ need to be corrected or a new electrode configuration needs to be evaluated.
 ## What it does
 
 1. Reads `constant/electroProperties` and extracts the electrode positions from
-   the first `ecgDomains` entry.
+   the first entry of the top-level `ecgDomains` block.
 2. Reads the conductivity tensor once from `0/conductivity`, or from the active
    solver coefficients when the field is not present on disk.
 3. Iterates over every stored time directory (or a selected range).
@@ -16,8 +16,12 @@ need to be corrected or a new electrode configuration needs to be evaluated.
    - Computes `fvc::grad(Vm)` via the Green-Gauss scheme.
    - Applies the Gima-Rudy dipole integral over all mesh cells:
 
-         phi(P) = sum_c  (sigma_c . grad(Vm)_c) . (x_c - P) * V_c
-                          / |x_c - P|^3
+         phi(P) = 1/(4 pi sigmaExtracellular)
+                  sum_c  (sigma_c . grad(Vm)_c) . (x_c - P) * V_c
+                         / |x_c - P|^3
+
+     `sigmaExtracellular` is required in the ECG domain entry, as for the
+     `pseudoECG` model.
 
 5. Writes `postProcessing/pseudoECG.dat` (header + one row per time step).
 
@@ -52,8 +56,8 @@ during a normal `cardiacFoam` run and is compatible with `plot_pseudo_ecg.py`.
 - Conductivity uses the same `conductivitySource` contract as `cardiacFoam`.
   `field` mode searches the canonical static field and fails if it is absent;
   `uniform` mode uses the active solver coefficient and does not probe disk.
-- Electrode positions are taken from the first `ecgDomains` sub-dictionary in
-  `constant/electroProperties`. Update the positions there and re-run this
+- Electrode positions are taken from the first sub-dictionary of the
+  top-level `ecgDomains` block of `constant/electroProperties`. Update the positions there and re-run this
   utility to correct any errors without re-running the simulation.
 - Runs in parallel; results are reduced across processors at each time step.
 - Approximately 50× faster than a full simulation re-run since no ODE solving

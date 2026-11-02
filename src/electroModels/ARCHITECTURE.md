@@ -17,9 +17,11 @@ physicsModel::New()             physicsProperties: type electroModel
 The eikonal spatial entry uses `eikonalMyocardiumDomain` rather than the
 `myocardiumSolver` kernel table. `singleCellSolver` registers directly in the
 parent `electroModel` table and bypasses this spatial assembly. For spatial
-entries, `<name>Coeffs` is the builder's configuration root; optional public
-blocks include `conductionNetworkDomains`, `ecgDomains`,
-`bathPotentialDomain`, and `domainCouplings`. Domain-specific selectors include
+entries, `<name>Coeffs` is the builder's configuration root of the heart;
+its optional public blocks include `conductionNetworkDomains` and
+`domainCouplings`. The top level of `electroProperties` holds the region
+outside the heart and the ECG: `torso`, `torsoCoupling` (`bath` or
+`leadField`) and `ecgDomains`. Domain-specific selectors include
 `conductionSystemSolver` and `ecgSolver`.
 
 This complete electrophysiology path is built in both full solids4foam and
@@ -40,7 +42,7 @@ electroModels/
 ├── electroDomains/             Physical domain implementations
 │   ├── myocardiumDomain/                3D myocardium: Vm PDE + ionic ODE
 │   ├── ecgDomain/                       ECG body region: elliptic Vm-driven PDE
-│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath)
+│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath) and its passiveConductor
 │   └── conductionSystemDomain/          Purkinje/conduction network: 1D graph ODE
 ├── myocardiumModels/           Run-time-selectable myocardium diffusion solvers
 ├── ecgModels/                  Run-time-selectable ECG field solvers
@@ -122,6 +124,14 @@ The body-surface region. Solves a purely passive Laplace/Poisson equation driven
 
 - Owns: `autoPtr<ecgSolver>`
 
+- Reads its electrodes with `readEcgElectrodes` (`ecgElectrodes.H`): the
+  entry's own electrode positions, else those shared by all ECG domains.
+  The lead-field build reads them with the same function.
+
+**`ecgElectrodeCells`** — the cell of each electrode of a torso ECG, owned
+by one processor; an electrode outside the mesh is fatal. Used by `torsoECG`
+(bath) and `leadFieldConductor` (lead fields).
+
 **`extracellularPotentialDomain`** — unified global extracellular potential
 domain. Implements `electroStateDomain`.
 
@@ -132,6 +142,14 @@ domain. Implements `electroStateDomain`.
 
 - Solves an elliptic Poisson equation for `phiE` driven by the scattered heart
   `Vm`, with Dirichlet `groundPatches` and Neumann `surfaceCurrentPatches`.
+
+- Owns a `passiveConductor` (same folder), built from the top-level `torso`
+  block: the heart+torso cell and face conductivities, the operator, the
+  boundary data of the potential (patch types, ground values, surface
+  currents), the reference pin and the heart source. `passiveConductor` has
+  two users: this domain (`torsoCoupling bath`) and the lead fields of
+  `torsoECG` (`torsoCoupling leadField`: `leadFieldConductor`,
+  `buildLeadFields`).
 
 - Binds a restricted local view of `phiE` back into the bidomain myocardium
   solver via `bindExternalPhiE`, so the bidomain solver no longer solves a
@@ -204,9 +222,18 @@ Concrete implementations of `ecgSolver`.
 
 | Class | Type name | Method | Notes |
 |---|---|---|---|
-| `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
-| `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
-| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+| `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` (`infiniteMediumLeadField`) | No body-conductor mesh required; requires `sigmaExtracellular` |
+| `torsoECG` | `torsoECG` | The potential at electrodes in the torso: with `torsoCoupling bath`, cell-centre sampling of the unified `phiE`; with `torsoCoupling leadField`, the lead fields of `buildLeadFields` contracted with the heart source of `Vm` (`leadFieldECG`) | Requires the top-level `torso` block; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
+| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then integrates with `infiniteMediumLeadField` | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+
+The classes these models are built from:
+
+| Class | Folder | Used by | Role |
+|---|---|---|---|
+| `infiniteMediumLeadField` | `infiniteMediumLeadField/` | `pseudoECG`, `eikonalECG` | The lead field of an infinite homogeneous medium and its `1/(4 pi sigmaExtracellular)` scaling |
+| `leadFieldECG` | `leadFieldECG/` | `torsoECG` (`torsoCoupling leadField`) | Loads the lead fields of `buildLeadFields`, checks their signature and evaluates the channels from the heart source of `Vm` |
+| `leadFieldConductor` | `leadFieldECG/` | `leadFieldECG`, `buildLeadFields`, the lead-field verifiers | The `passiveConductor` of an ECG domain: the heart sub-mesh, Gi and Ge (those of a running bidomain heart), the torso block, the electrodes of the ECG domain and the signature |
+| `leadFieldAdjoint` | `leadFieldECG/` | `buildLeadFields` | The transpose of the explicit part of the conductor's operator (`probedOperator`) and the self-checks of the build |
 
 `tissueTemplates.H`, beside `eikonalECG`, holds the compiled endo/mid/epi
 templates. Templates generated from an ionic model, one per

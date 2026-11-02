@@ -194,7 +194,7 @@ echo "writeErrorField $errorField;" > local/verifier
 # The ECG and its verifier are 3D only
 if [ "$dim" != 3 ]
 then
-    echo "#remove ecgDomains" >> local/field
+    echo "#remove ecgDomains" > local/ecg
 fi
 if [ "$electrodes" = five ]
 then

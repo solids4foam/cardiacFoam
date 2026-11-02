@@ -48,8 +48,9 @@ bidomainFDAManufacturedInitConsts
     double* CONSTANTS,
     double* RATES,
     double* STATES,
-    int dimension,
-    double k
+    double Cm,
+    double Chi,
+    double Beta
 );
 
 void

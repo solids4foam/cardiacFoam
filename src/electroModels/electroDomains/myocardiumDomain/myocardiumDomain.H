@@ -190,6 +190,16 @@ public:
         );
     }
 
+    virtual const fvMeshSubset* meshSubsetPtr() const override
+    {
+        return
+        (
+            meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+          ? meshSubsetPtr_.get()
+          : nullptr
+        );
+    }
+
     virtual const Time& time() const override
     {
         return Vm_.mesh().time();
@@ -356,6 +366,15 @@ public:
 
     virtual void postProcess() override;
 };
+
+
+//- Sub-mesh of the myocardium cellZone named by cellZone in
+//  electroProperties (null without cellZone)
+autoPtr<fvMeshSubset> createMyocardiumMeshSubset
+(
+    const fvMesh& supportMesh,
+    const dictionary& electroProperties
+);
 
 } // End namespace Foam
 

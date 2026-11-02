@@ -28,6 +28,8 @@ License
 #include "conormalStabilisation.H"
 #include "exposedPhiETrace.H"
 #include "fvMeshSubset.H"
+#include "torsoCoupling.H"
+#include "passiveConductor.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
 
@@ -36,6 +38,108 @@ namespace Foam
 
 defineTypeNameAndDebug(bidomainSolver, 0);
 addToRunTimeSelectionTable(myocardiumSolver, bidomainSolver, dictionary);
+
+
+namespace
+{
+
+// With torsoCoupling bath the bath domain owns phiE and binds it to the
+// heart; the heart reads no phiE of its own
+bool solvedWithBath(const dictionary& electroProperties)
+{
+    return
+        torsoCoupling::readFromCoeffs(electroProperties)
+     == torsoCoupling::type::bath;
+}
+
+
+// The reference of the heart's own phiE solve: phiERefPoint and the value
+// pinned at its cell, both required unless the bath owns phiE
+autoPtr<Tuple2<point, scalar>> readPhiEReference
+(
+    const dictionary& electroProperties
+)
+{
+    if
+    (
+        electroProperties.found("phiEReferenceValue")
+     && !electroProperties.found("phiERefPoint")
+    )
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "phiEReferenceValue is set but phiERefPoint is not; the value "
+            << "is applied at the cell containing phiERefPoint"
+            << exit(FatalIOError);
+    }
+
+    if (solvedWithBath(electroProperties))
+    {
+        return nullptr;
+    }
+
+    return autoPtr<Tuple2<point, scalar>>::New
+    (
+        electroProperties.get<point>("phiERefPoint"),
+        electroProperties.get<scalar>("phiEReferenceValue")
+    );
+}
+
+} // End anonymous namespace
+
+
+const Enum<bidomainSolver::heartPhiETrace>
+bidomainSolver::heartPhiETraceNames
+({
+    { heartPhiETrace::zeroGradient, "zeroGradient" },
+    { heartPhiETrace::global, "global" }
+});
+
+
+bidomainSolver::heartPhiETrace bidomainSolver::readBathHeartPhiETrace
+(
+    const dictionary& dict
+)
+{
+    const heartPhiETrace trace =
+        heartPhiETraceNames.get("bathHeartPhiETrace", dict);
+
+    if
+    (
+        trace == heartPhiETrace::global
+     && !dict.get<Switch>("sealedHeartBoundary")
+    )
+    {
+        FatalIOErrorInFunction(dict)
+            << "bathHeartPhiETrace global requires sealedHeartBoundary true"
+            << exit(FatalIOError);
+    }
+
+    return trace;
+}
+
+
+bidomainSolver::heartPhiETrace bidomainSolver::readHeartPhiETrace
+(
+    const dictionary& dict
+)
+{
+    if (torsoCoupling::readFromCoeffs(dict) != torsoCoupling::type::none)
+    {
+        return readBathHeartPhiETrace(dict);
+    }
+
+    if (dict.found("bathHeartPhiETrace"))
+    {
+        FatalIOErrorInFunction(dict)
+            << "bathHeartPhiETrace sets the heart phiE at the heart-torso "
+            << "wall, but electroProperties has no torso"
+            << exit(FatalIOError);
+    }
+
+    // Without a torso the heart wall is the outer boundary, where the heart
+    // phiE is zeroGradient
+    return heartPhiETrace::zeroGradient;
+}
 
 
 bidomainSolver::bidomainSolver
@@ -53,7 +157,7 @@ bidomainSolver::bidomainSolver
             "phiE",
             mesh.time().timeName(),
             mesh,
-            electroProperties.found("bathPotentialDomain")
+            solvedWithBath(electroProperties)
           ? IOobject::NO_READ
           : myocardiumFieldReadOption(meshSubsetPtr),
             IOobject::AUTO_WRITE
@@ -131,49 +235,20 @@ bidomainSolver::bidomainSolver
     (
         electroProperties.get<Switch>("sealedHeartBoundary")
     ),
-    phiEReferenceValue_
-    (
-        electroProperties.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)
-    ),
-    phiEReferencePoint_
-    (
-        electroProperties.found("phiERefPoint")
-      ? electroProperties.get<point>("phiERefPoint")
-      : point::zero
-    ),
-    hasPhiEReferencePoint_(electroProperties.found("phiERefPoint")),
+    phiEReferencePtr_(readPhiEReference(electroProperties)),
     externalPhiEBasePtr_(nullptr),
     externalPhiECellMapPtr_(nullptr),
     meshSubsetPtr_(meshSubsetPtr),
-    bathHeartPhiETrace_
-    (
-        electroProperties.getOrDefault<word>("bathHeartPhiETrace", "zeroGradient")
-    ),
+    bathHeartPhiETrace_(readHeartPhiETrace(electroProperties)),
     verifierPtr_(nullptr)
 {
-    if
-    (
-        bathHeartPhiETrace_ != "zeroGradient"
-     && bathHeartPhiETrace_ != "global"
-    )
-    {
-        FatalIOErrorInFunction(electroProperties)
-            << "bathHeartPhiETrace must be zeroGradient or global"
-            << exit(FatalIOError);
-    }
-    if (bathHeartPhiETrace_ == "global" && !sealedHeartBoundary_)
-    {
-        FatalIOErrorInFunction(electroProperties)
-            << "bathHeartPhiETrace global requires sealedHeartBoundary true"
-            << exit(FatalIOError);
-    }
     sealedWallPolicy::publish(phiE_, sealedHeartBoundary_);
 
     if (meshSubsetPtr_ && meshSubsetPtr_->hasSubMesh())
     {
         const labelUList& cellMap = meshSubsetPtr_->cellMap();
 
-        if (!electroProperties.found("bathPotentialDomain"))
+        if (!solvedWithBath(electroProperties))
         {
             readMappedCellField(phiE_, supportMesh, cellMap);
         }
@@ -190,35 +265,20 @@ void bidomainSolver::updateGradPhiE()
 
 label bidomainSolver::referenceCell() const
 {
-    if (!hasPhiEReferencePoint_)
+    if (!phiEReferencePtr_)
     {
         FatalErrorInFunction
             << "bidomainSolver requires phiERefPoint when it solves the "
             << "local extracellular potential. For bidomain-bath cases, "
-            << "configure bathPotentialDomain so a global phiE field is bound."
+            << "set torso and torsoCoupling bath so a global phiE field is "
+            << "bound."
             << exit(FatalError);
     }
 
-    const label refCell = phiE_.mesh().findCell(phiEReferencePoint_);
-
-    if (Pstream::parRun())
-    {
-        const label localOwnsReference = refCell >= 0 ? 1 : 0;
-        label ownerCount = localOwnsReference;
-
-        reduce(ownerCount, sumOp<label>());
-
-        if (ownerCount != 1)
-        {
-            FatalErrorInFunction
-                << "phiERefPoint " << phiEReferencePoint_
-                << " must be owned by exactly one processor in parallel, but "
-                << ownerCount << " processors reported a containing cell."
-                << exit(FatalError);
-        }
-    }
-
-    return refCell;
+    return passiveConductor::locateReferenceCell
+    (
+        phiE_.mesh(), phiEReferencePtr_->first()
+    );
 }
 
 
@@ -237,7 +297,7 @@ void bidomainSolver::bindExternalPhiE
     externalPhiEBasePtr_ = &phiE;
     externalPhiECellMapPtr_ = &heartCellMap;
 
-    if (bathHeartPhiETrace_ != "global")
+    if (bathHeartPhiETrace_ != heartPhiETrace::global)
     {
         return;
     }
@@ -299,7 +359,7 @@ void bidomainSolver::restrictExternalPhiE()
 
     if
     (
-        bathHeartPhiETrace_ == "global"
+        bathHeartPhiETrace_ == heartPhiETrace::global
      && meshSubsetPtr_
      && meshSubsetPtr_->hasSubMesh()
     )
@@ -448,7 +508,7 @@ void bidomainSolver::solvePhiEImplicitOnce
         }
         if (refCell >= 0)
         {
-            phiEqn.setReference(refCell, phiEReferenceValue_, true);
+            phiEqn.setReference(refCell, phiEReferencePtr_->second(), true);
         }
         solve(phiEqn);
     }

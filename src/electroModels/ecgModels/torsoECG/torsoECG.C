@@ -20,42 +20,13 @@ License
 #include "torsoECG.H"
 
 #include "ecgDomain.H"
+#include "ecgElectrodeCells.H"
+#include "torsoCoupling.H"
 #include "addToRunTimeSelectionTable.H"
 #include "PstreamReduceOps.H"
 
 namespace Foam
 {
-
-namespace
-{
-
-label nearestCell
-(
-    const fvMesh& mesh,
-    const point& samplePoint,
-    scalar& nearestDistanceSqr
-)
-{
-    label nearestCellI = -1;
-    nearestDistanceSqr = GREAT;
-
-    const vectorField& centres = mesh.C().primitiveField();
-
-    forAll(centres, cellI)
-    {
-        const scalar distSqr = Foam::magSqr(centres[cellI] - samplePoint);
-
-        if (distSqr < nearestDistanceSqr)
-        {
-            nearestDistanceSqr = distSqr;
-            nearestCellI = cellI;
-        }
-    }
-
-    return nearestCellI;
-}
-
-} // End anonymous namespace
 
 defineTypeNameAndDebug(torsoECG, 0);
 addToRunTimeSelectionTable(ecgSolver, torsoECG, dictionary);
@@ -63,160 +34,46 @@ addToRunTimeSelectionTable(ecgSolver, torsoECG, dictionary);
 
 torsoECG::torsoECG(const dictionary& dict)
 :
+    leadFieldPtr_(),
     electrodeCells_(),
     cellsBuilt_(false)
-{}
-
-
-void torsoECG::buildElectrodeCells(const ecgDomain& domain)
 {
-    const volScalarField* phiEPtr = domain.phiEPtr();
+    const dictionary& electroProperties = dict.topDict();
 
-    if (!phiEPtr)
+    if
+    (
+        torsoCoupling::read(electroProperties)
+     == torsoCoupling::type::leadField
+    )
     {
-        FatalErrorInFunction
-            << "torsoECG requires a global phiE field from the ECG "
-            << "state provider."
-            << exit(FatalError);
+        leadFieldPtr_.reset
+        (
+            new leadFieldECG(electroProperties, dict.dictName())
+        );
     }
-
-    const fvMesh& phiEMesh = phiEPtr->mesh();
-    const List<vector>& electrodes = domain.electrodePositions();
-
-    electrodeCells_.setSize(electrodes.size(), -1);
-
-    forAll(electrodes, electrodeI)
-    {
-        electrodeCells_[electrodeI] = phiEMesh.findCell(electrodes[electrodeI]);
-
-        label ownerCount = electrodeCells_[electrodeI] >= 0 ? 1 : 0;
-        reduce(ownerCount, sumOp<label>());
-        const label initialOwnerCount = ownerCount;
-
-        if (ownerCount != 1)
-        {
-            scalar localDistanceSqr = GREAT;
-            label localCandidate = -1;
-
-            if (ownerCount == 0)
-            {
-                localCandidate =
-                    nearestCell
-                    (
-                        phiEMesh,
-                        electrodes[electrodeI],
-                        localDistanceSqr
-                    );
-            }
-            else if (electrodeCells_[electrodeI] >= 0)
-            {
-                localCandidate = electrodeCells_[electrodeI];
-                localDistanceSqr =
-                    Foam::magSqr
-                    (
-                        phiEMesh.C().primitiveField()[localCandidate]
-                      - electrodes[electrodeI]
-                    );
-            }
-
-            scalar globalDistanceSqr = localDistanceSqr;
-            reduce(globalDistanceSqr, minOp<scalar>());
-
-            const bool isNearest
-            (
-                localCandidate >= 0
-             && Foam::mag(localDistanceSqr - globalDistanceSqr)
-              <= max(SMALL, ROOTSMALL*max(scalar(1), globalDistanceSqr))
-            );
-
-            label ownerProc = isNearest ? Pstream::myProcNo() : Pstream::nProcs();
-            reduce(ownerProc, minOp<label>());
-
-            electrodeCells_[electrodeI] =
-            (
-                isNearest
-             && Pstream::myProcNo() == ownerProc
-              ? localCandidate
-              : -1
-            );
-
-            ownerCount = electrodeCells_[electrodeI] >= 0 ? 1 : 0;
-            reduce(ownerCount, sumOp<label>());
-
-            if (electrodeCells_[electrodeI] >= 0)
-            {
-                if (initialOwnerCount == 0)
-                {
-                    Info<< "torsoECG: electrode "
-                        << domain.electrodeNames()[electrodeI]
-                        << " at " << electrodes[electrodeI]
-                        << " is outside findCell ownership; using nearest cell "
-                        << electrodeCells_[electrodeI]
-                        << " at distance " << Foam::sqrt(globalDistanceSqr)
-                        << " on phiE mesh '" << phiEMesh.name() << "'."
-                        << nl;
-                }
-                else
-                {
-                    Info<< "torsoECG: electrode "
-                        << domain.electrodeNames()[electrodeI]
-                        << " at " << electrodes[electrodeI]
-                        << " has ambiguous parallel findCell ownership; "
-                        << "using nearest owner cell "
-                        << electrodeCells_[electrodeI]
-                        << " at distance " << Foam::sqrt(globalDistanceSqr)
-                        << " on phiE mesh '" << phiEMesh.name() << "'."
-                        << nl;
-                }
-            }
-        }
-
-        if (ownerCount != 1)
-        {
-            FatalErrorInFunction
-                << "Electrode " << domain.electrodeNames()[electrodeI]
-                << " at " << electrodes[electrodeI]
-                << " must be owned by exactly one processor/cell in phiE "
-                << "mesh '" << phiEMesh.name() << "', but owner count is "
-                << ownerCount << "."
-                << exit(FatalError);
-        }
-    }
-
-    Info<< "torsoECG: located " << electrodes.size()
-        << " electrodes on phiE mesh '" << phiEMesh.name() << "'."
-        << endl;
-
-    cellsBuilt_ = true;
 }
 
 
-void torsoECG::solve
-(
-    ecgDomain& domain,
-    scalar t0,
-    scalar dt,
-    scalarField& values
-)
+void torsoECG::sample(const ecgDomain& domain, scalarField& values)
 {
-    (void)t0;
-    (void)dt;
+    const volScalarField& phiEField = domain.phiE();
 
     if (!cellsBuilt_)
     {
-        buildElectrodeCells(domain);
+        electrodeCells_ = ecgElectrodeCells
+        (
+            phiEField.mesh(),
+            domain.electrodeNames(),
+            domain.electrodePositions()
+        );
+        cellsBuilt_ = true;
+
+        Info<< "torsoECG: located " << electrodeCells_.size()
+            << " electrodes on phiE mesh '" << phiEField.mesh().name()
+            << "'." << endl;
     }
 
-    const volScalarField* phiEPtr = domain.phiEPtr();
-
-    if (!phiEPtr)
-    {
-        FatalErrorInFunction
-            << "torsoECG requires phiE, but domain.phiEPtr() returned null."
-            << exit(FatalError);
-    }
-
-    const scalarField& phiE = phiEPtr->primitiveField();
+    const scalarField& phiE = phiEField.primitiveField();
 
     values.setSize(electrodeCells_.size());
     values = 0.0;
@@ -235,6 +92,35 @@ void torsoECG::solve
         Pstream::listCombineGather(values, plusEqOp<scalar>());
         Pstream::broadcast(values);
     }
+}
+
+
+void torsoECG::solve
+(
+    ecgDomain& domain,
+    scalar t0,
+    scalar dt,
+    scalarField& values
+)
+{
+    (void)t0;
+    (void)dt;
+
+    if (!leadFieldPtr_.valid())
+    {
+        sample(domain, values);
+        return;
+    }
+
+    if (!leadFieldPtr_->loaded())
+    {
+        leadFieldPtr_->load
+        (
+            domain, domain.electrodeNames(), domain.electrodePositions()
+        );
+    }
+
+    leadFieldPtr_->evaluate(domain.Vm(), values);
 }
 
 } // End namespace Foam

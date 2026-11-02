@@ -40,41 +40,41 @@ eikonalSolverCoeffs
             epicardialCells  { range (0.7 1); }
         }
     }
+}
 
-    ecgDomains
+ecgDomains
+{
+    ECG
     {
-        ECG
+        ecgSolver eikonalECG;
+        sigmaExtracellular 0.2;
+        sampling
         {
-            ecgSolver eikonalECG;
-            sigmaExtracellular 0.2;
-            sampling
+            start  0;
+            end    0.01;
+            deltaT 1e-3;
+        }
+        electrodePositions
+        {
+            E1 (-0.01 0.005 0.00005);
+            E2 (0.02 0.005 0.00005);
+        }
+        personalizedTemplates
+        {
+            ionicModelConfig
             {
-                start  0;
-                end    0.01;
-                deltaT 1e-3;
-            }
-            electrodePositions
-            {
-                E1 (-0.01 0.005 0.00005);
-                E2 (0.02 0.005 0.00005);
-            }
-            personalizedTemplates
-            {
-                ionicModelConfig
+                ionicModel BuenoOrovio;
+                tissue     epicardialCells;
+                solver     RKF45;
+                singleCellStimulus
                 {
-                    ionicModel BuenoOrovio;
-                    tissue     epicardialCells;
-                    solver     RKF45;
-                    singleCellStimulus
-                    {
-                        stim_start 20; stim_duration 1; stim_amplitude 60;
-                        stim_period_S1 1000; nstim1 1; stim_period_S2 0; nstim2 0;
-                    }
+                    stim_start 20; stim_duration 1; stim_amplitude 60;
+                    stim_period_S1 1000; nstim1 1; stim_period_S2 0; nstim2 0;
                 }
-                regionStates "constant/templateStates";
-                duration     0.5;
-                dt           1e-4;
             }
+            regionStates "constant/templateStates";
+            duration     0.5;
+            dt           1e-4;
         }
     }
 }

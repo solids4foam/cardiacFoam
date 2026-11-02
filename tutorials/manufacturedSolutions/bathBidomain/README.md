@@ -57,10 +57,12 @@ The `sides` patches carry no current.
 
 - myocardium solver: `bidomainSolver`, `solutionAlgorithm implicit`,
   `timeCouplingScheme godunov`, `ddt(Vm)` `backward`
-- bath: `bathPotentialDomain` (cellZones `myocardium` and `bath`,
-  `bathConductivityField bodyAndOrgansConductivity`), `heartAssembly
+- bath: `torsoCoupling bath` with the top-level `torso` block (cellZone
+  `bath`, `conductivityField bodyAndOrgansConductivity`), `heartAssembly
   matchedSubmesh`, `interfaceConductivityInterpolation`
-  `distanceWeightedHarmonic` or `unweightedHarmonic` (`-interface`)
+  `distanceWeightedHarmonic` or `conormalHarmonic` (`-interface`; the
+  `phiE` solver entry of `system/fvSolution` sets
+  `nInterfaceGradientCorrectors 2` for `conormalHarmonic`)
 - bath coupling: `bathPredictorCorrector yes` or `no` (`-predictorCorrector`),
   `nOuterCorrectors 1`, `nNonOrthogonalCorrectors 0`
 - ionic model: `bathBidomainFDAManufactured`
@@ -104,7 +106,7 @@ Every option writes a file in `local/`, which the dictionaries include;
 | `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
 | `-variant groundElectrode\|electrodePair` | bath boundary variant | groundElectrode |
 | `-predictorCorrector yes\|no` | `bathPredictorCorrector` | yes |
-| `-interface distanceWeightedHarmonic\|unweightedHarmonic` | `interfaceConductivityInterpolation` | distanceWeightedHarmonic |
+| `-interface distanceWeightedHarmonic\|conormalHarmonic` | `interfaceConductivityInterpolation` | distanceWeightedHarmonic |
 | `-gradient leastSquares\|GaussLinear` | cell-gradient reconstruction | leastSquares |
 | `-snGrad corrected\|limited\|orthogonal` | laplacian and snGrad correction (`limited` is `limited 0.5`) | corrected |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
@@ -144,7 +146,7 @@ tables.
 | [cartesianConvergence](setup/studies/cartesianConvergence/README.md) | spatial order on hexahedra, 1D/2D/3D, with and without the predictor-corrector, both bath variants, Cartesian exact-field interface current |
 | [tetConvergence](setup/studies/tetConvergence/README.md) | spatial order and interface diagnostics on conformal tetrahedra, exact-field interface current, electrode pair |
 | [coupling](setup/studies/coupling/README.md) | effect of the predictor-corrector on the same tetrahedral meshes |
-| [interfaceCurrentConvergence](setup/studies/interfaceCurrentConvergence/README.md) | interface diagnostics with `distanceWeightedHarmonic` against `unweightedHarmonic` interface conductivity |
+| [interfaceCurrentConvergence](setup/studies/interfaceCurrentConvergence/README.md) | interface diagnostics with `distanceWeightedHarmonic` against `conormalHarmonic` |
 | [gradientScheme](setup/studies/gradientScheme/README.md) | gradient and non-orthogonal correction schemes on tetrahedra |
 | [temporalConvergence](setup/studies/temporalConvergence/README.md) | temporal order of the complete bath advance on fixed hexahedral meshes |
 | [tetTemporalControl](setup/studies/tetTemporalControl/README.md) | share of the time step in the tetrahedral interface diagnostics |

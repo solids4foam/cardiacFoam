@@ -52,7 +52,7 @@ Author
 #include "OFstream.H"
 #include "fvc.H"
 #include "PstreamReduceOps.H"
-#include "mathematicalConstants.H"
+#include "infiniteMediumLeadField.H"
 #include "conductivityFieldIO.H"
 #include "sealedWallPolicy.H"
 
@@ -89,18 +89,17 @@ List<vector> readElectrodePositions
 
 const dictionary& findECGDict
 (
-    const dictionary& coeffs
+    const dictionary& electroProperties
 )
 {
-    if (!coeffs.found("ecgDomains"))
+    if (!electroProperties.found("ecgDomains"))
     {
         FatalErrorInFunction
-            << "Cannot find 'ecgDomains' in active myocardium coefficients "
-            << " of constant/electroProperties."
+            << "Cannot find 'ecgDomains' in constant/electroProperties."
             << exit(FatalError);
     }
 
-    const dictionary& ecgDomains = coeffs.subDict("ecgDomains");
+    const dictionary& ecgDomains = electroProperties.subDict("ecgDomains");
     const dictionary* fallbackDomainPtr = nullptr;
 
     forAllConstIter(dictionary, ecgDomains, iter)
@@ -235,9 +234,9 @@ int main(int argc, char *argv[])
             canonicalSigmaFieldName
         );
 
-    const dictionary& ecgDict = findECGDict(myocardiumCoeffs);
+    const dictionary& ecgDict = findECGDict(electroProperties);
 
-    const dictionary& ecgDomains = myocardiumCoeffs.subDict("ecgDomains");
+    const dictionary& ecgDomains = electroProperties.subDict("ecgDomains");
     const dictionary* electrodeDictPtr = ecgDict.findDict("electrodePositions");
 
     if (!electrodeDictPtr)
@@ -259,12 +258,7 @@ int main(int argc, char *argv[])
         readElectrodePositions(electrodeDict, electrodeNames);
     const label nElectrodes = electrodeNames.size();
 
-    const scalar sigmaE =
-        ecgDict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0);
-    const scalar normFactor =
-        (sigmaE > VSMALL)
-      ? 1.0 / (4.0 * constant::mathematical::pi * sigmaE)
-      : 1.0;
+    const scalar normFactor = infiniteMediumLeadField(ecgDict).scale();
 
     Info<< "Electrode positions:" << nl;
     forAll(electrodeNames, i)

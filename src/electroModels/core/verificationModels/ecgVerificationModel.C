@@ -97,12 +97,10 @@ autoPtr<ecgVerificationModel> ecgVerificationModel::New
             << exit(FatalError);
     }
 
-    autoPtr<ecgVerificationModel> verifier
+    return autoPtr<ecgVerificationModel>
     (
         ctorPtr(stateProvider, domainName, dict, electrodeNames, electrodePositions)
     );
-    verifier->validateProvider();
-    return verifier;
 }
 
 

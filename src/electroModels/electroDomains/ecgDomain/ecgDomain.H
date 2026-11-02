@@ -71,7 +71,6 @@ class ecgDomain
     scalarField numericValues_;
 
     const dictionary* inheritedElectrodePositionsPtr_;
-    const dictionary* inheritedPotentialDomainPtr_;
 
     //- Disallow copy construct
     ecgDomain(const ecgDomain&) = delete;
@@ -85,7 +84,7 @@ class ecgDomain
     //- Electrode positions (empty when electrodes not configured)
     List<vector> electrodePositions_;
 
-    //- Read electrode positions from the 'electrodes' subdict (if present)
+    //- Read the electrodes of the domain entry (readEcgElectrodes)
     void readElectrodes(const dictionary& dict);
 
 public:
@@ -99,8 +98,7 @@ public:
             const electroStateProvider& stateProvider,
             const dictionary& dict,
             const word& domainName = "ECG",
-            const dictionary* inheritedElectrodePositionsPtr = nullptr,
-            const dictionary* inheritedPotentialDomainPtr = nullptr
+            const dictionary* inheritedElectrodePositionsPtr = nullptr
         );
 
     // Destructor
@@ -126,6 +124,11 @@ public:
         virtual const labelUList* subsetCellMapPtr() const override
         {
             return stateProvider_.subsetCellMapPtr();
+        }
+
+        virtual const fvMeshSubset* meshSubsetPtr() const override
+        {
+            return stateProvider_.meshSubsetPtr();
         }
 
         const volScalarField& Vm() const;

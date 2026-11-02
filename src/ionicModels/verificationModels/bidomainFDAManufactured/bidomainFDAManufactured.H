@@ -45,6 +45,25 @@ extern const char* bidomainFDAManufacturedCONSTANTS_NAMES[BIDOMAIN_NUM_CONSTANTS
 namespace Foam
 {
 
+//- FDA bidomain benchmark constants derived from the solver coefficients:
+//  chi and cm, k = Gi/(Gi + Ge) and beta = -sum_d (Gi Ge/(Gi + Ge))_dd (d pi)^2
+//  over the active dimensions d = 1..dimension
+struct bidomainFDAConstants
+{
+    scalar chi;
+    scalar Cm;
+    scalar k;
+    scalar beta;
+};
+
+//- Read chi, cm and the uniform intracellular and extracellular tensors from
+//  the bidomain coefficients; both tensors must be diagonal and proportional
+bidomainFDAConstants bidomainFDABenchmarkConstants
+(
+    const dictionary& coeffs,
+    const label dimension
+);
+
 class bidomainFDAManufactured
 :
     public ionicModel
@@ -53,7 +72,6 @@ class bidomainFDAManufactured
     mutable scalarField CONSTANTS_;
     mutable PtrList<scalarField> ALGEBRAIC_;
     mutable PtrList<scalarField> RATES_;
-    scalar k_;
 
     bidomainFDAManufactured(const bidomainFDAManufactured&) = delete;
     void operator=(const bidomainFDAManufactured&) = delete;

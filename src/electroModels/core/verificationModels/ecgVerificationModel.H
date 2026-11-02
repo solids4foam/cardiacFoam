@@ -109,6 +109,8 @@ public:
 
     virtual Requirements requirements() const = 0;
 
+    //- Fatal unless the provider exposes every state the model requires
+    //  (called by the ECG domain that binds the model to its provider)
     void validateProvider() const;
 
     void updateElectrodes
@@ -128,6 +130,17 @@ public:
     );
 
     virtual void end() {}
+
+    //- Write the fields the manufactured solution prescribes.
+    virtual void writeManufacturedFields(const fvMesh& mesh) const
+    {
+        (void)mesh;
+
+        FatalErrorInFunction
+            << "The selected ECG verification model does not write "
+            << "manufactured fields."
+            << exit(FatalError);
+    }
 };
 
 } // End namespace Foam

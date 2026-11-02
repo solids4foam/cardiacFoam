@@ -31,6 +31,7 @@ Author
 #include "autoPtr.H"
 #include "runTimeSelectionTables.H"
 #include "scalarField.H"
+#include "word.H"
 
 namespace Foam
 {
@@ -56,6 +57,10 @@ public:
     );
 
     ecgSolver() = default;
+
+    //- The ecgSolver of an ECG domain entry (required): the single reader
+    //  of the key
+    static word selectedType(const dictionary& dict);
 
     static autoPtr<ecgSolver> New(const dictionary& dict);
 

@@ -108,8 +108,9 @@ The outer residual history is the `Initial residual` of the
 
 ## ECG (`-ecg`)
 
-The `ecgDomains` block of `constant/electroProperties` is read only when
-`local/ecg` sets `_ecg yes;`. `eikonalECG` reconstructs
+The ECG domain is the case variable `_ecgDomains` of
+`constant/electroProperties`; `local/ecg` makes it the `ecgDomains` block
+(`ecgDomains { $:_ecgDomains; }`), so without `-ecg` the case runs no ECG. `eikonalECG` reconstructs
 `Vm = U(t - psi)` from the computed activation time and sums
 `G grad Vm . (x - e)/|x - e|^3 V` over the cells, with
 `grad Vm = -U'(t - psi) grad psi` and `grad psi` the cell gradient of
@@ -118,7 +119,7 @@ electrode `e` and sample time `t` is the same functional of the exact field
 (the ECG section of [eikonal_mms.pdf](../../generators/docs/eikonal/eikonal_mms.pdf)),
 with `psi`, `grad psi`, `G`, `r1` and `r2` from
 `manufacturedShellEikonalReference.H` and `c0` from `eikonalSolverCoeffs`
-(no `sigmaExtracellular`, as in the cube case). The integrand does not
+(unscaled, as in the cube case). The integrand does not
 separate in space and time, so the verifier evaluates `psi` and the kernel
 once at the nodes of each order and forms every sample as the sum of the
 kernel times `U'(t - psi)`; in parallel the radial nodes are shared out among

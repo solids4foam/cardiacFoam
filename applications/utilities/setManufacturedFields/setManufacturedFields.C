@@ -21,16 +21,46 @@ Application
 Description
     Write the fields a manufactured solution prescribes (conductivities and
     the cell decomposition) for the verification model selected in
-    constant/electroProperties. Serial only.
+    constant/electroProperties: the myocardium's, or, when the myocardium
+    has none, the one of the only ECG domain with a verification model.
+    Serial only.
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
 #include "IOdictionary.H"
 #include "electroVerificationModel.H"
 #include "eikonalVerificationModel.H"
+#include "ecgVerificationModel.H"
 #include "dimVoltage.H"
 
 using namespace Foam;
+
+namespace
+{
+
+// The case mesh as the state of an ECG domain whose verification model only
+// writes its manufactured fields: no state channels
+class meshStateProvider
+:
+    public electroStateProvider
+{
+    const fvMesh& mesh_;
+
+public:
+
+    explicit meshStateProvider(const fvMesh& mesh)
+    :
+        mesh_(mesh)
+    {}
+
+    virtual const fvMesh& mesh() const
+    {
+        return mesh_;
+    }
+};
+
+} // End anonymous namespace
+
 
 int main(int argc, char *argv[])
 {
@@ -58,7 +88,58 @@ int main(int argc, char *argv[])
 
     const word modelType(electroVerificationModel::selectedType(coeffs));
 
-    if (eikonalVerificationModel::dictionaryConstructorTable(modelType))
+    // The ECG domains with a verification model
+    wordList verifiedEcgDomains;
+    if (const dictionary* ecgPtr = electroProperties.findDict("ecgDomains"))
+    {
+        for (const entry& domain : *ecgPtr)
+        {
+            if (!domain.isDict())
+            {
+                continue;
+            }
+            const word ecgType
+            (
+                ecgVerificationModel::selectedType(domain.dict())
+            );
+            if (!ecgType.empty() && ecgType != "none")
+            {
+                verifiedEcgDomains.append(domain.keyword());
+            }
+        }
+    }
+
+    if
+    (
+        (modelType.empty() || modelType == "none")
+     && !verifiedEcgDomains.empty()
+    )
+    {
+        // The myocardium has no manufactured solution: the ECG domain's
+        // verification model writes the fields
+        if (verifiedEcgDomains.size() > 1)
+        {
+            FatalIOErrorInFunction(electroProperties)
+                << "The ECG domains " << verifiedEcgDomains << " each have "
+                << "a verification model and the myocardium has none: the "
+                << "fields of one would overwrite those of the others."
+                << exit(FatalIOError);
+        }
+
+        const meshStateProvider provider(mesh);
+        const word& domainName = verifiedEcgDomains.first();
+
+        // The fields do not depend on the electrodes
+        ecgVerificationModel::New
+        (
+            provider,
+            domainName,
+            electroProperties.subDict("ecgDomains").subDict(domainName),
+            wordList(),
+            List<vector>()
+        )->writeManufacturedFields(mesh);
+    }
+    else if (eikonalVerificationModel::dictionaryConstructorTable(modelType))
     {
         // The verifier reads the conductivity only once the solver uses it
         const volTensorField conductivity

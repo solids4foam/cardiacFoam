@@ -27,7 +27,9 @@ anisotropic`, 3D, default) are defined in the construction document
 [`rotated_monodomain.py`](../generators/reference/rotated_monodomain.py) and
 [`pseudo_ecg.py`](../generators/reference/pseudo_ecg.py). The pseudo-ECG at 161
 electrodes is compared with a Gauss-Legendre order-96 reference integral of the
-same field.
+same field. `sigmaExtracellular` is `1/(4 pi)` = `0.07957747154594767`, for which
+`1/(4 pi sigmaExtracellular)` is exactly 1 in double precision, so the ECG is
+the unscaled sum the reference integrates.
 
 ### Stack
 
