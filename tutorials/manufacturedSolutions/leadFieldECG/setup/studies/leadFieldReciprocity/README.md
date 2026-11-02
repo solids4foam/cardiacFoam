@@ -84,7 +84,13 @@ run fixedPointTight_tet_N20 -mesh tet -N 20 -fixedPointTolerance 1e-12
 python3 ../summarize.py ../leadFieldConvergence/results results
 ```
 
-The omnidriver specs for this study are `sweep_hex_reciprocity.json` and `sweep_tet_reciprocity.json`.
+The omnidriver specs for this study are `sweep_hex_reciprocity.json` and
+`sweep_tet_reciprocity.json`, for the record `manufacturedLeadFieldECG`, which
+omnidriver does not have. They name the `Allrun` options as axes
+(`myocardium`, `conductivity`, `mesh`, `parallel`; `-N` is `numberCells` on hexahedra and `tetNumberCells` on tetrahedra),
+`-endTime` as the keys `system/controlDict:endTime` and `writeInterval`, and
+`-fixedPointTolerance` as the key
+`system/fvSolution:leadFieldFixedPoint.tolerance`.
 
 ## Measured behaviour
 

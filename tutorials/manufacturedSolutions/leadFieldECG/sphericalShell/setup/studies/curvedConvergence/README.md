@@ -93,7 +93,10 @@ done
 `../summarize.py` reads one seed at a time from a folder of
 `tet_N<n>` entries, for example links to `results/seeds/tet_N<n>_seed2`.
 
-The omnidriver specs for this study are `sweep_hex_convergence.json`, `sweep_tet_convergence.json` and `sweep_tet_seeds.json`.
+The omnidriver specs for this study are `sweep_hex_convergence.json`,
+`sweep_tet_convergence.json` and `sweep_tet_seeds.json`, for the record
+`manufacturedLeadFieldECGShell`, which omnidriver does not have. They name the
+`Allrun` options as axes (`mesh`, `seed`, `parallel`; `-N` is `numberCells` on hexahedra and `tetNumberCells` on tetrahedra).
 
 ## Measured behaviour
 

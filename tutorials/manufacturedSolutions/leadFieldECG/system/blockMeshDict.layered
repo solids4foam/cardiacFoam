@@ -15,11 +15,19 @@ FoamFile
 
 // Five blocks along x: torso layers [-1, xLeft] and [xLeft, 0], heart
 // [0, 1], torso layers [1, xRight] and [xRight, 2]; N cells per unit length.
-// The layer interfaces and the cells across each torso layer are those of
-// Allrun -problem layered (local/layers)
+// The defaults are the layer interfaces of Allrun -problem layered and the
+// cells across each torso layer at N 10; Allrun writes the cells at its N
+// (local/layers)
 N 10;
 #includeIfPresent "<case>/local/mesh"
-#include "<case>/local/layers"
+
+xLeft           -0.5;
+xRight          1.5;
+nOuterLeft      5;
+nInnerLeft      5;
+nInnerRight     5;
+nOuterRight     5;
+#includeIfPresent "<case>/local/layers"
 
 vertices
 (

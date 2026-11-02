@@ -53,10 +53,9 @@ monodomainSolverCoeffs
     }
 }
 
-_ecg    no;
-#includeIfPresent "<case>/local/ecg"
-#ifeq $_ecg yes
-ecgDomains
+// The ECG domain of Allrun -ecg, which writes ecgDomains { $:_ecgDomains; }
+// into local/ecg; without it the case runs no ECG
+_ecgDomains
 {
     ECG
     {
@@ -84,6 +83,7 @@ ecgDomains
         }
     }
 }
-#endif
+
+#includeIfPresent "<case>/local/ecg"
 
 // ************************************************************************* //

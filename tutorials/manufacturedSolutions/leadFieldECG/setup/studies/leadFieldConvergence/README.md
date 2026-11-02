@@ -82,7 +82,11 @@ done
 python3 ../summarize.py results
 ```
 
-The omnidriver specs for this study are `sweep_hex_convergence.json` and `sweep_tet_convergence.json`.
+The omnidriver specs for this study are `sweep_hex_convergence.json` and
+`sweep_tet_convergence.json`, for the record `manufacturedLeadFieldECG`, which
+omnidriver does not have. They name the `Allrun` options as axes
+(`conductivity`, `mesh`; `-N` is `numberCells` on hexahedra and `tetNumberCells` on tetrahedra) and
+`-endTime` as the keys `system/controlDict:endTime` and `writeInterval`.
 
 ## Measured behaviour
 

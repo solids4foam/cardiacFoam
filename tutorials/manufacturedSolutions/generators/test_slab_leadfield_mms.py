@@ -95,11 +95,16 @@ def _case_value(path, pattern):
 @pytest.mark.skipif(not os.path.isdir(CASE), reason="tutorial case absent (cardiacFoam-only)")
 def test_tutorial_matches():
     props = os.path.join(CASE, "constant", "electroProperties")
-    gi = _case_value(props, r"_monodomainGi\s*\(\s*(\S+)")
-    ge = _case_value(props, r"_monodomainGe\s*\(\s*(\S+)")
+    # The set anisotropic: the xx entries of the ECG domain (monodomain heart)
+    # and of bidomainSolverCoeffs
+    tensor = r"\s*\[[^\]]*\]\s*\(\s*(\S+)"
+    ecg = r"\becgDomains\s*\{[^}]*?"
+    bidomain = r"\bbidomainSolverCoeffs\s*\{[^}]*?"
+    gi = _case_value(props, ecg + r"conductivityIntracellular" + tensor)
+    ge = _case_value(props, ecg + r"conductivityExtracellular" + tensor)
     assert (sp.Rational(gi), sp.Rational(ge)) == slm.MONODOMAIN_PAIR
-    bi = _case_value(props, r"_bidomainGi\s*\(\s*(\S+)")
-    be = _case_value(props, r"_bidomainGe\s*\(\s*(\S+)")
+    bi = _case_value(props, bidomain + r"conductivityIntracellular" + tensor)
+    be = _case_value(props, bidomain + r"conductivityExtracellular" + tensor)
     assert (sp.Rational(bi), sp.Rational(be)) == slm.BIDOMAIN_PAIR
     pin = _case_value(props, r"\btorso\s*\{[^{}]*?phiERefPoint\s*\(([^)]*)\)")
     assert tuple(sp.Rational(v) for v in pin.split()) == slm.PHI_REF_POINT

@@ -12,8 +12,10 @@ FoamFile
 
 // Layered torso: torsoInner next to the heart (xLeft < x < 0,
 // 1 < x < xRight), torsoOuter beyond it (x < xLeft, x > xRight); the layer
-// interfaces of Allrun -problem layered (local/layers)
-#include "<case>/local/layers"
+// interfaces of Allrun -problem layered
+xLeft           -0.5;
+xRight          1.5;
+#includeIfPresent "<case>/local/layers"
 
 actions
 (

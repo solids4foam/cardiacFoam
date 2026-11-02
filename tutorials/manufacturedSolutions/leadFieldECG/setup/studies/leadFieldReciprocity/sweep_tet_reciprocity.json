@@ -10,8 +10,8 @@
     "mode": "zip",
     "independent": {
       "tetNumberCells": [10, 14, 20, 10, 14, 20, 28, 20, 20],
-      "constant/electroProperties:_conductivity": ["isotropic", "isotropic", "isotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic"],
-      "constant/electroProperties:myocardiumSolver": ["monodomainSolver", "monodomainSolver", "monodomainSolver", "bidomainSolver", "bidomainSolver", "bidomainSolver", "bidomainSolver", "monodomainSolver", "monodomainSolver"],
+      "conductivity": ["isotropic", "isotropic", "isotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic"],
+      "myocardium": ["monodomain", "monodomain", "monodomain", "bidomain", "bidomain", "bidomain", "bidomain", "monodomain", "monodomain"],
       "parallel": [false, false, false, false, false, false, false, true, false],
       "system/fvSolution:leadFieldFixedPoint.tolerance": [1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-12],
       "caseId": ["isotropic_tet_N10", "isotropic_tet_N14", "isotropic_tet_N20", "bidomain_tet_N10", "bidomain_tet_N14", "bidomain_tet_N20", "bidomain_tet_N28", "parallel_tet_N20", "fixedPointTight_tet_N20"]

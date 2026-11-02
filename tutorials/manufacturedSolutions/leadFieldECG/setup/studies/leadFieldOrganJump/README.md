@@ -90,7 +90,12 @@ run layeredAlpha0_tet_N40 parallel -problem layered -alpha 0 -mesh tet -N 40
 python3 ../summarize.py results
 ```
 
-The omnidriver specs for this study are `sweep_hex_layered.json`, `sweep_hex_slab.json`, `sweep_tet_layered.json` and `sweep_tet_slab.json`.
+The omnidriver specs for this study are `sweep_hex_layered.json`,
+`sweep_hex_slab.json`, `sweep_tet_layered.json` and `sweep_tet_slab.json`, for
+the record `manufacturedLeadFieldECG`, which omnidriver does not have. They
+name the `Allrun` options as axes (`problem`, `alpha`, `mesh`, `parallel`;
+`-N` is `numberCells` on hexahedra and `tetNumberCells` on tetrahedra) and `-endTime` as the keys
+`system/controlDict:endTime` and `writeInterval`.
 
 ## Measured behaviour
 

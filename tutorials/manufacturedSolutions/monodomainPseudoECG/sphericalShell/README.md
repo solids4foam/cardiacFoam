@@ -83,8 +83,9 @@ rows of
 
 ## Pseudo-ECG (`-ecg`)
 
-The `ecgDomains` block of `constant/electroProperties` is read only when
-`local/ecg` sets `_ecg yes;`. The verifier's reference at electrode `e` is the
+The ECG domain is the case variable `_ecgDomains` of
+`constant/electroProperties`; `local/ecg` makes it the `ecgDomains` block
+(`ecgDomains { $:_ecgDomains; }`), so without `-ecg` the case runs no ECG. The verifier's reference at electrode `e` is the
 shell integral of the pseudo-ECG section of
 [monodomain_mms.pdf](../../generators/docs/monodomain/monodomain_mms.pdf), with
 `F`, `grad F`, `G`, `r1` and `r2` from `manufacturedShellMonodomainReference.H`

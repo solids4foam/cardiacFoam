@@ -90,10 +90,13 @@ Conductivities, as `diag(xx, yy, zz)` in S/m:
 | `bidomain` | `Gi = diag(0.111453302, 0.121585420, 0.030396355)`, `Ge = diag(0.046165469, 0.050362330, 0.012590582)` | the solver's | the solver's |
 
 In both rows `k = 1/sqrt 2`, and the monodomain row has
-`G_m = Gi (Gi+Ge)^-1 Ge`. These are the set `anisotropic` of the
-`_conductivities` block of `constant/electroProperties`, which also holds the
-sets `isotropic` and `unequal`; `-conductivity` writes the selector
-`_conductivity`. `-conductivity isotropic` uses the `xx` value in
+`G_m = Gi (Gi+Ge)^-1 Ge`. These are the set `anisotropic`, the values written
+in `monodomainSolverCoeffs`, `bidomainSolverCoeffs` and `ecgDomains.ECG` of
+`constant/electroProperties`. Its `_conductivities` block holds the sets
+`isotropic` and `unequal`, which `-conductivity` writes into those entries
+(`local/monodomainConductivity`, `local/bidomainConductivity`,
+`local/ecgConductivity`). `-myocardium bidomain` removes the Gi and Ge of the
+ECG domain (`local/ecgConductivity`). `-conductivity isotropic` uses the `xx` value in
 every direction. `-conductivity unequal` keeps Gi and every `xx` value and
 sets `Ge_yy = Gi_yy`, `Ge_zz = 0.1 Gi_zz` (`G_m` follows), so the
 anisotropy ratios of Gi and Ge differ.
@@ -228,11 +231,14 @@ The meshes are those of [bathBidomain](../bathBidomain/README.md).
   (`system/setTorsoOrganConductivityFieldDict.layered`) sets their
   conductivities.
 
-`Allrun` defines the layer interfaces once (`layerLeft`, `layerRight`) and
-writes them to `local/layers` (with the cells across each torso layer), which
-`blockMeshDict.layered` and `topoSetDict.layered` include, to the verifier's
-`layerInterfaces` (`local/reference`) and to gmsh (`-setnumber`); it stops
-when the gmsh defaults of `layered_box.geo.template` differ from them.
+`Allrun` defines the layer interfaces (`layerLeft`, `layerRight`) and writes
+them to `local/layers` (with the cells across each torso layer at its `N`),
+which `blockMeshDict.layered` and `topoSetDict.layered` include, to the
+verifier's `layerInterfaces` (`local/reference`) and to gmsh (`-setnumber`).
+`blockMeshDict.layered`, `topoSetDict.layered` and `layered_box.geo.template`
+hold the same interfaces as defaults, and `blockMeshDict.layered` the cells
+across each layer at its default `N 10`; `Allrun` stops when one of them
+differs.
 
 ## Usage
 
@@ -242,7 +248,8 @@ when the gmsh defaults of `layered_box.geo.template` differ from them.
 ```
 
 `Allrun` meshes the case, then runs `buildLeadFields` and `cardiacFoam`. Every
-option writes a file in `local/`, which the dictionaries include. `Allclean`
+option writes a file in `local/`, which the dictionaries include if present;
+without `local/` the dictionaries give the defaults of the table. `Allclean`
 removes `local/`, `0/`, the mesh and the lead fields.
 
 | option | effect | default |
