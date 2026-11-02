@@ -16,8 +16,12 @@ need to be corrected or a new electrode configuration needs to be evaluated.
    - Computes `fvc::grad(Vm)` via the Green-Gauss scheme.
    - Applies the Gima-Rudy dipole integral over all mesh cells:
 
-         phi(P) = sum_c  (sigma_c . grad(Vm)_c) . (x_c - P) * V_c
-                          / |x_c - P|^3
+         phi(P) = 1/(4 pi sigmaExtracellular)
+                  sum_c  (sigma_c . grad(Vm)_c) . (x_c - P) * V_c
+                         / |x_c - P|^3
+
+     `sigmaExtracellular` is required in the ECG domain entry, as for the
+     `pseudoECG` model.
 
 5. Writes `postProcessing/pseudoECG.dat` (header + one row per time step).
 

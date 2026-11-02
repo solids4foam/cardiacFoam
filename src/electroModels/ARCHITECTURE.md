@@ -204,9 +204,9 @@ Concrete implementations of `ecgSolver`.
 
 | Class | Type name | Method | Notes |
 |---|---|---|---|
-| `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
+| `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` (`infiniteMediumLeadField`) | No body-conductor mesh required; requires `sigmaExtracellular` |
 | `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
-| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then integrates with `infiniteMediumLeadField` | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
 
 `eikonalTemplateGenerator.C/H` and `tissueTemplates.H`, beside `eikonalECG`,
 build those single-cell templates: pacing a single-cell ionic model to

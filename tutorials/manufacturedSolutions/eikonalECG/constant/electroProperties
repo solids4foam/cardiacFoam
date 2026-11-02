@@ -39,6 +39,7 @@ eikonalSolverCoeffs
         ECG
         {
             ecgSolver    eikonalECG;
+            sigmaExtracellular    0.07957747154594767;
             sampling
             {
                 start           -6;

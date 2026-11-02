@@ -118,7 +118,7 @@ electrode `e` and sample time `t` is the same functional of the exact field
 (the ECG section of [eikonal_mms.pdf](../../generators/docs/eikonal/eikonal_mms.pdf)),
 with `psi`, `grad psi`, `G`, `r1` and `r2` from
 `manufacturedShellEikonalReference.H` and `c0` from `eikonalSolverCoeffs`
-(no `sigmaExtracellular`, as in the cube case). The integrand does not
+(unscaled, as in the cube case). The integrand does not
 separate in space and time, so the verifier evaluates `psi` and the kernel
 once at the nodes of each order and forms every sample as the sum of the
 kernel times `U'(t - psi)`; in parallel the radial nodes are shared out among

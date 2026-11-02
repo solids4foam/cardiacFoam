@@ -52,7 +52,7 @@ Author
 #include "OFstream.H"
 #include "fvc.H"
 #include "PstreamReduceOps.H"
-#include "mathematicalConstants.H"
+#include "infiniteMediumLeadField.H"
 #include "conductivityFieldIO.H"
 #include "sealedWallPolicy.H"
 
@@ -259,12 +259,7 @@ int main(int argc, char *argv[])
         readElectrodePositions(electrodeDict, electrodeNames);
     const label nElectrodes = electrodeNames.size();
 
-    const scalar sigmaE =
-        ecgDict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0);
-    const scalar normFactor =
-        (sigmaE > VSMALL)
-      ? 1.0 / (4.0 * constant::mathematical::pi * sigmaE)
-      : 1.0;
+    const scalar normFactor = infiniteMediumLeadField(ecgDict).scale();
 
     Info<< "Electrode positions:" << nl;
     forAll(electrodeNames, i)

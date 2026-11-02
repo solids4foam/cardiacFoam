@@ -60,6 +60,7 @@ monodomainSolverCoeffs
         ECG
         {
             ecgSolver    pseudoECG;
+            sigmaExtracellular    0.07957747154594767;
             verificationModel
             {
                 type    manufacturedPseudoECGVerifier;

@@ -36,6 +36,7 @@ myocardiumModels/bidomainSolver/bidomainSolver.C
 myocardiumModels/singleCellSolver/singleCellSolver.C
 
 /* ECG models */
+ecgModels/infiniteMediumLeadField/infiniteMediumLeadField.C
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
 ecgModels/eikonalECG/eikonalECG.C
 ecgModels/eikonalECG/eikonalTemplateGenerator.C

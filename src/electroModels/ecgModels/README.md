@@ -9,10 +9,13 @@ The ECG models, used by `ecgDomain`. They read the electrical state after each s
 - `leadFieldECG`: the ECG of a heart-and-torso passive conductor from precomputed lead fields (`buildLeadFields`). See [leadFieldECG](leadFieldECG/README.md).
 - `eikonalECG`: a surrogate ECG for eikonal runs, built from activation times and action-potential templates. See [eikonalECG](eikonalECG/README.md).
 
+`pseudoECG` and `eikonalECG` share `infiniteMediumLeadField`: the lead field of an infinite homogeneous medium, scaled by `1/(4 pi sigmaExtracellular)`. Both require `sigmaExtracellular`, a positive scalar, in the ECG domain entry.
+
 ## Folders
 
 ```text
 src/electroModels/ecgModels/
+├── infiniteMediumLeadField/
 ├── pseudoECGSolver/
 ├── torsoECG/
 ├── leadFieldECG/

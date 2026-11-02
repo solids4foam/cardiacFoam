@@ -43,7 +43,9 @@ action-potential-like event. `templateDuration` and `templateRise`, defaults
   on the coarsest mesh.
 
 The sampling window, `-6` to `92` by `0.25`, covers the whole event at every
-point.
+point. `sigmaExtracellular` is `1/(4 pi)` = `0.07957747154594767`, for which
+`1/(4 pi sigmaExtracellular)` is exactly 1 in double precision, so the ECG is
+the unscaled sum the reference integrates.
 
 ### Sine template
 
