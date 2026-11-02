@@ -19,8 +19,8 @@ point to these definitions.
 - `bidomain` : spatial manufactured-solution verification for the bidomain solver
 - `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
 - `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
-- `monodomain1D3D` : manufactured 1D-3D monodomain coupling verification
-- [`monodomain1D3DShell`](monodomain1D3DShell/README.md) : 1D-3D coupling with the junction supports cut by the sealed curved endocardium of the spherical shell, on gmsh tetrahedra, against the continuum junction
+- [`monodomain1D3DCube`](monodomain1D3DCube/README.md) : 1D-3D monodomain coupling on the unit cube, against the production map or the continuum junction, four junction kernels
+- [`monodomain1D3DShell`](monodomain1D3DShell/README.md) : 1D-3D coupling on the sealed spherical shell, gmsh tetrahedra, against the continuum junction: supports cut by the curved endocardium, inside the wall (`-graphY`) or overlapping at a branch point (`-graphY2`)
 - `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
 - [`monodomainPseudoECG/sphericalShell`](monodomainPseudoECG/sphericalShell/README.md) : 3D monodomain with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient and a parallel hex regression
 - [`bidomain/sphericalShell`](bidomain/sphericalShell/README.md) : 3D heart-only bidomain with sealed curved walls crossed by two unequal rotated full conductivity tensors, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient, a compatibility-projected phiE equation and a parallel hex regression
@@ -85,7 +85,7 @@ directory, run through `tutorials/Alltest-regression`.
 |---|---|
 | tet | monodomainPseudoECG (`setup/studies/tetConvergence`) |
 | eikonal_tet | eikonalECG (`-mesh tet`) |
-| coupling | monodomain1D3D |
+| coupling | monodomain1D3DCube |
 | eikonal | eikonalECG |
 | mono_spatial | monodomainPseudoECG |
 | pseudo_ecg_spatial | monodomainPseudoECG |
