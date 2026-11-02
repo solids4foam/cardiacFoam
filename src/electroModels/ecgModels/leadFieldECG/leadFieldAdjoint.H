@@ -25,26 +25,32 @@ Description
 
     C x is minus the source of the operator assembled on x (base unknown
     phiE with the lead-field patch types, heart companion filled from x, no
-    source, no reference). The sparsity pattern is
+    source, no reference). The sparsity pattern is the stencil the conductor
+    publishes (passiveConductor::explicitStencil):
         face o face^p o S,
-    with S the face stencil when every gradient scheme of phiE and
-    phiE.component(0) on the base and heart meshes is leastSquares or Gauss
-    linear, the point stencil otherwise, and p = 2 for conormalHarmonic (two
-    interfaceGradient passes), 0 otherwise.
+    with S the face stencil when every gradient scheme of
+    passiveConductor::gradientNames() on the base and heart meshes is
+    leastSquares or Gauss linear, the point stencil otherwise, and p the
+    number of jump-aware gradient passes (nInterfaceGradientCorrectors with
+    conormalHarmonic, 0 otherwise).
 
     Checks, each fatal above its tolerance:
     - linearity:    C(r1 + 2 r2) = C r1 + 2 C r2 on fields of the cell
-                    centres;
-    - reproduction: the stored C equals the assembled C on another field;
-    - transpose:    <z, C psi> = <C^T z, psi>;
+                    centres (1e-11);
+    - reproduction: the stored C equals the assembled C on another field
+                    (1e-11);
+    - transpose:    <z, C psi> = <C^T z, psi> (1e-12);
     - symmetry:     x^T M y = y^T M x, with the boundary diagonal and the
-                    coupled-interface coefficients of M;
-    - residual:     e - M z - C^T z after each lead field;
-    - pin:          z_r d_r = 1 at a pinned reference cell (d_r its diagonal
-                    before the pin).
-    The fields of the cell centres are the same in serial and in parallel.
+                    coupled-interface coefficients of M (1e-12);
+    - residual:     e - M z - C^T z after each lead field (100 times the
+                    leadFieldFixedPoint tolerance);
+    - pin:          z_r d_r = 1 at a pinned reference cell, d_r its diagonal
+                    before the pin (as the residual).
+    The first four are round-off checks of exactly linear operators; the
+    last two measure the convergence of the fixed point. The fields of the
+    cell centres are the same in serial and in parallel.
 
-    Gradient caching of phiE or phiE.component(0) is fatal: a cached
+    Gradient caching of the gradientNames() fields is fatal: a cached
     gradient can belong to another field of the same name.
 
 SourceFiles
@@ -68,6 +74,9 @@ class leadFieldAdjoint
 {
     const leadFieldConductor& lfc_;
 
+    // Tolerance of the residual and pin checks
+    const scalar residualTolerance_;
+
     // Probe fields: base phiE with the lead-field patch types and its heart
     // companion
     mutable autoPtr<volScalarField> probePtr_;
@@ -77,9 +86,6 @@ class leadFieldAdjoint
 
     // C x assembled on x
     tmp<scalarField> assembledC(const scalarField& x) const;
-
-    // Pattern hops from the resolved schemes
-    List<probedOperator::hop> patternHops() const;
 
     // Field of the cell centres (seed 1, 2, 3, ...)
     tmp<scalarField> centreField(const label seed) const;
@@ -91,8 +97,13 @@ class leadFieldAdjoint
 
 public:
 
-    //- Probe C of lfc's conductor and check it
-    explicit leadFieldAdjoint(const leadFieldConductor& lfc);
+    //- Probe C of lfc's conductor and check it; the residual and pin
+    //  tolerances follow the fixed-point tolerance
+    leadFieldAdjoint
+    (
+        const leadFieldConductor& lfc,
+        const leadFieldConductor::fixedPointControls& fixedPoint
+    );
 
     leadFieldAdjoint(const leadFieldAdjoint&) = delete;
     void operator=(const leadFieldAdjoint&) = delete;

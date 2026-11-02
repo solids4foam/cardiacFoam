@@ -39,8 +39,9 @@ Description
 
     The build checks the linearity of C, the probed C against the assembled
     one, the transpose, the symmetry of M and, for each lead field, the
-    residual of A^T z = e and the reference pin; each is fatal above its
-    tolerance and is reported in the log.
+    residual of A^T z = e and the reference pin (at 100 times the
+    leadFieldFixedPoint tolerance); each is fatal above its tolerance and is
+    reported in the log.
 
     The unknown is named phiE on the base and heart meshes, so the forward's
     fvSchemes entries and wall-gradient states apply. Ground patches are
@@ -161,10 +162,12 @@ int main(int argc, char *argv[])
     const passiveConductor& conductor = lfc.conductor();
     const dictionary& solverDict = mesh.solverDict("leadField");
     const dictionary& finalSolverDict = mesh.solverDict("leadFieldFinal");
-    const dictionary& fixedPointDict =
-        mesh.solutionDict().subDict("leadFieldFixedPoint");
-    const scalar convergenceTol = fixedPointDict.get<scalar>("tolerance");
-    const label maxPasses = fixedPointDict.get<label>("maxPasses");
+    const leadFieldConductor::fixedPointControls fixedPoint
+    (
+        leadFieldConductor::fixedPointControls::read(mesh)
+    );
+    const scalar convergenceTol = fixedPoint.tolerance;
+    const label maxPasses = fixedPoint.maxPasses;
 
     // z is in 1/(conductivity length), so that A z = e in units of the
     // matrix source
@@ -186,7 +189,7 @@ int main(int argc, char *argv[])
     pinned = returnReduce(pinned, orOp<bool>());
     conductor.applyReference(M, z, lfc.referenceCell(), 0.0);
 
-    const leadFieldAdjoint adjoint(lfc);
+    const leadFieldAdjoint adjoint(lfc, fixedPoint);
     adjoint.checkSymmetry(M, z);
     Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
         << "  ClockTime = " << runTime.elapsedClockTime() << " s" << nl;
@@ -231,7 +234,11 @@ int main(int argc, char *argv[])
             M.source() = e - adjoint.applyTranspose(zI);
 
             const bool finalPass =
-                finalPasses > 0 || (pass >= 2 && change < convergenceTol);
+                finalPasses > 0
+             || (
+                    pass >= leadFieldConductor::fixedPointControls::minPasses
+                 && change < convergenceTol
+                );
             if (finalPass)
             {
                 ++finalPasses;

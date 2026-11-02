@@ -236,6 +236,10 @@ ecgDomain::ecgDomain
         electrodeNames_,
         electrodePositions_
     );
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->validateProvider();
+    }
 
     numericValues_.setSize(electrodeNames_.size(), 0.0);
 }
@@ -329,6 +333,10 @@ bool ecgDomain::read(const dictionary& dict)
         electrodeNames_,
         electrodePositions_
     );
+    if (verificationModelPtr_.valid())
+    {
+        verificationModelPtr_->validateProvider();
+    }
 
     return true;
 }

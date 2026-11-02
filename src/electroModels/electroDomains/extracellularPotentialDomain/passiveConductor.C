@@ -31,6 +31,19 @@ License
 namespace Foam
 {
 
+const word passiveConductor::potentialName("phiE");
+
+
+wordList passiveConductor::gradientNames()
+{
+    return wordList
+    ({
+        "grad(" + potentialName + ")",
+        "grad(" + potentialName + ".component(0))"
+    });
+}
+
+
 passiveConductor::torsoSettings passiveConductor::torsoSettings::read
 (
     const fvMesh& mesh,
@@ -180,6 +193,7 @@ passiveConductor::passiveConductor
     sealingField_(sealingField),
     interfaceConductivityInterpolation_(interfaceConductivityInterpolation),
     sealedHeartBoundary_(sealedHeartBoundary),
+    nInterfaceGradientCorrectors_(0),
     totalWallConductivity_(totalWallConductivity),
     registerFields_(registerFields),
     heartCellToBaseCell_(),
@@ -199,6 +213,20 @@ passiveConductor::passiveConductor
             << interfaceConductivityInterpolation_ << "'. Valid values are "
             << "distanceWeightedHarmonic and conormalHarmonic."
             << exit(FatalError);
+    }
+
+    if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+    {
+        const dictionary& solverDict = baseMesh_.solverDict(potentialName);
+        nInterfaceGradientCorrectors_ =
+            solverDict.get<label>("nInterfaceGradientCorrectors");
+
+        if (nInterfaceGradientCorrectors_ < 1)
+        {
+            FatalIOErrorInFunction(solverDict)
+                << "nInterfaceGradientCorrectors must be at least 1; found "
+                << nInterfaceGradientCorrectors_ << '.' << exit(FatalIOError);
+        }
     }
 
     const dimensionSet conductivityDim
@@ -246,7 +274,17 @@ passiveConductor::passiveConductor
 
     buildHeartScatterMap(heartCellMap, heartFaceMap);
     assembleConductivities(Ge, torsoConductivity, torsoCellZones);
-    buildSigmaExtracellularSurface();
+    sigmaExtracellularfPtr_.reset
+    (
+        faceConductivity
+        (
+            sigmaTotalPtr_(),
+            sigmaIglobalPtr_(),
+            heartCellToBaseCell_,
+            totalWallConductivity_,
+            registerFields_
+        ).ptr()
+    );
 }
 
 
@@ -465,13 +503,18 @@ tensor torsoFaceConductivity
 } // End anonymous namespace
 
 
-void passiveConductor::buildSigmaExtracellularSurface()
+tmp<surfaceTensorField> passiveConductor::faceConductivity
+(
+    const volTensorField& sigma,
+    const volTensorField& sigmaIglobal,
+    const labelUList& heartCells,
+    const bool totalWallConductivity,
+    const bool registerObject
+)
 {
-    const volTensorField& sigma = sigmaTotalPtr_();
-    const volTensorField& sigmaIglobal = sigmaIglobalPtr_();
-    const fvMesh& m = baseMesh_;
+    const fvMesh& m = sigma.mesh();
 
-    sigmaExtracellularfPtr_.reset
+    tmp<surfaceTensorField> tSef
     (
         new surfaceTensorField
         (
@@ -482,14 +525,14 @@ void passiveConductor::buildSigmaExtracellularSurface()
                 m,
                 IOobject::NO_READ,
                 IOobject::NO_WRITE,
-                registerFields_
+                registerObject
             ),
             m,
             dimensionedTensor("zero", sigma.dimensions(), tensor::zero)
         )
     );
 
-    surfaceTensorField& Sef = sigmaExtracellularfPtr_();
+    surfaceTensorField& Sef = tSef.ref();
 
     // Myocardium membership from the heart cell map, with coupled neighbours
     volScalarField heartFlag
@@ -506,7 +549,7 @@ void passiveConductor::buildSigmaExtracellularSurface()
         m,
         dimensionedScalar(dimless, 0)
     );
-    for (const label baseCellI : heartCellToBaseCell_)
+    for (const label baseCellI : heartCells)
     {
         heartFlag[baseCellI] = 1;
     }
@@ -527,11 +570,11 @@ void passiveConductor::buildSigmaExtracellularSurface()
         const bool neiHeart = heartFlag[neiCell] > 0.5;
         const bool wallFace = ownHeart != neiHeart;
         const tensor ownSigmaE =
-            ownHeart && !(wallFace && totalWallConductivity_)
+            ownHeart && !(wallFace && totalWallConductivity)
           ? sigmaI[ownCell] - sigmaIntracellularI[ownCell]
           : sigmaI[ownCell];
         const tensor neiSigmaE =
-            neiHeart && !(wallFace && totalWallConductivity_)
+            neiHeart && !(wallFace && totalWallConductivity)
           ? sigmaI[neiCell] - sigmaIntracellularI[neiCell]
           : sigmaI[neiCell];
 
@@ -601,11 +644,11 @@ void passiveConductor::buildSigmaExtracellularSurface()
                 const bool nHeart = heartN[faceI] > 0.5;
                 const bool wallFace = pHeart != nHeart;
                 const tensor pSigmaE =
-                    pHeart && !(wallFace && totalWallConductivity_)
+                    pHeart && !(wallFace && totalWallConductivity)
                   ? sigmaP[faceI] - sigmaIP[faceI]
                   : sigmaP[faceI];
                 const tensor nSigmaE =
-                    nHeart && !(wallFace && totalWallConductivity_)
+                    nHeart && !(wallFace && totalWallConductivity)
                   ? sigmaN[faceI] - sigmaIN[faceI]
                   : sigmaN[faceI];
                 if (pHeart == nHeart)
@@ -644,6 +687,8 @@ void passiveConductor::buildSigmaExtracellularSurface()
               - sigmaIglobal.boundaryField()[patchI].patchInternalField();
         }
     }
+
+    return tSef;
 }
 
 
@@ -655,6 +700,14 @@ tmp<fvScalarMatrix> passiveConductor::assemble
     faceCorrection* correction
 ) const
 {
+    if (psi.name() != potentialName || heartPsi.name() != potentialName)
+    {
+        FatalErrorInFunction
+            << "The conductor assembles the potential " << potentialName
+            << ", not " << psi.name() << " and " << heartPsi.name() << '.'
+            << exit(FatalError);
+    }
+
     tmp<fvScalarMatrix> tphiEqn;
     if (interfaceConductivityInterpolation_ == "conormalHarmonic")
     {
@@ -673,7 +726,7 @@ tmp<fvScalarMatrix> passiveConductor::assemble
           : volTensorField(sigmaTotalPtr_() - sigmaIglobalPtr_())
         );
         tmp<volVectorField> tgrad(fvc::grad(psi));
-        for (label iter = 0; iter < 2; ++iter)
+        for (label iter = 0; iter < nInterfaceGradientCorrectors_; ++iter)
         {
             tgrad = interfaceGradient
             (
@@ -840,6 +893,55 @@ void passiveConductor::applyReference
     {
         eqn.setReference(refCell, value, true);
     }
+}
+
+
+namespace
+{
+
+// True for a gradient whose stencil is the cell and its face neighbours
+bool faceStencilGradient(const fvMesh& mesh, const word& name)
+{
+    ITstream is(mesh.gradScheme(name));
+    const word scheme(is);
+    if (scheme == "leastSquares")
+    {
+        return true;
+    }
+    if (scheme == "Gauss" && !is.eof())
+    {
+        const word interpolation(is);
+        return interpolation == "linear";
+    }
+    return false;
+}
+
+} // End anonymous namespace
+
+
+List<probedOperator::hop> passiveConductor::explicitStencil() const
+{
+    bool faceStencil = true;
+    for (const fvMesh* meshPtr : {&baseMesh_, &heartMesh_})
+    {
+        for (const word& name : gradientNames())
+        {
+            faceStencil = faceStencil && faceStencilGradient(*meshPtr, name);
+        }
+    }
+
+    // Divergence and face interpolation, jump-aware gradient passes, and
+    // the gradient stencil
+    List<probedOperator::hop> hops(1, probedOperator::hop::face);
+    for (label passI = 0; passI < nInterfaceGradientCorrectors_; ++passI)
+    {
+        hops.append(probedOperator::hop::face);
+    }
+    hops.append
+    (
+        faceStencil ? probedOperator::hop::face : probedOperator::hop::point
+    );
+    return hops;
 }
 
 

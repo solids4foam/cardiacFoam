@@ -197,6 +197,19 @@ void publishIfAbsent(const volScalarField& psi, const bool seal)
 } // End anonymous namespace
 
 
+leadFieldConductor::fixedPointControls
+leadFieldConductor::fixedPointControls::read(const fvMesh& mesh)
+{
+    const dictionary& dict =
+        mesh.solutionDict().subDict("leadFieldFixedPoint");
+
+    fixedPointControls controls;
+    controls.tolerance = dict.get<scalar>("tolerance");
+    controls.maxPasses = dict.get<label>("maxPasses");
+    return controls;
+}
+
+
 leadFieldConductor::leadFieldConductor
 (
     const fvMesh& baseMesh,
@@ -755,6 +768,14 @@ dictionary leadFieldConductor::signature() const
         "interfaceConductivityInterpolation",
         interfaceConductivityInterpolation_
     );
+    if (interfaceConductivityInterpolation_ == "conormalHarmonic")
+    {
+        sig.add
+        (
+            "nInterfaceGradientCorrectors",
+            conductorPtr_->nInterfaceGradientCorrectors()
+        );
+    }
     sig.add("sealedHeartBoundary", sealedHeartBoundary_);
 
     dictionary sealingTypes;

@@ -80,6 +80,72 @@ const scalar layeredGeometryTol = 1e-9;
 // solution's at the cell centres
 const scalar shellConductivityTol = 1e-10;
 
+
+// sphericalShell: the zone of the transmission solution for every cell,
+// from the cellZones bloodPool, myocardium and bath of the mesh (fatal if a
+// cell is in none). A cell centre may lie outside the radial range of its
+// zone, where a polyhedral interface cuts the sphere, by at most the cell
+// size cbrt(V) (the zone formulas extend smoothly across the spheres).
+labelList shellZones(const fvMesh& mesh)
+{
+    using namespace shellTransmissionMMS;
+
+    const Params p = defaultParams();
+    const wordList names({"bloodPool", "myocardium", "bath"});
+    const label zoneIds[3] = {bloodPool, myocardium, bath};
+
+    labelList zone(mesh.nCells(), -1);
+    forAll(names, i)
+    {
+        const label zoneI = mesh.cellZones().findZoneID(names[i]);
+        if (zoneI < 0)
+        {
+            FatalErrorInFunction
+                << "The sphericalShell solution needs the cellZone "
+                << names[i] << "." << exit(FatalError);
+        }
+        for (const label cellI : mesh.cellZones()[zoneI])
+        {
+            zone[cellI] = zoneIds[i];
+        }
+    }
+
+    const vectorField& C = mesh.C().primitiveField();
+    const scalarField& V = mesh.V().field();
+    label unassigned = 0;
+    label misplaced = 0;
+    forAll(zone, cellI)
+    {
+        if (zone[cellI] < 0)
+        {
+            ++unassigned;
+            continue;
+        }
+        const label z = zone[cellI];
+        const scalar r = mag(C[cellI]);
+        const scalar rMin =
+            z == bloodPool ? 0 : (z == myocardium ? p.r1 : p.r2);
+        const scalar rMax =
+            z == bloodPool ? p.r1 : (z == myocardium ? p.r2 : GREAT);
+        const scalar size = Foam::cbrt(V[cellI]);
+        if (r < rMin - size || r > rMax + size)
+        {
+            ++misplaced;
+        }
+    }
+    reduce(unassigned, sumOp<label>());
+    reduce(misplaced, sumOp<label>());
+    if (unassigned > 0 || misplaced > 0)
+    {
+        FatalErrorInFunction
+            << unassigned << " cells lie in no sphericalShell cellZone and "
+            << misplaced << " cells lie farther than their own size outside "
+            << "the radial range of their zone." << exit(FatalError);
+    }
+
+    return zone;
+}
+
 } // End anonymous namespace
 
 
@@ -104,6 +170,9 @@ manufacturedLeadFieldECGVerifier::manufacturedLeadFieldECGVerifier
     shellParams_(shellTransmissionMMS::defaultParams()),
     leadFields_(),
     shellZones_(),
+    heartCells_(),
+    interfaceBand_(),
+    surfaceCells_(),
     electrodeCells_(),
     electrodeCentroids_(),
     referenceCentroid_(point::zero),
@@ -173,6 +242,101 @@ bool manufacturedLeadFieldECGVerifier::read(const dictionary& dict)
     }
 
     return true;
+}
+
+
+void manufacturedLeadFieldECGVerifier::writeManufacturedFields
+(
+    const fvMesh& mesh
+) const
+{
+    using namespace shellTransmissionMMS;
+
+    if (reference_ != referenceType::sphericalShell)
+    {
+        FatalErrorInFunction
+            << "The " << referenceTypeNames[reference_] << " reference of "
+            << type() << " prescribes no fields: its conductivities are those "
+            << "of the case." << exit(FatalError);
+    }
+
+    if (Pstream::parRun())
+    {
+        FatalErrorInFunction
+            << "The sphericalShell lead-field conductivities are written on "
+            << "the undecomposed case; run in serial." << exit(FatalError);
+    }
+
+    const dimensionSet conductivityDim(-1, -3, 3, 0, 0, 2, 0);
+    const vectorField& C = mesh.C().primitiveField();
+    const unsigned int oldPrecision = IOstream::defaultPrecision(17);
+
+    const auto io = [&mesh](const word& name)
+    {
+        return IOobject(name, "0", mesh, IOobject::NO_READ, IOobject::NO_WRITE);
+    };
+
+    const auto copyInternalToPatches = [&mesh](auto& field)
+    {
+        forAll(mesh.boundary(), patchI)
+        {
+            if (polyPatch::constraintType(mesh.boundaryMesh()[patchI].type()))
+            {
+                continue;
+            }
+            field.boundaryFieldRef()[patchI] ==
+                field.boundaryField()[patchI].patchInternalField();
+        }
+    };
+
+    for (label i = 0; i < 2; ++i)
+    {
+        volSymmTensorField G
+        (
+            io
+            (
+                i == 0
+              ? "ConductivityIntracellular"
+              : "ConductivityExtracellular"
+            ),
+            mesh,
+            dimensionedSymmTensor(conductivityDim, Zero),
+            "calculated"
+        );
+        forAll(C, cellI)
+        {
+            G[cellI] =
+                i == 0
+              ? Gi(C[cellI], shellParams_)
+              : Ge(C[cellI], shellParams_);
+        }
+        copyInternalToPatches(G);
+        G.write();
+        Info<< "Wrote " << G.name() << " in 0." << endl;
+    }
+
+    volScalarField sigma
+    (
+        io("bodyAndOrgansConductivity"),
+        mesh,
+        dimensionedScalar(conductivityDim, Zero),
+        "calculated"
+    );
+    const labelList zone(shellZones(mesh));
+    forAll(C, cellI)
+    {
+        sigma[cellI] = sigmaB
+        (
+            C[cellI],
+            zone[cellI] == myocardium ? label(bath) : zone[cellI],
+            shellParams_
+        );
+    }
+    copyInternalToPatches(sigma);
+    sigma.write();
+    Info<< "Wrote " << sigma.name() << " in 0." << endl;
+
+    IOstream::defaultPrecision(oldPrecision);
 }
 
 
@@ -272,12 +436,6 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
 
     // Each torso cell lies in one layer; one isotropic value per layer
     const passiveConductor& conductor = lfc.conductor();
-    boolList heart(baseMesh.nCells(), false);
-    for (const label cellI : conductor.heartCellToBaseCell())
-    {
-        heart[cellI] = true;
-    }
-
     const scalar xL = layers_.xLeft;
     const scalar xR = layers_.xRight;
     const scalar tol = layeredGeometryTol;
@@ -287,7 +445,7 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
 
     forAll(sigma, cellI)
     {
-        if (heart[cellI])
+        if (heartCells_[cellI])
         {
             continue;
         }
@@ -389,12 +547,7 @@ void manufacturedLeadFieldECGVerifier::initialiseShell
 
     // Zones from the cellZones against the conductor's heart cells, and the
     // torso conductivity against sigmaB
-    shellZones_ = manufacturedLeadFieldShellZones(baseMesh);
-    boolList heart(baseMesh.nCells(), false);
-    for (const label cellI : conductor.heartCellToBaseCell())
-    {
-        heart[cellI] = true;
-    }
+    shellZones_ = shellZones(baseMesh);
     const vectorField& C = baseMesh.C().primitiveField();
     const tensorField& sigma = conductor.sigmaTotal().primitiveField();
     label misplaced = 0;
@@ -402,11 +555,11 @@ void manufacturedLeadFieldECGVerifier::initialiseShell
     forAll(C, cellI)
     {
         const label zone = shellZones_[cellI];
-        if (heart[cellI] != (zone == myocardium))
+        if (heartCells_[cellI] != (zone == myocardium))
         {
             ++misplaced;
         }
-        else if (!heart[cellI])
+        else if (!heartCells_[cellI])
         {
             const tensor exact = sigmaB(C[cellI], zone, shellParams_)*tensor::I;
             worst = max(worst, mag(sigma[cellI] - exact)/mag(exact));
@@ -555,6 +708,16 @@ void manufacturedLeadFieldECGVerifier::initialise()
 
     const leadFieldConductor& lfc = leadFieldPtr_->conductor();
     const fvMesh& baseMesh = stateProvider_.baseMesh();
+
+    // Region masks of the phiStatic rows and of the reference checks
+    heartCells_ = boolList(baseMesh.nCells(), false);
+    for (const label cellI : lfc.conductor().heartCellToBaseCell())
+    {
+        heartCells_[cellI] = true;
+    }
+    interfaceBand_ =
+        verificationUtils::interfaceBandCells(baseMesh, heartCells_);
+    surfaceCells_ = verificationUtils::boundaryAdjacentCells(baseMesh);
 
     switch (reference_)
     {
@@ -739,11 +902,14 @@ void manufacturedLeadFieldECGVerifier::solveDirect
 {
     const leadFieldConductor& lfc = leadFieldPtr_->conductor();
     const passiveConductor& conductor = lfc.conductor();
-    const dictionary& solverDict = phi.mesh().solverDict("phiE");
-    const dictionary& fixedPointDict =
-        phi.mesh().solutionDict().subDict("leadFieldFixedPoint");
-    const scalar directTolerance = fixedPointDict.get<scalar>("tolerance");
-    const label directMaxPasses = fixedPointDict.get<label>("maxPasses");
+    const dictionary& solverDict =
+        phi.mesh().solverDict(passiveConductor::potentialName);
+    const leadFieldConductor::fixedPointControls fixedPoint
+    (
+        leadFieldConductor::fixedPointControls::read(phi.mesh())
+    );
+    const scalar directTolerance = fixedPoint.tolerance;
+    const label directMaxPasses = fixedPoint.maxPasses;
     tmp<volScalarField> tb(conductor.heartSource(Vm));
     if (extraSource)
     {
@@ -756,7 +922,11 @@ void manufacturedLeadFieldECGVerifier::solveDirect
     scalar change = GREAT;
     label pass = 0;
 
-    while (pass < 2 || change >= directTolerance)
+    while
+    (
+        pass < leadFieldConductor::fixedPointControls::minPasses
+     || change >= directTolerance
+    )
     {
         if (pass == directMaxPasses)
         {
@@ -795,75 +965,9 @@ void manufacturedLeadFieldECGVerifier::solveDirect
 void manufacturedLeadFieldECGVerifier::recordFieldError(const scalar t)
 {
     const fvMesh& baseMesh = stateProvider_.baseMesh();
-    const passiveConductor& conductor = leadFieldPtr_->conductor().conductor();
     const scalarField& phi = directStaticPhi_().primitiveField();
     const vectorField& C = baseMesh.C().primitiveField();
     const scalarField& V = baseMesh.V().field();
-
-    // Heart flag with coupled neighbour values, for the interface band
-    volScalarField heart
-    (
-        IOobject
-        (
-            "leadFieldVerifierHeart",
-            baseMesh.time().timeName(),
-            baseMesh,
-            IOobject::NO_READ,
-            IOobject::NO_WRITE,
-            IOobject::NO_REGISTER
-        ),
-        baseMesh,
-        dimensionedScalar(dimless, 0)
-    );
-    for (const label cellI : conductor.heartCellToBaseCell())
-    {
-        heart[cellI] = 1;
-    }
-    heart.correctBoundaryConditions();
-
-    boolList band(baseMesh.nCells(), false);
-    const labelUList& own = baseMesh.owner();
-    const labelUList& nei = baseMesh.neighbour();
-    forAll(nei, faceI)
-    {
-        if (heart[own[faceI]] != heart[nei[faceI]])
-        {
-            band[own[faceI]] = true;
-            band[nei[faceI]] = true;
-        }
-    }
-    forAll(heart.boundaryField(), patchI)
-    {
-        const fvPatchScalarField& hp = heart.boundaryField()[patchI];
-        if (!hp.coupled())
-        {
-            continue;
-        }
-        const scalarField hN(hp.patchNeighbourField());
-        const labelUList& cells = hp.patch().faceCells();
-        forAll(cells, faceI)
-        {
-            if (heart[cells[faceI]] != hN[faceI])
-            {
-                band[cells[faceI]] = true;
-            }
-        }
-    }
-
-    // Cells with a face on the outer boundary of the conductor
-    boolList surface(baseMesh.nCells(), false);
-    forAll(baseMesh.boundary(), patchI)
-    {
-        const fvPatch& patch = baseMesh.boundary()[patchI];
-        if (patch.coupled() || isA<emptyFvPatch>(patch))
-        {
-            continue;
-        }
-        for (const label cellI : patch.faceCells())
-        {
-            surface[cellI] = true;
-        }
-    }
 
     // Per region: sum |e| V, sum e^2 V, sum V, max |e|
     List<FixedList<scalar, 4>> sums(fieldRegionNames_.size(), Zero);
@@ -874,9 +978,11 @@ void manufacturedLeadFieldECGVerifier::recordFieldError(const scalar t)
         const label zone =
             reference_ == referenceType::sphericalShell ? shellZones_[cellI] : -1;
         const scalar e = mag(phi[cellI] - exactPhi(C[cellI], t, zone));
-        const bool inHeart = heart[cellI] > 0.5;
+        const bool inHeart = heartCells_[cellI];
         const bool member[5] =
-            {true, inHeart, !inHeart, band[cellI], surface[cellI]};
+        {
+            true, inHeart, !inHeart, interfaceBand_[cellI], surfaceCells_[cellI]
+        };
         for (label r = 0; r < 5; ++r)
         {
             if (member[r])
@@ -1028,8 +1134,7 @@ void manufacturedLeadFieldECGVerifier::record
         ecgModelIO::writeRow(outputPtr_.ref(), t, row);
     }
 
-    const Time& time = mesh_.time();
-    if (time.value() + 0.5*time.deltaTValue() >= time.endTime().value())
+    if (verificationUtils::shouldReportManufacturedErrors(Vm))
     {
         writeSummary();
     }
@@ -1046,8 +1151,12 @@ void manufacturedLeadFieldECGVerifier::writeSummary()
 
     // Reduced on every rank before the master writes
     const label nCells =
-        returnReduce(stateProvider_.baseMesh().nCells(), sumOp<label>());
-    const label nHeartCells = returnReduce(mesh_.nCells(), sumOp<label>());
+        verificationUtils::globalManufacturedCellCount
+        (
+            stateProvider_.baseMesh()
+        );
+    const label nHeartCells =
+        verificationUtils::globalManufacturedCellCount(mesh_);
 
     if (!Pstream::master())
     {

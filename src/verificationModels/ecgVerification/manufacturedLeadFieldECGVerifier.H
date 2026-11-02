@@ -33,10 +33,11 @@ Description
       applied to the exact Vm at the heart cell centres;
     - phiStatic: the error of the directStatic potential field against the
       exact potential at the cell centres, over the whole mesh, the heart,
-      the torso, the interface band (cells with a heart-torso face) and the
-      surface (cells with a face on the outer boundary of the conductor):
-      mean |e|, volume-weighted RMS and maximum, the largest over the
-      samples; the cell of the largest error is logged.
+      the torso, the interface band (verificationUtils::interfaceBandCells)
+      and the surface (verificationUtils::boundaryAdjacentCells): mean |e|
+      and volume-weighted RMS over the volume of the region (not of the
+      mesh, as verificationUtils::computeMaskedNorms) and maximum, the
+      largest over the samples; the cell of the largest error is logged.
 
     With a pinned reference the exact potential is shifted to equal the
     reference value at the centroid of the pinned cell.
@@ -60,10 +61,14 @@ Description
     between the bath zones bloodPool and bath): the conductor must be the
     bidomain one, pinned, with no ground or surface-current patches, and its
     zones, Gi, Ge and torso conductivity must be those of the solution at
-    the cell centres. Its phiE source and the exact outward current on the
-    outer boundary enter both static channels as one extra source, without
-    its volume mean: the direct solve adds it to b, the lead field adds
-    sum z_e V s.
+    the cell centres. writeManufacturedFields (setManufacturedFields) writes
+    them: 0/ConductivityIntracellular, 0/ConductivityExtracellular and
+    0/bodyAndOrgansConductivity (the outer-bath formula in the myocardium,
+    where the conductor does not read it), each cell with the formula of its
+    cellZone; slab and layered prescribe no fields. The phiE source of the
+    solution and its exact outward current on the outer boundary enter both
+    static channels as one extra source, without its volume mean: the
+    direct solve adds it to b, the lead field adds sum z_e V s.
 
     The direct solve uses the fvSolution entry phiE.
 
@@ -80,7 +85,8 @@ Author
 #include "ecgVerificationModel.H"
 #include "leadFieldECG.H"
 #include "ecgVerification/manufacturedLeadFieldECGReference.H"
-#include "ecgVerification/manufacturedLeadFieldShellFields.H"
+#include \
+    "bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H"
 #include "OFstream.H"
 #include "Enum.H"
 #include "overrideTypeName.H"
@@ -140,6 +146,12 @@ private:
 
     //- sphericalShell: the solution zone of every base cell (its cellZone)
     labelList shellZones_;
+
+    //- Base-mesh cells of the heart, of the interface band and of the
+    //  surface
+    boolList heartCells_;
+    boolList interfaceBand_;
+    boolList surfaceCells_;
 
     labelList electrodeCells_;
     List<point> electrodeCentroids_;
@@ -239,6 +251,10 @@ public:
     virtual Requirements requirements() const override;
 
     virtual bool read(const dictionary& dict) override;
+
+    //- sphericalShell: write Gi, Ge and the torso conductivity of the
+    //  solution on the undecomposed mesh; fatal for slab and layered
+    virtual void writeManufacturedFields(const fvMesh& mesh) const override;
 
     virtual void record(const List<scalar>& numericValues) override;
 

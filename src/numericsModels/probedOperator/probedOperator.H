@@ -30,7 +30,9 @@ Description
     Columns that share no row get the same colour (distance-2 colouring of
     the pattern), and C x_c with x_c the indicator of colour c gives every
     entry of that colour. An operator whose stencil exceeds the pattern, or
-    that is not linear, is not reproduced; reproductionError() measures it.
+    that is not linear, is not reproduced: apply() then differs from the
+    operator, which the caller checks on a test field (applyAbs() gives the
+    scale of the difference).
 
     Rows are stored on their owning processor with global column ids. The
     pattern and the colouring are built on the master, in global cell order,

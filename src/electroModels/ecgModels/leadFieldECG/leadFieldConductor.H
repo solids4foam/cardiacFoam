@@ -152,6 +152,29 @@ class leadFieldConductor
 
 public:
 
+    //- The fixed point of the lead fields (buildLeadFields) and of the
+    //  verifier's direct forward solve: the fvSolution dictionary
+    //  leadFieldFixedPoint
+    struct fixedPointControls
+    {
+        //- Relative change of the unknown between passes below which the
+        //  fixed point stops (tolerance, required)
+        scalar tolerance;
+
+        //- Passes after which the fixed point is fatal (maxPasses,
+        //  required)
+        label maxPasses;
+
+        //- Passes before the change can stop the fixed point: the change
+        //  then compares two solves of the fixed point, not a solve with
+        //  its start value
+        static constexpr label minPasses = 2;
+
+        //- Read leadFieldFixedPoint from the fvSolution of mesh
+        static fixedPointControls read(const fvMesh& mesh);
+    };
+
+
     //- Construct from the base mesh, the top-level electroProperties and
     //  the name of the ECG domain entry in its ecgDomains
     leadFieldConductor
@@ -265,7 +288,8 @@ public:
     //  cell counts, the global sum of base-mesh cell volumes and of volume
     //  times cell centre, the global cell count of the myocardium and of
     //  each torso cellZone, sums of Gi, Ge and the torso conductivity,
-    //  myocardium solver, interface option, seal flag, sealing patch types,
+    //  myocardium solver, interface option (and nInterfaceGradientCorrectors
+    //  with conormalHarmonic), seal flag, sealing patch types,
     //  bidomain heart trace, geometry scheme, the base and heart fvSchemes
     //  entries that can resolve the schemes of phiE (default, patterns and
     //  keys containing phiE), electrodes, ground and surface-current

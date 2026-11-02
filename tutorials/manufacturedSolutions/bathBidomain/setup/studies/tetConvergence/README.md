@@ -93,10 +93,11 @@ The regional potentials converge at 1.8 to 1.55 and the current jump and
 leakage at about 2 up to `N = 40`, then flatten. The assembled current density
 of the solved field stops falling after `N = 20` and rises slightly at
 `N = 80`: the shared-face flux is conservative, but its constitutive error
-does not converge on this family. These runs evaluated the assembled current
-with the `unweightedHarmonic` interface conductivity of the utility while the
-solver used `distanceWeightedHarmonic`; `Allrun` gives both the method of
-`-interface`.
+does not converge on this family. The assembled current density of
+`bathBidomainInterfaceMetrics` uses the face conductivity of the solver's
+conductor (`passiveConductor`). **Rerun required** for the assembled rows
+above: they were evaluated with an `unweightedHarmonic` face conductivity,
+not the solver's.
 
 Assembled interface current density of the exact `phiE` field
 (`-endTime 0.02`, gmsh 4.15.2 meshes):

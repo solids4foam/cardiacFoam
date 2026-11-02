@@ -21,6 +21,13 @@ Application
 Description
     Compute region-separated potential errors and one-sided heart--bath
     interface flux diagnostics on a reconstructed serial mesh.
+
+    The assembled current density is the face flux of
+    fvm::laplacian(Sef, phiE), Sef the face conductivity of the conductor
+    (passiveConductor::faceConductivity), whose corrections use the
+    standard cell gradient of phiE: the flux of the
+    distanceWeightedHarmonic operator. Under conormalHarmonic the solver's
+    corrections use the jump-aware gradient instead.
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
@@ -30,7 +37,7 @@ Description
 #include "mathematicalConstants.H"
 #include "HashSet.H"
 #include "fvMeshSubset.H"
-#include "extracellularFaceConductivity.H"
+#include "passiveConductor.H"
 #include "sealedWallPolicy.H"
 #include "conductivityFieldIO.H"
 
@@ -277,7 +284,6 @@ int main(int argc, char* argv[])
     );
     const dictionary& coeffs = electroProperties.subDict("bidomainSolverCoeffs");
     const dictionary& verification = coeffs.subDict("verificationModel");
-    const dictionary& torso = electroProperties.subDict("torso");
     const scalar k = verification.lookupOrDefault<scalar>
     (
         "k",
@@ -413,10 +419,6 @@ int main(int argc, char* argv[])
             << ", Ge=" << sigmaEVariation << '.'
             << exit(FatalError);
     }
-    const word method
-    (
-        torso.get<word>("interfaceConductivityInterpolation")
-    );
     const word assembly("matchedSubmesh");
 
 
@@ -450,60 +452,44 @@ int main(int argc, char* argv[])
         isHeart[cellI] = true;
     }
 
-    surfaceTensorField sigmaExtracellularf
+    // The face conductivity of the conductor of the phiE equation, from
+    // sigmaTotal and Gi in the myocardium cells
+    volTensorField sigmaIntracellular
     (
         IOobject
         (
-            "sigmaExtracellularfDiagnostic",
+            "sigmaIntracellularDiagnostic",
             runTime.timeName(),
             mesh,
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedTensor("zero", sigmaTotal.dimensions(), tensor::zero)
+        dimensionedTensor("zero", sigmaTotal.dimensions(), tensor::zero),
+        "zeroGradient"
     );
+    for (const label cellI : mesh.cellZones()[heartZone])
+    {
+        sigmaIntracellular[cellI] = sigmaI;
+    }
+    sigmaIntracellular.correctBoundaryConditions();
+
+    const tmp<surfaceTensorField> tSigmaExtracellularf
+    (
+        passiveConductor::faceConductivity
+        (
+            sigmaTotal,
+            sigmaIntracellular,
+            mesh.cellZones()[heartZone],
+            false,
+            false
+        )
+    );
+    const surfaceTensorField& sigmaExtracellularf = tSigmaExtracellularf();
     const labelUList& owner = mesh.owner();
     const labelUList& neighbour = mesh.neighbour();
     const scalarField& weights = mesh.weights().primitiveField();
     const tensorField& sigma = sigmaTotal.primitiveField();
-    tensorField& sigmaExtracellularFace =
-        sigmaExtracellularf.primitiveFieldRef();
-    forAll(neighbour, faceI)
-    {
-        const label ownCell = owner[faceI];
-        const label neiCell = neighbour[faceI];
-        const tensor sigmaIOwn = isHeart[ownCell] ? sigmaI : tensor::zero;
-        const tensor sigmaINei = isHeart[neiCell] ? sigmaI : tensor::zero;
-        const tensor ownSigmaE = sigma[ownCell] - sigmaIOwn;
-        const tensor neiSigmaE = sigma[neiCell] - sigmaINei;
-
-        if (isHeart[ownCell] == isHeart[neiCell])
-        {
-            sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::linear
-                (
-                    ownSigmaE, neiSigmaE, weights[faceI]
-                );
-        }
-        else
-        {
-            sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::conormalHarmonic
-                (
-                    ownSigmaE,
-                    neiSigmaE,
-                    mesh.Sf()[faceI]/mesh.magSf()[faceI],
-                    1.0 - weights[faceI],
-                    weights[faceI]
-                );
-        }
-    }
-    forAll(sigmaExtracellularf.boundaryField(), patchI)
-    {
-        sigmaExtracellularf.boundaryFieldRef()[patchI] =
-            sigmaTotal.boundaryField()[patchI].patchInternalField();
-    }
 
     fvScalarMatrix assembledLaplacian
     (
@@ -778,7 +764,7 @@ int main(int argc, char* argv[])
     );
     OFstream output(outputDir/outputName);
     output
-        << "method,assembly,fieldSource,time,interfaceFaces"
+        << "assembly,fieldSource,time,interfaceFaces"
         << ",heartPhiE_L1,heartPhiE_L2,heartPhiE_Linf"
         << ",bathPhiE_L1,bathPhiE_L2,bathPhiE_Linf"
         << ",x0PhiE_L1,x0PhiE_L2,x0PhiE_Linf"
@@ -805,7 +791,7 @@ int main(int argc, char* argv[])
         << ",sidesFlux_L1,sidesFlux_L2,sidesFlux_Linf"
         << ",exteriorFluxIntegral,fdaBathVariant\n";
     output
-        << method << ',' << assembly << ','
+        << assembly << ','
         << (exactFields ? "exact" : "numerical") << ','
         << runTime.value() << ',' << interfaceFaces;
     writeNorms(output, heartPotential);

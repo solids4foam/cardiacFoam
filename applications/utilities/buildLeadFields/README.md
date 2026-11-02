@@ -6,7 +6,9 @@ solves the discrete adjoint
 problem `A^T z_e = e_e`:
 
 - `A` is the forward heart+torso operator of `passiveConductor`, with the
-  conductivities, interface option, seal flag and schemes the case defines.
+  conductivities, interface option, seal flag and schemes the case defines
+  (with `conormalHarmonic`, `nInterfaceGradientCorrectors` of the `phiE`
+  entry of `solvers` in `system/fvSolution`).
 - `e_e` is the unit vector of the cell that contains the electrode.
 - Ground patches are `fixedValue 0`; every other non-coupled patch is
   `zeroGradient`. Without ground patches, the `phiERefPoint` cell is pinned
@@ -30,12 +32,15 @@ The build checks, and stops with a fatal error above each tolerance:
 | reproduction | probed `C` equals assembled `C` on another field | 1e-11 |
 | transpose | `<z, C psi> = <C^T z, psi>` | 1e-12 |
 | symmetry | `x^T M y = y^T M x`, coupled interfaces included | 1e-12 |
-| residual | `e_e - M z - C^T z`, for each lead field | 1e-8 |
-| pin | `z_r d_r = 1` at a pinned reference cell | 1e-8 |
+| residual | `e_e - M z - C^T z`, for each lead field | 100 `t` |
+| pin | `z_r d_r = 1` at a pinned reference cell | 100 `t` |
 
-Each value is written to the log (`leadFieldAdjoint: <check> <value>`). The
-checks refuse nonlinear schemes (for example a `limited` snGrad or a limited
-gradient). A cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
+The first four are round-off checks of exactly linear operators. The residual
+and the pin measure the convergence of the fixed point, so their tolerance
+follows the `leadFieldFixedPoint` tolerance `t` (below). Each value is
+written to the log (`leadFieldAdjoint: <check> <value>`). The checks refuse
+nonlinear schemes (for example a `limited` snGrad or a limited gradient). A
+cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
 
 ## Inputs
 
@@ -87,7 +92,8 @@ gradient). A cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
   mesh per electrode, in `1/(conductivity·length)`.
 - `constant/[region/]leadFieldSignature`: the conductor's
   decomposition-independent signature (`operator adjoint`, cell counts,
-  volume sums, conductivity sums, myocardium solver, interface option, seal
+  volume sums, conductivity sums, myocardium solver, interface option (and
+  `nInterfaceGradientCorrectors` with `conormalHarmonic`), seal
   flag, sealing patch types, bidomain heart trace, geometry scheme, the
   fvSchemes entries that resolve the schemes of `phiE` on the base and heart
   meshes, electrodes, ground and surface-current patches, reference).
@@ -115,4 +121,4 @@ mpirun -np 2 buildLeadFields -parallel -ecgDomain leadField
 ```
 
 Rebuild the lead fields whenever the mesh, conductivities, interface option,
-seal flag, electrodes or schemes change.
+interface-gradient passes, seal flag, electrodes or schemes change.

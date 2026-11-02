@@ -38,6 +38,23 @@ Description
     the exact flux of a potential that is linear on each side; torso faces
     between equal conductivities take the linear one.
 
+    The potential is named phiE on the base and heart meshes. With
+    interfaceConductivityInterpolation conormalHarmonic, the solver entry of
+    phiE in fvSolution sets the number of jump-aware gradient passes
+    (interfaceGradient) of the explicit corrections:
+
+        solvers
+        {
+            phiE
+            {
+                ...
+                nInterfaceGradientCorrectors 2;
+            }
+        }
+
+    The conductor publishes the gradient fields whose schemes enter its
+    operator and the stencil of its explicit part (leadFieldAdjoint).
+
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
@@ -55,6 +72,7 @@ Author
 #include "point.H"
 #include "wordList.H"
 #include "scalarList.H"
+#include "probedOperator.H"
 
 namespace Foam
 {
@@ -142,6 +160,10 @@ private:
     const word interfaceConductivityInterpolation_;
     const Switch sealedHeartBoundary_;
 
+    // Jump-aware gradient passes of the corrections (conormalHarmonic),
+    // 0 otherwise
+    label nInterfaceGradientCorrectors_;
+
     // Heart-side wall conductivity is Gi + Ge (sealed source), else Ge.
     const bool totalWallConductivity_;
 
@@ -175,20 +197,46 @@ private:
         const wordList& torsoCellZones
     );
 
-    // Build the extracellular/torso face conductivity on all faces.
-    void buildSigmaExtracellularSurface();
-
 
 public:
+
+    //- Name of the potential on the base and heart meshes
+    static const word potentialName;
+
+    //- The gradient fields whose schemes enter the operator, on the base
+    //  and heart meshes: grad(phiE) (snGrad corrections and the cell
+    //  gradient of the corrections) and grad(phiE.component(0)) (the
+    //  corrections of the tensor-conductivity Laplacians)
+    static wordList gradientNames();
+
+    //- Extracellular/torso face conductivity on all faces of the mesh of
+    //  sigmaTotal, from sigmaTotal (Gi + Ge in the heart cells, the torso
+    //  conductivity elsewhere), sigmaIntracellular (Gi in the heart cells,
+    //  0 elsewhere) and the heart cells: the linear mean of Ge on heart
+    //  faces, the torso face value on torso faces, the conormal harmonic
+    //  value of Ge (Gi + Ge when totalWallConductivity) and the torso
+    //  conductivity on heart-torso faces, and sigmaTotal - sigmaIntracellular
+    //  of the cell on physical boundary faces
+    static tmp<surfaceTensorField> faceConductivity
+    (
+        const volTensorField& sigmaTotal,
+        const volTensorField& sigmaIntracellular,
+        const labelUList& heartCells,
+        const bool totalWallConductivity,
+        const bool registerObject
+    );
+
 
     //- Construct from the base mesh, the heart sub-mesh with its cell and
     //  face maps to the base mesh, Gi and Ge on the heart mesh, the torso
     //  conductivity on the base mesh and its cellZones, the heart-torso face
     //  interpolation, the seal flag and the heart field whose patch types
-    //  decide sealing. totalWallConductivity selects Gi + Ge (true) or Ge
-    //  (false) on the heart side of heart-torso faces. registerFields false
-    //  keeps the base-mesh fields out of the base-mesh registry (their names
-    //  stay the same).
+    //  decide sealing. With conormalHarmonic, nInterfaceGradientCorrectors
+    //  (required, at least 1) is read from the phiE entry of the solvers of
+    //  fvSolution of the base mesh. totalWallConductivity selects Gi + Ge
+    //  (true) or Ge (false) on the heart side of heart-torso faces.
+    //  registerFields false keeps the base-mesh fields out of the base-mesh
+    //  registry (their names stay the same).
     passiveConductor
     (
         const fvMesh& baseMesh,
@@ -216,7 +264,8 @@ public:
     //  heartPsi. A given source enters as == source after the base-mesh
     //  Laplacian (and the conormalHarmonic cross term), before the
     //  conormalHarmonic non-orthogonal term and the heart block. A given
-    //  correction receives the explicit face terms.
+    //  correction receives the explicit face terms. psi and heartPsi are
+    //  named potentialName.
     tmp<fvScalarMatrix> assemble
     (
         volScalarField& psi,
@@ -237,6 +286,13 @@ public:
         const label refCell,
         const scalar value
     ) const;
+
+    //- Stencil of the explicit part of the operator as probedOperator
+    //  hops, outermost first: the divergence and face interpolation (face),
+    //  one face hop per jump-aware gradient pass, and the gradient stencil
+    //  (face when every gradientNames() scheme on the base and heart meshes
+    //  is leastSquares or Gauss linear, point otherwise)
+    List<probedOperator::hop> explicitStencil() const;
 
     //- Base cell containing p, owned by exactly one partition (-1 elsewhere)
     label referenceCell(const point& p) const;
@@ -276,6 +332,13 @@ public:
     Switch sealedHeartBoundary() const
     {
         return sealedHeartBoundary_;
+    }
+
+    //- Jump-aware gradient passes of the corrections (conormalHarmonic),
+    //  0 otherwise
+    label nInterfaceGradientCorrectors() const
+    {
+        return nInterfaceGradientCorrectors_;
     }
 
     //- True when heart-torso faces carry Gi + Ge on the heart side (a sealed

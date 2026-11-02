@@ -148,6 +148,9 @@ leadFieldECGKeyword                    bath  monodomainLeadFieldECG      fail:Un
 bathPotentialDomainBlock               bath  bathBidomain                fail:bathPotentialDomain      bidomainSolverCoeffs/bathPotentialDomain={bathCellZones~(bath);}  skip=v2312
 bathWithoutCellZone                    bath  bathBidomain                fail:subset~cell~map          bidomainSolverCoeffs/cellZone!
 unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       torso/interfaceConductivityInterpolation=bogusInterpolation
+# conormalHarmonic without nInterfaceGradientCorrectors in the phiE solver
+# entry of fvSolution
+conormalWithoutGradientCorrectors      bath  bathBidomain                fail:nInterfaceGradientCorrectors  torso/interfaceConductivityInterpolation=conormalHarmonic
 bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ  skip=v2312
 # Torso ECG from lead fields: an electrode without a lead field; the
 # conductivity changed after building; Gi (Gi+Ge)^-1 Ge not the monodomain

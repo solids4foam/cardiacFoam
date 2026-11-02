@@ -28,15 +28,22 @@ namespace Foam
 namespace
 {
 
+// The explicit part is linear and the probing exact, so the linearity,
+// reproduction and transpose defects are round-off of the assembly and of
+// the probed sums; a scheme that is not linear or whose stencil exceeds the
+// probing pattern gives defects far above round-off
 const scalar linearityTolerance = 1e-11;
 const scalar reproductionTolerance = 1e-11;
 const scalar transposeTolerance = 1e-12;
-const scalar symmetryTolerance = 1e-12;
-const scalar residualTolerance = 1e-8;
-const scalar pinTolerance = 1e-8;
 
-// Gradient entries whose schemes enter C
-const wordList gradientNames({"grad(phiE)", "grad(phiE.component(0))"});
+// The implicit matrix is assembled symmetric, so its defect is round-off of
+// the products
+const scalar symmetryTolerance = 1e-12;
+
+// The relative residual of A^T z = e and the pin defect of a fixed point
+// stopped at a relative change t between passes are of order t; the factor
+// leaves room for the linear solver tolerance and round-off
+const scalar fixedPointResidualFactor = 100;
 
 
 // The resolved gradient schemes of the base and heart meshes, as text
@@ -46,7 +53,7 @@ std::string gradSchemesText(const fvMesh& base, const fvMesh& heart)
     for (const fvMesh* meshPtr : {&base, &heart})
     {
         os  << (meshPtr == &base ? "base" : "; heart");
-        for (const word& name : gradientNames)
+        for (const word& name : passiveConductor::gradientNames())
         {
             os  << ' ' << name << ':';
             for (const token& t : ITstream(meshPtr->gradScheme(name)))
@@ -59,24 +66,6 @@ std::string gradSchemesText(const fvMesh& base, const fvMesh& heart)
 }
 
 
-// True for a gradient whose stencil is the cell and its face neighbours
-bool faceStencilGradient(const fvMesh& mesh, const word& name)
-{
-    ITstream is(mesh.gradScheme(name));
-    const word scheme(is);
-    if (scheme == "leastSquares")
-    {
-        return true;
-    }
-    if (scheme == "Gauss" && !is.eof())
-    {
-        const word interpolation(is);
-        return interpolation == "linear";
-    }
-    return false;
-}
-
-
 void report(const word& check, const scalar value, const scalar tolerance)
 {
     Info<< "leadFieldAdjoint: " << check << ' ' << value
@@ -86,16 +75,21 @@ void report(const word& check, const scalar value, const scalar tolerance)
 } // End anonymous namespace
 
 
-leadFieldAdjoint::leadFieldAdjoint(const leadFieldConductor& lfc)
+leadFieldAdjoint::leadFieldAdjoint
+(
+    const leadFieldConductor& lfc,
+    const leadFieldConductor::fixedPointControls& fixedPoint
+)
 :
     lfc_(lfc),
+    residualTolerance_(fixedPointResidualFactor*fixedPoint.tolerance),
     probePtr_(lfc.leadFieldPotential().ptr()),
     heartProbePtr_(lfc.heartPotential().ptr()),
     CPtr_()
 {
     for (const fvMesh* meshPtr : {&lfc.baseMesh(), &lfc.heartMesh()})
     {
-        for (const word& name : gradientNames)
+        for (const word& name : passiveConductor::gradientNames())
         {
             if (meshPtr->solution().cache(name))
             {
@@ -110,7 +104,7 @@ leadFieldAdjoint::leadFieldAdjoint(const leadFieldConductor& lfc)
 
     checkLinearity();
 
-    const List<probedOperator::hop> hops(patternHops());
+    const List<probedOperator::hop> hops(lfc.conductor().explicitStencil());
     CPtr_.reset
     (
         new probedOperator
@@ -144,43 +138,20 @@ tmp<scalarField> leadFieldAdjoint::assembledC(const scalarField& x) const
 }
 
 
-List<probedOperator::hop> leadFieldAdjoint::patternHops() const
-{
-    bool faceStencil = true;
-    for (const fvMesh* meshPtr : {&lfc_.baseMesh(), &lfc_.heartMesh()})
-    {
-        for (const word& name : gradientNames)
-        {
-            faceStencil = faceStencil && faceStencilGradient(*meshPtr, name);
-        }
-    }
-
-    // Divergence and face interpolation, interface-gradient passes, and the
-    // gradient stencil
-    List<probedOperator::hop> hops(1, probedOperator::hop::face);
-    if
-    (
-        lfc_.conductor().interfaceConductivityInterpolation()
-     == "conormalHarmonic"
-    )
-    {
-        hops.append(probedOperator::hop::face);
-        hops.append(probedOperator::hop::face);
-    }
-    hops.append
-    (
-        faceStencil ? probedOperator::hop::face : probedOperator::hop::point
-    );
-    return hops;
-}
-
-
 tmp<scalarField> leadFieldAdjoint::centreField(const label seed) const
 {
     const fvMesh& mesh = lfc_.baseMesh();
     const vectorField& C = mesh.C().primitiveField();
     const vector origin(gMin(C));
     const scalar h = cbrt(gMin(mesh.V().field()));
+
+    // r = fract(43758.5453 sin(x.a + 1.618 seed)) - 1/2, x the cell centre
+    // in units of h from the global origin: a value in [-1/2, 1/2) without
+    // a pattern from cell to cell, the same for a cell in serial and in
+    // parallel. a and 43758.5453 are arbitrary incommensurate hash
+    // constants (those of the common sin-hash one-liner, a third component
+    // added for 3D); 1.618 shifts the phase so that each seed gives
+    // another field
     const vector a(12.9898, 78.233, 37.719);
 
     tmp<scalarField> tr(new scalarField(C.size()));
@@ -244,7 +215,9 @@ void leadFieldAdjoint::checkReproduction() const
             << "Gradient schemes: "
             << gradSchemesText(lfc_.baseMesh(), lfc_.heartMesh()).c_str()
             << "; interface option "
-            << lfc_.conductor().interfaceConductivityInterpolation() << '.'
+            << lfc_.conductor().interfaceConductivityInterpolation()
+            << ", nInterfaceGradientCorrectors "
+            << lfc_.conductor().nInterfaceGradientCorrectors() << '.'
             << exit(FatalError);
     }
 }
@@ -365,13 +338,13 @@ void leadFieldAdjoint::checkSolution
         matrixProduct(M, z, zI, true) + CPtr_->applyTransposeAbs(zI)
     );
     const scalar value = gMax(mag(r))/max(scale, VSMALL);
-    report("residual", value, residualTolerance);
+    report("residual", value, residualTolerance_);
 
-    if (!(value <= residualTolerance))
+    if (!(value <= residualTolerance_))
     {
         FatalErrorInFunction
             << "Lead field does not solve A^T z = e: relative residual "
-            << value << " (tolerance " << residualTolerance << ")."
+            << value << " (tolerance " << residualTolerance_ << ")."
             << exit(FatalError);
     }
 
@@ -382,13 +355,13 @@ void leadFieldAdjoint::checkSolution
             refCell >= 0 ? zI[refCell]*refDiag : 0, sumOp<scalar>()
         );
         const scalar pinValue = mag(zd - 1);
-        report("pin", pinValue, pinTolerance);
+        report("pin", pinValue, residualTolerance_);
 
-        if (!(pinValue <= pinTolerance))
+        if (!(pinValue <= residualTolerance_))
         {
             FatalErrorInFunction
                 << "Lead field at the reference cell times its diagonal is "
-                << zd << ", not 1 (tolerance " << pinTolerance << ")."
+                << zd << ", not 1 (tolerance " << residualTolerance_ << ")."
                 << exit(FatalError);
         }
     }
