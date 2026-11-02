@@ -72,6 +72,16 @@ void eikonalPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     (void)dt;
 
     networkTerminalDomain_.terminalActivationTime(terminalActivationBuffer_);
+
+    // Junction delay
+    for (scalar& t : terminalActivationBuffer_)
+    {
+        if (t >= 0)
+        {
+            t += pvjDelay_;
+        }
+    }
+
     mapper_.depositActivationTimes
     (
         terminalActivationBuffer_,

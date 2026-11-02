@@ -2,6 +2,8 @@ ionicModel/ionicModel.C
 ionicModel/ionicSelector.C
 ionicModel/ionicHeterogeneity.C
 ionicModel/ionicHeterogeneityOrchestrator.C
+ionicTemplates/ionicTemplates.C
+ionicTemplates/templateSignalProvider.C
 
 verificationModels/monodomainFDAManufactured/monodomainFDAManufactured.C
 verificationModels/bidomainFDAManufactured/bidomainFDAManufactured.C

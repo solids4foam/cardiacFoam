@@ -165,7 +165,7 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 
     for (label i = 0; i < nTerminalNodes; ++i)
     {
-        const scalar tact = terminalActivationBuffer_[i];
+        const scalar tact = terminalActivationBuffer_[i] + pvjDelay_;
 
         // If activated, compute the template voltage
         if (currentTime >= tact)

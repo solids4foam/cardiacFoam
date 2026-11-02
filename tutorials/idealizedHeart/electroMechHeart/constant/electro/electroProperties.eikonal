@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant/electro";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver    eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    sealedHeartBoundary false;
+    conductivitySource field;
+    chi   [ 0 -1 0 0 0 0 0 ] 140000;
+    cm    [ -1 -4 4 0 0 2 0 ] 0.01;
+    c0    [ 0 0 -0.5 0 0 0 0 ] 29.7;
+
+    eikonalAdvectionDiffusionApproach true;
+
+    // Activation time 0 in the monodomain variant's apical stimulus box
+    stimulusLocationMin (7.56e-2 -4.0e-3 3.0e-3);
+    stimulusLocationMax (8.00e-2 2.0e-3 6.0e-3);
+
+    ionicHeterogeneity
+    {
+        mode              namedRegions;
+        field             t;
+        transitionMode    hard;
+        regions
+        {
+            endocardialCells { range (0 0.3); }
+            mCells           { range (0.3 0.7); }
+            epicardialCells  { range (0.7 1); }
+        }
+    }
+}
+
+// ************************************************************************* //
