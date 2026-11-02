@@ -22,9 +22,11 @@ Two controls on the 3D ladder: `-gradient GaussLinear` at `N = 10, 20, 40`
 ## Execution
 
 Each run is a copy of the case in `results/` (ignored by git), named
-`<d>D_N<n>`, `GaussLinear_3D_N<n>` and `3D_N40_dt<dt>`, the names that
+`<d>D_N<n>`, `GaussLinear_3D_N<n>`, `3D_N40_dt<dt>` and `sealed_3D_N<n>`, the names that
 `../summarize.py` reads (`3D_N40_dt<dt>` is a two-level temporal ladder; its
-default-step level is a link to `3D_N40`). From this folder:
+default-step level is a link to `3D_N40`), and `sealed_3D_N<n>`, the 3D
+ladder with the sealed-wall gradient (`-wallGradient sealed`) against the
+default stock least squares of `3D_N<n>`. From this folder:
 
 ```bash
 mkdir -p results
@@ -40,6 +42,11 @@ for n in 10 20 40
 do
     rsync -a --exclude setup ../../../ results/GaussLinear_3D_N$n/
     results/GaussLinear_3D_N$n/Allrun parallel -dim 3 -N $n -gradient GaussLinear
+done
+for n in 10 20 40 80
+do
+    rsync -a --exclude setup ../../../ results/sealed_3D_N$n/
+    results/sealed_3D_N$n/Allrun -dim 3 -N $n -wallGradient sealed
 done
 set -- $(awk -v N=40 'BEGIN { h = 0.00892857*(10/N)^2; k = int(0.2/h); if (k*h < 0.2) k++; printf "%.17g %.17g", 0.2/k, 0.1/k }')
 ln -s 3D_N40 results/3D_N40_dt$1
