@@ -1,13 +1,13 @@
 # monodomain1D3DShell
 
-The 1D-3D junction of [monodomain1D3D](../monodomain1D3D/README.md) with each
+The 1D-3D junction of [monodomain1D3DCube](../monodomain1D3DCube/README.md) with each
 support cut by a sealed curved wall, on tetrahedra. The myocardium is the
 sealed-shell monodomain problem of
 [monodomainPseudoECG/sphericalShell](../monodomainPseudoECG/sphericalShell/README.md)
 on gmsh tetrahedra; a Purkinje graph crosses the cavity on the `x` axis and
 ends at two terminals on the endocardium, `(-0.5, 0, 0)` and `(0.5, 0, 0)`.
 The junction forcing is the continuum one (`reference continuum`, see
-[monodomain1D3D](../monodomain1D3D/README.md#continuum-reference)), with the
+[monodomain1D3DCube](../monodomain1D3DCube/README.md#continuum-reference)), with the
 continuum normalisation taken over the part of the support ball outside the
 inner sphere, `mu >= -r/(2 r1)` about the outward radius at the terminal.
 
@@ -25,7 +25,7 @@ conductivity tensor `G`, written cell-wise by `setManufacturedFields`).
 `V1D = sqrt(1 + t) cos(pi (x + 0.5))` (`xOrigin -0.5` in both the graph and
 the coupled verifier), whose slope vanishes at both terminals, so the free
 graph ends need no boundary forcing. `G1D`, `g`, `chi`, `Cm`, the FDA ionic
-closure and `purkinjeFibreRadius 1/sqrt(pi)` are those of `monodomain1D3D`.
+closure and `purkinjeFibreRadius 1/sqrt(pi)` are those of `monodomain1D3DCube`.
 
 The graph has its root at the centre and `ceil(N/2)` equal edges per branch
 (edge length `1/(2 ceil(N/2))`), written to `constant/purkinjeGraph` by
@@ -79,7 +79,7 @@ Outputs: `postProcessing/3D_tet_<N>_cells.dat` (shell errors, as in
 sphericalShell), `postProcessing/graph_1D_<k>_nodes.dat` (graph errors), and
 the continuum-reference files `verification/coupled1D3DMonodomain_map.csv`,
 `_steps.csv` and `_local.csv` described in
-[monodomain1D3D](../monodomain1D3D/README.md#usage).
+[monodomain1D3DCube](../monodomain1D3DCube/README.md#usage).
 
 There is no regression test; the study and its results are in
-[continuumCoupling](../monodomain1D3D/setup/studies/continuumCoupling/README.md).
+[continuumCoupling](../monodomain1D3DCube/setup/studies/continuumCoupling/README.md).

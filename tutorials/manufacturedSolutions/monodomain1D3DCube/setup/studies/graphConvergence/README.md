@@ -1,4 +1,4 @@
-# graphConvergence - monodomain1D3D
+# graphConvergence - monodomain1D3DCube
 
 Spatial convergence of the Purkinje graph alone (`Allrun -domain graph`,
 `runPurkinjeGraph`, no junction): the six graphs at a fixed time step, and the

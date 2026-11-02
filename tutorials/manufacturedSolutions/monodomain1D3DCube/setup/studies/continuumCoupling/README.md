@@ -1,4 +1,4 @@
-# continuumCoupling - monodomain1D3D
+# continuumCoupling - monodomain1D3DCube
 
 The junction against its continuum definition (`-reference continuum`): the
 tissue and graph forcings come from the continuum kernel normalised over the
@@ -27,7 +27,7 @@ on tetrahedra.
 
 ## Ladders
 
-Box (`monodomain1D3D`), bidirectional explicit transfer, `R_pvj = 1`, the
+Box (`monodomain1D3DCube`), bidirectional explicit transfer, `R_pvj = 1`, the
 case's `dt ~ h^2`, `endTime 0.1`, graph `nodes<N+1>`:
 
 - regime (a), fixed `R = 0.11`: two interleaved halving ladders

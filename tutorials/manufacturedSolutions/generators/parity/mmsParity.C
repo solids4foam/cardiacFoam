@@ -76,7 +76,7 @@ namespace
 {
 
 // chi, Cm of every case: tutorials/manufacturedSolutions/monodomainPseudoECG/
-// constant/electroProperties:25-26 (also eikonalECG and monodomain1D3D)
+// constant/electroProperties:25-26 (also eikonalECG and monodomain1D3DCube)
 const scalar chi = 3.0;
 const scalar Cm = 2.0;
 
@@ -115,13 +115,13 @@ scalar defaultBeta(const label d)
     return -8.6;
 }
 
-// Terminals of the coupled case: monodomain1D3D/constant/purkinjeGraph.nodes003
+// Terminals of the coupled case: monodomain1D3DCube/constant/purkinjeGraph.nodes003
 // pvjLocations
 const scalar terminalY = 0.166666666667;
 const scalar terminalZ = 0.333333333333;
 const scalar terminalX[2] = {0.0, 1.0};
 
-// Junction resistance of the coupled case: monodomain1D3D/constant/
+// Junction resistance of the coupled case: monodomain1D3DCube/constant/
 // electroProperties (rPvj 1.0)
 const scalar rPvj = 1.0;
 

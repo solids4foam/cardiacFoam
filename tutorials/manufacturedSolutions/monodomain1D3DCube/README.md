@@ -1,4 +1,4 @@
-# monodomain1D3D
+# monodomain1D3DCube
 
 Coupled 1D-3D monodomain manufactured solution: a reaction-diffusion Purkinje
 graph and the 3D myocardium on the unit cube, joined at two Purkinje-ventricular
