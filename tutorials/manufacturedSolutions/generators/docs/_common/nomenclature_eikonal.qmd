@@ -1,0 +1,35 @@
+| Symbol | Meaning | Unit | Code name |
+|:----|:--------|:----|:---------|
+| $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
+| $d$, $\Omega$, $\mathbf n$ | spatial dimension; the domain; outward unit normal of $\partial\Omega$ | --; --; -- | `dim`, `d` |
+| $\psi$ | activation time | s | `activationTime`; `psi` (generators) |
+| $t$, $s$ | time; argument of the template | s | `t`, `s` |
+| $V_m$ | template transmembrane potential $U(t-\psi)$ | case units | -- |
+| $\boldsymbol\sigma$ | conductivity tensor | S m$^{-1}$ | `conductivity`; `G` (shell generators), `sigma` (NumPy) |
+| $\chi$ | membrane surface-to-volume ratio | m$^{-1}$ | `chi` |
+| $C_m$ | membrane capacitance per unit area | F m$^{-2}$ | `cm` |
+| $\mathbf M$ | eikonal metric, $\boldsymbol\sigma/(\chi C_m)$ | m$^2$ s$^{-1}$ | `M` |
+| $c_0$ | eikonal--diffusion scaling coefficient | s$^{-1/2}$ | `c0` |
+| $S_\psi$ | manufactured source of the eikonal equation | -- | `source` |
+| $\mathbf k_d$, $K_M$ | direction of the Cartesian field; $\mathbf k_d\cdot\mathbf M\mathbf k_d$ | m$^{-1}$; s$^{-1}$ | `k_vector(d)`; `K_M` |
+| $r_1$, $r_2$ | inner and outer radius of the shell | m | `r1`, `r2` |
+| $\lambda$, $\omega$ | transmural coordinate; function vanishing on both spheres | -- | `lam`, `om` |
+| $\mathbf f,\mathbf s,\mathbf n_s$ | fibre, sheet and sheet-normal directions | -- | (shell generator) |
+| $\mathbf e_a,\mathbf e_b$ | fixed frame of the shell fibre rotation | -- | (shell generator) |
+| $\sigma_f,\sigma_s,\sigma_n$ | conductivities along $\mathbf f$, $\mathbf s$, $\mathbf n_s$ | S m$^{-1}$ | `gil`, `git`, `gin` |
+| $\theta_0,\theta_1$, $\gamma_1,\gamma_2$ | fibre angles; rotation angles of the fixed frame | deg | `theta0`, `theta1`, `gamma1`, `gamma2` |
+| $\mathbf x_s$, $\mathbf M_s$ | stimulus point; $\mathbf M(\mathbf x_s)$ | m; m$^2$ s$^{-1}$ | `xs`; `Msi` holds $\mathbf M_s^{-1}$ |
+| $\delta$ | smoothing length of the anisotropic distance | case units | `delta` |
+| $r_{\mathrm{pin}}$ | radius of the ball of pinned cells | m | `rPin` |
+| $\hat h$, $m_j$, $m$ | unsealed field; wall correction of sphere $j$; blend | -- | (shell generator) |
+| $d_j$, $\mathbf n_j$ | $\partial_n\omega$ on sphere $j$; unit normal of sphere $j$ out of the heart | -- | (shell generator) |
+| $U$, $U'$ | transmembrane template and its derivative | case units | `template` |
+| $H$, $w$ | smooth step of the single-event template; its width | --; s | (eikonal ECG generator) |
+| $a$, $b$ | $\tanh(s/w)$, $\tanh((s-D)/w)$ | -- | (eikonal ECG generator) |
+| $D$, $T_r$ | duration and 10--90% rise time of the single-event template | s | `templateDuration`, `templateRise`; `duration`, `rise` |
+| $\mathbf r_e$, $\Phi_e$ | electrode position; eikonal-driven ECG functional | m; case units | `electrodePositions`; `eikonalECG` |
+| $\mathbf r$, $\varphi_d$ | $\mathbf x-\mathbf r_e$; integrand of $\Phi_e$ in dimension $d$ | m; case units | `integrand_d<d>_<template>` |
+| $c_{\mathrm{ECG}}$ | normalisation of the ECG functional, here 1 | -- | -- |
+| $q_{\mathrm{ref}}$, $q$ | Gauss--Legendre points per axis of the reference quadrature (cube; shell) | -- | `referenceQuadratureOrder` |
+| $W_q$, $\kappa$ | quadrature weights; kernel $\mathbf r\cdot\boldsymbol\sigma\nabla\psi/\lVert\mathbf r\rVert^3$ at the quadrature points | --; case units | -- |
+| $\mu$, $\vartheta$ | $\cos\vartheta$; polar angle of the shell quadrature | -- | -- |

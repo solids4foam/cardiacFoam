@@ -15,7 +15,6 @@ FoamFile
 
 dimensions      [0 0 1 0 0 0 0];
 
-// -1 marks "not yet activated"; read by the eikonal myocardium only
 internalField   uniform -1;
 
 boundaryField

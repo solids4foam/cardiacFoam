@@ -6,8 +6,6 @@
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 
-// Transmembrane-potential probes along the fibres
-
 type            probes;
 region          electro;
 libs            ("libsampling.so");
@@ -21,8 +19,6 @@ fields
     Vm
 );
 
-// Along the fibres at y = 1.5 mm, z = 3.5 mm: stimulated layer, slab
-// centre and far end (x = 0.75, 10.0 and 19.25 mm)
 probeLocations
 (
     (0.00075 0.00150 0.00350)

@@ -13,8 +13,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Dummy fvSolution for the top-level region (not used directly)
-
 solvers
 {
 }

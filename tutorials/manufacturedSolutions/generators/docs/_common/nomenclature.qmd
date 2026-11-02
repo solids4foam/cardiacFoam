@@ -1,0 +1,4 @@
+The code name is the key of the cardiacFoam case dictionaries or the name used
+in the generators and the NumPy reference modules. "Case units" marks a
+quantity defined only through the manufactured construction, with no
+physical calibration.

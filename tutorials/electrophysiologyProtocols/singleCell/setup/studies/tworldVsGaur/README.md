@@ -35,9 +35,12 @@ From the repository root, source the host OpenFOAM installation and run:
 
 ```bash
 source /Volumes/OpenFOAM-v2412/etc/bashrc
-export OMNIDRIVER_RUNTIME_CONFIG=/Users/simaocastro/omnidriver/omnidriver-runtime.yaml
+export OMNIDRIVER_RUNTIME_CONFIG=<path to omnidriver-runtime.yaml>
 
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam --repo . sweep-run \
+    --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
+    --scratch-dir <scratch> \
+    --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
 
 python3 tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/postprocess_tworld_vs_gaur.py \
     --input-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun/cases \

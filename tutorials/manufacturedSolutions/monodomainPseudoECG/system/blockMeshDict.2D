@@ -31,7 +31,6 @@ vertices
 
 blocks
 (
-    // 2D slab: nx × ny × 1, thin in z with empty faces
 hex (0 1 2 3 4 5 6 7) ($N $N 1) simpleGrading (1 1 1)
 );
 
@@ -82,5 +81,3 @@ mergePatchPairs
 );
 
 // ************************************************************************* //
-
-

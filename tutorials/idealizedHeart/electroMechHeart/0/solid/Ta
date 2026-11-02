@@ -13,10 +13,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Initial active tension. The electromechanical model registers and solves
-// Ta, but the solid model builds its stiffness while it is constructed,
-// before that field exists, and electroMechanicalLaw then reads Ta from here
-
 dimensions      [1 -1 -2 0 0 0 0];
 
 internalField   uniform 0;

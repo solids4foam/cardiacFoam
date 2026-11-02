@@ -94,7 +94,7 @@ def _dot(a, b):
 
 
 def _frame():
-    """Fixed orthonormal frame (e_a, e_b, e_c): columns of Rz(gamma1) Rx(gamma2)."""
+    """Fixed orthonormal frame (e_a, e_b, n_s): columns of Rz(gamma1) Rx(gamma2)."""
     c1, s1 = sp.cos(P["gamma1"]), sp.sin(P["gamma1"])
     c2, s2 = sp.cos(P["gamma2"]), sp.sin(P["gamma2"])
     Rz = sp.Matrix([[c1, -s1, 0], [s1, c1, 0], [0, 0, 1]])
@@ -104,7 +104,7 @@ def _frame():
 
 
 def _tensor(l, tr, nn, theta):
-    """l f f + tr s s + nn e_c e_c with f, s rotated by theta in the (e_a, e_b) plane."""
+    """l f f + tr s s + nn n_s n_s with f, s rotated by theta in the (e_a, e_b) plane."""
     ea, eb, ec = _frame()
     f = sp.cos(theta)*ea + sp.sin(theta)*eb
     s = -sp.sin(theta)*ea + sp.cos(theta)*eb

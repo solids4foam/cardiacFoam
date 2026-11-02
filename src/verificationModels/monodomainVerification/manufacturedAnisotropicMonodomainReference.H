@@ -31,6 +31,13 @@ Description
     continuous PDE source is evaluated from the analytic Hessian; no discrete
     finite-volume operator is used to manufacture the source.
 
+    The formulas between "// BEGIN GENERATED <name>" and
+    "// END GENERATED <name>" are written from the sympy definitions in
+    tutorials/manufacturedSolutions/generators: rotated_monodomain_mms.py (F,
+    V, u1-u3, source) and pseudo_ecg_mms.py (grad F, pseudo-ECG kernel).
+    Regenerate them with --write and compare with --check; the rest of the
+    file is hand-written.
+
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
@@ -58,10 +65,9 @@ inline void computeAnisotropicManufacturedF
     forAll(centres, cellI)
     {
         const vector& c = centres[cellI];
-        F[cellI] =
-            Foam::sqr(Foam::sin(pi*c.x()))
-           *Foam::sqr(Foam::sin(pi*c.y()))
-           *Foam::sqr(Foam::sin(pi*c.z()));
+        // BEGIN GENERATED computeAnisotropicManufacturedF
+        F[cellI] = sqr(sin(pi*c.x()))*sqr(sin(pi*c.y()))*sqr(sin(pi*c.z()));
+        // END GENERATED computeAnisotropicManufacturedF
     }
 }
 
@@ -77,11 +83,12 @@ inline void computeAnisotropicManufacturedV
     computeAnisotropicManufacturedF(F, centres);
 
     V.setSize(centres.size());
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
 
     forAll(V, cellI)
     {
-        V[cellI] = sqrt1t*F[cellI];
+        // BEGIN GENERATED computeAnisotropicManufacturedV
+        V[cellI] = F[cellI]*sqrt(t + 1);
+        // END GENERATED computeAnisotropicManufacturedV
     }
 }
 
@@ -102,18 +109,15 @@ inline void computeAnisotropicManufacturedU
     u2.setSize(centres.size());
     u3.setSize(centres.size());
 
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
-    const scalar inv1t = 1.0/(1.0 + t);
-
     forAll(centres, cellI)
     {
         const vector& c = centres[cellI];
-        const scalar G =
-            1.0 + c.x()*Foam::sqr(c.y())*Foam::pow(c.z(), 3);
-
-        u1[cellI] = (1.0 + t)*G + sqrt1t*F[cellI];
-        u2[cellI] = inv1t*Foam::pow(G, -0.5);
-        u3[cellI] = 0.0;
+        // BEGIN GENERATED computeAnisotropicManufacturedU
+        const scalar G = c.x()*(c.y()*c.y())*(c.z()*c.z()*c.z()) + 1;
+        u1[cellI] = F[cellI]*sqrt(t + 1) + G*(t + 1);
+        u2[cellI] = 1/(sqrt(G)*(t + 1));
+        u3[cellI] = 0;
+        // END GENERATED computeAnisotropicManufacturedU
     }
 }
 
@@ -139,39 +143,56 @@ inline void computeAnisotropicManufacturedPdeSource
     source.setSize(centres.size());
 
     const scalar pi = constant::mathematical::pi;
-    const scalar piSqr = Foam::sqr(pi);
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
 
     forAll(centres, cellI)
     {
         const vector& c = centres[cellI];
         const tensor& K = conductivity[cellI];
 
-        const scalar sx2 = Foam::sqr(Foam::sin(pi*c.x()));
-        const scalar sy2 = Foam::sqr(Foam::sin(pi*c.y()));
-        const scalar sz2 = Foam::sqr(Foam::sin(pi*c.z()));
-
-        const scalar dx = pi*Foam::sin(2.0*pi*c.x());
-        const scalar dy = pi*Foam::sin(2.0*pi*c.y());
-        const scalar dz = pi*Foam::sin(2.0*pi*c.z());
-
-        const scalar dxx = 2.0*piSqr*Foam::cos(2.0*pi*c.x());
-        const scalar dyy = 2.0*piSqr*Foam::cos(2.0*pi*c.y());
-        const scalar dzz = 2.0*piSqr*Foam::cos(2.0*pi*c.z());
-
-        const scalar F = sx2*sy2*sz2;
-        const scalar divKGradF =
-            K.xx()*dxx*sy2*sz2
-          + K.yy()*sx2*dyy*sz2
-          + K.zz()*sx2*sy2*dzz
-          + (K.xy() + K.yx())*dx*dy*sz2
-          + (K.xz() + K.zx())*dx*sy2*dz
-          + (K.yz() + K.zy())*sx2*dy*dz;
-
         // The solver uses +source on the PDE right-hand side.  The FDA
         // ionic model contributes -Cm*dV/dt + beta*V/chi, hence this source
-        // must be beta*V - div(K grad(V)).
-        source[cellI] = sqrt1t*(beta*F - divKGradF);
+        // is beta*V - div(K grad(V)).
+        // BEGIN GENERATED computeAnisotropicManufacturedPdeSource
+        const scalar w0 = pi*c.x();
+        const scalar w1 = sin(w0);
+        const scalar w2 = (w1*w1);
+        const scalar w3 = pi*c.y();
+        const scalar w4 = sin(w3);
+        const scalar w5 = (w4*w4);
+        const scalar w6 = pi*c.z();
+        const scalar w7 = sin(w6);
+        const scalar w8 = (w7*w7);
+        const scalar w9 = w5*w8;
+        const scalar w10 = w2*w9;
+        const scalar w11 = sqr(pi);
+        const scalar w12 = 2*w11;
+        const scalar w13 = w10*w12;
+        const scalar w14 = cos(w0);
+        const scalar w15 = cos(w3);
+        const scalar w16 = w12*w2;
+        const scalar w17 = cos(w6);
+        const scalar w18 = 4*w1*w11*w14;
+        const scalar w19 = w15*w4;
+        const scalar w20 = w18*w19*w8;
+        const scalar w21 = w17*w7;
+        const scalar w22 = w18*w21*w5;
+        const scalar w23 = 4*w11*w19*w2*w21;
+        const scalar F = w10;
+        const scalar divKGradF =
+            K.xx()*w12*(w14*w14)*w9
+          - K.xx()*w13
+          + K.xy()*w20
+          + K.xz()*w22
+          + K.yx()*w20
+          - K.yy()*w13
+          + K.yy()*(w15*w15)*w16*w8
+          + K.yz()*w23
+          + K.zx()*w22
+          + K.zy()*w23
+          - K.zz()*w13
+          + K.zz()*w16*(w17*w17)*w5;
+        source[cellI] = sqrt(t + 1)*(F*beta - divKGradF);
+        // END GENERATED computeAnisotropicManufacturedPdeSource
     }
 }
 
@@ -184,15 +205,18 @@ inline vector pseudoECGManufacturedGradFAnisotropic
 {
     const scalar pi = constant::mathematical::pi;
 
-    const scalar sx2 = Foam::sqr(Foam::sin(pi*x));
-    const scalar sy2 = Foam::sqr(Foam::sin(pi*y));
-    const scalar sz2 = Foam::sqr(Foam::sin(pi*z));
-
-    const scalar dx = pi*Foam::sin(2.0*pi*x);
-    const scalar dy = pi*Foam::sin(2.0*pi*y);
-    const scalar dz = pi*Foam::sin(2.0*pi*z);
-
-    return vector(dx*sy2*sz2, sx2*dy*sz2, sx2*sy2*dz);
+    // BEGIN GENERATED pseudoECGManufacturedGradFAnisotropic
+    const scalar w0 = pi*y;
+    const scalar w1 = sin(w0);
+    const scalar w2 = (w1*w1);
+    const scalar w3 = pi*x;
+    const scalar w4 = sin(w3);
+    const scalar w5 = pi*z;
+    const scalar w6 = sin(w5);
+    const scalar w7 = 2*pi*(w6*w6);
+    const scalar w8 = (w4*w4);
+    return vector(w2*w4*w7*cos(w3), w1*w7*w8*cos(w0), 2*pi*w2*w6*w8*cos(w5));
+    // END GENERATED pseudoECGManufacturedGradFAnisotropic
 }
 
 
@@ -218,9 +242,11 @@ inline scalar pseudoECGManufacturedIntegrandAnisotropic
         return 0.0;
     }
 
+    // BEGIN GENERATED pseudoECGManufacturedIntegrandAnisotropic
     return
-        (sigmaGradF.x()*dx + sigmaGradF.y()*dy + sigmaGradF.z()*dz)
-       /Foam::pow(rSq, 1.5);
+        (dx*sigmaGradF.x() + dy*sigmaGradF.y() + dz*sigmaGradF.z())
+       /pow(rSq, 1.5);
+    // END GENERATED pseudoECGManufacturedIntegrandAnisotropic
 }
 
 

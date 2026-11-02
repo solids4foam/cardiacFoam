@@ -1,0 +1,28 @@
+---
+title: "Manufactured solutions for the monodomain equation"
+subtitle: "Construction of the exact fields, sources and reference functionals"
+author:
+  - name: "Simão Castro"
+    affiliation: "University College Dublin"
+bibliography: ../_common/references.bib
+link-citations: true
+format:
+  pdf:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    colorlinks: true
+    papersize: a4
+    geometry: margin=2.4cm
+    fontsize: 11pt
+    fig-pos: "H"
+    pdf-engine: pdflatex
+    include-in-header: ../_common/preamble.tex
+---
+
+{{< include _monodomain_body.qmd >}}
+
+# References {.unnumbered}
+
+::: {#refs}
+:::

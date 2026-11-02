@@ -28,6 +28,7 @@ Author
 #define manufacturedTemplate_H
 
 #include "dictionary.H"
+#include "Enum.H"
 #include "mathematicalConstants.H"
 
 namespace Foam
@@ -43,9 +44,28 @@ inline void readManufacturedTemplate
     scalar& rise
 )
 {
+    enum class templateKind
+    {
+        singleEvent,
+        sine
+    };
+
+    // Unlike a plain word comparison, a misspelt value fails and lists the
+    // valid names instead of silently selecting singleEvent.
+    static const Enum<templateKind> templateKinds
+    ({
+        { templateKind::singleEvent, "singleEvent" },
+        { templateKind::sine,        "sine"        }
+    });
+
     sine =
-        verificationDict.lookupOrDefault<word>("template", "singleEvent")
-     == "sine";
+        templateKinds.getOrDefault
+        (
+            "template",
+            verificationDict,
+            templateKind::singleEvent
+        )
+     == templateKind::sine;
     duration = verificationDict.lookupOrDefault<scalar>("templateDuration", 64);
     rise = verificationDict.lookupOrDefault<scalar>("templateRise", 4);
 }

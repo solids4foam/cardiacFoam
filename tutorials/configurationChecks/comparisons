@@ -25,6 +25,7 @@ differ  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusion
 # Options that must not change the myocardium solution
 same    monodomainExplicit                   monodomainFieldConductivity                      0.005/Vm
 same    monodomainExplicit                   monodomainVerificationNone                       0.005/Vm
+same    monodomainExplicit                   monodomainCaseVariable                           0.005/Vm
 same    monodomainPurkinjeReactionDiffusion  monodomainPurkinjeIonicExport                    0.005/Vm
 same    monodomainExplicit                   monodomainPseudoECG                              0.005/Vm
 same    bidomain                             bidomainPseudoECG                                0.005/Vm

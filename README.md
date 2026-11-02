@@ -51,6 +51,7 @@ The tutorial stops at 0.04 s so that its regression test stays short; the `foamD
 - [src/](src/README.md): the libraries and what each one is for.
 - [applications/utilities/](applications/utilities/README.md): tools for preparing and post-processing cases.
 - [src/verificationModels/](src/verificationModels/README.md) and [tutorials/manufacturedSolutions/](tutorials/manufacturedSolutions/README.md): how the numerics are verified.
+- [docs/manufactured-solutions.md](docs/manufactured-solutions.md): the manufactured solutions, their construction documents, and the exact solutions as NumPy modules for use in other codes.
 
 ## Build modes
 

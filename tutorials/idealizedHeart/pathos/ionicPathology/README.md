@@ -68,3 +68,18 @@ tissue.
 ```
 
 `python3 setup/plot_pseudo_ecg.py --case-dir .` plots the pseudo-ECG of a finished run.
+
+## References for the parametrisations
+
+- **brugada** (ten Tusscher-Noble-Noble-Panfilov 2004 parametrisation): the
+  `g_Na` reduction (SCN5A loss of function) together with the epicardial `g_to`
+  gain of function (x6) tips the plateau past the bifurcation point, causing
+  complete dome loss in epicardial cells and transmural dispersion of
+  repolarisation. Coronel et al. 2009; Shimizu & Antzelevitch 1999.
+- **ischemia**: acidosis and ATP depletion depress `g_Na` and `g_CaL` (-40 %),
+  hyperkalemia raises `K_o` and doubles `g_K1`, and Na/K-ATPase inhibition
+  halves `P_NaK`. Ferrero et al. 1996; Trenor et al. 2010; Rodriguez et al.
+  2006.
+
+The Purkinje conduction velocity and `pvjRadius` follow `../../electroHeart`
+(see its README).

@@ -18,6 +18,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "activeTensionIO.H"
+#include "ionicVariableCompatibility.H"
+#include "DynamicList.H"
 
 namespace Foam
 {
@@ -156,11 +158,15 @@ const activeTensionIO::SelectionPlan& buildSelectedPlan
             }
             else
             {
-                WarningInFunction
-                    << "Unknown active tension variable '" << name
-                    << "'. Output will be zero." << nl;
-                plan.source[k] = activeTensionIO::COL_STATE;
-                plan.index[k]  = 0;
+                ionicVariableCompatibility::reportUnknownVariables
+                (
+                    "active tension",
+                    wordList({name}),
+                    ionicVariableCompatibility::variableNames
+                    (
+                        stateNames, nStates, algNames, nAlg
+                    )
+                );
             }
         }
 
@@ -352,6 +358,7 @@ const Foam::wordList& activeTensionIO::exportedFieldNamesRef
 
     const word ratePrefix("RATES_");
     wordList filtered;
+    DynamicList<word> unknown;
 
     forAll(userList, k)
     {
@@ -370,9 +377,20 @@ const Foam::wordList& activeTensionIO::exportedFieldNamesRef
         if (found)
             filtered.append(name);
         else
-            WarningInFunction
-                << "Ignoring unknown active tension variable '" << name
-                << "'." << nl;
+            unknown.append(name);
+    }
+
+    if (!unknown.empty())
+    {
+        ionicVariableCompatibility::reportUnknownVariables
+        (
+            "active tension",
+            unknown,
+            ionicVariableCompatibility::variableNames
+            (
+                stateNames, nStates, algNames, nAlg
+            )
+        );
     }
 
     cache.valid         = true;

@@ -17,7 +17,6 @@ FoamFile
 
 dimensions      [0 0 1 0 0 0 0];
 
-// -1 marks "not yet activated"; the solve overwrites it.
 internalField   uniform -1;
 
 boundaryField

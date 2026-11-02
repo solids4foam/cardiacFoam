@@ -90,7 +90,10 @@ native names), IKr, IK1, Ito, and the TWorld contraction `AV_Ta` trace. Run the
 study from the repository root with:
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam --repo . sweep-run \
+    --spec tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/sweep_tworld_vs_gaur.json \
+    --scratch-dir <scratch> \
+    --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
 python3 tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/postprocess_tworld_vs_gaur.py \
     --input-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun/cases \
     --output-dir tutorials/electrophysiologyProtocols/singleCell/setup/studies/tworldVsGaur/results/sweepRun
@@ -143,3 +146,24 @@ or this record's one allowed axis, `ionicModel` (a bare model name; derives
 
 `regressionTest.sh` is local to this case and validates against
 `singleCell.reference`.
+
+## Notes on dictionary entries
+
+`constant/electroProperties` carries a model-neutral `export` list. No list is
+valid for every ionic model: `listCellModelsVariables` shows that state names
+differ per model (TWorld's voltage is `v`, Gaur's is `cell_v`) and so do the
+`AV_*` currents (`AV_Ito_Ito` and `AV_J_SRCarel` exist in TWorld; `AV_ITo_ITo`
+and `AV_Jrel` do not). Per-model lists belong in a study's `ionic_export`
+override (see `setup/studies/tworldVsGaur`), not in the baseline.
+
+`Vm` must be listed: it is not written unconditionally, so `export (cai)`
+produces a trace with the header `time cai` and no `Vm` column, which fails
+`regression/singleCell.reference`. `Vm` is the output name of the model's
+voltage state (reported as `v` by `listCellModelsVariables`; only `RATES_v`
+keeps the internal spelling in the dump), so a name absent from the model
+inventory can still be a valid export. An empty `export ();` dumps every
+variable (~513 columns).
+
+`constant/sweepCurrents` prints the variables taken from each model's
+dependency-map header; `listCurrentsOnly true;` is an optional mode that
+prints only the available current names and exits.

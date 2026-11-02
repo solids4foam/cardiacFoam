@@ -21,6 +21,7 @@ License
 #include "restitutionTemplates.H"
 #include "ionicModel.H"
 #include "purkinjeModelIO.H"
+#include "dictionaryKeyCheck.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -47,8 +48,13 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
     R_pvj_(),
     implicitCoupling_
     (
-        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
-     == "implicit"
+        dictionaryKeyCheck::getWord
+        (
+            dict,
+            "pvjCouplingScheme",
+            "explicit",
+            wordList({"explicit", "implicit"})
+        ) == "implicit"
     ),
     vmTemplateOffset_
     (

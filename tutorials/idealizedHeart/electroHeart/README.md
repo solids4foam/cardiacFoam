@@ -208,3 +208,52 @@ regression probe activates at 28.9 ms (`monodomain`) and 30.1 ms (`hybrid`)
 on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per
 `eikonalMyocardiumDomain::applyModelTimeControls`.
+
+## Notes on dictionary entries
+
+**Variants.** `electroProperties.eikonal` makes both the 3D myocardium and the
+1D Purkinje network eikonal (activation-time-only) solves, the cheapest of the
+three solver combinations. `electroProperties.hybrid` couples the full 3D
+reaction-diffusion myocardium of `electroProperties.monodomain` to an eikonal
+1D Purkinje network, between the monodomain and eikonal variants. Field and
+graph file names and electrode positions follow this tutorial's own
+convention. The eikonal variant has no intramural box stimulus: activation is
+seeded exclusively through the Purkinje graph's `rootStimulus`.
+
+**Apex-to-base APD gradient.** Action potential duration is shorter at the
+apex and longer at the base, the direction consistently reported in the
+literature (Opthof et al., *J Cardiovasc Electrophysiol*; Sengupta et al.,
+*Circulation: Cardiovascular Imaging*). `tauSi` is the primary
+APD-determining time constant of the Bueno-Orovio-Cherry-Fenton model;
+`scalingMin`/`scalingMax` target a ~20 ms apex-to-base gradient from
+single-cell APD90 measurements (RKF45, S1 pacing) rather than the library's
+generic wide-range defaults.
+
+**Purkinje conduction velocity** of ~3.3 m/s equals the `hybrid` variant's
+restitution maximum (3.33 m/s). **`pvjRadius`** is the smallest radius valid at
+every junction of both Purkinje trees; the coarsest junction cell (pig tree,
+mid-wall) is 1.60 mm across.
+
+**Pre-pacing.** `prePacingProperties` stimulates each region's cell at
+`stim_start 20` ms for `stim_duration 1` ms with `stim_amplitude 0.4`
+(BuenoOrovio stimulus units) every `stim_period_S1 1000` ms; `tolerance` is
+the maximum relative state change between successive beats.
+
+**Fields and schemes.** `0/activationTime` holds `-1` for "not yet activated".
+Only the eikonal variant reads it (`MUST_READ`); the monodomain and hybrid
+variants compute `activationTime` as an output. The `fvSchemes` entries for
+the advection direction, the bounded `div(phiU,activationTime)`
+reconstruction and the `c0 |grad psi|_M` convection term, and the eikonal
+entries of `fvSolution`, apply to the eikonal variant only (`.eikonal` and
+`.hybrid`). `system/setExprFieldsDict` preloads `tm` so that the expression
+reads it as an owned, mutable field instead of triggering the auto-fetch
+path of `setExprFields`.
+
+**Injection probe.** `system/injectionProbe` is a single probe on the LV free
+wall at a Purkinje-myocardial-junction site of the shared `purkinjeGraph`
+(node 211): the junction with the earliest healthy activation (~3.6 ms) whose
+downstream tissue is fully cut off from the root in the `lbbb` variant of
+`../pathos/conductionBlock` (severed LV subtree, no alternate path). The
+regression uses this point in both cases: in healthy `electroHeart` it
+confirms that Purkinje-to-myocardium injection fires and reaches tissue, and
+in `conductionBlock` `lbbb` that it does not.

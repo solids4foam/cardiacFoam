@@ -13,13 +13,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Root 0 at (1, 5) mm branches at node 1 (3, 5) mm to the junctions 2
-// (5, 3) mm and 3 (5, 7) mm, subdivided into ~0.5 mm segments so
-// monodomain1DSolver has a cable to integrate. The junctions are close to
-// the root so that the network activates the slab within the short run.
-//
-// conductionEdges is (nodeA nodeB length conductance).
-
 rootNode
 0;
 

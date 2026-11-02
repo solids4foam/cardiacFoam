@@ -14,7 +14,7 @@ Built-in verification: verifiers that compare a run with a manufactured solution
 | `coupledVerification/` | `coupled1D3DMonodomainVerifier` |
 | `electromechanicsVerification/` | `manufacturedElectromechanicsVerifier` |
 
-Cases that run them are in [tutorials/manufacturedSolutions](../../tutorials/manufacturedSolutions/README.md).
+Cases that run them are in [tutorials/manufacturedSolutions](../../tutorials/manufacturedSolutions/README.md). The monodomain and eikonal `*Reference.H` headers are generated from the sympy generators in [tutorials/manufacturedSolutions/generators](../../tutorials/manufacturedSolutions/generators/README.md); edit the generator, not the header ([overview](../../docs/manufactured-solutions.md)).
 
 **Deep dive:** [ARCHITECTURE.md](ARCHITECTURE.md) explains how this library is built inside.
 

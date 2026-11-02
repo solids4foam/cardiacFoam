@@ -6,10 +6,6 @@
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 
-// Probe 0: LV free wall near graph PMJ node 211, blocked in LBBB.
-// Probe 1: RV tissue cell near graph PMJ node 8151, blocked in RBBB.
-// The intact side activates before the regression cutoff in each variant.
-
 type            probes;
 libs            ("libsampling.so");
 enabled         true;

@@ -14,8 +14,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-
-
 N 20;
 #includeIfPresent "<case>/local/mesh"
 
@@ -33,13 +31,10 @@ vertices
 
 blocks
 (
-    // 1 [] slab with (nx ny nz) cells in x y z
-
 
 hex (0 1 2 3 4 5 6 7) ($N $N $N) simpleGrading (1 1 1)
 
 );
-
 
 edges
 (

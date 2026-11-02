@@ -30,7 +30,7 @@ The intended workflow is:
 ## Folder structure
 
 ```text
-tutorials/coreProtocols/cableProtocol/monodomain1DCableCV/
+tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -122,7 +122,7 @@ This case is also exposed as the `cable1DRestitution` tutorial record
 
 ```bash
 omnidriver --plugin cardiacfoam plan --strict --entry cable1DRestitution \
-    --config <config.json> --cases-root <tutorials root> --scratch-dir <scratch>
+    --cases-root <tutorials root> --scratch-dir <scratch>
 ```
 
 The S1-S2 schedule (drive train plus an optional premature beat, in either a
@@ -244,3 +244,9 @@ For a new ionic model or tissue phenotype:
 2. use this 1D cable to tune conductivity to the target CV
 3. if using dynamic restitution in eikonal solves, run an S1-S2 protocol to extract functional restitution values
 4. move the calibrated setup into larger tissue or organ cases
+
+## Notes on dictionary entries
+
+The tissue conductivity in `constant/electroProperties` is this tutorial's
+calibration parameter: 3.3 S/m gives roughly 3.0 m/s with the Stewart
+Purkinje/myocyte model.

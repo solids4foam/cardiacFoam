@@ -6,12 +6,6 @@
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 
-// Active-tension probes on the transmural column under the stimulus footprint
-// (x,y = 0.75 mm, 0.75 mm). One probe at the centre of each tissue band:
-//   probe 0 (col 2): endo  band centre, t = 0.15  (z = 1.05 mm)
-//   probe 1 (col 3): M     band centre, t = 0.50  (z = 3.50 mm)
-//   probe 2 (col 4): epi   band centre, t = 0.85  (z = 5.95 mm)
-
 type            probes;
 region          solid;
 libs            ("libsampling.so");
@@ -27,8 +21,8 @@ fields
 
 probeLocations
 (
-    (0.077286 -0.000616 0.004096)   // apex, inside the stimulus region
-    (0.024482 0.017758 -0.001906)   // mid-wall, later activation
+    (0.077286 -0.000616 0.004096)
+    (0.024482 0.017758 -0.001906)
 );
 
 // ************************************************************************* //

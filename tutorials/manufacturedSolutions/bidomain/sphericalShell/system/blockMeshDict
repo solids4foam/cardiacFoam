@@ -15,10 +15,6 @@ FoamFile
     object          blockMeshDict;
 }
 
-// Heart shell r1 < |x| < r2 as six projected blocks of a cubed sphere. N (a multiple
-// of 4) sets k = N/4: 3k cells along a cube-face edge and 2k radially, N cells per
-// unit length radially.
-
 N   12;
 #includeIfPresent "<case>/local/mesh"
 
@@ -131,6 +127,5 @@ boundary
         );
     }
 );
-
 
 // ************************************************************************* //

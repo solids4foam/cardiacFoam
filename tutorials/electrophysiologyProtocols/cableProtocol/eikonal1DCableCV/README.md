@@ -96,30 +96,15 @@ The decomposition is defined in `system/decomposeParDict`.
 To extract CV from a manual run, call `python3 setup/extract_cv.py` separately.
 The script is under `setup/` for post-processing workflows.
 
-## Driver convergence entry
+## omnidriver entry
 
-This folder does not currently have a dedicated registered driver entry. The
-similarly named `cable1DCVConvergence` entry is registered, but the current
-registry resolves it to the *monodomain* cable case, not this eikonal folder:
+This case is the `cable1DEikonalCV` record; its `dx` axis (metres) rewrites the
+block mesh:
 
 ```bash
-[omnidriver command to run]
+omnidriver --plugin cardiacfoam --repo . plan --strict \
+    --entry cable1DEikonalCV --scratch-dir <scratch>
 ```
-
-Use `Allrun` above for this eikonal case until a dedicated driver factory is
-added.
-
-The default sweep config is stored in:
-
-```text
-setup/driver_config.json
-```
-
-That workflow mutates `blockMeshDict`, `controlDict`, and `electroProperties`
-per sweep case, runs in parallel by default, exports one CV summary per case,
-and then writes per-ionic-model convergence CSVs plus convergence plots under
-model-specific output folders such as `outputsCVConvergence/BuenoOrovio/` or
-`outputsCVConvergence/TWorld/`.
 
 ## Main calibration knob
 
@@ -154,3 +139,11 @@ For a new ionic model or tissue phenotype:
 1. calibrate AP shape and APD in a single-cell case first
 2. use this 1D cable to tune conductivity to the target CV
 3. move the calibrated setup into larger tissue or organ cases
+
+## Notes on dictionary entries
+
+The conductivity matches the monodomain scaling. The eikonal conduction
+velocity is `CV = c0 * sqrt(sigma / (chi * cm))`; with `sigma = 0.1334`,
+`chi = 140000` and `cm = 0.01`, `sqrt(sigma / (chi * cm)) = 0.00976`, so
+`c0 = 72` gives `CV = 0.702 m/s`. `0/activationTime` is initialised to `-1`
+("not yet activated") and overwritten by the solve.

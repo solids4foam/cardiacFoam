@@ -57,7 +57,6 @@ monodomainSolverCoeffs
                 cm       0.01;
                 vm1DRest -0.084;
 
-                // Current injected at the root node over each window.
                 rootStimulus
                 {
                     node          0;

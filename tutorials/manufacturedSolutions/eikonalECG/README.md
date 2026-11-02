@@ -16,42 +16,29 @@ problems.
 
 ## Problem
 
-```text
--div(M grad psi) + c0 sqrt(grad psi . M grad psi) = 1 + S    in [0,1]^d
-psi = psi_ex    on every face and on the cells of smallest centre x, y or z
-```
-
-`psi_ex = exp(k . x)` with `k = (1,0,0)`, `(1,1,0)`, `(1,1,1)` in 1D, 2D,
-3D, `M = G/(chi Cm)`, `chi = 3`, `Cm = 2`, `c0 = 1`, and
-`S = psi_ex (c0 sqrt(K) - K) - 1`, `K = k . M k`. `G` is
-
-- rotated (`-conductivity rotated`, default): the full tensor `(0.106875
-  -0.0084931 -0.022561 0.116682 -0.0130256 0.0398782)`
-- axis (`-conductivity axis`): `diag(0.111453302, 0.121585420, 0.030396355)`
-
-The ECG is the lead-field integral of the template `Vm = U(t - psi)` at
-external electrodes:
-
-```text
-phi(x_e, t) = int G grad Vm . (x - x_e)/|x - x_e|^3 dx,   grad Vm = -U'(t - psi) grad psi
-```
-
-The solver evaluates it with the reconstructed `grad psi` of the computed
-field; the reference is a Gauss-Legendre order-48 quadrature of the exact
-integrand.
+The activation-time field (`-conductivity rotated`, default, or `axis`; 1D/2D/3D)
+and the eikonal-driven ECG are defined in the construction document
+[eikonal_mms.pdf](../generators/docs/eikonal/eikonal_mms.pdf), sections
+"Cartesian eikonal field" and "Eikonal-driven ECG", with the generators
+[`cartesian_eikonal_mms.py`](../generators/cartesian_eikonal_mms.py) and
+[`eikonal_ecg_mms.py`](../generators/eikonal_ecg_mms.py) and the NumPy
+references [`cartesian_eikonal.py`](../generators/reference/cartesian_eikonal.py)
+and [`eikonal_ecg.py`](../generators/reference/eikonal_ecg.py). The exact
+activation time is imposed on every face and on the cells of smallest centre
+`x`, `y` or `z`. The solver evaluates the ECG with the reconstructed `grad psi`
+of the computed field; the reference is a Gauss-Legendre order-48 quadrature of
+the exact integrand.
 
 ### Single-event template
 
 `template singleEvent;` in the ECG `verificationModel` (the default) is one
-action-potential-like event,
-`U = Su(s) (1 - Su(s - templateDuration))`, `Su = (1 + tanh(s/w))/2`, where
-`w` makes `Su` rise from 10 % to 90 % within `templateRise`. Their defaults,
-`64` and `4`, are set from the activation range `S = e^3 - 1 = 19.1`:
+action-potential-like event. `templateDuration` and `templateRise`, defaults
+`64` and `4`, are set from the activation range `e^3 - 1 = 19.1`:
 
-- `templateDuration` (about `S/0.3`) exceeds the range, so upstroke and
+- `templateDuration` (about the range over 0.3) exceeds the range, so upstroke and
   repolarisation never meet in one sample and `U'(t - psi)` keeps one sign
   across the cube;
-- `templateRise` (about `0.2 S`) keeps the upstroke near one cell wide at
+- `templateRise` (about 0.2 times the range) keeps the upstroke near one cell wide at
   `x = y = z = 1`, where `|grad psi|` is twenty times its value at the origin,
   on the coarsest mesh.
 
@@ -60,8 +47,8 @@ point.
 
 ### Sine template
 
-`template sine;` (`-template sine`) selects the periodic template
-`U(s) = sin(2 pi s)`, sampled from `0` to `2` by `0.01`. The sine repeats
+`template sine;` (`-template sine`) selects the periodic template, sampled from
+`0` to `2` by `0.01`. The sine repeats
 about 19 times across the activation range, so its ECG integrand changes sign
 many times over the cube and the integral cancels. The integrand is also
 spatially under-resolved on coarse meshes, so its quadrature error falls
@@ -155,3 +142,27 @@ tables.
 - [sphericalShell](sphericalShell/README.md): sealed curved walls crossed by a
   rotated conductivity, with a pinned stimulus ball; `-ecg` adds the ECG of
   the shell field.
+
+## Notes on dictionary entries
+
+**Boundary condition of `0/activationTime`.** `0/activationTime` holds `-1`
+for "not yet activated". On the cube, the values on every non-empty patch face
+are overwritten each step by `manufacturedEikonalVerifier::applyConstraints`
+with the exact manufactured solution. Only the patch *type* matters: a
+Dirichlet type keeps those values, whereas `zeroGradient` would extrapolate
+them away from the interior and silently invalidate the verification. On the
+spherical shell both spheres are sealed walls: the verifier pins the cells
+near the stimulus point and imposes no value on a patch.
+
+**Electrodes.** The cube uses the 161 electrodes of `monodomainPseudoECG`:
+`E1-E5`, then `R1-R156` with a direction uniform on the sphere and a standoff
+uniform in `[0.05, 1.0]`. The spherical shell uses five directions with
+`|e| = 1.2, 1.4, 1.6, 1.8, 2.0`, as in `monodomainPseudoECG/sphericalShell`.
+
+**Spherical shell.** The mesh is the cubed-sphere shell described in
+`../bidomain/README.md`. The eikonal-driven ECG of the shell field is off
+unless `Allrun -ecg` writes `ecg yes;` to `local/ecg`; the template, its
+parameters and its sampling are those of the cube case, and `-template sine`
+writes `local/ecgTemplate`. The reference integrates the same kernel over the
+shell with a spherical Gauss rule; electrodes lie outside the outer sphere
+`|x| = 1`.

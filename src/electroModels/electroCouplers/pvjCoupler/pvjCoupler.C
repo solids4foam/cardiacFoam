@@ -20,6 +20,7 @@ License
 #include "pvjCoupler.H"
 #include "electroDomainInterface.H"
 #include "purkinjeModelIO.H"
+#include "dictionaryKeyCheck.H"
 
 namespace Foam
 {
@@ -85,7 +86,13 @@ pvjCoupler::pvjCoupler
         primaryDomain.mesh(),
         networkTerminalDomain_.terminalLocations(),
         dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-        dict.lookupOrDefault<word>("pvjKernel", "uniform")
+        dictionaryKeyCheck::getWord
+        (
+            dict,
+            "pvjKernel",
+            "uniform",
+            wordList({"uniform", "gaussian", "linear"})
+        )
     ),
     pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),
     couplingMode_(parseCouplingMode(dict.get<word>("couplingMode"))),

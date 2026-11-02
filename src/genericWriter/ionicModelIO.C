@@ -1047,6 +1047,7 @@ namespace Foam
         }
 
         wordList filtered;
+        DynamicList<word> unknown;
         forAll(userList, k)
         {
             const word& name = userList[k];
@@ -1075,10 +1076,24 @@ namespace Foam
             }
             else
             {
-                WarningInFunction
-                    << "Ignoring unknown ionic model variable '" << name
-                    << "'." << nl;
+                unknown.append(name);
             }
+        }
+
+        if (!unknown.empty())
+        {
+            wordList valid
+            (
+                ionicVariableCompatibility::variableNames
+                (
+                    stateNames, nStates, algNames, nAlg
+                )
+            );
+            valid.append("Vm");
+            ionicVariableCompatibility::reportUnknownVariables
+            (
+                "ionic model", unknown, valid
+            );
         }
 
         cache.valid = true;

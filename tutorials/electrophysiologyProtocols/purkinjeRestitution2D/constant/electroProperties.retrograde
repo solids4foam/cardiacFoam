@@ -40,7 +40,6 @@ monodomainSolverCoeffs
     maxSteps 1000000000;
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
-    // Two tissue beats 0.5 s apart, each on the junction at node 4.
     externalStimulus
     {
         stimulusLocationMinList ((43e-3 23e-3 0) (43e-3 23e-3 0));

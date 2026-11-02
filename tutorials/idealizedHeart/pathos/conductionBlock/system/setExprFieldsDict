@@ -14,8 +14,6 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Preload tm so the expression below reads it as an owned, mutable field
-// rather than triggering setExprFields' auto-fetch path.
 readFields      ( tm );
 
 expressions

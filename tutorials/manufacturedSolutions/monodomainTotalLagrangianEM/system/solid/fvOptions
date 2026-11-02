@@ -21,12 +21,6 @@ manufacturedBodyForce
     selectionMode   all;
     fieldNames      (D);
 
-    // All physics parameters are deduced at run time from the authoritative
-    // dictionaries, so they cannot drift from the solver:
-    //   - amplitude, Tmax, V0, gamma, TaScale
-    //       <- constant/electroMechanicalProperties
-    //   - E, nu
-    //       <- constant/solid/mechanicalProperties (passiveMechanicalLaw)
 }
 
 // ************************************************************************* //

@@ -37,7 +37,7 @@ done
 python3 ../summarize.py results
 ```
 
-The closest omnidriver spec for this study is `sweep_hex_convergence.json`: omnidriver cannot yet remove `ecgDomains`, which the 1D and 2D runs need.
+The closest omnidriver spec for this study is `sweep_hex_convergence.json`: the record removes `ecgDomains` for the 1D and 2D runs, which have no ECG.
 
 ## Measured behaviour
 

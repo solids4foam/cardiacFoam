@@ -21,6 +21,7 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "dimVoltage.H"
 #include "electrophysicsSystemBuilder.H"
+#include "electroPropertiesKeys.H"
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
@@ -110,7 +111,9 @@ Foam::electroModel::electroModel
     pimplePtr_(),
     advanceTimings_(),
     domainSystem_()
-{}
+{
+    electroPropertiesKeys::check(*this, type);
+}
 
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //

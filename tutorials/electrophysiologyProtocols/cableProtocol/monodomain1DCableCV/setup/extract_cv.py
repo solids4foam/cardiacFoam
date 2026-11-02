@@ -238,7 +238,7 @@ def main() -> None:
     summary = write_summary_files(
         case_dir=case_dir,
         output_dir=output_dir,
-        case_id=args.case_id,
+        case_id=args.case_id if args.case_id is not None else case_dir.name,
     )
     print(render_summary_text(summary), end="")
 

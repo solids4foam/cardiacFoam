@@ -18,15 +18,6 @@ method          scotch;
 
 scotchCoeffs
 {
-    //processorWeights
-    //(
-    //    1
-    //    1
-    //    1
-    //    1
-    //);
-    //writeGraph  true;
-    //strategy "b";
 }
 
 // ************************************************************************* //

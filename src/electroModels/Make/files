@@ -1,5 +1,6 @@
 /* Core */
 core/electroModel.C
+core/electroPropertiesKeys.C
 core/electroStateDomain.C
 core/verificationModels/electroVerificationModel.C
 core/verificationModels/couplingVerificationModel.C
