@@ -1,6 +1,6 @@
 #!/bin/bash
 # Mesh the 1-D bath-myocardium-bath column as base/bath does, then build the
-# lead fields of the leadFieldECG domain
+# lead fields of the torsoECG domain
 cd "${0%/*}" || exit 1
 . "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
 

@@ -56,7 +56,7 @@ class extracellularPotentialDomain
     // Heart-side data sources (non-owning).
     myocardiumDomainInterface& heartDomain_;
 
-    // Torso/bath keys of the bathPotentialDomain block: cellZones,
+    // Keys of the top-level torso block: cellZones,
     // conductivity field, interface interpolation, ground and
     // surface-current patches and the reference pin.
     const passiveConductor::torsoSettings torso_;
@@ -106,11 +106,14 @@ public:
 
     OverrideTypeName("extracellularPotentialDomain");
 
+    //- Construct on the base mesh from the bidomain heart domain and the
+    //  top-level electroProperties: its torso block and the
+    //  sealedHeartBoundary of the myocardium Coeffs
     extracellularPotentialDomain
     (
         const fvMesh& baseMesh,
         myocardiumDomainInterface& heartDomain,
-        const dictionary& dict
+        const dictionary& electroProperties
     );
 
     virtual ~extracellularPotentialDomain() = default;

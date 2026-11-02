@@ -4,8 +4,8 @@
     "cases_root": "tutorials",
     "parallel": true,
     "constant/electroProperties:bidomainSolverCoeffs.verificationModel.fdaBathVariant": "electrodePair",
-    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.groundPatches": {},
-    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.surfaceCurrentPatches": {
+    "constant/electroProperties:torso.groundPatches": {},
+    "constant/electroProperties:torso.surfaceCurrentPatches": {
       "xMin": -0.01,
       "xMax": 0.01
     },

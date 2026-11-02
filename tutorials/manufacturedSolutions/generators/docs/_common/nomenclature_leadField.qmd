@@ -2,7 +2,7 @@
 |:----|:--------|:----|:---------|
 | $\mathbf x=(x,y,z)$ | position, normalised by $1\,\mathrm m$ | m | `x`, `y`, `z` |
 | $t$, $S(t)$ | time, normalised by $1\,\mathrm s$; $\sqrt{1+t}$ | s; -- | `t`; `St` |
-| $\Omega_H$, $\Omega_B$, $\Gamma_{HB}$ | heart (cellZone `myocardium`); torso (the bath cellZones); heart--torso interface | -- | `cellZone`; `bathCellZones` |
+| $\Omega_H$, $\Omega_B$, $\Gamma_{HB}$ | heart (cellZone `myocardium`); torso (the bath cellZones); heart--torso interface | -- | `cellZone`; `torso.cellZones` |
 | $\mathbf n$ | unit normal of $\Gamma_{HB}$ or of $\Gamma_B$ | -- | -- |
 | $V_m$ | transmembrane potential, the heart input of the conductor | V | `Vm` |
 | $\phi$ | potential of the passive conductor (heart and torso) | V | `phiE` |

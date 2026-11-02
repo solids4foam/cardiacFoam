@@ -1,7 +1,7 @@
 # leadFieldECG
 
-Verification of the lead-field ECG (`ecgSolver leadFieldECG` with the lead
-fields of `buildLeadFields`). The case checks two things:
+Verification of the lead-field ECG (`ecgSolver torsoECG` with
+`torsoCoupling leadField` and the lead fields of `buildLeadFields`). The case checks two things:
 
 - that the lead-field channel equals the converged forward
   passive-conductor solve of the same conductor; the lead field is the
@@ -10,8 +10,8 @@ fields of `buildLeadFields`). The case checks two things:
 - that both converge to an exact torso potential.
 
 The myocardium is a monodomain or a bidomain solver on the cellZone
-`myocardium`. The torso exists only as the conductor of the ECG domain; no
-bath forward solve is run.
+`myocardium`. The torso (the top-level `torso` block) exists only as the
+conductor of the ECG; no bath forward solve is run.
 
 The verifier `manufacturedLeadFieldECGVerifier` evaluates each sample in four
 ways:
@@ -79,7 +79,7 @@ potential is constant in each torso slab, so the point value and the
 centroid value are equal.
 
 Intracardiac electrodes are not supported: `buildLeadFields` and
-`leadFieldECG` stop with a fatal error when an electrode's cell is a
+`torsoECG` stop with a fatal error when an electrode's cell is a
 myocardium cell.
 
 Conductivities, as `diag(xx, yy, zz)` in S/m:
@@ -130,7 +130,7 @@ conductivity `sigma_1 = 0.1`) next to the heart and `torsoOuter`
 (`x < -0.5` and `x > 1.5`, `sigma_2 = 0.02`) beyond it. The torso faces
 between the two zones take the distance-weighted harmonic mean of the two
 conductivities. A current enters through the outer faces as the surface
-currents of the `torso` sub-dictionary:
+currents of the `torso` block:
 
 ```text
 surfaceCurrentPatches { xMin -alpha; xMax alpha; }     (-alpha, default 0.01)
@@ -178,10 +178,12 @@ centroid values differ.
   - `solutionAlgorithm implicit`, `timeCouplingScheme godunov`;
   - `ddt(Vm)` `backward`;
   - the bidomain heart `phiE` is pinned at `(0.1137 0.0437 0.0437)`.
+- torso: the top-level `torso` block with `torsoCoupling leadField`:
+  cellZone `bath` (`layered`: `torsoInner` and `torsoOuter`, and the surface
+  currents), `bodyAndOrgansConductivity`, `distanceWeightedHarmonic`, pinned
+  at `(-0.9013 0.0437 0.0437)`;
 - ECG domain:
-  - `leadFieldECG` with a `torso` sub-dictionary: cellZone `bath`
-    (`layered`: `torsoInner` and `torsoOuter`, and the surface currents),
-    `bodyAndOrgansConductivity`, `distanceWeightedHarmonic`, the pin above;
+  - `torsoECG`, with Gi and Ge for the monodomain heart;
   - the verifier `manufacturedLeadFieldECGVerifier` with `reference slab`
     or `layered`.
 - schemes:
@@ -251,7 +253,7 @@ removes `local/`, `0/`, the mesh and the lead fields.
 
 Outputs in `postProcessing/`:
 
-- `leadFieldECG.dat`: the channels.
+- `torsoECG.dat`: the channels.
 - `manufacturedLeadFieldECG_ECG.dat`: for every sample and electrode,
   `leadField`, `direct`, `exactPoint`, `exactCentroid`, `leadFieldStatic` and
   `directStatic`, at full precision.

@@ -19,7 +19,8 @@ Class
     leadFieldECG
 
 Description
-    ECG from lead fields: the potential of electrode e is
+    ECG from lead fields, evaluated by torsoECG with torsoCoupling leadField:
+    the potential of electrode e is
 
         phi_e = sum over heart cells of z_e V b(Vm) + c_e
 
@@ -29,8 +30,8 @@ Description
     c_e is the constant contribution of ground values, surface currents and
     the reference value.
 
-    The conductor is built on the myocardium's sub-mesh at the first solve.
-    Its signature must match constant/[region/]leadFieldSignature.
+    The conductor (leadFieldConductor) is built on the myocardium's sub-mesh
+    at load. Its signature must match constant/[region/]leadFieldSignature.
 
 SourceFiles
     leadFieldECG.C
@@ -42,20 +43,16 @@ Author
 #ifndef leadFieldECG_H
 #define leadFieldECG_H
 
-#include "ecgSolver.H"
 #include "electroStateProvider.H"
 #include "leadFieldConductor.H"
-#include "overrideTypeName.H"
 
 namespace Foam
 {
 
 class leadFieldECG
-:
-    public ecgSolver
 {
-    //- Myocardium solver Coeffs holding the ECG domain entry
-    const dictionary electroCoeffs_;
+    //- Top-level electroProperties
+    const dictionary electroProperties_;
 
     const word ecgDomainName_;
 
@@ -69,13 +66,16 @@ class leadFieldECG
 
 public:
 
-    OverrideTypeName("leadFieldECG");
+    //- Construct from the top-level electroProperties and the name of the
+    //  ECG domain entry in its ecgDomains
+    leadFieldECG
+    (
+        const dictionary& electroProperties,
+        const word& ecgDomainName
+    );
 
-    //- Construct from the ECG domain entry of the myocardium solver Coeffs
-    explicit leadFieldECG(const dictionary& dict);
-
-    //- Construct from the myocardium solver Coeffs and the ECG domain name
-    leadFieldECG(const dictionary& electroCoeffs, const word& ecgDomainName);
+    leadFieldECG(const leadFieldECG&) = delete;
+    void operator=(const leadFieldECG&) = delete;
 
     //- Build the conductor on the provider's myocardium, check the
     //  signature and read the lead fields of the named electrodes
@@ -98,14 +98,6 @@ public:
     //- Channels sum z_e V b(Vm) + c_e for a heart Vm on the conductor's
     //  heart mesh
     void evaluate(const volScalarField& Vm, scalarField& values) const;
-
-    virtual void solve
-    (
-        ecgDomain& domain,
-        scalar t0,
-        scalar dt,
-        scalarField& values
-    ) override;
 };
 
 } // End namespace Foam

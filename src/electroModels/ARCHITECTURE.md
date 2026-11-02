@@ -17,9 +17,11 @@ physicsModel::New()             physicsProperties: type electroModel
 The eikonal spatial entry uses `eikonalMyocardiumDomain` rather than the
 `myocardiumSolver` kernel table. `singleCellSolver` registers directly in the
 parent `electroModel` table and bypasses this spatial assembly. For spatial
-entries, `<name>Coeffs` is the builder's configuration root; optional public
-blocks include `conductionNetworkDomains`, `ecgDomains`,
-`bathPotentialDomain`, and `domainCouplings`. Domain-specific selectors include
+entries, `<name>Coeffs` is the builder's configuration root of the heart;
+its optional public blocks include `conductionNetworkDomains` and
+`domainCouplings`. The top level of `electroProperties` holds the region
+outside the heart and the ECG: `torso`, `torsoCoupling` (`bath` or
+`leadField`) and `ecgDomains`. Domain-specific selectors include
 `conductionSystemSolver` and `ecgSolver`.
 
 This complete electrophysiology path is built in both full solids4foam and
@@ -205,7 +207,7 @@ Concrete implementations of `ecgSolver`.
 | Class | Type name | Method | Notes |
 |---|---|---|---|
 | `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` (`infiniteMediumLeadField`) | No body-conductor mesh required; requires `sigmaExtracellular` |
-| `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
+| `torsoECG` | `torsoECG` | The potential at electrodes in the torso: with `torsoCoupling bath`, cell-centre sampling of the unified `phiE`; with `torsoCoupling leadField`, the lead fields of `buildLeadFields` contracted with the heart source of `Vm` (`leadFieldECG`) | Requires the top-level `torso` block; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
 | `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then integrates with `infiniteMediumLeadField` | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
 
 `eikonalTemplateGenerator.C/H` and `tissueTemplates.H`, beside `eikonalECG`,

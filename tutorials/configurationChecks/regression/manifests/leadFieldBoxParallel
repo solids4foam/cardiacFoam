@@ -7,4 +7,4 @@
 0.00336323/uniform/functionObjects/functionObjectProperties
 0.00336323/uniform/time
 constant/electroProperties.withDefaultValues
-postProcessing/leadFieldECG.dat
+postProcessing/torsoECG.dat

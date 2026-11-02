@@ -49,56 +49,10 @@ word outputFileName(const word& solverType)
         return word("eikonalECG.dat");
     }
 
-    if (solverType == "leadFieldECG")
-    {
-        return word("leadFieldECG.dat");
-    }
-
     return
         solverType == "torsoECG"
       ? word("torsoECG.dat")
       : word("pseudoECG.dat");
-}
-
-
-dictionary withInheritedPotentialDomain
-(
-    const dictionary& dict,
-    const dictionary* inheritedPotentialDomainPtr
-)
-{
-    dictionary merged(dict);
-
-    if (inheritedPotentialDomainPtr)
-    {
-        if
-        (
-            !merged.found("groundPatches")
-         && inheritedPotentialDomainPtr->found("groundPatches")
-        )
-        {
-            merged.add
-            (
-                "groundPatches",
-                inheritedPotentialDomainPtr->subDict("groundPatches")
-            );
-        }
-
-        if
-        (
-            !merged.found("surfaceCurrentPatches")
-         && inheritedPotentialDomainPtr->found("surfaceCurrentPatches")
-        )
-        {
-            merged.add
-            (
-                "surfaceCurrentPatches",
-                inheritedPotentialDomainPtr->subDict("surfaceCurrentPatches")
-            );
-        }
-    }
-
-    return merged;
 }
 
 
@@ -229,8 +183,7 @@ ecgDomain::ecgDomain
     const electroStateProvider& stateProvider,
     const dictionary& dict,
     const word& domainName,
-    const dictionary* inheritedElectrodePositionsPtr,
-    const dictionary* inheritedPotentialDomainPtr
+    const dictionary* inheritedElectrodePositionsPtr
 )
 :
     stateProvider_(stateProvider),
@@ -242,7 +195,6 @@ ecgDomain::ecgDomain
     verificationModelPtr_(),
     numericValues_(),
     inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
-    inheritedPotentialDomainPtr_(inheritedPotentialDomainPtr),
     electrodeNames_(),
     electrodePositions_()
 {
@@ -261,14 +213,6 @@ ecgDomain::ecgDomain
         (void)activationTime();
         (void)conductivity();
     }
-    else if (solverType_ == "torsoECG")
-    {
-        (void)phiE();
-    }
-    else if (solverType_ == "leadFieldECG")
-    {
-        (void)Vm();
-    }
 
     readElectrodes(dict);
 
@@ -284,18 +228,11 @@ ecgDomain::ecgDomain
             );
     }
 
-    const dictionary verificationDict =
-        withInheritedPotentialDomain
-        (
-            dict,
-            inheritedPotentialDomainPtr_
-        );
-
     verificationModelPtr_ = ecgVerificationModel::New
     (
         *this,
         domainName_,
-        verificationDict,
+        dict,
         electrodeNames_,
         electrodePositions_
     );
@@ -360,17 +297,7 @@ bool ecgDomain::read(const dictionary& dict)
         }
     }
 
-    const dictionary verificationDict =
-        withInheritedPotentialDomain
-        (
-            dict,
-            inheritedPotentialDomainPtr_
-        );
-
-    const word requestedType
-    (
-        ecgVerificationModel::selectedType(verificationDict)
-    );
+    const word requestedType(ecgVerificationModel::selectedType(dict));
 
     if (requestedType.empty())
     {
@@ -390,7 +317,7 @@ bool ecgDomain::read(const dictionary& dict)
             electrodePositions_
         );
 
-        return verificationModelPtr_->read(verificationDict);
+        return verificationModelPtr_->read(dict);
     }
 
     finalizeVerificationModel(verificationModelPtr_);
@@ -398,7 +325,7 @@ bool ecgDomain::read(const dictionary& dict)
     (
         *this,
         domainName_,
-        verificationDict,
+        dict,
         electrodeNames_,
         electrodePositions_
     );

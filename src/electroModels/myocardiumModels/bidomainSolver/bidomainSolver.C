@@ -28,6 +28,7 @@ License
 #include "conormalStabilisation.H"
 #include "exposedPhiETrace.H"
 #include "fvMeshSubset.H"
+#include "torsoCoupling.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
 
@@ -36,6 +37,21 @@ namespace Foam
 
 defineTypeNameAndDebug(bidomainSolver, 0);
 addToRunTimeSelectionTable(myocardiumSolver, bidomainSolver, dictionary);
+
+
+namespace
+{
+
+// With torsoCoupling bath the bath domain owns phiE and binds it to the
+// heart; the heart reads no phiE of its own
+bool solvedWithBath(const dictionary& electroProperties)
+{
+    return
+        torsoCoupling::readFromCoeffs(electroProperties)
+     == torsoCoupling::type::bath;
+}
+
+} // End anonymous namespace
 
 
 bidomainSolver::bidomainSolver
@@ -53,7 +69,7 @@ bidomainSolver::bidomainSolver
             "phiE",
             mesh.time().timeName(),
             mesh,
-            electroProperties.found("bathPotentialDomain")
+            solvedWithBath(electroProperties)
           ? IOobject::NO_READ
           : myocardiumFieldReadOption(meshSubsetPtr),
             IOobject::AUTO_WRITE
@@ -180,7 +196,7 @@ bidomainSolver::bidomainSolver
     {
         const labelUList& cellMap = meshSubsetPtr_->cellMap();
 
-        if (!electroProperties.found("bathPotentialDomain"))
+        if (!solvedWithBath(electroProperties))
         {
             readMappedCellField(phiE_, supportMesh, cellMap);
         }
@@ -202,7 +218,8 @@ label bidomainSolver::referenceCell() const
         FatalErrorInFunction
             << "bidomainSolver requires phiERefPoint when it solves the "
             << "local extracellular potential. For bidomain-bath cases, "
-            << "configure bathPotentialDomain so a global phiE field is bound."
+            << "set torso and torsoCoupling bath so a global phiE field is "
+            << "bound."
             << exit(FatalError);
     }
 

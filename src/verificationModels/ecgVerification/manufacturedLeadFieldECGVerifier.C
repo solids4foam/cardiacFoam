@@ -547,15 +547,10 @@ tmp<volScalarField> manufacturedLeadFieldECGVerifier::shellSource
 
 void manufacturedLeadFieldECGVerifier::initialise()
 {
-    // The myocardium solver Coeffs of this case
     const IOdictionary& electroProperties =
         mesh_.time().lookupObject<IOdictionary>("electroProperties");
-    const dictionary& electroCoeffs = electroProperties.subDict
-    (
-        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
-    );
 
-    leadFieldPtr_.reset(new leadFieldECG(electroCoeffs, domainName_));
+    leadFieldPtr_.reset(new leadFieldECG(electroProperties, domainName_));
     leadFieldPtr_->load(stateProvider_, electrodeNames_);
 
     const leadFieldConductor& lfc = leadFieldPtr_->conductor();

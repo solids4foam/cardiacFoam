@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     // An ECG domain verified against the sphericalShell lead-field reference
     // takes the conductivities of that solution
     bool shellLeadField = false;
-    if (const dictionary* ecgPtr = coeffs.findDict("ecgDomains"))
+    if (const dictionary* ecgPtr = electroProperties.findDict("ecgDomains"))
     {
         for (const entry& domain : *ecgPtr)
         {

@@ -51,39 +51,39 @@ monodomainSolverCoeffs
         stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
         stimulusStartTime 0;
     }
+}
 
-    _ecg    no;
-    #includeIfPresent "<case>/local/ecg"
-    #ifeq $_ecg yes
-    ecgDomains
+_ecg    no;
+#includeIfPresent "<case>/local/ecg"
+#ifeq $_ecg yes
+ecgDomains
+{
+    ECG
     {
-        ECG
+        ecgSolver    pseudoECG;
+        sigmaExtracellular    0.07957747154594767;
+        verificationModel
         {
-            ecgSolver    pseudoECG;
-            sigmaExtracellular    0.07957747154594767;
-            verificationModel
-            {
-                type    manufacturedPseudoECGVerifier;
-                enabled    yes;
-                domain    shell;
-                dimension    "3D";
-                referenceQuadratureOrder    96;
-                checkQuadratureOrders    (6 12 24 48);
-                #includeIfPresent "<case>/local/ecgVerification"
-            }
-            electrodePositions
-            {
-                E1    (0.4 -0.8 0.8);
-                E2    (0.6 1.2 0.4);
-                E3    (-0.96 0 -1.28);
-                E4    (-0.6 1.2 -1.2);
-                E5    (1.2 -0.96 -1.28);
+            type    manufacturedPseudoECGVerifier;
+            enabled    yes;
+            domain    shell;
+            dimension    "3D";
+            referenceQuadratureOrder    96;
+            checkQuadratureOrders    (6 12 24 48);
+            #includeIfPresent "<case>/local/ecgVerification"
+        }
+        electrodePositions
+        {
+            E1    (0.4 -0.8 0.8);
+            E2    (0.6 1.2 0.4);
+            E3    (-0.96 0 -1.28);
+            E4    (-0.6 1.2 -1.2);
+            E5    (1.2 -0.96 -1.28);
 
-                #includeIfPresent "<case>/local/electrodes"
-            }
+            #includeIfPresent "<case>/local/electrodes"
         }
     }
-    #endif
 }
+#endif
 
 // ************************************************************************* //

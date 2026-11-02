@@ -120,12 +120,18 @@ extracellularPotentialDomain::extracellularPotentialDomain
 (
     const fvMesh& baseMesh,
     myocardiumDomainInterface& heartDomain,
-    const dictionary& dict
+    const dictionary& electroProperties
 )
 :
     baseMesh_(baseMesh),
     heartDomain_(heartDomain),
-    torso_(passiveConductor::torsoSettings::read(baseMesh, dict)),
+    torso_
+    (
+        passiveConductor::torsoSettings::read
+        (
+            baseMesh, electroProperties.subDict("torso")
+        )
+    ),
     phiEPtr_(),
     VmGlobalPtr_(),
     hasDirichletPatch_(false),
@@ -135,7 +141,10 @@ extracellularPotentialDomain::extracellularPotentialDomain
     ),
     sealedHeartBoundary_
     (
-        dict.parent().get<Switch>("sealedHeartBoundary")
+        electroProperties.subDict
+        (
+            electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+        ).get<Switch>("sealedHeartBoundary")
     ),
     manufacturedEvaluationTime_(baseMesh.time().value())
 {
@@ -332,7 +341,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
     (
         passiveConductor::readTorsoConductivity
         (
-            baseMesh_, torso_.bathConductivityField, true
+            baseMesh_, torso_.conductivityField, true
         )
     );
 
@@ -347,7 +356,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
             *GiPtr,
             *GePtr,
             bathSigmaPtr(),
-            torso_.bathCellZones,
+            torso_.cellZones,
             torso_.interfaceConductivityInterpolation,
             sealedHeartBoundary_,
             *heartVmPtr,

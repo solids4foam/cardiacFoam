@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
     );
     const dictionary& coeffs = electroProperties.subDict("bidomainSolverCoeffs");
     const dictionary& verification = coeffs.subDict("verificationModel");
-    const dictionary& bath = coeffs.subDict("bathPotentialDomain");
+    const dictionary& torso = electroProperties.subDict("torso");
     const scalar k = verification.lookupOrDefault<scalar>
     (
         "k",
@@ -288,7 +288,7 @@ int main(int argc, char* argv[])
     // manufactured phiEExact() below carries a fixed additive constant that
     // pins the groundElectrode variant's phiE(x=-1)=0, and the numerical
     // field is instead pinned by an unrelated reference cell
-    // (bathPotentialDomain.phiERefPoint). Comparing the two directly would
+    // (torso.phiERefPoint). Comparing the two directly would
     // measure that arbitrary gauge difference, not discretisation error, so
     // both are shifted to zero volume-weighted mean first -- the same
     // treatment manufacturedFDABathBidomainVerifier.C applies to its own
@@ -413,10 +413,9 @@ int main(int argc, char* argv[])
             << ", Ge=" << sigmaEVariation << '.'
             << exit(FatalError);
     }
-    const word method = bath.lookupOrDefault<word>
+    const word method
     (
-        "interfaceConductivityInterpolation",
-        "distanceWeightedHarmonic"
+        torso.get<word>("interfaceConductivityInterpolation")
     );
     const word assembly("matchedSubmesh");
 

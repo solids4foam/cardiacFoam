@@ -1,7 +1,8 @@
 # buildLeadFields
 
-Builds the lead fields that the `leadFieldECG` ecgSolver records with. For
-each electrode `e` of a `leadFieldECG` domain it solves the discrete adjoint
+Builds the lead fields that `ecgSolver torsoECG` records with under
+`torsoCoupling leadField`. For each electrode `e` of the `torsoECG` domain it
+solves the discrete adjoint
 problem `A^T z_e = e_e`:
 
 - `A` is the forward heart+torso operator of `passiveConductor`, with the
@@ -38,10 +39,12 @@ gradient). A cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
 
 ## Inputs
 
-- `constant/[region/]electroProperties`: the `<myocardiumSolver>Coeffs`
-  with the `leadFieldECG` entry of `ecgDomains`, its electrodes, Gi and Ge,
-  and the torso conductor (the `bathPotentialDomain` block or the entry's
-  `torso { ... }`).
+- `constant/[region/]electroProperties`: `torsoCoupling leadField`, the
+  top-level `torso` block (the torso conductor), the `torsoECG` entry of the
+  top-level `ecgDomains` block (its electrodes, and Gi and Ge for a
+  `monodomainSolver` heart) and the `<myocardiumSolver>Coeffs` (the heart,
+  and Gi and Ge for a `bidomainSolver` heart). Its keywords are checked as
+  `cardiacFoam` checks them.
 - The mesh, the myocardium `cellZone`, the torso cellZones and the torso
   conductivity field (and the Gi/Ge fields with `conductivitySource field`).
 - `system/fvSchemes`: the forward's own entries. The unknown is named
@@ -88,7 +91,7 @@ gradient). A cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
   flag, sealing patch types, bidomain heart trace, geometry scheme, the
   fvSchemes entries that resolve the schemes of `phiE` on the base and heart
   meshes, electrodes, ground and surface-current patches, reference).
-  `leadFieldECG` compares it with the case at load.
+  `torsoECG` compares it with the case at load.
 
 In parallel (`-parallel`), each processor writes its own
 `processorN/constant/[region/]leadField_<electrode>`. A parallel ECG run
@@ -102,7 +105,7 @@ decomposed with `decomposePar -constant` (the lead fields are in
 | Option | Default | Description |
 |---|---|---|
 | `-region <name>` | `region0` | Mesh region |
-| `-ecgDomain <name>` | the only `leadFieldECG` entry | `ecgDomains` entry to build; fatal when none or several exist without it |
+| `-ecgDomain <name>` | the only `torsoECG` entry | `ecgDomains` entry to build; fatal when none or several exist without it |
 
 ## Example
 

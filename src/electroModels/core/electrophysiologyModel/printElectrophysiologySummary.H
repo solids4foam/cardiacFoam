@@ -125,13 +125,20 @@ Author
             }
         }
 
-        // 3. ECG Domains
-        if (coeffs.found("ecgDomains"))
+        // 3. Torso
+        if (this->found("torsoCoupling"))
         {
-            const dictionary& ecgDicts = coeffs.subDict("ecgDomains");
+            Info<< nl << "  torso               : "
+                << this->get<word>("torsoCoupling") << " coupling" << nl;
+        }
+
+        // 4. ECG Domains
+        if (this->found("ecgDomains"))
+        {
+            const dictionary& ecgDicts = this->subDict("ecgDomains");
             forAllConstIters(ecgDicts, iter)
             {
-                if (iter().isDict())
+                if (iter().isDict() && iter().keyword() != "electrodePositions")
                 {
                     const word ecgName = iter().keyword();
                     const dictionary& ecgDict = iter().dict();

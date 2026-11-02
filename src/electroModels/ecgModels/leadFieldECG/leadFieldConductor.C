@@ -22,6 +22,7 @@ License
 #include "myocardiumDomain.H"
 #include "conductivityFieldIO.H"
 #include "sealedWallPolicy.H"
+#include "torsoCoupling.H"
 #include "dimVoltage.H"
 #include "HashSet.H"
 #include "PstreamReduceOps.H"
@@ -39,19 +40,13 @@ namespace Foam
 namespace
 {
 
-word solverTypeOf(const dictionary& electroCoeffs)
+// The <myocardiumSolver>Coeffs block of electroProperties
+const dictionary& myocardiumCoeffs(const dictionary& electroProperties)
 {
-    const word& coeffDictName = electroCoeffs.dictName();
-
-    if (!coeffDictName.endsWith("Coeffs"))
-    {
-        FatalIOErrorInFunction(electroCoeffs)
-            << "Expected the <myocardiumSolver>Coeffs dictionary, got '"
-            << coeffDictName << "'."
-            << exit(FatalIOError);
-    }
-
-    return word(coeffDictName.substr(0, coeffDictName.size() - 6));
+    return electroProperties.subDict
+    (
+        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+    );
 }
 
 
@@ -205,15 +200,15 @@ void publishIfAbsent(const volScalarField& psi, const bool seal)
 leadFieldConductor::leadFieldConductor
 (
     const fvMesh& baseMesh,
-    const dictionary& electroCoeffs,
+    const dictionary& electroProperties,
     const word& ecgDomainName
 )
 :
     baseMesh_(baseMesh),
-    solverType_(solverTypeOf(electroCoeffs)),
+    solverType_(electroProperties.get<word>("myocardiumSolver")),
     bathHeartPhiETrace_
     (
-        electroCoeffs.getOrDefault<word>
+        myocardiumCoeffs(electroProperties).getOrDefault<word>
         (
             "bathHeartPhiETrace", "zeroGradient"
         )
@@ -225,7 +220,10 @@ leadFieldConductor::leadFieldConductor
     torsoConductivityPtr_(),
     torsoCellZones_(),
     interfaceConductivityInterpolation_(),
-    sealedHeartBoundary_(electroCoeffs.get<Switch>("sealedHeartBoundary")),
+    sealedHeartBoundary_
+    (
+        myocardiumCoeffs(electroProperties).get<Switch>("sealedHeartBoundary")
+    ),
     ownSealingFieldPtr_(),
     sealingFieldPtr_(nullptr),
     electrodeNames_(),
@@ -241,9 +239,13 @@ leadFieldConductor::leadFieldConductor
     referenceCell_(-1),
     conductorPtr_()
 {
-    checkMyocardium(electroCoeffs, ecgDomainName);
+    checkMyocardium(electroProperties, ecgDomainName);
 
-    ownSubsetPtr_ = createMyocardiumMeshSubset(baseMesh_, electroCoeffs);
+    ownSubsetPtr_ =
+        createMyocardiumMeshSubset
+        (
+            baseMesh_, myocardiumCoeffs(electroProperties)
+        );
 
     if (!ownSubsetPtr_.valid() || !ownSubsetPtr_->hasSubMesh())
     {
@@ -276,7 +278,7 @@ leadFieldConductor::leadFieldConductor
     sealedWallPolicy::publish(ownSealingFieldPtr_(), sealedHeartBoundary_);
     sealingFieldPtr_ = ownSealingFieldPtr_.get();
 
-    build(electroCoeffs, ecgDomainName);
+    build(electroProperties, ecgDomainName);
 }
 
 
@@ -284,15 +286,15 @@ leadFieldConductor::leadFieldConductor
 (
     const fvMeshSubset& heartSubset,
     const volScalarField& Vm,
-    const dictionary& electroCoeffs,
+    const dictionary& electroProperties,
     const word& ecgDomainName
 )
 :
     baseMesh_(heartSubset.baseMesh()),
-    solverType_(solverTypeOf(electroCoeffs)),
+    solverType_(electroProperties.get<word>("myocardiumSolver")),
     bathHeartPhiETrace_
     (
-        electroCoeffs.getOrDefault<word>
+        myocardiumCoeffs(electroProperties).getOrDefault<word>
         (
             "bathHeartPhiETrace", "zeroGradient"
         )
@@ -304,7 +306,10 @@ leadFieldConductor::leadFieldConductor
     torsoConductivityPtr_(),
     torsoCellZones_(),
     interfaceConductivityInterpolation_(),
-    sealedHeartBoundary_(electroCoeffs.get<Switch>("sealedHeartBoundary")),
+    sealedHeartBoundary_
+    (
+        myocardiumCoeffs(electroProperties).get<Switch>("sealedHeartBoundary")
+    ),
     ownSealingFieldPtr_(),
     sealingFieldPtr_(&Vm),
     electrodeNames_(),
@@ -320,7 +325,7 @@ leadFieldConductor::leadFieldConductor
     referenceCell_(-1),
     conductorPtr_()
 {
-    checkMyocardium(electroCoeffs, ecgDomainName);
+    checkMyocardium(electroProperties, ecgDomainName);
 
     if (&Vm.mesh() != &heartSubset.subMesh())
     {
@@ -330,16 +335,35 @@ leadFieldConductor::leadFieldConductor
             << exit(FatalError);
     }
 
-    build(electroCoeffs, ecgDomainName);
+    build(electroProperties, ecgDomainName);
 }
 
 
 void leadFieldConductor::checkMyocardium
 (
-    const dictionary& electroCoeffs,
+    const dictionary& electroProperties,
     const word& ecgDomainName
 ) const
 {
+    const torsoCoupling::type coupling = torsoCoupling::read(electroProperties);
+
+    if (coupling != torsoCoupling::type::leadField)
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "ECG domain '" << ecgDomainName << "' needs lead fields, "
+            << "which are built for torsoCoupling leadField; torsoCoupling is "
+            << torsoCoupling::name(coupling) << "."
+            << (
+                   coupling == torsoCoupling::type::bath
+                 ? " With torsoCoupling bath, torsoECG samples the phiE that "
+                   "the bath solves and needs no lead fields."
+                 : ""
+               )
+            << exit(FatalIOError);
+    }
+
+    const dictionary& electroCoeffs = myocardiumCoeffs(electroProperties);
+
     if
     (
         solverType_ != "bidomainSolver"
@@ -381,52 +405,20 @@ void leadFieldConductor::checkMyocardium
 
 void leadFieldConductor::build
 (
-    const dictionary& electroCoeffs,
+    const dictionary& electroProperties,
     const word& ecgDomainName
 )
 {
+    const dictionary& electroCoeffs = myocardiumCoeffs(electroProperties);
     const dictionary& ecgDict =
-        electroCoeffs.subDict("ecgDomains").subDict(ecgDomainName);
+        electroProperties.subDict("ecgDomains").subDict(ecgDomainName);
 
     myocardiumZone_ = word(electroCoeffs.lookup("cellZone"));
 
     readHeartConductivities(electroCoeffs, ecgDict);
+    readTorso(electroProperties.subDict("torso"));
 
-    const dictionary* bathDictPtr =
-        electroCoeffs.findDict("bathPotentialDomain");
-    const bool hasTorso = ecgDict.found("torso");
-
-    if (bathDictPtr && hasTorso)
-    {
-        FatalIOErrorInFunction(ecgDict)
-            << "ECG domain '" << ecgDomainName << "' has a torso "
-            << "sub-dictionary, but " << electroCoeffs.name() << " has "
-            << "bathPotentialDomain, which defines the torso conductor. "
-            << "Remove one of them."
-            << exit(FatalIOError);
-    }
-
-    if (!bathDictPtr && !hasTorso)
-    {
-        FatalIOErrorInFunction(ecgDict)
-            << "ECG domain '" << ecgDomainName << "' needs a torso "
-            << "sub-dictionary (bathCellZones, bathConductivityField, "
-            << "interfaceConductivityInterpolation, and groundPatches or "
-            << "phiERefPoint with phiEReferenceValue), because "
-            << electroCoeffs.name() << " has no bathPotentialDomain."
-            << exit(FatalIOError);
-    }
-
-    if (bathDictPtr)
-    {
-        readTorso(*bathDictPtr, true);
-    }
-    else
-    {
-        readTorso(ecgDict.subDict("torso"), false);
-    }
-
-    readElectrodes(electroCoeffs, ecgDict);
+    readElectrodes(electroProperties, ecgDict);
     locateElectrodes(ecgDict);
 
     conductorPtr_.reset
@@ -577,49 +569,17 @@ void leadFieldConductor::readHeartConductivities
 }
 
 
-void leadFieldConductor::readTorso
-(
-    const dictionary& torsoDict,
-    const bool bathBlock
-)
+void leadFieldConductor::readTorso(const dictionary& torsoDict)
 {
-    if (!bathBlock)
-    {
-        const wordHashSet validKeys
-        ({
-            "bathCellZones",
-            "bathConductivityField",
-            "interfaceConductivityInterpolation",
-            "groundPatches",
-            "surfaceCurrentPatches",
-            "phiERefPoint",
-            "phiEReferenceValue"
-        });
-
-        const wordList keys(torsoDict.toc());
-
-        forAll(keys, keyI)
-        {
-            if (!validKeys.found(keys[keyI]))
-            {
-                FatalIOErrorInFunction(torsoDict)
-                    << "Unknown key '" << keys[keyI] << "' in "
-                    << torsoDict.name() << ". Valid keys are "
-                    << validKeys.sortedToc() << "."
-                    << exit(FatalIOError);
-            }
-        }
-    }
-
     const passiveConductor::torsoSettings torso =
         passiveConductor::torsoSettings::read(baseMesh_, torsoDict);
 
-    torsoCellZones_ = torso.bathCellZones;
+    torsoCellZones_ = torso.cellZones;
     interfaceConductivityInterpolation_ =
         torso.interfaceConductivityInterpolation;
     torsoConductivityPtr_ = passiveConductor::readTorsoConductivity
     (
-        baseMesh_, torso.bathConductivityField, false
+        baseMesh_, torso.conductivityField, false
     );
     groundPatches_ = torso.groundPatches;
     groundValues_ = torso.groundValues;
@@ -640,7 +600,7 @@ void leadFieldConductor::readTorso
 
 void leadFieldConductor::readElectrodes
 (
-    const dictionary& electroCoeffs,
+    const dictionary& electroProperties,
     const dictionary& ecgDict
 )
 {
@@ -649,7 +609,8 @@ void leadFieldConductor::readElectrodes
     if (!electrodeDictPtr)
     {
         electrodeDictPtr =
-            electroCoeffs.subDict("ecgDomains").findDict("electrodePositions");
+            electroProperties.subDict("ecgDomains")
+           .findDict("electrodePositions");
     }
 
     if (!electrodeDictPtr || electrodeDictPtr->empty())

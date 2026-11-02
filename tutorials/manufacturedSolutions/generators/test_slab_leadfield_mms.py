@@ -101,7 +101,7 @@ def test_tutorial_matches():
     bi = _case_value(props, r"_bidomainGi\s*\(\s*(\S+)")
     be = _case_value(props, r"_bidomainGe\s*\(\s*(\S+)")
     assert (sp.Rational(bi), sp.Rational(be)) == slm.BIDOMAIN_PAIR
-    pin = _case_value(props, r"_leadFieldTorso\s*\{[^{}]*?phiERefPoint\s*\(([^)]*)\)")
+    pin = _case_value(props, r"\btorso\s*\{[^{}]*?phiERefPoint\s*\(([^)]*)\)")
     assert tuple(sp.Rational(v) for v in pin.split()) == slm.PHI_REF_POINT
     slab = os.path.join(CASE, "system", "setTorsoOrganConductivityFieldDict")
     assert sp.Rational(_case_value(slab, r"\bbath\s+(\S+);")) == slm.SIGMA_SLAB

@@ -180,12 +180,12 @@ EOF
 echo "fdaBathVariant  $variant;" > local/verifier
 
 # The electrode pair replaces the ground on xMin by the opposite current
-cat > local/bath <<EOF
+cat > local/torso <<EOF
 interfaceConductivityInterpolation $interface;
 EOF
 if [ "$variant" = electrodePair ]
 then
-    cat >> local/bath <<EOF
+    cat >> local/torso <<EOF
 #remove groundPatches
 surfaceCurrentPatches
 {

@@ -39,25 +39,15 @@ passiveConductor::torsoSettings passiveConductor::torsoSettings::read
 {
     torsoSettings s;
 
-    s.interfaceConductivityInterpolation = dict.lookupOrDefault<word>
-    (
-        "interfaceConductivityInterpolation",
-        "distanceWeightedHarmonic"
-    );
+    s.interfaceConductivityInterpolation =
+        dict.get<word>("interfaceConductivityInterpolation");
     s.hasPhiERefPoint = dict.found("phiERefPoint");
     s.phiERefPoint =
         s.hasPhiERefPoint ? dict.get<point>("phiERefPoint") : point::zero;
     s.phiEReferenceValue =
         dict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
-    {
-        const wordList zones(dict.lookup("bathCellZones"));
-        s.bathCellZones = zones;
-    }
-    s.bathConductivityField = dict.lookupOrDefault<word>
-    (
-        "bathConductivityField",
-        "bodyAndOrgansConductivity"
-    );
+    s.cellZones = dict.get<wordList>("cellZones");
+    s.conductivityField = dict.get<word>("conductivityField");
 
     const dictionary* groundDict = dict.findDict("groundPatches");
     const dictionary* currentDict = dict.findDict("surfaceCurrentPatches");
@@ -83,7 +73,7 @@ passiveConductor::torsoSettings passiveConductor::torsoSettings::read
             if (mesh.boundaryMesh().findPatchID(s.groundPatches[patchI]) < 0)
             {
                 FatalErrorInFunction
-                    << "Cannot find extracellularPotentialDomain ground patch '"
+                    << "Cannot find torso ground patch '"
                     << s.groundPatches[patchI] << "' on mesh '" << mesh.name()
                     << "'."
                     << exit(FatalError);
@@ -96,7 +86,7 @@ passiveConductor::torsoSettings passiveConductor::torsoSettings::read
         if (mesh.boundaryMesh().findPatchID(s.surfaceCurrentPatches[patchI]) < 0)
         {
             FatalErrorInFunction
-                << "Cannot find extracellularPotentialDomain surface-current "
+                << "Cannot find torso surface-current "
                 << "patch '" << s.surfaceCurrentPatches[patchI]
                 << "' on mesh '" << mesh.name() << "'."
                 << exit(FatalError);
@@ -105,7 +95,7 @@ passiveConductor::torsoSettings passiveConductor::torsoSettings::read
         if (s.groundPatches.found(s.surfaceCurrentPatches[patchI]))
         {
             FatalErrorInFunction
-                << "Extracellular-potential patch '"
+                << "Torso patch '"
                 << s.surfaceCurrentPatches[patchI]
                 << "' cannot be listed in both groundPatches and "
                 << "surfaceCurrentPatches."

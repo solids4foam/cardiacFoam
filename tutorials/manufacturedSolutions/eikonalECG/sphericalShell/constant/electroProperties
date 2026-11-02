@@ -36,45 +36,45 @@ eikonalSolverCoeffs
         N       12;
         #includeIfPresent "<case>/local/verification"
     }
-
-    _ecg    no;
-    #includeIfPresent "<case>/local/ecg"
-    #ifeq $_ecg yes
-    ecgDomains
-    {
-        ECG
-        {
-            ecgSolver    eikonalECG;
-            sigmaExtracellular    0.07957747154594767;
-            sampling
-            {
-                start           -6;
-                end             92;
-                deltaT          0.25;
-            }
-            verificationModel
-            {
-                type    manufacturedEikonalECGVerifier;
-                enabled    yes;
-                domain    shell;
-                dimension    "3D";
-                template    singleEvent;
-                referenceQuadratureOrder    128;
-                checkQuadratureOrders    (24 48 96);
-                #includeIfPresent "<case>/local/ecgVerification"
-            }
-            electrodePositions
-            {
-                E1    (0.4 -0.8 0.8);
-                E2    (0.6 1.2 0.4);
-                E3    (-0.96 0 -1.28);
-                E4    (-0.6 1.2 -1.2);
-                E5    (1.2 -0.96 -1.28);
-            }
-            #includeIfPresent "<case>/local/ecgTemplate"
-        }
-    }
-    #endif
 }
+
+_ecg    no;
+#includeIfPresent "<case>/local/ecg"
+#ifeq $_ecg yes
+ecgDomains
+{
+    ECG
+    {
+        ecgSolver    eikonalECG;
+        sigmaExtracellular    0.07957747154594767;
+        sampling
+        {
+            start           -6;
+            end             92;
+            deltaT          0.25;
+        }
+        verificationModel
+        {
+            type    manufacturedEikonalECGVerifier;
+            enabled    yes;
+            domain    shell;
+            dimension    "3D";
+            template    singleEvent;
+            referenceQuadratureOrder    128;
+            checkQuadratureOrders    (24 48 96);
+            #includeIfPresent "<case>/local/ecgVerification"
+        }
+        electrodePositions
+        {
+            E1    (0.4 -0.8 0.8);
+            E2    (0.6 1.2 0.4);
+            E3    (-0.96 0 -1.28);
+            E4    (-0.6 1.2 -1.2);
+            E5    (1.2 -0.96 -1.28);
+        }
+        #includeIfPresent "<case>/local/ecgTemplate"
+    }
+}
+#endif
 
 // ************************************************************************* //

@@ -6,7 +6,7 @@
     "mesh": "tet",
     "system/controlDict:endTime": 0.02,
     "system/controlDict:writeInterval": 0.02,
-    "constant/electroProperties:bidomainSolverCoeffs.bathPotentialDomain.interfaceConductivityInterpolation": "unweightedHarmonic"
+    "constant/electroProperties:torso.interfaceConductivityInterpolation": "unweightedHarmonic"
   },
   "sweep": {
     "mode": "zip",

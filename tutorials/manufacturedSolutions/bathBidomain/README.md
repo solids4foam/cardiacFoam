@@ -57,8 +57,8 @@ The `sides` patches carry no current.
 
 - myocardium solver: `bidomainSolver`, `solutionAlgorithm implicit`,
   `timeCouplingScheme godunov`, `ddt(Vm)` `backward`
-- bath: `bathPotentialDomain` (cellZones `myocardium` and `bath`,
-  `bathConductivityField bodyAndOrgansConductivity`), `heartAssembly
+- bath: `torsoCoupling bath` with the top-level `torso` block (cellZone
+  `bath`, `conductivityField bodyAndOrgansConductivity`), `heartAssembly
   matchedSubmesh`, `interfaceConductivityInterpolation`
   `distanceWeightedHarmonic` or `conormalHarmonic` (`-interface`)
 - bath coupling: `bathPredictorCorrector yes` or `no` (`-predictorCorrector`),

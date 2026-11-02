@@ -75,21 +75,22 @@ public:
     };
 
 
-    //- The torso/bath keys of a bathPotentialDomain block (or of an ECG
-    //  domain torso sub-dictionary): the single reader of these keys.
-    //  The interface option is checked by the passiveConductor constructor.
+    //- The keys of the top-level torso block of electroProperties: the
+    //  single reader of these keys. The interface option is checked by the
+    //  passiveConductor constructor.
     struct torsoSettings
     {
-        //- Torso cellZones (required)
-        wordList bathCellZones;
+        //- Torso cellZones (cellZones, required)
+        wordList cellZones;
 
-        //- Torso scalar conductivity field name
-        //  (default bodyAndOrgansConductivity)
-        word bathConductivityField;
+        //- Torso scalar conductivity field name (conductivityField,
+        //  required)
+        word conductivityField;
 
-        //- Heart-torso faces carry the flux-continuous face conductivity;
-        //  distanceWeightedHarmonic (default) uses the standard cell
-        //  gradient for its cross term, conormalHarmonic the jump-aware one
+        //- Heart-torso faces carry the flux-continuous face conductivity
+        //  (interfaceConductivityInterpolation, required):
+        //  distanceWeightedHarmonic uses the standard cell gradient for its
+        //  cross term, conormalHarmonic the jump-aware one
         word interfaceConductivityInterpolation;
 
         //- Dirichlet patches and their values

@@ -15,7 +15,7 @@ FoamFile
 
 // Monodomain on the myocardium cellZone of the bath column. The ECG domain
 // gives Gi and Ge with Gi (Gi+Ge)^-1 Ge equal to the monodomain
-// conductivity, and the torso conductor in its torso sub-dictionary.
+// conductivity; the torso conductor is the top-level torso block.
 
 myocardiumSolver monodomainSolver;
 
@@ -44,30 +44,33 @@ monodomainSolverCoeffs
     }
 
     cellZone myocardium;
+}
 
-    ecgDomains
+torso
+{
+    cellZones       ( bath );
+    conductivityField bodyAndOrgansConductivity;
+    interfaceConductivityInterpolation distanceWeightedHarmonic;
+    groundPatches
     {
-        ECG
+        xMin        0.001;
+    }
+}
+
+torsoCoupling leadField;
+
+ecgDomains
+{
+    ECG
+    {
+        ecgSolver torsoECG;
+        conductivitySource uniform;
+        conductivityIntracellular [ -1 -3 3 0 0 2 0 ] (0.12 0 0 0.12 0 0.06);
+        conductivityExtracellular [ -1 -3 3 0 0 2 0 ] (0.06 0 0 0.06 0 0.03);
+        electrodePositions
         {
-            ecgSolver leadFieldECG;
-            conductivitySource uniform;
-            conductivityIntracellular [ -1 -3 3 0 0 2 0 ] (0.12 0 0 0.12 0 0.06);
-            conductivityExtracellular [ -1 -3 3 0 0 2 0 ] (0.06 0 0 0.06 0 0.03);
-            torso
-            {
-                bathCellZones   ( bath );
-                bathConductivityField bodyAndOrgansConductivity;
-                interfaceConductivityInterpolation distanceWeightedHarmonic;
-                groundPatches
-                {
-                    xMin        0.001;
-                }
-            }
-            electrodePositions
-            {
-                left  (-0.5 0.05 0.05);
-                right (1.5 0.05 0.05);
-            }
+            left  (-0.5 0.05 0.05);
+            right (1.5 0.05 0.05);
         }
     }
 }

@@ -19,7 +19,8 @@ Application
     buildLeadFields
 
 Description
-    Lead fields of a leadFieldECG domain: for each electrode e, the discrete
+    Lead fields of a torsoECG domain with torsoCoupling leadField: for each
+    electrode e, the discrete
     adjoint z = A^-T e of the heart+torso operator A of passiveConductor,
     with e the unit vector of the electrode cell. Then z^T b equals the
     electrode value of the converged forward solve A phi = b of the same
@@ -62,6 +63,7 @@ Author
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
+#include "electroPropertiesKeys.H"
 #include "leadFieldConductor.H"
 #include "leadFieldAdjoint.H"
 #include "fixedValueFvPatchFields.H"
@@ -85,15 +87,15 @@ IOobject fieldIO
 }
 
 
-// The requested leadFieldECG entry of ecgDomains, or the only one.
+// The requested torsoECG entry of ecgDomains, or the only one.
 word selectEcgDomain(const dictionary& ecgDomains, const word& requested)
 {
-    const word lfType("leadFieldECG");
+    const word torsoType("torsoECG");
     wordList names;
     for (const entry& e : ecgDomains)
     {
         const dictionary* d = e.dictPtr();
-        if (d && d->getOrDefault<word>("ecgSolver", "pseudoECG") == lfType)
+        if (d && d->getOrDefault<word>("ecgSolver", "pseudoECG") == torsoType)
         {
             names.append(e.keyword());
         }
@@ -103,7 +105,7 @@ word selectEcgDomain(const dictionary& ecgDomains, const word& requested)
     {
         FatalIOErrorInFunction(ecgDomains)
             << "Need exactly one ecgDomains entry with ecgSolver "
-            << "leadFieldECG, or -ecgDomain naming one of them. Entries: "
+            << "torsoECG, or -ecgDomain naming one of them. Entries: "
             << names << ", -ecgDomain: '" << requested << "'."
             << exit(FatalIOError);
     }
@@ -117,12 +119,16 @@ word selectEcgDomain(const dictionary& ecgDomains, const word& requested)
 
 int main(int argc, char *argv[])
 {
-    argList::addNote("Write the lead fields of a leadFieldECG domain.");
+    argList::addNote
+    (
+        "Write the lead fields of a torsoECG domain with torsoCoupling "
+        "leadField."
+    );
     #include "addRegionOption.H"
     argList::addOption
     (
         "ecgDomain", "name",
-        "leadFieldECG entry of ecgDomains (default: the only one)"
+        "torsoECG entry of ecgDomains (default: the only one)"
     );
 
     #include "setRootCase.H"
@@ -141,17 +147,17 @@ int main(int argc, char *argv[])
             IOobject::MUST_READ, IOobject::NO_WRITE, false
         )
     );
-    const dictionary& electroCoeffs = electroProperties.subDict
+    electroPropertiesKeys::check
     (
-        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+        electroProperties, electroProperties.get<word>("myocardiumSolver")
     );
     const word ecgDomainName = selectEcgDomain
     (
-        electroCoeffs.subDict("ecgDomains"),
+        electroProperties.subDict("ecgDomains"),
         args.getOrDefault<word>("ecgDomain", word::null)
     );
 
-    const leadFieldConductor lfc(mesh, electroCoeffs, ecgDomainName);
+    const leadFieldConductor lfc(mesh, electroProperties, ecgDomainName);
     const passiveConductor& conductor = lfc.conductor();
     const dictionary& solverDict = mesh.solverDict("leadField");
     const dictionary& finalSolverDict = mesh.solverDict("leadFieldFinal");

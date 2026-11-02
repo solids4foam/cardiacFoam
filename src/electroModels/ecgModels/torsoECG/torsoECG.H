@@ -19,7 +19,12 @@ Class
     torsoECG
 
 Description
-    Torso ECG.
+    ECG of the electrodes in the torso, the region outside the heart
+    (the torso block of electroProperties), by torsoCoupling:
+    - bath: the phiE of the bath domain, solved with the heart, in the
+      electrode cells;
+    - leadField: the lead fields of buildLeadFields contracted with the
+      heart source of the myocardium's Vm (leadFieldECG).
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -29,9 +34,9 @@ Author
 #define torsoECG_H
 
 #include "ecgSolver.H"
+#include "leadFieldECG.H"
 #include "labelList.H"
 #include "overrideTypeName.H"
-#include "Switch.H"
 
 namespace Foam
 {
@@ -40,15 +45,24 @@ class torsoECG
 :
     public ecgSolver
 {
+    //- Lead-field evaluation (torsoCoupling leadField), else null
+    autoPtr<leadFieldECG> leadFieldPtr_;
+
+    //- Electrode cells on the phiE mesh (torsoCoupling bath)
     labelList electrodeCells_;
     bool cellsBuilt_;
 
     void buildElectrodeCells(const ecgDomain& domain);
 
+    //- phiE of the bath domain in the electrode cells
+    void sample(const ecgDomain& domain, scalarField& values);
+
 public:
 
     OverrideTypeName("torsoECG");
 
+    //- Construct from the ECG domain entry of the ecgDomains block of
+    //  electroProperties, whose torsoCoupling selects the evaluation
     explicit torsoECG(const dictionary& dict);
 
     virtual void solve

@@ -20,7 +20,8 @@ Class
 
 Description
     Lead-field ECG verifier. At each sample and electrode it compares:
-    - leadField: the channel of the leadFieldECG domain (z_e^T b(Vm_h) + c_e);
+    - leadField: the lead-field channel of the torsoECG domain with
+      torsoCoupling leadField (z_e^T b(Vm_h) + c_e);
     - direct: a direct forward solve of the same conductor on Vm_h, with the
       same boundary values and reference, assembly and solve repeated until
       the relative change between passes is below the tolerance of the

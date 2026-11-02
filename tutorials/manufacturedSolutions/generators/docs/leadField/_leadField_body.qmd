@@ -1,8 +1,9 @@
 # The problem {#sec-lf-problem}
 
 This document describes the manufactured problems with which cardiacFoam
-verifies the lead-field ECG: the ECG domain `leadFieldECG`, whose channels
-are built from the lead fields of the utility `buildLeadFields`. In the
+verifies the lead-field ECG: the ECG domain `torsoECG` with
+`torsoCoupling leadField`, whose channels are built from the lead fields of
+the utility `buildLeadFields`. In the
 method of manufactured solutions [@roache2002code] an exact field is chosen
 first and the data that make it satisfy the equations are derived from it.
 The document gives, for each problem, the geometry and its regions, the
@@ -58,7 +59,7 @@ $c(e)$ that contains $\mathbf r_e$. The lead-field ECG computes it from the
 lead field of the electrode, the solution of the adjoint discrete problem,
 without solving for $\phi$ at each sample [@geselowitz1967bioelectric];
 @sec-identity states the identity and what is compared. Electrodes lie in the
-torso: `buildLeadFields` and `leadFieldECG` stop with a fatal error when an
+torso: `buildLeadFields` and `torsoECG` stop with a fatal error when an
 electrode cell is a heart cell. Each case has two kinds of electrode, recorded
 in the same way. The eight body-surface electrodes `surface1` to `surface8`
 lie just inside the outer boundary of the conductor, in cells with a face on
@@ -222,10 +223,10 @@ In cardiacFoam:
 
 - tutorial `manufacturedSolutions/leadFieldECG`, options `-problem slab|layered`,
   `-alpha`, `-mesh hex|tet`, `-N`, `-myocardium monodomain|bidomain`;
-- ECG domain `leadFieldECG` with the `torso` sub-dictionary: the
-  `bathCellZones`, the field `bodyAndOrgansConductivity`, the interface
-  interpolation `distanceWeightedHarmonic`, the reference point, and for
-  `layered` the `surfaceCurrentPatches`;
+- ECG domain `torsoECG` with `torsoCoupling leadField` and the `torso`
+  block: the `cellZones`, the field `bodyAndOrgansConductivity`, the
+  interface interpolation `distanceWeightedHarmonic`, the reference point,
+  and for `layered` the `surfaceCurrentPatches`;
 - verifier `manufacturedLeadFieldECGVerifier` with `reference slab`, or
   `reference layered` and `layerInterfaces (-0.5 1.5)`.
 
@@ -471,7 +472,8 @@ In cardiacFoam:
   solution at the cell centres; every cell takes $\boldsymbol\sigma_i$ and
   $\boldsymbol\sigma_e$ of the heart formula, and the torso cells $\sigma_b$ of their
   zone;
-- ECG domain `leadFieldECG`, torso cellZones `bloodPool` and `bath`,
+- ECG domain `torsoECG` with `torsoCoupling leadField`, torso cellZones
+  `bloodPool` and `bath`,
   `distanceWeightedHarmonic`; myocardium `bidomainSolver` with
   `sealedHeartBoundary true` and `conductivitySource field`;
 - verifier `manufacturedLeadFieldECGVerifier`, `reference sphericalShell`.
@@ -803,6 +805,6 @@ is not linear or does not reproduce the assembled one ($10^{-11}$), when
 $\langle\mathbf z,\mathbf C\boldsymbol\psi\rangle\ne\langle\mathbf C^{\mathsf T}\mathbf z,\boldsymbol\psi\rangle$
 or $\mathbf M$ is not symmetric ($10^{-12}$), when the residual of a lead field
 exceeds $10^{-8}$, or when the pinned row is not satisfied ($10^{-8}$); it
-refuses nonlinear schemes. `leadFieldECG` stops when the signature of the
+refuses nonlinear schemes. `torsoECG` stops when the signature of the
 lead fields (mesh, conductivities, schemes, electrodes, reference) differs
 from the case.

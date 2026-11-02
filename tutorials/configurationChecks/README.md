@@ -16,7 +16,7 @@ base case:
 - `fail:<text>` checks must stop with a FOAM FATAL error that mentions
   `<text>`, in `cardiacFoam` or in the case preparation (`Allprepare`). They
   cover unknown selector values, invalid combinations such as `torsoECG`
-  without a bath, and misspelt or unknown keywords and values, whose error
+  without a torso, and misspelt or unknown keywords and values, whose error
   must name the closest valid one (`did you mean ...`).
 - `np=2` checks run a variant on two processors (simple decomposition) and
   reconstruct it.
@@ -55,7 +55,7 @@ configuration. A variant's `Allprepare.parallel`, if present, runs after
 
 ```bash
 ./Allrun                                  # all checks, about 2 minutes
-./Allrun bidomain torsoECGWithoutBath     # selected checks
+./Allrun bidomain torsoECGWithoutTorso    # selected checks
 ./regression/regressionTest.sh --update-manifests   # after an intended change
 ./Allclean
 ```

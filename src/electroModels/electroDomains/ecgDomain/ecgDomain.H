@@ -61,8 +61,7 @@ class ecgDomain
     word domainName_;
     word solverType_;
 
-    //- Output stream for pseudoECG.dat, torsoECG.dat, eikonalECG.dat or
-    //  leadFieldECG.dat
+    //- Output stream for pseudoECG.dat, torsoECG.dat or eikonalECG.dat
     autoPtr<OFstream> outputPtr_;
     //- Runtime-selected ECG evaluation kernel
     autoPtr<ecgSolver> solverPtr_;
@@ -72,7 +71,6 @@ class ecgDomain
     scalarField numericValues_;
 
     const dictionary* inheritedElectrodePositionsPtr_;
-    const dictionary* inheritedPotentialDomainPtr_;
 
     //- Disallow copy construct
     ecgDomain(const ecgDomain&) = delete;
@@ -100,8 +98,7 @@ public:
             const electroStateProvider& stateProvider,
             const dictionary& dict,
             const word& domainName = "ECG",
-            const dictionary* inheritedElectrodePositionsPtr = nullptr,
-            const dictionary* inheritedPotentialDomainPtr = nullptr
+            const dictionary* inheritedElectrodePositionsPtr = nullptr
         );
 
     // Destructor

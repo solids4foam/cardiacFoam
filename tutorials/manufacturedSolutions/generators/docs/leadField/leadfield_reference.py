@@ -181,7 +181,7 @@ def case_points(kind):
     """(electrodes, pin) of the committed case; the built-in sets when absent."""
     if kind == "slab":
         path = os.path.join(SLAB_CASE, "constant", "electroProperties")
-        blocks, pin_block = ("_leadFieldElectrodes",), "_leadFieldTorso"
+        blocks, pin_block = ("_leadFieldElectrodes",), "torso"
         builtin = (BUILTIN_SLAB_ELECTRODES, BUILTIN_SLAB_PIN)
     else:
         path = os.path.join(SHELL_CASE, "constant", "electroProperties")

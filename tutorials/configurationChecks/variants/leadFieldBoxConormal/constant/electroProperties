@@ -43,28 +43,31 @@ monodomainSolverCoeffs
     }
 
     cellZone myocardium;
+}
 
-    ecgDomains
+torso
+{
+    cellZones       ( bath );
+    conductivityField bodyAndOrgansConductivity;
+    interfaceConductivityInterpolation conormalHarmonic;
+    phiERefPoint    ( -0.95 0.25 0.25 );
+    phiEReferenceValue 0.001;
+}
+
+torsoCoupling leadField;
+
+ecgDomains
+{
+    ECG
     {
-        ECG
+        ecgSolver torsoECG;
+        conductivitySource uniform;
+        conductivityIntracellular [ -1 -3 3 0 0 2 0 ] (0.092957086760318178 0.032957086760318194 -0.027373778923183292 0.054416692162865092 -0.0055833078371348962 0.032626221076816703);
+        conductivityExtracellular [ -1 -3 3 0 0 2 0 ] (0.046478543380159089 0.016478543380159097 -0.013686889461591646 0.027208346081432546 -0.0027916539185674481 0.016313110538408351);
+        electrodePositions
         {
-            ecgSolver leadFieldECG;
-            conductivitySource uniform;
-            conductivityIntracellular [ -1 -3 3 0 0 2 0 ] (0.092957086760318178 0.032957086760318194 -0.027373778923183292 0.054416692162865092 -0.0055833078371348962 0.032626221076816703);
-            conductivityExtracellular [ -1 -3 3 0 0 2 0 ] (0.046478543380159089 0.016478543380159097 -0.013686889461591646 0.027208346081432546 -0.0027916539185674481 0.016313110538408351);
-            torso
-            {
-                bathCellZones   ( bath );
-                bathConductivityField bodyAndOrgansConductivity;
-                interfaceConductivityInterpolation conormalHarmonic;
-                phiERefPoint    ( -0.95 0.25 0.25 );
-                phiEReferenceValue 0.001;
-            }
-            electrodePositions
-            {
-                far   (-0.8 0.3 0.28);
-                near  (-0.3 0.45 0.35);
-            }
+            far   (-0.8 0.3 0.28);
+            near  (-0.3 0.45 0.35);
         }
     }
 }

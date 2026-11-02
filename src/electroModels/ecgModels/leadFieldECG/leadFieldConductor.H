@@ -19,9 +19,11 @@ Class
     leadFieldConductor
 
 Description
-    The heart+torso passiveConductor of a lead-field ECG domain, built from
-    the case dictionaries, with its electrodes, reference and signature.
+    The heart+torso passiveConductor of a torsoECG domain with torsoCoupling
+    leadField, built from electroProperties, with its electrodes, reference
+    and signature.
 
+    - Coupling: torsoCoupling must be leadField.
     - Heart: the myocardium cellZone sub-mesh (createMyocardiumMeshSubset).
     - Myocardium: bidomainSolver or monodomainSolver; eikonalSolver is not
       supported.
@@ -29,8 +31,7 @@ Description
       reads them from the ECG domain entry with the same keys.
       For monodomainSolver the Coeffs conductivity must equal
       Gi (Gi+Ge)^-1 Ge in every cell.
-    - Torso: the bathPotentialDomain block of the Coeffs, or the torso
-      sub-dictionary of the ECG domain entry; exactly one of them.
+    - Torso: the top-level torso block of electroProperties.
     - Sealing: sealedHeartBoundary of the Coeffs, with a heart field Vm
       that is zeroGradient on every non-coupled patch.
     - Electrodes: each lies in a torso cell; an electrode whose cell is a
@@ -114,15 +115,19 @@ class leadFieldConductor
 
     autoPtr<passiveConductor> conductorPtr_;
 
-    // Check the myocardium solver type and its cellZone.
+    // Check the coupling, the myocardium solver type and its cellZone.
     void checkMyocardium
     (
-        const dictionary& electroCoeffs,
+        const dictionary& electroProperties,
         const word& ecgDomainName
     ) const;
 
     // Read conductivities, torso and electrodes; build the conductor.
-    void build(const dictionary& electroCoeffs, const word& ecgDomainName);
+    void build
+    (
+        const dictionary& electroProperties,
+        const word& ecgDomainName
+    );
 
     // Read Gi and Ge; check the monodomain conductivity against them.
     void readHeartConductivities
@@ -132,11 +137,11 @@ class leadFieldConductor
     );
 
     // Read the torso, interface and reference keys.
-    void readTorso(const dictionary& torsoDict, const bool bathBlock);
+    void readTorso(const dictionary& torsoDict);
 
     void readElectrodes
     (
-        const dictionary& electroCoeffs,
+        const dictionary& electroProperties,
         const dictionary& ecgDict
     );
 
@@ -147,22 +152,23 @@ class leadFieldConductor
 
 public:
 
-    //- Construct from the base mesh, the myocardium solver Coeffs and the
-    //  name of the ECG domain entry in its ecgDomains
+    //- Construct from the base mesh, the top-level electroProperties and
+    //  the name of the ECG domain entry in its ecgDomains
     leadFieldConductor
     (
         const fvMesh& baseMesh,
-        const dictionary& electroCoeffs,
+        const dictionary& electroProperties,
         const word& ecgDomainName
     );
 
     //- Construct on the sub-mesh of a running myocardium, whose Vm decides
-    //  sealing, from its solver Coeffs and the ECG domain entry name
+    //  sealing, from the top-level electroProperties and the ECG domain
+    //  entry name
     leadFieldConductor
     (
         const fvMeshSubset& heartSubset,
         const volScalarField& Vm,
-        const dictionary& electroCoeffs,
+        const dictionary& electroProperties,
         const word& ecgDomainName
     );
 

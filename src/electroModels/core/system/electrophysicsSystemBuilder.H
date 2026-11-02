@@ -68,6 +68,8 @@ void configureConductionDomains
     scalar                initialDeltaT
 );
 
+//- The extracellularPotentialDomain of torsoCoupling bath, from the torso
+//  block of the top-level electroProperties; none for any other coupling
 void configureBathPotentialDomain
 (
     electrophysicsSystem& system,
@@ -75,6 +77,8 @@ void configureBathPotentialDomain
     const dictionary&     electroProperties
 );
 
+//- The ECG domains of the ecgDomains block of the top-level
+//  electroProperties
 void configureECGDomains
 (
     electrophysicsSystem&       system,

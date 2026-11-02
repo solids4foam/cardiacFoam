@@ -63,7 +63,7 @@ flowchart TB
 | sweep a cell model's currents | `sweepCurrents` | [README](sweepCurrents/README.md) |
 | advance a Purkinje graph on its own | `runPurkinjeGraph` | [README](runPurkinjeGraph/README.md) |
 | recompute a pseudo-ECG from saved fields | `recomputePseudoECG` | [README](recomputePseudoECG/README.md) |
-| build the lead fields of a `leadFieldECG` domain | `buildLeadFields` | [README](buildLeadFields/README.md) |
+| build the lead fields of a `torsoECG` domain with `torsoCoupling leadField` | `buildLeadFields` | [README](buildLeadFields/README.md) |
 | measure bath–bidomain interface fluxes | `bathBidomainInterfaceMetrics` | [README](bathBidomainInterfaceMetrics/README.md) |
 | test the sealed-wall cell gradient on a shell mesh | `wallGradientProbe` | [README](wallGradientProbe/README.md) |
 | write the conductivity fields a manufactured solution prescribes | `setManufacturedFields` | [README](setManufacturedFields/README.md) |

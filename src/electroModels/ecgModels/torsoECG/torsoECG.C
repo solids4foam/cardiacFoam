@@ -21,6 +21,7 @@ License
 
 #include "ecgDomain.H"
 #include "ecgElectrodeCells.H"
+#include "torsoCoupling.H"
 #include "addToRunTimeSelectionTable.H"
 #include "PstreamReduceOps.H"
 
@@ -33,9 +34,24 @@ addToRunTimeSelectionTable(ecgSolver, torsoECG, dictionary);
 
 torsoECG::torsoECG(const dictionary& dict)
 :
+    leadFieldPtr_(),
     electrodeCells_(),
     cellsBuilt_(false)
-{}
+{
+    const dictionary& electroProperties = dict.topDict();
+
+    if
+    (
+        torsoCoupling::read(electroProperties)
+     == torsoCoupling::type::leadField
+    )
+    {
+        leadFieldPtr_.reset
+        (
+            new leadFieldECG(electroProperties, dict.dictName())
+        );
+    }
+}
 
 
 void torsoECG::buildElectrodeCells(const ecgDomain& domain)
@@ -63,17 +79,8 @@ void torsoECG::buildElectrodeCells(const ecgDomain& domain)
 }
 
 
-void torsoECG::solve
-(
-    ecgDomain& domain,
-    scalar t0,
-    scalar dt,
-    scalarField& values
-)
+void torsoECG::sample(const ecgDomain& domain, scalarField& values)
 {
-    (void)t0;
-    (void)dt;
-
     if (!cellsBuilt_)
     {
         buildElectrodeCells(domain);
@@ -107,6 +114,32 @@ void torsoECG::solve
         Pstream::listCombineGather(values, plusEqOp<scalar>());
         Pstream::broadcast(values);
     }
+}
+
+
+void torsoECG::solve
+(
+    ecgDomain& domain,
+    scalar t0,
+    scalar dt,
+    scalarField& values
+)
+{
+    (void)t0;
+    (void)dt;
+
+    if (!leadFieldPtr_.valid())
+    {
+        sample(domain, values);
+        return;
+    }
+
+    if (!leadFieldPtr_->loaded())
+    {
+        leadFieldPtr_->load(domain, domain.electrodeNames());
+    }
+
+    leadFieldPtr_->evaluate(domain.Vm(), values);
 }
 
 } // End namespace Foam

@@ -133,7 +133,7 @@ Foam::electrophysiologyModel::electrophysiologyModel
     (
         domainSystem_,
         mesh(),
-        electroProperties()
+        *this
     );
 
     electrophysicsSystemBuilder::configureConductionDomains

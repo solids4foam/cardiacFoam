@@ -52,7 +52,8 @@ electrode lies in the myocardium.
 - conductivities: `0/ConductivityIntracellular`,
   `0/ConductivityExtracellular` and `0/bodyAndOrgansConductivity` written by
   `setManufacturedFields` from the solution at the cell centres;
-- ECG domain: `leadFieldECG`, torso cellZones `bloodPool` and `bath`,
+- ECG domain: `torsoECG` with `torsoCoupling leadField`, torso cellZones
+  `bloodPool` and `bath`,
   `distanceWeightedHarmonic`, pinned in the outer bath; body-surface
   electrodes `surface1` to `surface8`, spread over the outer sphere at
   `|x| = 1.495`, inside its faceted surface at every level, and the

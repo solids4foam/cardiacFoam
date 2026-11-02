@@ -22,6 +22,7 @@ License
 #include "ecgDomain.H"
 #include "electroDomainCoupler.H"
 #include "extracellularPotentialDomain.H"
+#include "torsoCoupling.H"
 #include "electrophysicsAdvanceScheme.H"
 #include "error.H"
 
@@ -102,21 +103,6 @@ void collectConductionCouplingDicts
 }
 
 
-word myocardiumSolverType(const dictionary& electroProperties)
-{
-    if (electroProperties.found("myocardiumSolver"))
-    {
-        return word(electroProperties.lookup("myocardiumSolver"));
-    }
-
-    const word coeffDictName = electroProperties.dictName();
-
-    return coeffDictName.endsWith("Coeffs")
-      ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
-      : word("unset");
-}
-
-
 } // End anonymous namespace
 
 
@@ -172,9 +158,21 @@ void configureBathPotentialDomain
 {
     system.clearPotentialDomain();
 
-    if (!electroProperties.found("bathPotentialDomain"))
+    if (torsoCoupling::read(electroProperties) != torsoCoupling::type::bath)
     {
         return;
+    }
+
+    const word solverType(electroProperties.get<word>("myocardiumSolver"));
+
+    if (solverType != "bidomainSolver")
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "torsoCoupling bath solves phiE of the heart and the torso "
+            << "together, which needs myocardiumSolver bidomainSolver; "
+            << "myocardiumSolver is '" << solverType << "'. Use torsoCoupling "
+            << "leadField for a one-way torso ECG of a monodomainSolver heart."
+            << exit(FatalIOError);
     }
 
     if (!system.hasMyocardium())
@@ -191,7 +189,7 @@ void configureBathPotentialDomain
         (
             mesh,
             system.myocardium(),
-            electroProperties.subDict("bathPotentialDomain")
+            electroProperties
         )
     );
 }
@@ -344,8 +342,6 @@ void configureECGDomains
     DynamicList<word> ecgDomainNames;
     DynamicList<const dictionary*> ecgDomainDicts;
     const dictionary* sharedElectrodePositionsPtr = nullptr;
-    const dictionary* bathPotentialDomainPtr =
-        electroProperties.findDict("bathPotentialDomain");
 
     if (electroProperties.found("ecgDomains"))
     {
@@ -364,9 +360,9 @@ void configureECGDomains
                 continue;
             }
 
-            // An ECG reads the myocardium (and bath) state directly, and a
-            // bath bidomain already couples the torso, so there is nothing
-            // to couple an ECG domain through
+            // An ECG reads the myocardium (and bath) state directly, and
+            // torsoCoupling couples the torso, so there is nothing to couple
+            // an ECG domain through
             if (e.dict().found("coupling"))
             {
                 FatalIOErrorInFunction(e.dict())
@@ -382,10 +378,16 @@ void configureECGDomains
 
     HashTable<ecgDomain*> ecgDomainsByName(ecgDomainNames.size());
 
-    // The output file (pseudoECG.dat, torsoECG.dat, eikonalECG.dat,
-    // leadFieldECG.dat) is named after the ecgSolver, not the domain: two
-    // domains with the same ecgSolver write the same file
+    // The output file (pseudoECG.dat, torsoECG.dat, eikonalECG.dat) is
+    // named after the ecgSolver, not the domain: two domains with the same
+    // ecgSolver write the same file
     HashTable<word> ecgDomainBySolverType(ecgDomainNames.size());
+
+    const word myocardiumSolver
+    (
+        electroProperties.get<word>("myocardiumSolver")
+    );
+    const torsoCoupling::type coupling = torsoCoupling::read(electroProperties);
 
     forAll(ecgDomainNames, i)
     {
@@ -426,14 +428,12 @@ void configureECGDomains
         }
         else if (ecgSolverType == "eikonalECG")
         {
-            const word solverType(myocardiumSolverType(electroProperties));
-
-            if (solverType != "eikonalSolver")
+            if (myocardiumSolver != "eikonalSolver")
             {
                 FatalErrorInFunction
                     << "ECG domain '" << domainName
                     << "' selects ecgSolver eikonalECG, but "
-                    << "myocardiumSolver is '" << solverType
+                    << "myocardiumSolver is '" << myocardiumSolver
                     << "'. eikonalECG requires myocardiumSolver "
                     << "eikonalSolver because it reconstructs Vm from "
                     << "the activation-time field."
@@ -444,42 +444,37 @@ void configureECGDomains
         }
         else if (ecgSolverType == "torsoECG")
         {
-            const word solverType(myocardiumSolverType(electroProperties));
+            if (coupling == torsoCoupling::type::none)
+            {
+                FatalIOErrorInFunction(domainDict)
+                    << "ECG domain '" << domainName
+                    << "' selects ecgSolver torsoECG, but electroProperties "
+                    << "has no torso. Add the region outside the heart and "
+                    << "how its potential is obtained:" << nl
+                    << "torso" << nl
+                    << "{" << nl
+                    << "    cellZones         (...);" << nl
+                    << "    conductivityField <name>;" << nl
+                    << "    ..." << nl
+                    << "}" << nl
+                    << "torsoCoupling bath | leadField;"
+                    << exit(FatalIOError);
+            }
 
-            if (solverType != "bidomainSolver")
+            // bath: the bath domain's phiE; leadField: the myocardium's Vm
+            stateProviderPtr =
+                coupling == torsoCoupling::type::bath
+              ? potentialStateProviderPtr
+              : &myocardiumStateProvider;
+
+            if (!stateProviderPtr)
             {
                 FatalErrorInFunction
-                    << "ECG domain '" << domainName
-                    << "' selects ecgSolver torsoECG, but "
-                    << "myocardiumSolver is '" << solverType
-                    << "'. torsoECG requires myocardiumSolver "
-                    << "bidomainSolver because it samples the "
-                    << "extracellular potential phiE."
+                    << "ECG domain '" << domainName << "' selects ecgSolver "
+                    << "torsoECG with torsoCoupling bath, but no bath domain "
+                    << "is configured."
                     << exit(FatalError);
             }
-
-            if (!potentialStateProviderPtr)
-            {
-                FatalErrorInFunction
-                    << "ECG domain '" << domainName
-                    << "' selects ecgSolver torsoECG, but no "
-                    << "bathPotentialDomain is configured inside "
-                    << "bidomainSolverCoeffs. Add:" << nl
-                    << "bidomainSolverCoeffs" << nl
-                    << "{" << nl
-                    << "    bathPotentialDomain" << nl
-                    << "    {" << nl
-                    << "        bathCellZones (...);" << nl
-                    << "        ..." << nl
-                    << "    }" << nl
-                    << "}" << exit(FatalError);
-            }
-
-            stateProviderPtr = potentialStateProviderPtr;
-        }
-        else if (ecgSolverType == "leadFieldECG")
-        {
-            stateProviderPtr = &myocardiumStateProvider;
         }
         else
         {
@@ -487,7 +482,7 @@ void configureECGDomains
                 << "ECG domain '" << domainName
                 << "' selects ecgSolver '" << ecgSolverType
                 << "', but provider routing is only defined for "
-                << "pseudoECG, eikonalECG, torsoECG and leadFieldECG."
+                << "pseudoECG, eikonalECG and torsoECG."
                 << exit(FatalError);
         }
 
@@ -497,8 +492,7 @@ void configureECGDomains
                 *stateProviderPtr,
                 domainDict,
                 domainName,
-                sharedElectrodePositionsPtr,
-                bathPotentialDomainPtr
+                sharedElectrodePositionsPtr
             );
 
         ecgDomainsByName.insert(domainName, domainPtr);

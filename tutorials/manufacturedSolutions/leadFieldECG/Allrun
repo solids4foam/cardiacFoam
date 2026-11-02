@@ -213,7 +213,7 @@ EOF
         geometry=layered_box
         dictSuffix=.layered
         echo "NHalf $((N/2));" >> local/mesh
-        echo "bathCellZones ( torsoInner torsoOuter );" > local/torso
+        echo "cellZones ( torsoInner torsoOuter );" > local/torso
         alpha=${alpha:-0.01}
         if awk -v a="$alpha" 'BEGIN { exit !(a != 0) }'
         then

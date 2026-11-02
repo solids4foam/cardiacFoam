@@ -18,30 +18,18 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "leadFieldECG.H"
-#include "ecgDomain.H"
-#include "addToRunTimeSelectionTable.H"
 #include <limits>
 
 namespace Foam
 {
 
-defineTypeNameAndDebug(leadFieldECG, 0);
-addToRunTimeSelectionTable(ecgSolver, leadFieldECG, dictionary);
-
-
-leadFieldECG::leadFieldECG(const dictionary& dict)
-:
-    leadFieldECG(dict.parent().parent(), dict.dictName())
-{}
-
-
 leadFieldECG::leadFieldECG
 (
-    const dictionary& electroCoeffs,
+    const dictionary& electroProperties,
     const word& ecgDomainName
 )
 :
-    electroCoeffs_(electroCoeffs),
+    electroProperties_(electroProperties),
     ecgDomainName_(ecgDomainName),
     conductorPtr_(),
     heartWeights_(),
@@ -58,10 +46,10 @@ void leadFieldECG::load
     const fvMeshSubset* subsetPtr = provider.meshSubsetPtr();
     if (!subsetPtr)
     {
-        FatalIOErrorInFunction(electroCoeffs_)
+        FatalIOErrorInFunction(electroProperties_)
             << "ECG domain '" << ecgDomainName_ << "' needs the myocardium on "
             << "a cellZone of the heart+torso mesh; set cellZone in "
-            << electroCoeffs_.name() << "."
+            << electroProperties_.get<word>("myocardiumSolver") << "Coeffs."
             << exit(FatalIOError);
     }
 
@@ -77,7 +65,7 @@ void leadFieldECG::load
     (
         new leadFieldConductor
         (
-            *subsetPtr, *VmPtr, electroCoeffs_, ecgDomainName_
+            *subsetPtr, *VmPtr, electroProperties_, ecgDomainName_
         )
     );
     const leadFieldConductor& lfc = conductorPtr_();
@@ -168,7 +156,7 @@ void leadFieldECG::load
         }
     }
 
-    Info<< "leadFieldECG: " << names.size() << " lead fields, constant terms "
+    Info<< "torsoECG lead fields: " << names.size() << " lead fields, constant terms "
         << constants_ << endl;
 }
 
@@ -194,26 +182,6 @@ void leadFieldECG::evaluate
     {
         values[e] = gSum(heartWeights_[e]*bHeart) + constants_[e];
     }
-}
-
-
-void leadFieldECG::solve
-(
-    ecgDomain& domain,
-    scalar t0,
-    scalar dt,
-    scalarField& values
-)
-{
-    (void)t0;
-    (void)dt;
-
-    if (!loaded())
-    {
-        load(domain, domain.electrodeNames());
-    }
-
-    evaluate(domain.Vm(), values);
 }
 
 } // End namespace Foam
