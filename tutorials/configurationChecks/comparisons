@@ -16,6 +16,8 @@ differ  monodomainImplicit                   monodomainSbdf2                    
 differ  monodomainExplicit                   monodomainCellZone                               0.005/Vm
 differ  monodomainImplicit                   bidomain                                         0.005/Vm
 differ  eikonal                              eikonalPurkinje                                  1/activationTime
+differ  eikonalPurkinje                      eikonalPurkinjePvjDelay                          1/activationTime
+differ  eikonalECG                           eikonalECGRegionStates                           postProcessing/eikonalECG.dat
 
 # Purkinje junction couplers must feed the network activation into the slab
 differ  monodomainExplicit                   monodomainPurkinjeReactionDiffusion              0.005/Vm

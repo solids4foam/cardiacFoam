@@ -27,6 +27,7 @@ Author
 #define tissueTemplates_H
 
 #include "scalar.H"
+#include "ionicTemplates.H"
 
 namespace Foam
 {
@@ -680,50 +681,7 @@ static const int numEpiSamples = 1000;
 // INTERPOLATION LOGIC
 // ========================================================================= //
 
-inline scalar evaluateTemplate
-(
-    scalar localTime,
-    const scalar* times,
-    const scalar* values,
-    int numSamples
-)
-{
-    if (numSamples < 2) return 0.0;
-    if (localTime <= times[0]) return values[0];
-    if (localTime >= times[numSamples - 1]) return values[numSamples - 1];
-
-    // O(1) Direct Index Lookup
-    // Assumes times array has a perfectly uniform deltaT
-    const scalar dt = times[1] - times[0];
-    label lo = static_cast<label>((localTime - times[0]) / dt);
-
-    // Safeguard against floating point inaccuracies
-    if (lo < 0) lo = 0;
-    if (lo >= numSamples - 1) lo = numSamples - 2;
-
-    const scalar t0 = times[lo];
-    const scalar t1 = times[lo + 1];
-
-    // Fallback if the array isn't perfectly uniform at this specific index
-    if (localTime < t0 || localTime > t1)
-    {
-        // Rare edge case: standard binary search fallback
-        label hi = numSamples - 1;
-        lo = 0;
-        while (hi - lo > 1)
-        {
-            const label mid = (lo + hi)/2;
-            if (times[mid] <= localTime) lo = mid;
-            else hi = mid;
-        }
-    }
-
-    const scalar exactT0 = times[lo];
-    const scalar exactT1 = times[lo + 1];
-    const scalar alpha = (localTime - exactT0)/(exactT1 - exactT0);
-
-    return (1.0 - alpha)*values[lo] + alpha*values[lo + 1];
-}
+using ionicTemplates::evaluateTemplate;
 
 
 //- Derivative of evaluateTemplate's piecewise-linear interpolant, i.e. the

@@ -53,6 +53,10 @@ protected:
     networkCouplingEndpoint& networkTerminalDomain_;
     pvjMapper mapper_;
     scalar pvjRadius_;
+
+    //- Anterograde junction delay (s)
+    scalar pvjDelay_;
+
     CouplingMode couplingMode_;
     mutable scalarField terminalCurrentBuffer_;
     mutable scalarField terminalSourceBuffer_;

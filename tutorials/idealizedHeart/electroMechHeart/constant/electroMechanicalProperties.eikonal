@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| cardiacFoam: the OpenFOAM heart project                                     |
+| Version:     v0.1                                                           |
+| Web:         https://cardiacFoam.github.io                                  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroMechanicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+electroMechanicalModel  sequentialElectroMechanical;
+
+sequentialElectroMechanicalCoeffs
+{
+    electroRegion   electro;
+    solidRegion     solid;
+
+    activeTensionModel  LandNiedererTWorld;
+
+    // Cai from TNNP single-cell templates at t - activationTime
+    activeTensionSignal  templates;
+
+    activeTensionTemplates
+    {
+        ionicModelConfig
+        {
+            ionicModel TNNP;
+            tissue     epicardialCells;
+            solver     RKF45;
+            singleCellStimulus
+            {
+                stim_start 0; stim_duration 1; stim_amplitude 60;
+                stim_period_S1 1000; nstim1 1; stim_period_S2 0; nstim2 0;
+            }
+        }
+        nBeats   1;
+        duration 0.5;
+        dt       1e-5;
+    }
+
+    ODESolver
+    {
+        solver      RKF45;
+        absTol      1e-8;
+        relTol      1e-6;
+    }
+}
+
+// ************************************************************************* //
