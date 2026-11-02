@@ -55,6 +55,18 @@ element size `1/N`, `N = 10, 14, 20, 28`, kernels linear, cosine, uniform,
 gaussian, and linear with `R_pvj = 1e6` on seed 1; linear, cosine and the
 suppressed control also on seeds 2 and 3; `N = 14` once more on 4 ranks.
 
+- Terminals inside the wall, tetrahedra (`monodomain1D3DShell -graphY
+  0.5590169943749474`: terminals at `r = 0.75`, full-ball supports, `R = 0.2`),
+  `N = 10, 14, 20, 28`: unidirectional linear, suppressed (`R_pvj = 1e6`) and
+  bidirectional linear on seeds 1-3; unidirectional cosine, uniform and
+  gaussian on seed 1; time step at `N = 14`, `dt = 0.1/(22 2^k)`, `k = 0..4`,
+  junction active and suppressed
+- Endocardial terminals, unidirectional linear, seed 1
+- Overlapping supports and a branch point of degree three (`-graphY 0.49
+  -graphY2 0.61 -radius 0.15`: four terminals, each inside its neighbour's
+  support), unidirectional linear on seeds 1-3, bidirectional linear on seed 1
+- Box, unidirectional linear, regime (a), `N = 16-96`
+
 ## Execution
 
 Each run is a copy of a case in `results/` (ignored by git), one at a time.
@@ -127,6 +139,34 @@ for k in uniform linear cosine
 do
     for c in 1.5 2 3 4 6 8; do run $box scan64_${k}_c$c -N 64 $cont -kernel $k -radius $(awk -v c=$c 'BEGIN{printf "%.17g", c/64}'); done
 done
+Y=0.5590169943749474
+for N in 10 14 20 28
+do
+    for s in 1 2 3
+    do
+        run $shell inlin_s${s}_N$N -N $N -seed $s -graphY $Y -coupling unidirectional -kernel linear
+        run $shell inoff_s${s}_N$N -N $N -seed $s -graphY $Y -coupling unidirectional -kernel linear -rPvj 1e6
+        run $shell inbi_s${s}_N$N  -N $N -seed $s -graphY $Y -coupling bidirectional  -kernel linear
+        run $shell ovuni_s${s}_N$N -N $N -seed $s -graphY 0.49 -graphY2 0.61 -radius 0.15 -coupling unidirectional -kernel linear
+    done
+    for k in cosine uniform gaussian
+    do
+        run $shell in${k:0:3}_s1_N$N -N $N -seed 1 -graphY $Y -coupling unidirectional -kernel $k
+    done
+    run $shell enduni_s1_N$N -N $N -seed 1 -coupling unidirectional -kernel linear
+    run $shell ovbi_s1_N$N -N $N -seed 1 -graphY 0.49 -graphY2 0.61 -radius 0.15 -coupling bidirectional -kernel linear
+done
+for k in 0 1 2 3 4
+do
+    dt=$(awk -v k=$k 'BEGIN { printf "%.17g", 0.1/(22*2^k) }')
+    run $shell indton_k$k  -N 14 -seed 1 -graphY $Y -coupling unidirectional -kernel linear -dt $dt
+    run $shell indtoff_k$k -N 14 -seed 1 -graphY $Y -coupling unidirectional -kernel linear -rPvj 1e6 -dt $dt
+done
+for N in 16 24 32 48 64 96
+do
+    run $box unilin_N$N -N $N -coupling unidirectional -reference continuum -kernel linear
+done
+python3 summarize_interior.py results
 python3 summarize.py results lin cos uni gau off disc b2_uniform b2_linear b2_gaussian \
     b4_uniform b4_linear b4_gaussian shlin shcos shuni shgau shoff
 python3 summarize.py results --scan scan_uniform scan_linear scan_gaussian scan_cosine \
@@ -142,7 +182,7 @@ finite or exceeds 1e3 is reported as diverged.
 
 ## Measured behaviour
 
-Results of the last run of this study (27 October 2026). Orders are
+Results of the runs of this study (27 October 2026; terminals inside the wall, overlapping supports and unidirectional box: 2 November 2026). Orders are
 least-squares fits over the four finest levels; values in brackets are the
 errors at the finest level; terminal 0.
 
@@ -164,10 +204,20 @@ errors at the finest level; terminal 0.
 | gaussian | 1.93 +- 0.03 (2.4e-2) | 1.81 +- 0.07 (5.2e-3) | 1.80 +- 0.06 (2.4e-3) | 2.00 +- 0.01 (2.1e-5) |
 | cosine | 2.05 +- 0.01 (1.8e-2) | 2.02 +- 0.00 (4.1e-3) | 2.00 +- 0.01 (1.9e-3) | 2.00 +- 0.00 (2.1e-5) |
 
-The junction quantities follow the map: erratic and about first order for
-the uniform kernel, near second order for linear and gaussian, second order
-for cosine. The far field converges at second order with the same constant
-for every kernel.
+The junction quantities follow the map: erratic for the uniform kernel, near
+second order for linear and gaussian, second order for cosine. The uniform
+kernel's final-time current error changes sign during the run at `N = 24`
+(-2.0e-2 at mid-run, +3.5e-3 at `T`), which produces its pairwise orders 8.3
+and -4.8; the maximum over time (`maxStepCurrentError`) gives 1.59 +- 0.23
+(uniform), 1.94 (linear), 1.84 (gaussian), 2.02 (cosine). Fitted separately,
+the interleaved ladders differ for the irregular kernels (uniform current:
+16-32-64 1.95, 24-48-96 -0.30; linear deposit: 1.80 and 2.03): at `N = 24,
+48, 96` the terminal sits on a mesh vertex, at 16, 32, 64 inside a cell. The
+gaussian kernel's jump at `R` (0.011 of its peak) gives no visible first-order
+term over this range. The far field converges at second order; its constant
+is the same for linear, gaussian and cosine and 20% higher for uniform
+(2.6e-5 against 2.1e-5). The two terminals are mirror images and give the
+same orders to 0.02.
 
 ### Suppression control
 
@@ -188,7 +238,12 @@ discretisation error remains.
 
 The per-step difference between the charge the graph loses and the charge
 the tissue receives is 1e-14 to 6e-13 of the charge crossing the junctions in
-every bidirectional run (box and shell, serial and 4 ranks).
+every bidirectional run with the junction active (box and shell, serial, and
+`shpar_N14` on 4 ranks). With the junction suppressed the crossing charge is
+six orders smaller and the ratio reaches 5e-7. Under unidirectional transfer
+the graph loses no charge by construction, so the ratio only reports the net
+current of the terminals and is not a conservation check; there the deposit
+integrates to the current through the normalisation `sum w|K|`.
 
 ### Time step (box, N = 32, linear)
 
@@ -218,10 +273,13 @@ At `N = 40` (support L2 / junction current error):
 | 4 | 0.23 / 0.023 | 0.089 / 0.023 | 0.19 / 0.032 |
 | 6 | 0.054 / 0.0105 | 0.019 / 0.0100 | 0.038 / 0.0152 |
 
-`R = h` is below the stability limit of the explicit tissue-side junction,
-`dt q/(R^3 R_pvj chi Cm) < 2` with `q` = 0.48, 0.76, 1.29, 1.12 for the
-uniform, linear, gaussian and cosine kernels on a half-ball; with `dt ~ h^2`
-the minimum stable `R/h` grows as `h^(-1/3)`. At `R = h` and `N = 24`, where
+`R = h` diverged for every kernel. The continuum estimate of the explicit
+tissue-side limit, `dt q/(R^3 R_pvj chi Cm) < 2` with `q` = 0.48, 0.76, 1.29,
+1.12 for the uniform, linear, gaussian and cosine kernels on a half-ball, is
+not predictive at `R/h = 1.5`: `scan64_linear_c1.5` (2.16) and
+`scan_gaussian_c1.5` (2.28) exceed it and stayed bounded, while
+`scan64_cosine_c1.5` diverged. With about six cells in the support the
+discrete `sum w^2 |K|/W^2` is not the continuum `q`. At `R = h` and `N = 24`, where
 the terminal lies on cell faces, the errors are three orders smaller than at
 `N = 16`: one cell per support makes the result depend on where the terminal
 sits in its cell.
@@ -304,3 +362,70 @@ mesh-integrated normalisation exceeds the exact one by 2.0e-2 (`N = 10`) to
 2.8e-3 (`N = 28`), about second order: the flat facets place part of the
 mesh inside the true cavity sphere. On 4 ranks the `N = 14` run reproduces
 the serial one to about 1e-10.
+
+The continuum normalisation is taken over the true tissue part of the ball,
+but the cell integrals cover the faceted mesh, so the reference deposit
+itself integrates to `I (1 + delta)` with `delta = sum omega_K/Wc - 1`
+(`meshIntegratedNormalisationError` in `_map.csv`): 2.0e-2, 1.1e-2, 5.2e-3,
+2.8e-3 for `N = 10` to 28 (linear, mean of three seeds), the same size as the
+relative junction current error at each level (2.3e-2 to 2.3e-3). On the
+endocardium the junction order therefore cannot be separated from the
+second-order convergence of the faceted wall; the interior terminals below
+have no facet in their supports. Per terminal (mean of three seeds, fit over
+all four levels): linear current 2.20 (terminal 0) and 1.89 +- 0.34
+(terminal 1), graph terminal voltage 1.66 and 1.33; cosine current 1.88 and
+1.77.
+
+### Terminals inside the wall, tetrahedra
+
+`summarize_interior.py`: `-graphY 0.5590169943749474`, terminals at
+`r = 0.75`, full-ball supports, `R = 0.2`, `T = 0.1`. Means over the seeds
+present (three for linear, one for the other kernels) and both terminals;
+`h` is the shell verifier's mean cell size (0.059, 0.043, 0.030, 0.022);
+least-squares orders over the four levels, values at `N = 28`.
+
+| case | support cells | support L2 | junction current | graph `V1D` at the terminal | deposit L1 |
+|---|---|---|---|---|---|
+| unidirectional, linear | 144-3270 | 2.18 +- 0.06 (3.7e-3) | 2.26 +- 0.08 (3.5e-3) | 1.92 +- 0.05 | 2.07 +- 0.06 |
+| unidirectional, cosine | 146-3306 | 1.99 +- 0.04 (5.4e-3) | 2.00 +- 0.05 (5.5e-3) | 1.93 | 1.98 +- 0.06 |
+| unidirectional, gaussian | 146-3306 | 1.93 +- 0.03 (6.7e-3) | 1.90 +- 0.06 (6.8e-3) | 1.93 | 1.70 +- 0.05 |
+| unidirectional, uniform | 146-3306 | 1.59 +- 0.03 (1.2e-2) | 2.25 +- 0.23 (4.4e-3) | 1.93 | 1.16 +- 0.04 |
+| bidirectional, linear | 144-3270 | 2.17 +- 0.06 (3.9e-3) | 2.34 +- 0.09 (2.9e-3) | 1.75 +- 0.04 (8.4e-4) | 2.07 +- 0.06 |
+| endocardial, unidirectional, linear (seed 1) | 100-2000 | 1.90 +- 0.25 | 1.92 +- 0.58 (pairwise 4.39, -0.08, 2.53) | 1.93 | 1.85 +- 0.30 |
+
+The exact current is about 1.057; the seed-to-seed spread of the linear
+current error at `N = 28` is 7.7%. Under unidirectional transfer the graph
+error is the standalone graph error for every kernel. The far field and the
+whole-domain error converge at 1.56 and 1.99, the shell operator's orders in
+this window (1.54, 1.54 with the junction suppressed). The bidirectional
+charge balance is 9.4e-14 or better.
+
+Suppression (linear, unidirectional, error with the junction over error with
+it suppressed): within `R` 18.2, 13.9, 10.8, 10.3; whole domain 2.46, 1.96,
+1.65, 1.56; far field 1.03, 1.01, 1.01, 1.01 (`N = 10` to 28).
+
+Time step at `N = 14`, junction active, `dt = 4.5e-3` halved four times:
+orders of the successive differences of the junction current error 1.00,
+1.00, 1.00; of the gathered tissue voltage 0.99, 1.00, 1.00. With the
+junction suppressed the gathered voltage gives 0.98, 0.98, 0.99.
+
+### Overlapping supports and a branch point
+
+`-graphY 0.49 -graphY2 0.61 -radius 0.15`: four terminals, each 0.12 from its
+neighbour and inside its support; the two chains meet at a node of degree
+three. Means over the four terminals (and the three seeds for
+unidirectional), support cells 62-1379, fit over `N = 10-28`:
+
+| case | support L2 | junction current | graph `V1D` at the terminal | charge balance |
+|---|---|---|---|---|
+| unidirectional, linear | 2.07 +- 0.05 (1.4e-2) | 2.14 +- 0.02 (8.2e-3) | 1.92 +- 0.05 | - |
+| bidirectional, linear (seed 1) | 2.08 +- 0.12 (1.6e-2) | 2.17 +- 0.06 (7.6e-3) | 1.66 +- 0.03 (2.6e-3) | 5.9e-14 |
+
+### Unidirectional transfer on the box
+
+Linear kernel, regime (a), `N = 16-96`, terminal 0, fit over `N >= 32`:
+junction current 1.93 +- 0.12 (3.4e-3 at `N = 96`), support L2 2.10 +- 0.13
+(9.6e-3), far field 2.00 (2.1e-5). The bidirectional ladder gives 1.93
+(3.3e-3), 2.09 (9.8e-3) and 2.00 (2.1e-5): the tissue-side junction does not
+depend on the direction of transfer. The graph terminal error is the
+standalone graph error (4.7e-7 at `N = 96`).
