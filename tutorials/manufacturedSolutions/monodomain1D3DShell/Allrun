@@ -21,6 +21,12 @@ Options (parameters are written to local/ and included by the dictionaries):
   -kernel uniform|linear|gaussian|cosine
                             PVJ pvjKernel (default linear)
   -radius x                 PVJ pvjRadius (default 0.2)
+  -graphY y                 graph on the line y (default 0: terminals on the endocardium);
+                            y > 0 puts the terminals inside the wall at r = sqrt(0.25 + y^2),
+                            where the support is a full ball (0.5590169943749474: r = 0.75)
+  -graphY2 y                a second graph chain on the line y with its own two terminals,
+                            joined to the first at x = 0 (default none); with
+                            |y - graphY| < radius the supports of neighbouring terminals overlap
   -dt x                     time step
   -endTime x                end time (default 0.1)
 
@@ -37,6 +43,8 @@ coupling=bidirectional
 rPvj=1
 kernel=linear
 radius=0.2
+graphY=0
+graphY2=
 dt=
 endTime=0.1
 
@@ -103,6 +111,14 @@ do
             needValue "$@"; radius="$2"; shift
             positiveNumber -radius "$radius"
             ;;
+        -graphY)
+            needValue "$@"; graphY="$2"; shift
+            positiveNumber -graphY "$graphY"
+            ;;
+        -graphY2)
+            needValue "$@"; graphY2="$2"; shift
+            positiveNumber -graphY2 "$graphY2"
+            ;;
         -dt)
             needValue "$@"; dt="$2"; shift
             positiveNumber -dt "$dt"
@@ -145,11 +161,17 @@ pvjRadius           $radius;
 EOF
 echo "reference continuum;" > local/couplingVerification
 
-# Graph across the cavity on the x axis: root at the centre, one branch to
-# each endocardial terminal (-0.5 0 0) and (0.5 0 0), n edges per branch
-awk -v N="$N" 'BEGIN {
+# Graph on the line (x, graphY, 0): root at x = 0, one branch to each terminal
+# (-0.5 graphY 0) and (0.5 graphY 0), n edges per branch. graphY 0: across the
+# cavity, terminals on the endocardium; graphY > 0: terminals inside the wall.
+# -graphY2 adds a second chain on y = graphY2, its root joined to the first
+# root by one edge along y (x = 0, where the graph field and its flux vanish,
+# so the joining node is a branch point of degree three)
+awk -v N="$N" -v y1="$graphY" -v y2="$graphY2" 'BEGIN {
     n = int((N + 1)/2)
     h = 0.5/n
+    nc = (y2 == "") ? 1 : 2
+    y[0] = y1; y[1] = y2
     print "FoamFile"
     print "{"
     print "    version     2.0;"
@@ -161,26 +183,40 @@ awk -v N="$N" 'BEGIN {
     print ""
     print "rootNode 0;"
     print ""
-    printf "pvjNodes (%d %d);\n\n", n, 2*n
+    printf "pvjNodes ("
+    for (c = 0; c < nc; c++) printf "%s%d %d", (c ? " " : ""), c*(2*n + 1) + n, c*(2*n + 1) + 2*n
+    print ");"
+    print ""
     print "pvjLocations"
     print "("
-    print "    (-0.5 0 0)"
-    print "    (0.5 0 0)"
+    for (c = 0; c < nc; c++)
+    {
+        printf "    (-0.5 %.17g 0)\n", y[c]
+        printf "    (0.5 %.17g 0)\n", y[c]
+    }
     print ");"
     print ""
     print "conductionEdges"
     print "("
-    printf "    (0 1 %.17g 1)\n", h
-    for (i = 1; i < n; i++) printf "    (%d %d %.17g 1)\n", i, i + 1, h
-    printf "    (0 %d %.17g 1)\n", n + 1, h
-    for (i = n + 1; i < 2*n; i++) printf "    (%d %d %.17g 1)\n", i, i + 1, h
+    for (c = 0; c < nc; c++)
+    {
+        o = c*(2*n + 1)
+        printf "    (%d %d %.17g 1)\n", o, o + 1, h
+        for (i = 1; i < n; i++) printf "    (%d %d %.17g 1)\n", o + i, o + i + 1, h
+        printf "    (%d %d %.17g 1)\n", o, o + n + 1, h
+        for (i = n + 1; i < 2*n; i++) printf "    (%d %d %.17g 1)\n", o + i, o + i + 1, h
+    }
+    if (nc == 2) printf "    (0 %d %.17g 1)\n", 2*n + 1, (y2 > y1 ? y2 - y1 : y1 - y2)
     print ");"
     print ""
     print "points"
     print "("
-    print "    (0 0 0)"
-    for (i = 1; i <= n; i++) printf "    (%.17g 0 0)\n", -i*h
-    for (i = 1; i <= n; i++) printf "    (%.17g 0 0)\n", i*h
+    for (c = 0; c < nc; c++)
+    {
+        printf "    (0 %.17g 0)\n", y[c]
+        for (i = 1; i <= n; i++) printf "    (%.17g %.17g 0)\n", -i*h, y[c]
+        for (i = 1; i <= n; i++) printf "    (%.17g %.17g 0)\n", i*h, y[c]
+    }
     print ");"
 }' > constant/purkinjeGraph
 

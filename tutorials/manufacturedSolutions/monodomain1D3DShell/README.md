@@ -32,6 +32,24 @@ The graph has its root at the centre and `ceil(N/2)` equal edges per branch
 `Allrun`. The support radius is 0.2 (`-radius`): it must exceed the local cell
 length, and `r1 + R <= r2` keeps the outer sphere out of the support.
 
+Two variants move the terminals off the endocardium:
+
+- `-graphY y` puts the graph on the line `(x, y, 0)`, with terminals at
+  `(-0.5, y, 0)` and `(0.5, y, 0)` inside the wall, `r = sqrt(0.25 + y^2)`.
+  When `r - R >= r1` and `r + R <= r2` the support is a full ball (the
+  verifier's `interior` support): no facet of either sphere enters it, so the
+  continuum normalisation and the mesh agree up to the cell clipping.
+  `y = 0.5590169943749474` gives `r = 0.75`, the centre of the wall.
+- `-graphY2 y2` adds a second chain on `(x, y2, 0)` with its own two
+  terminals, joined to the first root by one edge along `y` at `x = 0`. There
+  `V1D` and its slope along the chain vanish, so the joining edge carries no
+  current and the joining node is a branch point of degree three that the
+  manufactured field satisfies exactly. With `|y2 - y| < R` each terminal lies
+  in its neighbour's support and the supports overlap.
+
+`V1D` depends on `x` only, so both variants keep the graph field and its
+closure unchanged.
+
 Coupling is bidirectional by default. The tissue side of bidirectional
 transfer is always explicit, so the continuum forcing is the gathered
 operator `I_c w/W`.
@@ -52,6 +70,8 @@ operator `I_c w/W`.
 | `-rPvj x` | junction resistance | 1 |
 | `-kernel uniform\|linear\|gaussian\|cosine` | PVJ `pvjKernel` | linear |
 | `-radius x` | PVJ `pvjRadius` | 0.2 |
+| `-graphY y` | graph on the line `y`: terminals inside the wall | 0 (on the endocardium) |
+| `-graphY2 y` | second chain on the line `y`, joined at `x = 0` | none |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
 | `-endTime x` | end time | 0.1 |
 
