@@ -16,23 +16,55 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 // Myocardium on the cellZone myocardium of the heart+torso mesh; the torso
-// is the cellZone bath. Allrun writes the solver, the conductivities and the
-// reference into local/.
+// is the cellZone bath. Allrun writes the solver, the conductivity set and
+// the reference into local/.
 
 myocardiumSolver monodomainSolver;
 
-// Conductivities (S/m). The monodomain conductivity equals
-// Gi (Gi+Ge)^-1 Ge of its ECG domain; the bidomain Gi and Ge are those of
-// manufacturedSolutions/bidomain. Both pairs give Gi_xx/(Gi_xx+Ge_xx) =
-// 1/sqrt(2).
-_monodomainG     ( 0.111453302 0 0 0.121585420 0 0.030396355 );
-_monodomainGi    ( 0.380525375260 0 0 0.415118589951 0 0.103779647488 );
-_monodomainGe    ( 0.157618771260 0 0 0.171947749951 0 0.0429869374877 );
-_bidomainGi      ( 0.111453302 0 0 0.121585420 0 0.030396355 );
-_bidomainGe      ( 0.046165469 0 0 0.050362330 0 0.012590582 );
-
 #includeIfPresent "<case>/local/myocardium"
-#includeIfPresent "<case>/local/conductivity"
+#include "<case>/local/conductivity"
+
+// Heart conductivity sets (S/m), selected by _conductivity (Allrun
+// -conductivity). The monodomain conductivity equals Gi (Gi+Ge)^-1 Ge of its
+// ECG domain; every set gives Gi_xx/(Gi_xx+Ge_xx) = 1/sqrt(2).
+_conductivities
+{
+    // Diagonal, different along x, y, z; Ge proportional to Gi. The bidomain
+    // Gi and Ge are those of manufacturedSolutions/bidomain
+    anisotropic
+    {
+        _monodomainG     ( 0.111453302 0 0 0.121585420 0 0.030396355 );
+        _monodomainGi    ( 0.380525375260 0 0 0.415118589951 0 0.103779647488 );
+        _monodomainGe    ( 0.157618771260 0 0 0.171947749951 0 0.0429869374877 );
+        _bidomainGi      ( 0.111453302 0 0 0.121585420 0 0.030396355 );
+        _bidomainGe      ( 0.046165469 0 0 0.050362330 0 0.012590582 );
+    }
+
+    // The anisotropic xx values in every direction
+    isotropic
+    {
+        _monodomainG     ( 0.111453302 0 0 0.111453302 0 0.111453302 );
+        _monodomainGi    ( 0.380525375260 0 0 0.380525375260 0 0.380525375260 );
+        _monodomainGe    ( 0.157618771260 0 0 0.157618771260 0 0.157618771260 );
+        _bidomainGi      ( 0.111453302 0 0 0.111453302 0 0.111453302 );
+        _bidomainGe      ( 0.046165469 0 0 0.046165469 0 0.046165469 );
+    }
+
+    // Gi and the xx entries as anisotropic; Ge yy = Gi yy and
+    // Ge zz = 0.1 Gi zz, and G_m = Gi (Gi+Ge)^-1 Ge
+    unequal
+    {
+        _monodomainG     ( 0.111453302 0 0 0.207559294976 0 0.009434513408 );
+        _monodomainGi    ( 0.380525375260 0 0 0.415118589951 0 0.103779647488 );
+        _monodomainGe    ( 0.157618771260 0 0 0.415118589951 0 0.0103779647488 );
+        _bidomainGi      ( 0.111453302 0 0 0.121585420 0 0.030396355 );
+        _bidomainGe      ( 0.046165469 0 0 0.121585420 0 0.0030396355 );
+    }
+}
+
+// The selected set: _monodomainG, _monodomainGi, _monodomainGe, _bidomainGi
+// and _bidomainGe
+${_conductivities.${_conductivity}};
 
 // Body surface: eight electrodes 0.003 inside the outer faces of the torso
 // slabs, two on each end face (x = -1, x = 2) and one on each of four side

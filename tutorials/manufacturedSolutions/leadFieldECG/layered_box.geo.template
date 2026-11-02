@@ -1,19 +1,18 @@
 // Conformal tetrahedral layered box [-1,2] x [0,1] x [0,1]: torso layers
 // [-1,xLeft] and [xLeft,0], heart [0,1], torso layers [1,xRight] and
-// [xRight,2]; Delaunay tetrahedra of size lc. Set lc and seed with
-// gmsh -setnumber lc <value> -setnumber seed <value>.
+// [xRight,2]; Delaunay tetrahedra of size lc. Set lc, seed and the layer
+// interfaces xLeft and xRight with gmsh -setnumber <name> <value>. Allrun
+// sets xLeft and xRight for -problem layered and stops when the defaults
+// below differ from its own.
 
 SetFactory("OpenCASCADE");
 
 DefineConstant[
     lc = { 0.1, Name "lc" },
-    seed = { 1, Name "seed" }
+    seed = { 1, Name "seed" },
+    xLeft = { -0.5, Name "xLeft" },
+    xRight = { 1.5, Name "xRight" }
 ];
-
-// Layer interfaces, as in system/topoSetDict.layered and the verifier's
-// layerInterfaces
-xLeft = -0.5;
-xRight = 1.5;
 
 eps = 1e-7;
 

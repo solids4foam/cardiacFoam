@@ -12,7 +12,7 @@ FoamFile
 
 fieldName bodyAndOrgansConductivity;
 
-// Torso layers with a jump of 5 at x = -0.5 and x = 1.5; the myocardium
+// Torso layers with a jump of 5 at the layer interfaces; the myocardium
 // value is not used by the conductor (its cells take Gi + Ge)
 cellZones
 {

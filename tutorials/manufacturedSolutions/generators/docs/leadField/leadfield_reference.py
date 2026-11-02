@@ -2,7 +2,7 @@
 """Exact potentials of the lead-field ECG problems, in NumPy.
 
     python leadfield_reference.py --self-check
-    python leadfield_reference.py --check-run RUN [--check-run RUN ...]
+    python leadfield_reference.py --run-check RUN [--run-check RUN ...]
 
 The slab and layered potentials repeat manufacturedLeadFieldECGReference.H
 (and manufacturedFDABathPhiEAt of manufacturedFDABathBidomainReference.H with
@@ -10,7 +10,7 @@ alpha = 0 and se = 1) term by term.  The sphericalShell potential is the
 transmission solution of generators/shell_mms.py, evaluated with the formula
 of the zone that contains the point, as the verifier does.
 
---check-run reads a finished run of leadFieldECG or leadFieldECG/sphericalShell
+--run-check reads a finished run of leadFieldECG or leadFieldECG/sphericalShell
 (its log.cardiacFoam, postProcessing/manufacturedLeadFieldECG_ECG.dat and
 constant/polyMesh) and compares the exactPoint and exactCentroid columns that
 the verifier wrote with this module.
@@ -446,14 +446,14 @@ def check_run(run, tol=1e-12):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--self-check", action="store_true")
-    ap.add_argument("--check-run", action="append", default=[], metavar="RUN")
+    ap.add_argument("--run-check", action="append", default=[], metavar="RUN")
     args = ap.parse_args(argv)
-    if not args.self_check and not args.check_run:
-        ap.error("give --self-check or --check-run RUN")
+    if not args.self_check and not args.run_check:
+        ap.error("give --self-check or --run-check RUN")
     if args.self_check:
         run_self_checks()
         print("self-checks passed")
-    for run in args.check_run:
+    for run in args.run_check:
         check_run(run)
     return 0
 

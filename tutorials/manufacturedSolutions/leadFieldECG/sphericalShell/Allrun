@@ -43,6 +43,18 @@ positiveInteger()
     esac
 }
 
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
 while [ "$#" -gt 0 ]
 do
     case "$1" in
@@ -51,10 +63,7 @@ do
             ;;
         -mesh)
             needValue "$@"; mesh="$2"; shift
-            case "$mesh" in
-                hex|tet) ;;
-                *) echo "${0##*/}: unknown -mesh $mesh" 1>&2; usage ;;
-            esac
+            oneOf -mesh "$mesh" hex tet
             ;;
         -N)
             needValue "$@"; N="$2"; shift

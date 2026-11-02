@@ -1,0 +1,17 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02,
+    "problem": "layered"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "numberCells": [10, 20, 40, 10, 20, 40],
+      "alpha": [0.01, 0.01, 0.01, 0, 0, 0],
+      "caseId": ["layered_hex_N10", "layered_hex_N20", "layered_hex_N40", "layeredAlpha0_hex_N10", "layeredAlpha0_hex_N20", "layeredAlpha0_hex_N40"]
+    }
+  }
+}

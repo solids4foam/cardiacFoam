@@ -1,0 +1,16 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02,
+    "problem": "slab"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "numberCells": [10, 20, 40],
+      "caseId": ["slab_hex_N10", "slab_hex_N20", "slab_hex_N40"]
+    }
+  }
+}

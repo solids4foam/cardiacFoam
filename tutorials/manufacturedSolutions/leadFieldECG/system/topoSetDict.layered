@@ -10,8 +10,10 @@ FoamFile
     object      topoSetDict;
 }
 
-// Layered torso: torsoInner next to the heart (-0.5 < x < 0, 1 < x < 1.5),
-// torsoOuter beyond it (x < -0.5, x > 1.5)
+// Layered torso: torsoInner next to the heart (xLeft < x < 0,
+// 1 < x < xRight), torsoOuter beyond it (x < xLeft, x > xRight); the layer
+// interfaces of Allrun -problem layered (local/layers)
+#include "<case>/local/layers"
 
 actions
 (
@@ -32,7 +34,7 @@ actions
         source  boxToCell;
         sourceInfo
         {
-            box (-0.5 -1 -1) (0 2 2);
+            box ($xLeft -1 -1) (0 2 2);
         }
     }
     {
@@ -42,7 +44,7 @@ actions
         source  boxToCell;
         sourceInfo
         {
-            box (1 -1 -1) (1.5 2 2);
+            box (1 -1 -1) ($xRight 2 2);
         }
     }
     {
@@ -52,7 +54,7 @@ actions
         source  boxToCell;
         sourceInfo
         {
-            box (-1.1 -1 -1) (-0.5 2 2);
+            box (-1.1 -1 -1) ($xLeft 2 2);
         }
     }
     {
@@ -62,7 +64,7 @@ actions
         source  boxToCell;
         sourceInfo
         {
-            box (1.5 -1 -1) (2.1 2 2);
+            box ($xRight -1 -1) (2.1 2 2);
         }
     }
     {

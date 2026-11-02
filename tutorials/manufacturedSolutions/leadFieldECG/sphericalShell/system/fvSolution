@@ -33,6 +33,7 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+        // PCG iteration cap; the study README gives the counts reached
         maxIter         100000;
     }
 
@@ -62,6 +63,7 @@ solvers
 leadFieldFixedPoint
 {
     tolerance       1e-10;
+    // Fatal when reached; the study README gives the passes needed
     maxPasses       1000;
 }
 

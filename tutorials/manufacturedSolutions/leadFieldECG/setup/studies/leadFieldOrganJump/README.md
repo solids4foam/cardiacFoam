@@ -53,7 +53,9 @@ The tetrahedral `N = 40` runs use two ranks (the `parallel` argument of
 one per electrode. The fixed points stop at the `leadFieldFixedPoint`
 tolerance of `system/fvSolution`. On hexahedra the lead fields need 5 or 6
 passes and each direct solve 2. On tetrahedra the lead fields need 38 to 64
-passes and each direct solve 39 to 77.
+passes and each direct solve 39 to 77, within the `maxPasses 100` of
+`system/fvSolution`. The largest `phiE` iteration count is 888
+(`layered_tet_N40`), below the `maxIter 100000` of `system/fvSolution`.
 
 ## Execution
 
@@ -87,6 +89,8 @@ run layered_tet_N40 parallel -problem layered -mesh tet -N 40
 run layeredAlpha0_tet_N40 parallel -problem layered -alpha 0 -mesh tet -N 40
 python3 ../summarize.py results
 ```
+
+The omnidriver specs for this study are `sweep_hex_layered.json`, `sweep_hex_slab.json`, `sweep_tet_layered.json` and `sweep_tet_slab.json`.
 
 ## Measured behaviour
 

@@ -31,6 +31,7 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+        // PCG iteration cap, as the bath column
         maxIter         5000;
     }
 
@@ -64,6 +65,7 @@ cache
 leadFieldFixedPoint
 {
     tolerance       1e-10;
+    // Pass limit of the lead-field fixed point; fatal when reached
     maxPasses       100;
 }
 

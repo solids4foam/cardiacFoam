@@ -102,11 +102,11 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     const dictionary& cfg = verificationDict();
 
     // k and alpha belong to the nested verificationModel dictionary.
-    k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
-    alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
-    // Preferred key: selects which FDA bidomain-with-bath boundary variant is
-    // being verified, and with it the error metric.
-    variant_ = bathVariantNames.getOrDefault("fdaBathVariant", cfg, bathVariant::electrodePair);
+    k_ = cfg.get<scalar>("k");
+    alpha_ = cfg.get<scalar>("alpha");
+    // The FDA bidomain-with-bath boundary variant being verified, and with
+    // it the error metric
+    variant_ = bathVariantNames.get("fdaBathVariant", cfg);
 }
 
 

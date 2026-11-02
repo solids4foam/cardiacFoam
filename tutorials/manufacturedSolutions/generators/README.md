@@ -42,7 +42,7 @@ no solver output.
 | `latex/` | emitted LaTeX fragments |
 | `docs/_common/` | document preamble, nomenclature, bibliography and figure style (`figstyle.py`) |
 | `docs/monodomain/`, `docs/eikonal/`, `docs/bidomain/`, `docs/leadField/` | Quarto entry file `<equation>_mms.qmd` (front matter), its includable text `_<equation>_body.qmd`, rendered PDF, figure script `figures.py` and `figures/` |
-| `docs/bidomain/bidomain_reference.py`, `docs/leadField/leadfield_reference.py` | checks that the tutorial dictionaries match the generators, and comparison of the exact fields with finished runs (`--run-check`, `--check-run`); the lead-field module also transcribes the hand-written C++ slab functions |
+| `docs/bidomain/bidomain_reference.py`, `docs/leadField/leadfield_reference.py` | checks that the tutorial dictionaries match the generators, and comparison of the exact fields with finished runs (`--run-check`); the lead-field module also transcribes the hand-written C++ slab functions |
 | `test_*.py` | generator tests; `test_release.py` holds the release checks |
 | `requirements.txt` | Python dependencies |
 | `parity/` | cardiacFoam-only: an OpenFOAM application comparing the C++ headers with the NumPy references |

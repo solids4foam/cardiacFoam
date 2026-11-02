@@ -42,7 +42,9 @@ This study adds:
 | `parallel_hex`, `parallel_tet` | `parallel` (2 ranks, `numberOfSubdomains 2` in `system/decomposeParDict`) | 20 |
 | `fixedPointTight_tet` | `-mesh tet -fixedPointTolerance 1e-12` | 20 |
 
-The `parallel` rows run on 2 ranks; every other run is serial.
+The `parallel` rows run on 2 ranks; every other run is serial. The largest
+`phiE` iteration count is 667 (`bidomain_tet_N28`), below the
+`maxIter 100000` of `system/fvSolution`.
 
 All runs use `-endTime 0.02` (two samples, `dt = 0.01`) and build 13 lead
 fields, one per electrode. The electrodes are those of the case, in three
@@ -81,6 +83,8 @@ run parallel_tet_N20 parallel -mesh tet -N 20
 run fixedPointTight_tet_N20 -mesh tet -N 20 -fixedPointTolerance 1e-12
 python3 ../summarize.py ../leadFieldConvergence/results results
 ```
+
+The omnidriver specs for this study are `sweep_hex_reciprocity.json` and `sweep_tet_reciprocity.json`.
 
 ## Measured behaviour
 

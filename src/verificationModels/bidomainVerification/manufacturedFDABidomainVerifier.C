@@ -58,9 +58,9 @@ manufacturedFDABidomainVerifier::manufacturedFDABidomainVerifier
         coeffDict,
         ionicSelector::selectDimension(coeffDict, {"1D", "2D", "3D"})
     ).k;
-    // phiEReferenceValue and phiERefPoint are physics parameters that belong
-    // in the bidomainSolverCoeffs dict (the parent dict), so we read them from coeffDict.
-    phiEReferenceValue_ = coeffDict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0);
+    // phiEReferenceValue and phiERefPoint are the heart potential pin of the
+    // bidomainSolverCoeffs dict (the parent dict), required as by the solver
+    phiEReferenceValue_ = coeffDict.get<scalar>("phiEReferenceValue");
     phiEReferencePoint_ = coeffDict.get<point>("phiERefPoint");
 }
 

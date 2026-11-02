@@ -105,11 +105,11 @@ depends on the tutorial cases and on finished runs:
 
 ```bash
 python docs/leadField/leadfield_reference.py --self-check
-python docs/leadField/leadfield_reference.py --check-run RUN
+python docs/leadField/leadfield_reference.py --run-check RUN
 ```
 
 `--self-check` asserts that the electrodes and reference points of the cases
-lie where @sec-slab and @sec-shell place them. `--check-run RUN` reads a
+lie where @sec-slab and @sec-shell place them. `--run-check RUN` reads a
 finished run of a lead-field tutorial (its `log.cardiacFoam`,
 `postProcessing/manufacturedLeadFieldECG_ECG.dat` and `constant/polyMesh`)
 and compares the exact columns written by the verifier with the exact
@@ -345,7 +345,7 @@ each of $x_L$, $0$, $1$, $x_R$; and that the electrodes of the case are
 farther inside, all in the torso and none on a hexahedral face at
 $N=10,20,40,80$.
 
-`--check-run RUN` reads the verifier line of `log.cardiacFoam` (reference,
+`--run-check RUN` reads the verifier line of `log.cardiacFoam` (reference,
 $\kappa$, $\alpha$ and the layer conductivities, which must equal the values of
 @sec-slab to the printed precision) and, at every sample, asserts to
 $10^{-12}$ that:
@@ -389,8 +389,8 @@ Meshes of the tutorial `leadFieldECG` at its default $N=10$, coloured by cellZon
 python slab_leadfield_mms.py --emit
 python slab_leadfield_mms.py --self-check
 python docs/leadField/leadfield_reference.py --self-check
-python docs/leadField/leadfield_reference.py --check-run SLAB_RUN \
-    --check-run LAYERED_RUN
+python docs/leadField/leadfield_reference.py --run-check SLAB_RUN \
+    --run-check LAYERED_RUN
 python docs/leadField/figures.py --mesh-case slab_hex=SLAB_HEX \
     --mesh-case slab_tet=SLAB_TET --mesh-case layered_hex=LAYERED_HEX \
     --mesh-case layered_tet=LAYERED_TET
@@ -666,7 +666,7 @@ electrode lies in the heart. `leadfield_reference.py --self-check` asserts
 that the twelve electrodes and the reference point lie in the zones of the
 table above and that the body-surface electrodes lie at
 $\lvert\mathbf x\rvert=1.47$, and `figures.py` that $\boldsymbol\sigma_i$ and
-$\boldsymbol\sigma_e$ have the same eigenvectors. `--check-run` compares the run with
+$\boldsymbol\sigma_e$ have the same eigenvectors. `--run-check` compares the run with
 `shell_mms.py` as in @sec-slab-checks. On the tetrahedra of the figures the
 gauge and the centroid values agree to $3\times10^{-16}$. On the cubed sphere
 the cells are not affine and their outer faces are curved: the pinned-cell
@@ -696,7 +696,7 @@ python shell_mms.py --self-check
 H=../../../src/verificationModels/bathBidomainVerification
 python shell_mms.py --check $H/manufacturedShellTransmissionBathBidomainReference.H
 python -m pytest test_shell_mms.py
-python docs/leadField/leadfield_reference.py --check-run SHELL_RUN
+python docs/leadField/leadfield_reference.py --run-check SHELL_RUN
 python docs/leadField/figures.py --mesh-case shell_hex=SHELL_HEX \
     --mesh-case shell_tet=SHELL_TET
 ```

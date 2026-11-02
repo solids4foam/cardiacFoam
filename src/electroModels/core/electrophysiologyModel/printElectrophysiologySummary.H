@@ -138,11 +138,16 @@ Author
             const dictionary& ecgDicts = this->subDict("ecgDomains");
             forAllConstIters(ecgDicts, iter)
             {
-                if (iter().isDict() && iter().keyword() != "electrodePositions")
+                if
+                (
+                    iter().isDict()
+                 && iter().keyword() != "electrodePositions"
+                 && !iter().keyword().starts_with('_')
+                )
                 {
                     const word ecgName = iter().keyword();
                     const dictionary& ecgDict = iter().dict();
-                    const word ecgSolver = ecgDict.lookupOrDefault<word>("ecgSolver", "none");
+                    const word ecgSolver(ecgDict.get<word>("ecgSolver"));
 
                     string padEcg("  " + ecgName);
                     while(padEcg.size() < 22) padEcg += " ";

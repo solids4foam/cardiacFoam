@@ -108,6 +108,8 @@ def test_tutorial_matches():
     layered = slab + ".layered"
     assert sp.Rational(_case_value(layered, r"torsoInner\s+(\S+);")) == slm.SIGMA_INNER
     assert sp.Rational(_case_value(layered, r"torsoOuter\s+(\S+);")) == slm.SIGMA_OUTER
-    allrun = open(os.path.join(CASE, "Allrun")).read()
-    assert "layerInterfaces ( -0.5 1.5 );" in allrun
+    allrun_path = os.path.join(CASE, "Allrun")
+    allrun = open(allrun_path).read()
+    assert sp.Rational(_case_value(allrun_path, r"\nlayerLeft=(\S+)")) == slm.X_LEFT
+    assert sp.Rational(_case_value(allrun_path, r"\nlayerRight=(\S+)")) == slm.X_RIGHT
     assert "alpha=${alpha:-0.01}" in allrun

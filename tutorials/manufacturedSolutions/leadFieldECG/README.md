@@ -90,7 +90,10 @@ Conductivities, as `diag(xx, yy, zz)` in S/m:
 | `bidomain` | `Gi = diag(0.111453302, 0.121585420, 0.030396355)`, `Ge = diag(0.046165469, 0.050362330, 0.012590582)` | the solver's | the solver's |
 
 In both rows `k = 1/sqrt 2`, and the monodomain row has
-`G_m = Gi (Gi+Ge)^-1 Ge`. `-conductivity isotropic` uses the `xx` value in
+`G_m = Gi (Gi+Ge)^-1 Ge`. These are the set `anisotropic` of the
+`_conductivities` block of `constant/electroProperties`, which also holds the
+sets `isotropic` and `unequal`; `-conductivity` writes the selector
+`_conductivity`. `-conductivity isotropic` uses the `xx` value in
 every direction. `-conductivity unequal` keeps Gi and every `xx` value and
 sets `Ge_yy = Gi_yy`, `Ge_zz = 0.1 Gi_zz` (`G_m` follows), so the
 anisotropy ratios of Gi and Ge differ.
@@ -214,16 +217,22 @@ The meshes are those of [bathBidomain](../bathBidomain/README.md).
 `-problem layered` uses the `.layered` dictionaries and
 `layered_box.geo.template`:
 
-- `-mesh hex` (`system/blockMeshDict.layered`): five blocks, `N/2` cells
-  along `x` in each torso layer and `N` in the heart, so every level has
-  faces at `x = -0.5` and `x = 1.5` (`N` even);
+- `-mesh hex` (`system/blockMeshDict.layered`): five blocks, `N` cells per
+  unit length along `x`, so every level has faces at `x = -0.5` and
+  `x = 1.5` (`N` even);
 - `-mesh tet`: the same gmsh tetrahedra with the planes `x = xLeft` and
-  `x = xRight` (`DefineConstant`, `-0.5` and `1.5`) as further shared
+  `x = xRight` (`DefineConstant`, set by `Allrun`) as further shared
   internal faces;
 - `topoSet` (`system/topoSetDict.layered`) builds `myocardium`, `torsoInner`
   and `torsoOuter`, and `setTorsoOrganConductivityField`
   (`system/setTorsoOrganConductivityFieldDict.layered`) sets their
   conductivities.
+
+`Allrun` defines the layer interfaces once (`layerLeft`, `layerRight`) and
+writes them to `local/layers` (with the cells across each torso layer), which
+`blockMeshDict.layered` and `topoSetDict.layered` include, to the verifier's
+`layerInterfaces` (`local/reference`) and to gmsh (`-setnumber`); it stops
+when the gmsh defaults of `layered_box.geo.template` differ from them.
 
 ## Usage
 

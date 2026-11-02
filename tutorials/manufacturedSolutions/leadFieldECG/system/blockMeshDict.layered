@@ -13,27 +13,29 @@ FoamFile
     object      blockMeshDict;
 }
 
-// Five blocks along x: torso layers [-1, -0.5] and [-0.5, 0], heart [0, 1],
-// torso layers [1, 1.5] and [1.5, 2]; N cells per unit length (N even)
+// Five blocks along x: torso layers [-1, xLeft] and [xLeft, 0], heart
+// [0, 1], torso layers [1, xRight] and [xRight, 2]; N cells per unit length.
+// The layer interfaces and the cells across each torso layer are those of
+// Allrun -problem layered (local/layers)
 N 10;
-NHalf 5;
 #includeIfPresent "<case>/local/mesh"
+#include "<case>/local/layers"
 
 vertices
 (
-    (-1 0 0) (-0.5 0 0) (0 0 0) (1 0 0) (1.5 0 0) (2 0 0)
-    (-1 1 0) (-0.5 1 0) (0 1 0) (1 1 0) (1.5 1 0) (2 1 0)
-    (-1 0 1) (-0.5 0 1) (0 0 1) (1 0 1) (1.5 0 1) (2 0 1)
-    (-1 1 1) (-0.5 1 1) (0 1 1) (1 1 1) (1.5 1 1) (2 1 1)
+    (-1 0 0) ($xLeft 0 0) (0 0 0) (1 0 0) ($xRight 0 0) (2 0 0)
+    (-1 1 0) ($xLeft 1 0) (0 1 0) (1 1 0) ($xRight 1 0) (2 1 0)
+    (-1 0 1) ($xLeft 0 1) (0 0 1) (1 0 1) ($xRight 0 1) (2 0 1)
+    (-1 1 1) ($xLeft 1 1) (0 1 1) (1 1 1) ($xRight 1 1) (2 1 1)
 );
 
 blocks
 (
-    hex (0 1 7 6 12 13 19 18) ($NHalf $N $N) simpleGrading (1 1 1)
-    hex (1 2 8 7 13 14 20 19) ($NHalf $N $N) simpleGrading (1 1 1)
+    hex (0 1 7 6 12 13 19 18) ($nOuterLeft $N $N) simpleGrading (1 1 1)
+    hex (1 2 8 7 13 14 20 19) ($nInnerLeft $N $N) simpleGrading (1 1 1)
     hex (2 3 9 8 14 15 21 20) ($N $N $N) simpleGrading (1 1 1)
-    hex (3 4 10 9 15 16 22 21) ($NHalf $N $N) simpleGrading (1 1 1)
-    hex (4 5 11 10 16 17 23 22) ($NHalf $N $N) simpleGrading (1 1 1)
+    hex (3 4 10 9 15 16 22 21) ($nInnerRight $N $N) simpleGrading (1 1 1)
+    hex (4 5 11 10 16 17 23 22) ($nOuterRight $N $N) simpleGrading (1 1 1)
 );
 
 boundary

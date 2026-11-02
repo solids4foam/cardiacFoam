@@ -110,7 +110,7 @@ manufacturedShellBidomainVerifier::manufacturedShellBidomainVerifier
     nPerDirection_(dict.subDict("verificationModel").get<label>("N")),
     phiEPtr_(nullptr),
     errorsReported_(false),
-    phiEReferenceValue_(dict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)),
+    phiEReferenceValue_(dict.get<scalar>("phiEReferenceValue")),
     phiEReferencePoint_(dict.get<point>("phiERefPoint")),
     beta_(0),
     betaInitialised_(false)

@@ -23,6 +23,7 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+        // PCG iteration cap; the study READMEs give the counts reached
         maxIter         5000;
     }
 
@@ -32,6 +33,7 @@ solvers
         preconditioner  DIC;
         tolerance       1e-15;
         relTol          0.0;
+        // PCG iteration cap; the study READMEs give the counts reached
         maxIter         5000;
 
         #includeIfPresent "<case>/local/phiTolerance"

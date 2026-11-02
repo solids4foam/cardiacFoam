@@ -12,6 +12,7 @@ import fda_monodomain_mms as fmm
 DIMS = (1, 2, 3)
 x, y, z, t = fbm.x, fbm.y, fbm.z, fbm.t
 TUTORIAL = os.path.join(fbm.HERE, "..", "bidomain", "constant", "electroProperties")
+DOCS_REFERENCE = os.path.join(fbm.HERE, "docs", "bidomain", "bidomain_reference.py")
 
 
 def test_constants():
@@ -112,3 +113,13 @@ def test_tutorial_dictionary_matches():
     assert as_diag(gi) == [fbm.GI_DIAG[0], 0, 0, fbm.GI_DIAG[1], 0, fbm.GI_DIAG[2]]
     assert as_diag(ge) == [fbm.GE_DIAG[0], 0, 0, fbm.GE_DIAG[1], 0, fbm.GE_DIAG[2]]
     assert tuple(sp.Rational(s) for s in ref.split()) == fbm.PHIE_REF_POINT
+
+
+@pytest.mark.skipif(not os.path.exists(TUTORIAL), reason="tutorial case absent (cardiacFoam-only)")
+def test_docs_reference_self_check():
+    """docs/bidomain/bidomain_reference.py --self-check: the conductivities and
+    phiERefPoint of bidomain and bidomain/sphericalShell equal the generators'."""
+    spec = importlib.util.spec_from_file_location("bidomain_reference", DOCS_REFERENCE)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.main(["--self-check"]) == 0

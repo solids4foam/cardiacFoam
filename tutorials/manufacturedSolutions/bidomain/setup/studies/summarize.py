@@ -13,7 +13,8 @@
 #     levels (of h = 1/n for hexahedra, the verifier's h on tetrahedra, or
 #     dt); the L2 rows of the boundary band and of the gradient
 #     reconstruction of the exact fields; and, from log.cardiacFoam, the
-#     largest iteration count and final residual of each linear solve.
+#     largest iteration count and final residual of each linear solve
+#     (linear_solves.py).
 #
 # Usage
 #     python3 summarize.py cartesianConvergence/results
@@ -26,12 +27,10 @@ import math
 import re
 from pathlib import Path
 
+from linear_solves import read_solves
+
 FIELDS = ("Vm", "phiE_gauge", "phiI_gauge", "u1", "u2")
 DIAGNOSTIC_RE = re.compile(r"_boundary$|^gradRecon")
-SOLVE_RE = re.compile(
-    r"Solving for (\w+), Initial residual = \S+, "
-    r"Final residual = ([0-9.eE+-]+), No Iterations (\d+)"
-)
 N_RE = re.compile(r"(?:^|_)N(\d+)(?=_|$)")
 DT_RE = re.compile(r"(?:^|_)dt([0-9.eE+-]+?)(?=_|$)")
 
@@ -47,16 +46,6 @@ def read_rows(path: Path) -> dict[str, list[float]]:
         except ValueError:
             continue
     return rows
-
-
-def read_solves(run: Path) -> dict[str, tuple[int, float]]:
-    """Largest iteration count and final residual of each solved field."""
-    solves: dict[str, tuple[int, float]] = {}
-    for log in sorted(run.glob("log.cardiacFoam*")):
-        for field, residual, iterations in SOLVE_RE.findall(log.read_text()):
-            its, res = solves.get(field, (0, 0.0))
-            solves[field] = (max(its, int(iterations)), max(res, float(residual)))
-    return solves
 
 
 def read_spacing(path: Path) -> float | None:

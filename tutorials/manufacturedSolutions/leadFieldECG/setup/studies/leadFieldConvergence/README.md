@@ -50,7 +50,9 @@ Each run builds 13 lead fields, one per electrode. The lead-field and direct
 fixed points stop at the `leadFieldFixedPoint` tolerance of
 `system/fvSolution`. On hexahedra the lead fields need 5 or 6 passes and
 each direct solve 2. On tetrahedra the lead fields need 40 to 77 passes and
-each direct solve 39 to 84.
+each direct solve 39 to 84, within the `maxPasses 100` of
+`system/fvSolution`. The largest `phiE` iteration count is 625
+(`unequal_tet_N28`), below the `maxIter 100000` of `system/fvSolution`.
 
 ## Execution
 
@@ -79,6 +81,8 @@ do
 done
 python3 ../summarize.py results
 ```
+
+The omnidriver specs for this study are `sweep_hex_convergence.json` and `sweep_tet_convergence.json`.
 
 ## Measured behaviour
 

@@ -15,7 +15,8 @@
 #     relative difference between a serial and the parallel run over all rows,
 #     the change under a loosened phiE tolerance, the spread over seeds, and,
 #     from log.cardiacFoam, the largest iteration count and final residual of
-#     each linear solve per group of runs.
+#     each linear solve per group of runs (linear_solves.py of the bidomain
+#     studies).
 #
 # Usage
 #     python3 summarize.py hexConvergence/results
@@ -27,7 +28,12 @@ import argparse
 import math
 import re
 import statistics
+import sys
 from pathlib import Path
+
+# linear_solves.py of the bidomain studies (bidomain/setup/studies)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]/"setup"/"studies"))
+from linear_solves import read_solves  # noqa: E402
 
 COLUMNS = (
     ("Vm", "L2"),
@@ -42,10 +48,6 @@ NORMS = {"L1": 0, "L2": 1, "Linf": 2}
 RUN_RE = re.compile(
     r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)"
     r"(?:_(T2|dthalf|serial|tol[0-9.eE+-]+))?$"
-)
-SOLVE_RE = re.compile(
-    r"Solving for (\w+), Initial residual = \S+, "
-    r"Final residual = ([0-9.eE+-]+), No Iterations (\d+)"
 )
 
 
@@ -63,21 +65,10 @@ def read_summary(path: Path) -> tuple[float, dict[str, list[float]]]:
     return h, rows
 
 
-def read_solves(run: Path) -> dict[str, tuple[int, float]]:
-    """Largest iteration count and final residual of each solved field."""
-    solves: dict[str, tuple[int, float]] = {}
-    for log in sorted(run.glob("log.cardiacFoam*")):
-        for field, residual, iterations in SOLVE_RE.findall(log.read_text()):
-            its, res = solves.get(field, (0, 0.0))
-            solves[field] = (max(its, int(iterations)), max(res, float(residual)))
-    return solves
-
-
-SOLVES: dict[tuple, dict[str, tuple[int, float]]] = {}
-
-
-def load(results: Path) -> dict[tuple, list]:
+def load(results: Path) -> tuple[dict[tuple, list], dict[tuple, dict]]:
+    """Runs and the largest linear-solve counts, both per group of runs."""
     runs: dict[tuple, list] = {}
+    solves: dict[tuple, dict[str, tuple[int, float]]] = {}
     for run in sorted(results.iterdir()):
         match = RUN_RE.match(run.name)
         summaries = sorted(run.glob("postProcessing/3D_*_cells.dat"))
@@ -85,14 +76,14 @@ def load(results: Path) -> dict[tuple, list]:
             continue
         gradient, mesh, n, seed, window = match.groups()
         key = (gradient, mesh, window or "")
-        group = SOLVES.setdefault(key, {})
+        group = solves.setdefault(key, {})
         for field, (its, res) in read_solves(run).items():
             its0, res0 = group.get(field, (0, 0.0))
             group[field] = (max(its0, its), max(res0, res))
         runs.setdefault(key, []).append(
             (int(n), int(seed), *read_summary(summaries[0]))
         )
-    return runs
+    return runs, solves
 
 
 def value(rows: dict, column: tuple[str, str]) -> float:
@@ -145,7 +136,7 @@ def table(runs: list) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("results", type=Path, help="folder of run copies")
-    runs = load(parser.parse_args().results)
+    runs, solves = load(parser.parse_args().results)
     if not runs:
         raise SystemExit("no run copies with a verifier summary found")
 
@@ -225,8 +216,8 @@ def main() -> None:
 
     print("\n| runs | field | max iterations | max final residual |")
     print("|---|---|---|---|")
-    for (gradient, mesh, window), solves in sorted(SOLVES.items()):
-        for field, (its, res) in sorted(solves.items()):
+    for (gradient, mesh, window), group in sorted(solves.items()):
+        for field, (its, res) in sorted(group.items()):
             label = f"{gradient} {mesh} {window or 'T = 0.2'}"
             print(f"| {label} | {field} | {its} | {res:.2e} |")
 

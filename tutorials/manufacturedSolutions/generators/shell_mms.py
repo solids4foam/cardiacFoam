@@ -16,9 +16,10 @@ of the oblique-slab header.
 lead-field document: the bath conductivity, f-hat, h-hat, the interface
 corrections g_j, m_j and their blends, the common mode, the zone formulas of
 phi and phi_i, V_m, the sources and the parameters.  The transmural
-coordinate, omega, the fibre frame, the wall normals and the tensors are the
-shared fragments of shell_monodomain_mms.py and shell_bidomain_mms.py;
-check_shared_construction asserts that this solution uses the same ones.
+coordinate, omega, the fibre frame, the wall normals, the tensors and h-hat
+are imported from shell_monodomain_mms.py and shell_bidomain_mms.py, whose
+fragments the document shares; check_shared_construction asserts that Gi is
+the monodomain conductivity and f-hat the bidomain e-hat.
 
     python shell_mms.py --emit
     python shell_mms.py --self-check
@@ -40,6 +41,11 @@ import sympy as sp
 import mms_codegen as codegen
 from mms_common.latex_emit import (emit_cases_fragment, emit_latex_fragment,
                                    emit_parameter_fragment, format_value)
+import shell_bidomain_mms as sbm
+import shell_monodomain_mms as smm
+from shell_bidomain_mms import _components, _full, _ionic_G, _tensor
+from shell_monodomain_mms import (_blend, _div, _dot, _fibonacci_sphere, _grad, _hhat,
+                                  _radial, _wall_correction, _walls)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HEADER_NAME = "manufacturedShellTransmissionBathBidomainReference.H"
@@ -120,56 +126,10 @@ def param_values(params):
 # Symbolic construction
 # ---------------------------------------------------------------------------
 
-def _grad(u):
-    return sp.Matrix([sp.diff(u, v) for v in (x, y, z)])
-
-
-def _div(J):
-    return sum(sp.diff(J[i], v) for i, v in enumerate((x, y, z)))
-
-
-def _dot(a, b):
-    return (a.T*b)[0]
-
-
-def _frame():
-    """Fixed orthonormal frame (e_a, e_b, e_c): columns of Rz(gamma1) Rx(gamma2)."""
-    c1, s1 = sp.cos(P["gamma1"]), sp.sin(P["gamma1"])
-    c2, s2 = sp.cos(P["gamma2"]), sp.sin(P["gamma2"])
-    Rz = sp.Matrix([[c1, -s1, 0], [s1, c1, 0], [0, 0, 1]])
-    Rx = sp.Matrix([[1, 0, 0], [0, c2, -s2], [0, s2, c2]])
-    Q = Rz*Rx
-    return Q[:, 0], Q[:, 1], Q[:, 2]
-
-
-def _tensor(l, tr, nn, theta):
-    """l f f + tr s s + nn e_c e_c with f, s rotated by theta in the (e_a, e_b) plane."""
-    ea, eb, ec = _frame()
-    f = sp.cos(theta)*ea + sp.sin(theta)*eb
-    s = -sp.sin(theta)*ea + sp.cos(theta)*eb
-    return l*f*f.T + tr*s*s.T + nn*ec*ec.T
-
-
-def _components(T):
-    return [T[0, 0], T[0, 1], T[0, 2], T[1, 1], T[1, 2], T[2, 2]]
-
-
 def _tensors(theta):
     i = (P["gil"], P["git"], P["gin"])
     e = (P["gel"], P["get"], P["gen"])
     return _tensor(*i, theta), _tensor(*e, theta)
-
-
-def _ionic_G():
-    k = P["k"]
-    return 1 + sp.Rational(1, 4)*sp.sin(k*x + sp.Rational(1, 5))*sp.cos(k*y - sp.Rational(1, 3))*sp.cos(k*z)
-
-
-def _radial(rho, r1, r2):
-    """lambda (0 on the inner, 1 on the outer sphere) and omega (zero on both) of rho = |x|^2."""
-    lam = (rho - r1**2)/(r2**2 - r1**2)
-    om = (rho - r1**2)*(rho - r2**2)/((r2**2 - r1**2)*(r1 + r2))
-    return lam, om
 
 
 def _sigma_hat():
@@ -186,13 +146,6 @@ def _fhat():
             + a[3]*sp.cos(k*y + sp.Rational(3, 10))*sp.exp(sp.Rational(2, 5)*z))
 
 
-def _hhat():
-    b = [P["hA%d" % i] for i in range(3)]
-    k = P["k"]
-    return (b[0]*z + b[1]*sp.cos(k*y)*(1 - sp.Rational(3, 10)*x**2)
-            + b[2]*sp.sin(k*z)*x)
-
-
 def _f2():
     k = P["k"]
     return sp.Rational(1, 5)*sp.cos(k*x) + sp.Rational(1, 10)*y + sp.Rational(1, 10)*z**2
@@ -202,15 +155,6 @@ def _flux_correction(n_jump_grad_f, n_Ge_n, d):
     """g_j = n_j.(sigma_B,j I - Ge) grad f/((n_j.Ge n_j) d_j): the jump of the
     extracellular flux that omega g_j removes on sphere j."""
     return n_jump_grad_f/(n_Ge_n*d)
-
-
-def _seal_correction(n_Gi_grad_h, n_Gi_n, d):
-    """m_j = -(n_j.Gi grad h)/((n_j.Gi n_j) d_j): seals phi_i on sphere j."""
-    return -n_Gi_grad_h/(n_Gi_n*d)
-
-
-def _blend(lam, a1, a2):
-    return (1 - lam)*a1 + lam*a2
 
 
 def _closure(n_Ge_grad_f2, n_Gi_grad_f2, n_Ge_n, D, n_grad_f2, sigma):
@@ -268,16 +212,15 @@ def expressions(solution):
     f2 = _f2()
 
     # unit normals on their own sphere, pointing from the heart into the bath zone
-    n = {1: -XYZ/r1, 2: XYZ/r2}
+    n, d = _walls(XYZ, r1, r2)
     sigj = {1: sig[0], 2: sig[2]}
-    d = {1: 2*r1/(r1 + r2), 2: 2*r2/(r1 + r2)}
     gj, mj, qj = {}, {}, {}
     for j in (1, 2):
         nj = n[j]
         gj[j] = _flux_correction(_dot(nj, (sigj[j]*sp.eye(3) - GeH)*_grad(f)),
                                  _dot(nj, GeH*nj), d[j])
-        mj[j] = _seal_correction(_dot(nj, GiH*_grad(h)), _dot(nj, GiH*nj), d[j])
-        qj[j] = _seal_correction(_dot(nj, GiH*_grad(f2)), _dot(nj, GiH*nj), d[j])
+        mj[j] = _wall_correction(_dot(nj, GiH*_grad(h)), _dot(nj, GiH*nj), d[j])
+        qj[j] = _wall_correction(_dot(nj, GiH*_grad(f2)), _dot(nj, GiH*nj), d[j])
     g = _blend(lam, gj[1], gj[2])
     m = _blend(lam, mj[1], mj[2])
     q = _blend(lam, qj[1], qj[2])
@@ -343,20 +286,6 @@ def _context(pts, tt, pv, lib):
         St, Tt = mp.sqrt(1 + tt), pv["cmAmplitude"]*mp.sin(pv["cmOmega"]*tt)
     return [X, Y, Z, tt, St, Tt] + [pv[n] for n in PARAM_ORDER]
 
-
-def _full(T6):
-    """symmTensor components (xx xy xz yy yz zz) as 3x3 matrices, stacked last."""
-    return np.stack([np.stack([T6[..., 0], T6[..., 1], T6[..., 2]], -1),
-                     np.stack([T6[..., 1], T6[..., 3], T6[..., 4]], -1),
-                     np.stack([T6[..., 2], T6[..., 4], T6[..., 5]], -1)], -2)
-
-
-def _fibonacci_sphere(n, radius):
-    """n points of equal area on the sphere of the given radius."""
-    i = np.arange(n) + 0.5
-    phi = np.arccos(1 - 2*i/n)
-    th = math.pi*(1 + 5**0.5)*i
-    return radius*np.stack([np.cos(th)*np.sin(phi), np.sin(th)*np.sin(phi), np.cos(phi)], -1)
 
 
 class Model:
@@ -676,31 +605,18 @@ def check_ionic_closure():
 RICHNESS_FRACTION = 0.7
 
 def check_shared_construction():
-    """lambda, omega, the frame, the wall normals, Gi, Ge, h-hat and f-hat are
-    those of shell_monodomain_mms.py and shell_bidomain_mms.py, whose
-    fragments the lead-field document prints."""
-    import shell_bidomain_mms as sbm
-    import shell_monodomain_mms as smm
-    rho, theta = sp.symbols("rho theta", real=True)
-    r1, r2 = P["r1"], P["r2"]
+    """Gi, built with the tensor of shell_bidomain_mms.py, is the conductivity
+    of shell_monodomain_mms.py, and f-hat is the e-hat of shell_bidomain_mms.py,
+    whose fragments the lead-field document prints."""
+    theta = sp.Symbol("theta", real=True)
 
     def same(a, b):
-        d = sp.Matrix(a) - sp.Matrix(b) if isinstance(a, (tuple, list, sp.MatrixBase)) \
-            else sp.Matrix([a - b])
+        d = sp.Matrix(a) - sp.Matrix(b)
         return all(sp.simplify(e) == 0 for e in d)
 
-    _require(same(_radial(rho, r1, r2), smm._radial(rho, r1, r2)), "lambda, omega")
-    Rz, Rx = smm._rotations()
-    Q = Rz*Rx
-    _require(same(sp.Matrix.hstack(*_frame()), Q), "frame")
-    n, d = smm._walls(XYZ, r1, r2)
-    _require(same(n[1], -XYZ/r1) and same(n[2], XYZ/r2), "wall normals")
-    _require(same([d[1], d[2]], [2*r1/(r1 + r2), 2*r2/(r1 + r2)]), "d_j")
-    Gi, Ge = _tensors(theta)
+    Gi, _ = _tensors(theta)
     _require(same(Gi, smm._conductivity(theta)), "Gi")
-    _require(same(Ge, sbm._tensor(P["gel"], P["get"], P["gen"], theta)), "Ge")
-    _require(same(_hhat(), smm._hhat()), "h-hat")
-    _require(same(_fhat(), sbm.expressions()["ehat"]), "f-hat")
+    _require(same([_fhat()], [sbm.expressions()["ehat"]]), "f-hat")
 
 
 SELF_CHECKS = (check_shared_construction, check_all_interfaces, check_sources_match_fd, check_bounded_and_finite,
@@ -920,7 +836,7 @@ def latex_fragments():
         ns = _names(base + corr + [
             (a, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\nabla %s\right)" % field),
             (b, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\mathbf n_j\right)")])
-        out[tag] = emit_latex_fragment(tag[0] + "_j", _seal_correction(a, b, dj), ns)
+        out[tag] = emit_latex_fragment(tag[0] + "_j", _wall_correction(a, b, dj), ns)
     for tag in ("g", "m", "q"):
         nb = _names(base + [(a1, tag + "_1"), (a2, tag + "_2")])
         out[tag] = emit_latex_fragment(tag, _blend(lam, a1, a2), nb)

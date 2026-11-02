@@ -5,6 +5,12 @@ set -e
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
+# Layer interfaces of -problem layered: the planes of the blockMesh and gmsh
+# meshes and of the topoSet layers (local/layers, gmsh -setnumber) and the
+# verifier's layerInterfaces (local/reference)
+layerLeft=-0.5
+layerRight=1.5
+
 usage()
 {
     cat <<USAGE
@@ -17,16 +23,17 @@ Options (parameters are written to local/ and included by the dictionaries):
                               slab     insulated heart slab between torso slabs
                               layered  the slab with each torso slab split in
                                        two layers (conductivity 0.1 next to
-                                       the heart, 0.02 beyond x = -0.5 and
-                                       x = 1.5) and the surface currents
+                                       the heart, 0.02 beyond x = $layerLeft and
+                                       x = $layerRight) and the surface currents
                                        -alpha on xMin and alpha on xMax
   -alpha x                  current of -problem layered (default 0.01); 0 leaves
                             the outer boundary insulated; a current needs
                             -myocardium monodomain
   -mesh hex|tet             blockMesh box (default) or gmsh tetrahedra
                             (three_domain_box.geo.template, layered_box.geo.template)
-  -N n                      cells per unit length (default 10; even for
-                            -problem layered -mesh hex); tet: element size 1/n
+  -N n                      cells per unit length (default 10; for -problem
+                            layered -mesh hex, a whole number of cells across
+                            each torso layer); tet: element size 1/n
   -seed n                   gmsh random seed for -mesh tet (default 1)
   -myocardium monodomain|bidomain
                             myocardium solver (default monodomain)
@@ -82,6 +89,16 @@ positiveNumber()
 {
     awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
         || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+# Cells across the interval [$1, $2] at N per unit length; fails unless whole
+layerCells()
+{
+    awk -v a="$1" -v b="$2" -v N="$N" 'BEGIN {
+        n = (b - a)*N; r = int(n + 0.5)
+        if (r < 1 || (n - r)^2 > 1e-18) exit 1
+        printf "%d", r
+    }'
 }
 
 oneOf()
@@ -172,11 +189,32 @@ then
     usage
 fi
 
-if [ "$problem" = layered ] && [ "$mesh" = hex ] && [ $((N % 2)) -ne 0 ]
+if [ "$problem" = layered ] && [ "$mesh" = hex ]
 then
-    echo "${0##*/}: -problem layered -mesh hex needs an even -N, not $N" 1>&2
-    usage
+    for layer in "-1 $layerLeft" "$layerLeft 0" "1 $layerRight" "$layerRight 2"
+    do
+        layerCells $layer > /dev/null || {
+            echo "${0##*/}: -problem layered -mesh hex needs a whole number of" \
+                "cells across the torso layer [${layer/ /, }], not -N $N" 1>&2
+            usage
+        }
+    done
 fi
+
+# layered_box.geo.template keeps gmsh defaults of the layer interfaces for a
+# run of gmsh by hand; they must equal layerLeft and layerRight
+for interface in "xLeft $layerLeft" "xRight $layerRight"
+do
+    set -- $interface
+    sed -n "s/^ *$1 = { *\([^,]*\),.*/\1/p" layered_box.geo.template \
+        | awk -v v="$2" 'NR == 1 { found = 1; same = ($1 + 0 == v + 0) }
+                         END { exit !(found && same) }' \
+        || {
+            echo "${0##*/}: the default of $1 in layered_box.geo.template" \
+                "is not $2" 1>&2
+            exit 1
+        }
+done
 
 if [ -e log.gmsh ] || [ -e log.blockMesh ]
 then
@@ -208,11 +246,23 @@ case "$problem" in
     layered)
         cat > local/reference <<EOF
 reference       layered;
-layerInterfaces ( -0.5 1.5 );
+layerInterfaces ( $layerLeft $layerRight );
 EOF
         geometry=layered_box
         dictSuffix=.layered
-        echo "NHalf $((N/2));" >> local/mesh
+        cat > local/layers <<EOF
+xLeft           $layerLeft;
+xRight          $layerRight;
+EOF
+        if [ "$mesh" = hex ]
+        then
+            cat >> local/layers <<EOF
+nOuterLeft      $(layerCells -1 "$layerLeft");
+nInnerLeft      $(layerCells "$layerLeft" 0);
+nInnerRight     $(layerCells 1 "$layerRight");
+nOuterRight     $(layerCells "$layerRight" 2);
+EOF
+        fi
         echo "cellZones ( torsoInner torsoOuter );" > local/torso
         alpha=${alpha:-0.01}
         if awk -v a="$alpha" 'BEGIN { exit !(a != 0) }'
@@ -228,30 +278,8 @@ EOF
         ;;
 esac
 
-# Isotropic: every diagonal entry takes the xx value
-if [ "$conductivity" = isotropic ]
-then
-    cat > local/conductivity <<EOF
-_monodomainG     ( 0.111453302 0 0 0.111453302 0 0.111453302 );
-_monodomainGi    ( 0.380525375260 0 0 0.380525375260 0 0.380525375260 );
-_monodomainGe    ( 0.157618771260 0 0 0.157618771260 0 0.157618771260 );
-_bidomainGi      ( 0.111453302 0 0 0.111453302 0 0.111453302 );
-_bidomainGe      ( 0.046165469 0 0 0.046165469 0 0.046165469 );
-EOF
-fi
-
-# Unequal: Gi and the xx entries as anisotropic; Ge yy = Gi yy and
-# Ge zz = 0.1 Gi zz, and G_m = Gi (Gi+Ge)^-1 Ge
-if [ "$conductivity" = unequal ]
-then
-    cat > local/conductivity <<EOF
-_monodomainG     ( 0.111453302 0 0 0.207559294976 0 0.009434513408 );
-_monodomainGi    ( 0.380525375260 0 0 0.415118589951 0 0.103779647488 );
-_monodomainGe    ( 0.157618771260 0 0 0.415118589951 0 0.0103779647488 );
-_bidomainGi      ( 0.111453302 0 0 0.121585420 0 0.030396355 );
-_bidomainGe      ( 0.046165469 0 0 0.121585420 0 0.0030396355 );
-EOF
-fi
+# The heart conductivity set of constant/electroProperties
+echo "_conductivity   $conductivity;" > local/conductivity
 
 echo "default         Gauss linear $snGrad;" > local/laplacian
 echo "default         $snGrad;" > local/snGrad
@@ -273,8 +301,13 @@ then
     runApplication blockMesh ${dictSuffix:+-dict system/blockMeshDict$dictSuffix}
 else
     lc=$(awk -v N="$N" 'BEGIN { printf "%.17g", 1/N }')
+    layerNumbers=
+    if [ "$problem" = layered ]
+    then
+        layerNumbers="-setnumber xLeft $layerLeft -setnumber xRight $layerRight"
+    fi
     runApplication gmsh -3 $geometry.geo.template -setnumber lc "$lc" -setnumber seed "$seed" \
-        -o local/$geometry.msh
+        $layerNumbers -o local/$geometry.msh
     if grep -q "Error" log.gmsh
     then
         echo "${0##*/}: gmsh reported errors; see log.gmsh" 1>&2
