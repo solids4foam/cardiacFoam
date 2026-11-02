@@ -11,7 +11,7 @@ this documented contract.
 tutorials/
 ├── electrophysiologyProtocols/    small EP checks: cells, restitution, CV, re-entry, Purkinje
 ├── electromechanicsProtocols/     small electromechanics checks: supports, active tension
-├── NiedererEtAl2011verification/  Niederer et al. (2011) monodomain slab benchmark
+├── NiedererEtAl2011verification/  Niederer et al. (2011) slab benchmark, monodomain and bidomain
 ├── manufacturedSolutions/         verification against known (manufactured) solutions
 └── idealizedHeart/                anatomical biventricular cases (EP, EM, pathologies)
 ```
@@ -33,6 +33,7 @@ fails when this column and that discovery disagree.
 | `electrophysiologyProtocols/rotorInstability` | Exercise sustained re-entry and activation-time behavior | monodomain rotor protocol | lightweight or full | `Alltest-regression` | probe traces and activation-time metrics |
 | `electrophysiologyProtocols/purkinjeRestitution2D` | Pace a Purkinje network coupled to a 2D slab over several beats, antegrade and retrograde | `monodomainSolver` with `restitutionEikonalSolver1D` or `monodomain1DSolver`, variant selected at run time | lightweight or full | `Alltest-regression` | per-node network activation time, `Vm` and junction current under `postProcessing/` |
 | `NiedererEtAl2011verification` | Run the Niederer slab electrophysiology benchmark | `monodomainSolver` verification workflow | lightweight or full | `Alltest-regression` | activation probes, smoke-check fields, summaries and plots |
+| `NiedererEtAl2011verification/bidomain` | Run the Niederer slab benchmark with the bidomain model, with the published conductivities or an equal-anisotropy set that reproduces the monodomain case | `bidomainSolver` with `TNNPcompactBatched`, conductivity set, mesh and time step selected at run time | lightweight or full | `Alltest-regression` | activation probes and the diagonal activation line under `postProcessing/` |
 | `electromechanicsProtocols/springSupportedSlab` | Show spring (Robin) supports in electromechanics: slab shortening from isometric to free as the end-spring stiffness drops | `electroMechanicalModel` with monodomain electrophysiology and `solidSpringDashpot` end supports | full only | `Alltest-regression` (expected skip in lightweight mode) | end displacement and end force (`solidForces`), `Ta` and `Vm` probes |
 | `manufacturedSolutions/monodomainPseudoECG` | Verify monodomain fields and pseudo-ECG against manufactured solutions | `monodomainFDAManufactured` plus pseudo-ECG verification | lightweight or full | `Alltest-regression` | manufactured error summaries and pseudo-ECG series under `postProcessing/` |
 | `manufacturedSolutions/monodomainPseudoECG/sphericalShell` | Verify the monodomain on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a cubed-sphere or gmsh-tetrahedra mesh | `monodomainFDAManufactured` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellMonodomainVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |

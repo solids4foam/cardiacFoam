@@ -19,6 +19,10 @@ Options (parameters are written to local/ and included by the dictionaries):
   -seed n                   gmsh random seed for -mesh tet (default 1)
   -gradient leastSquares|GaussLinear
                             cell-gradient reconstruction (default leastSquares)
+  -wallGradient sealed|stock
+                            gradient of Vm and phiE: sealedWallLeastSquares with
+                            sealedHeartBoundary true, or the stock -gradient scheme
+                            (default stock)
   -dt x                     time step
   -endTime x                end time (default 0.2)
   -coupling godunov|sbdf2   ionic-PDE time coupling (default godunov)
@@ -37,6 +41,7 @@ dim=3
 N=20
 seed=1
 gradient=leastSquares
+wallGradient=stock
 dt=
 endTime=0.2
 coupling=godunov
@@ -101,6 +106,10 @@ do
         -gradient)
             needValue "$@"; gradient="$2"; shift
             oneOf -gradient "$gradient" leastSquares GaussLinear
+            ;;
+        -wallGradient)
+            needValue "$@"; wallGradient="$2"; shift
+            oneOf -wallGradient "$wallGradient" sealed stock
             ;;
         -dt)
             needValue "$@"; dt="$2"; shift
@@ -167,6 +176,20 @@ if [ "$gradient" = GaussLinear ]
 then
     echo "default         Gauss linear;" > local/gradient
 fi
+
+# The sealed wall gradient overrides the gradient entries of system/fvSchemes;
+# its wall cells are those of the walls sealedHeartBoundary seals
+if [ "$wallGradient" = sealed ]
+then
+    cat > local/wallGradient <<EOF
+grad(Vm)                sealedWallLeastSquares;
+grad(Vm.component(0))   sealedWallLeastSquares;
+grad(phiE)              sealedWallLeastSquares;
+grad(phiE.component(0)) sealedWallLeastSquares;
+EOF
+    echo "sealedHeartBoundary true;" >> local/field
+fi
+
 echo "ddt(Vm)         $ddt;" > local/ddt
 
 if [ -n "$phiTolerance" ]

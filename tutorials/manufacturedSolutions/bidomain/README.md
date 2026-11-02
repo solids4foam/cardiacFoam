@@ -74,6 +74,7 @@ Every option writes a file in `local/`, which the dictionaries include;
 | `-N n` | cells per unit length; tet: element size `1/n` | 20 |
 | `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
 | `-gradient leastSquares\|GaussLinear` | cell-gradient reconstruction | leastSquares |
+| `-wallGradient sealed\|stock` | `sealedWallLeastSquares` for `grad(Vm)` and `grad(phiE)` with `sealedHeartBoundary true`, or the `-gradient` scheme with `sealedHeartBoundary false` | stock |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.00892857 (10/N)^2))` |
 | `-endTime x` | end time | 0.2 |
 | `-coupling godunov\|sbdf2` | ionic-PDE time coupling | godunov |

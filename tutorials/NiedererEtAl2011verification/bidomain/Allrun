@@ -1,0 +1,153 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+set -e
+
+# Source OpenFOAM run functions
+. $WM_PROJECT_DIR/bin/tools/RunFunctions
+
+usage()
+{
+    cat <<USAGE
+Usage: ${0##*/} [parallel] [OPTION]...
+
+Options (parameters are written to local/ and included by the dictionaries):
+  parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar,
+                            redistributeRestartState
+  -dx x                     isotropic cell size in metres; 0.02/x, 0.003/x and 0.007/x
+                            must be integers (default 2e-4: 100 x 15 x 35 cells)
+  -dt x                     time step in seconds (default 1e-5)
+  -endTime x                end time in seconds, also the write interval
+                            (default 0.015, written every 5e-3)
+  -conductivity equal|published
+                            equal: intracellular and extracellular tensors with one
+                            anisotropy ratio whose harmonic combination is the
+                            monodomain tensor of NiedererEtAl2011verification (default);
+                            published: Niederer et al. (2011) sigma_i (0.17, 0.019) and
+                            sigma_e (0.62, 0.24) S/m
+USAGE
+    exit 2
+}
+
+parallel=false
+dx=
+dt=
+endTime=
+conductivity=equal
+
+needValue()
+{
+    [ "$#" -ge 2 ] || { echo "${0##*/}: $1 needs a value" 1>&2; usage; }
+}
+
+positiveNumber()
+{
+    awk -v r="$2" 'BEGIN { exit !(r ~ /^[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$/ && r > 0) }' \
+        || { echo "${0##*/}: $1 takes a positive number, not $2" 1>&2; usage; }
+}
+
+oneOf()
+{
+    local option="$1" value="$2"
+    shift 2
+    for allowed in "$@"
+    do
+        [ "$value" = "$allowed" ] && return 0
+    done
+    echo "${0##*/}: unknown $option $value" 1>&2
+    usage
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+        parallel)
+            parallel=true
+            ;;
+        -dx)
+            needValue "$@"; dx="$2"; shift
+            positiveNumber -dx "$dx"
+            ;;
+        -dt)
+            needValue "$@"; dt="$2"; shift
+            positiveNumber -dt "$dt"
+            ;;
+        -endTime)
+            needValue "$@"; endTime="$2"; shift
+            positiveNumber -endTime "$endTime"
+            ;;
+        -conductivity)
+            needValue "$@"; conductivity="$2"; shift
+            oneOf -conductivity "$conductivity" equal published
+            ;;
+        -h|-help|--help)
+            usage
+            ;;
+        *)
+            echo "${0##*/}: unknown argument $1" 1>&2
+            usage
+            ;;
+    esac
+    shift
+done
+
+if [ -e log.blockMesh ]
+then
+    echo "${0##*/}: a mesh log exists; run ./Allclean first" 1>&2
+    exit 1
+fi
+
+rm -rf local
+mkdir local
+
+# Cell counts of the 20 x 3 x 7 mm slab
+if [ -n "$dx" ]
+then
+    awk -v dx="$dx" 'BEGIN {
+        split("20 3 7", L, " ")
+        split("_nx _ny _nz", name, " ")
+        for (i = 1; i <= 3; i++) {
+            n = L[i]*1e-3/dx
+            k = int(n + 0.5)
+            if (k < 1 || (n - k)^2 > 1e-18*n^2) {
+                printf "-dx %s does not divide the %s mm edge\n", dx, L[i] > "/dev/stderr"
+                exit 1
+            }
+            printf "%s %d;\n", name[i], k
+        }
+    }' > local/mesh || usage
+fi
+
+if [ -n "$dt" ]
+then
+    echo "deltaT          $dt;" >> local/time
+fi
+if [ -n "$endTime" ]
+then
+    cat >> local/time <<EOF
+endTime         $endTime;
+writeInterval   $endTime;
+EOF
+fi
+
+if [ "$conductivity" = published ]
+then
+    cat > local/conductivity <<EOF
+conductivityIntracellular [-1 -3 3 0 0 2 0] (0.17 0 0 0.019 0 0.019);
+conductivityExtracellular [-1 -3 3 0 0 2 0] (0.62 0 0 0.24 0 0.24);
+EOF
+fi
+
+runApplication blockMesh
+
+if $parallel
+then
+    runApplication decomposePar
+    runParallel cardiacFoam
+    runApplication reconstructPar
+    runApplication redistributeRestartState
+else
+    runApplication cardiacFoam
+fi
+
+runApplication -o postProcess -func Niedererpoints -latestTime
+runApplication -o postProcess -func Niedererlines -latestTime
