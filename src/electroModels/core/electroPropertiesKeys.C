@@ -69,11 +69,11 @@ const wordList torsoKeys
     "phiEReferenceValue"
 });
 
-// Every ECG domain entry; coupling is rejected by the system builder
+// Every ECG domain entry
 const wordList ecgCommonKeys
 ({
     "ecgSolver", "electrodePositions", "verificationModel",
-    "ecgVerificationModel", "coupling"
+    "ecgVerificationModel"
 });
 
 // singleCellSolver, including its optional active-tension model
@@ -265,8 +265,10 @@ wordList ecgSolverKeys
 
     if (ecgSolver == "eikonalECG")
     {
-        return
-            wordList({"sigmaExtracellular", "sampling", "personalizedTemplates"});
+        return wordList
+        ({
+            "sigmaExtracellular", "sampling", "personalizedTemplates"
+        });
     }
 
     if (coupling == torsoCoupling::type::leadField)
@@ -310,19 +312,20 @@ void checkECGDomains
 
         const dictionary& ecgDict = e.dict();
 
-        const word ecgSolver
+        const word ecgSolver(ecgDict.get<word>("ecgSolver"));
+        dictionaryKeyCheck::checkValue
         (
-            dictionaryKeyCheck::getWord
-            (
-                ecgDict,
-                "ecgSolver",
-                "pseudoECG",
-                wordList({"pseudoECG", "eikonalECG", "torsoECG"})
-            )
+            ecgDict,
+            "ecgSolver",
+            ecgSolver,
+            wordList({"pseudoECG", "eikonalECG", "torsoECG"})
         );
 
         const wordList modelKeys(ecgSolverKeys(ecgSolver, coupling));
-        dictionaryKeyCheck::checkKeys(ecgDict, join({&ecgCommonKeys, &modelKeys}));
+        dictionaryKeyCheck::checkKeys
+        (
+            ecgDict, join({&ecgCommonKeys, &modelKeys})
+        );
 
         checkSubDict(ecgDict, "sampling", keys({"start", "end", "deltaT"}));
 

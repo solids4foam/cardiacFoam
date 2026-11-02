@@ -9,7 +9,7 @@ The domains the core builds. Each one owns the state of one physical region and 
 | `myocardiumDomain` | the heart tissue: `Vm`, its ionic model and a tissue solver (monodomain or bidomain). `eikonalMyocardiumDomain` is its eikonal form. |
 | `conductionSystemDomain` | the Purkinje network as a graph, with its ionic model and a Purkinje solver |
 | `ecgDomain` | electrodes and an ECG model; it reads the tissue state and never changes it |
-| `extracellularPotentialDomain` | the global extracellular potential `phiE` over heart and bath, shared with a bidomain myocardium |
+| `extracellularPotentialDomain` | the global extracellular potential `phiE` over heart and bath, shared with a bidomain myocardium. Its heart+torso operator, `passiveConductor`, is also the conductor of the lead fields of `torsoECG`. |
 
 The domains exchange data only through interfaces: coupling endpoints, used by the Purkinje–muscle junction couplers, and state providers, used by the ECG.
 

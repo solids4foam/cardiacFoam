@@ -48,8 +48,8 @@ Description
     fixedValue 0, other non-coupled patches zeroGradient; without them the
     reference cell is pinned to 0.
 
-    Every electrode lies in a torso cell; an electrode in a myocardium cell
-    is fatal (leadFieldConductor).
+    Every electrode lies in a torso cell; an electrode outside the mesh or
+    in a myocardium cell is fatal (leadFieldConductor).
 
     Writes constant/[region/]leadField_<electrode> and leadFieldSignature.
     With -parallel each processor writes its own processorN/constant, so a
@@ -67,7 +67,7 @@ Author
 #include "electroPropertiesKeys.H"
 #include "leadFieldConductor.H"
 #include "leadFieldAdjoint.H"
-#include "fixedValueFvPatchFields.H"
+#include "ecgSolver.H"
 #include <limits>
 
 using namespace Foam;
@@ -96,7 +96,7 @@ word selectEcgDomain(const dictionary& ecgDomains, const word& requested)
     for (const entry& e : ecgDomains)
     {
         const dictionary* d = e.dictPtr();
-        if (d && d->getOrDefault<word>("ecgSolver", "pseudoECG") == torsoType)
+        if (d && ecgSolver::selectedType(*d) == torsoType)
         {
             names.append(e.keyword());
         }
@@ -179,15 +179,10 @@ int main(int argc, char *argv[])
     tmp<fvScalarMatrix> tM(conductor.assemble(z, heartZ));
     fvScalarMatrix& M = tM.ref();
 
-    bool pinned = lfc.referenceCell() >= 0;
-    forAll(z.boundaryField(), patchI)
-    {
-        pinned = pinned
-         && !isA<fixedValueFvPatchScalarField>(z.boundaryField()[patchI]);
-    }
-    const scalar refDiag = pinned ? M.diag()[lfc.referenceCell()] : 0;
-    pinned = returnReduce(pinned, orOp<bool>());
-    conductor.applyReference(M, z, lfc.referenceCell(), 0.0);
+    const label refCell = conductor.referenceCell();
+    const bool pinned = conductor.torso().pinsReference();
+    const scalar refDiag = refCell >= 0 ? M.diag()[refCell] : 0;
+    conductor.applyReference(M, 0.0);
 
     const leadFieldAdjoint adjoint(lfc, fixedPoint);
     adjoint.checkSymmetry(M, z);
@@ -256,7 +251,7 @@ int main(int argc, char *argv[])
 
         adjoint.checkSolution
         (
-            M, z, e, pinned, lfc.referenceCell(), refDiag
+            M, z, e, pinned, refCell, refDiag
         );
 
         const word fieldName("leadField_" + names[electrodeI]);

@@ -56,10 +56,11 @@ electrode lies in the myocardium.
   `bloodPool` and `bath`,
   `distanceWeightedHarmonic`, pinned in the outer bath; body-surface
   electrodes `surface1` to `surface8`, spread over the outer sphere at
-  `|x| = 1.495`, inside its faceted surface at every level, and the
+  `|x| = 1.47`, 0.03 below it and inside its faceted surface at every
+  level of the studies, and the
   interior probes `outerNear`, `outerSide`, `outerFar` (outer bath) and
   `pool` (bath ball);
-- verifier: `manufacturedLeadFieldECGVerifier`, `reference sphericalShell`;
+- verifier: `manufacturedShellLeadFieldECGVerifier`;
 - schemes: `sealedWallLeastSquares` for `Vm` and `phiE`, `leastSquares`
   elsewhere, `Gauss linear corrected`.
 

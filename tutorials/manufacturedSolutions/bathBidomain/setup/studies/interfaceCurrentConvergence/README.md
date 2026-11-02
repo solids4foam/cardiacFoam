@@ -49,10 +49,14 @@ python3 ../summarize.py results --relative-to distanceWeightedHarmonic_tet
 
 The omnidriver specs for this study are `sweep_tet_distanceWeightedHarmonic.json` and `sweep_tet_conormalHarmonic.json`.
 
-## Measured behaviour
+## Measured quantities
 
-**Rerun required:** the study has not been run with `conormalHarmonic`; its
-results are to be measured.
+For each method and level `../summarize.py` reports the L2 and Linf errors of
+`Vm`, `phiE` and `phiI` and the interface rows (L2): heart and bath `phiE`,
+current jump, intracellular leakage and assembled current density at `x = 0`
+and `x = 1`, with the orders between levels. With
+`--relative-to distanceWeightedHarmonic_tet` it reports the relative change
+of `conormalHarmonic` against `distanceWeightedHarmonic` at each level.
 
 ## Outputs
 

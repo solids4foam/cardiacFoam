@@ -77,12 +77,14 @@ public:
     leadFieldECG(const leadFieldECG&) = delete;
     void operator=(const leadFieldECG&) = delete;
 
-    //- Build the conductor on the provider's myocardium, check the
-    //  signature and read the lead fields of the named electrodes
+    //- Build the conductor on the provider's myocardium with the
+    //  electrodes of the ECG domain, check the signature and read the lead
+    //  fields of the electrodes
     void load
     (
         const electroStateProvider& provider,
-        const wordList& electrodeNames
+        const wordList& electrodeNames,
+        const List<vector>& electrodePositions
     );
 
     bool loaded() const

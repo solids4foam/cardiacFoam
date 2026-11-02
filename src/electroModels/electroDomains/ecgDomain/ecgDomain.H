@@ -84,7 +84,7 @@ class ecgDomain
     //- Electrode positions (empty when electrodes not configured)
     List<vector> electrodePositions_;
 
-    //- Read electrode positions from the 'electrodes' subdict (if present)
+    //- Read the electrodes of the domain entry (readEcgElectrodes)
     void readElectrodes(const dictionary& dict);
 
 public:

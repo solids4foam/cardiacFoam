@@ -26,6 +26,9 @@ Description
     - leadField: the lead fields of buildLeadFields contracted with the
       heart source of the myocardium's Vm (leadFieldECG).
 
+    Every electrode lies in the mesh: an electrode outside it is fatal
+    (ecgElectrodeCells).
+
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
@@ -51,8 +54,6 @@ class torsoECG
     //- Electrode cells on the phiE mesh (torsoCoupling bath)
     labelList electrodeCells_;
     bool cellsBuilt_;
-
-    void buildElectrodeCells(const ecgDomain& domain);
 
     //- phiE of the bath domain in the electrode cells
     void sample(const ecgDomain& domain, scalarField& values);

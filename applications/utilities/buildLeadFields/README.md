@@ -61,7 +61,8 @@ cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
   is below `t` (at least 3 passes, the last with `leadFieldFinal`; fatal
   after `n`). The passes solve with `leadField` until the change first falls
   below `t`, then with `leadFieldFinal` until it falls below `t` again. The
-  verifier `manufacturedLeadFieldECGVerifier` repeats its direct forward
+  lead-field ECG verifiers (`manufacturedLeadFieldECGVerifier`,
+  `manufacturedShellLeadFieldECGVerifier`) repeat their direct forward
   solve with the same `t` and `n`.
   - `leadField` may use a loose `relTol` (e.g. 0.01).
   - `leadFieldFinal` must use `relTol 0` and a `tolerance` well below `t`.

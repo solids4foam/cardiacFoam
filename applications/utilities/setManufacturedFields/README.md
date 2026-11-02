@@ -6,7 +6,7 @@ Writes the conductivity fields and the cell decomposition that a manufactured-so
 setManufacturedFields -case ./myCase
 ```
 
-The utility reads `constant/electroProperties`, takes the dictionary of the selected myocardium solver, selects the verification model it names, and calls that model's field writer on the case mesh. When the myocardium has no verification model (no `type`, or `none`), it selects the verification model of the only `ecgDomains` entry that has one and calls that model's field writer instead (for example `manufacturedLeadFieldECGVerifier` with `reference sphericalShell`, which writes Gi, Ge and the bath conductivity of its solution at the cell centres). The verification model library must be listed under `libs` in `system/controlDict`.
+The utility reads `constant/electroProperties`, takes the dictionary of the selected myocardium solver, selects the verification model it names, and calls that model's field writer on the case mesh. When the myocardium has no verification model (no `type`, or `none`), it selects the verification model of the only `ecgDomains` entry that has one and calls that model's field writer instead (for example `manufacturedShellLeadFieldECGVerifier`, which writes Gi, Ge and the bath conductivity of its solution at the cell centres). The verification model library must be listed under `libs` in `system/controlDict`.
 
 It writes `0/ConductivityIntracellular`, `0/ConductivityExtracellular` and `0/bodyAndOrgansConductivity`, and `constant/cellDecomposition` for `method manual` decomposition. Existing files with these names are overwritten. One model writes the fields: with a myocardium verification model, the ECG domains' models write none.
 

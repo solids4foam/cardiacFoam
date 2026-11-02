@@ -20,11 +20,8 @@ License
 #include "manufacturedLeadFieldECGVerifier.H"
 
 #include "addToRunTimeSelectionTable.H"
-#include "ecgModelIO.H"
-#include "fvMatrices.H"
-#include "emptyFvPatch.H"
+#include "verificationUtils.H"
 #include "PstreamReduceOps.H"
-#include <limits>
 
 namespace Foam
 {
@@ -42,109 +39,23 @@ const Enum<manufacturedLeadFieldECGVerifier::referenceType>
 manufacturedLeadFieldECGVerifier::referenceTypeNames
 ({
     { referenceType::slab, "slab" },
-    { referenceType::layered, "layered" },
-    { referenceType::sphericalShell, "sphericalShell" }
-});
-
-
-const wordList manufacturedLeadFieldECGVerifier::quantityNames_
-({
-    "leadField-direct",
-    "leadFieldStatic-directStatic",
-    "leadFieldStatic-exactPoint",
-    "leadFieldStatic-exactCentroid",
-    "directStatic-exactPoint",
-    "directStatic-exactCentroid",
-    "localisation"
-});
-
-
-const wordList manufacturedLeadFieldECGVerifier::fieldRegionNames_
-({
-    "phiStatic",
-    "phiStatic_heart",
-    "phiStatic_torso",
-    "phiStatic_interfaceBand",
-    "phiStatic_surface"
+    { referenceType::layered, "layered" }
 });
 
 
 namespace
 {
 
-
 // Layered: tolerance of the face normals and the cell extents (unit box)
 const scalar layeredGeometryTol = 1e-9;
 
-// sphericalShell: relative tolerance of the case conductivities against the
-// solution's at the cell centres
-const scalar shellConductivityTol = 1e-10;
+// Layered: relative spread of current times n_x over the surface-current
+// faces and relative net current, both equal by construction up to round-off
+const scalar layeredCurrentTol = 1e-12;
 
-
-// sphericalShell: the zone of the transmission solution for every cell,
-// from the cellZones bloodPool, myocardium and bath of the mesh (fatal if a
-// cell is in none). A cell centre may lie outside the radial range of its
-// zone, where a polyhedral interface cuts the sphere, by at most the cell
-// size cbrt(V) (the zone formulas extend smoothly across the spheres).
-labelList shellZones(const fvMesh& mesh)
-{
-    using namespace shellTransmissionMMS;
-
-    const Params p = defaultParams();
-    const wordList names({"bloodPool", "myocardium", "bath"});
-    const label zoneIds[3] = {bloodPool, myocardium, bath};
-
-    labelList zone(mesh.nCells(), -1);
-    forAll(names, i)
-    {
-        const label zoneI = mesh.cellZones().findZoneID(names[i]);
-        if (zoneI < 0)
-        {
-            FatalErrorInFunction
-                << "The sphericalShell solution needs the cellZone "
-                << names[i] << "." << exit(FatalError);
-        }
-        for (const label cellI : mesh.cellZones()[zoneI])
-        {
-            zone[cellI] = zoneIds[i];
-        }
-    }
-
-    const vectorField& C = mesh.C().primitiveField();
-    const scalarField& V = mesh.V().field();
-    label unassigned = 0;
-    label misplaced = 0;
-    forAll(zone, cellI)
-    {
-        if (zone[cellI] < 0)
-        {
-            ++unassigned;
-            continue;
-        }
-        const label z = zone[cellI];
-        const scalar r = mag(C[cellI]);
-        const scalar rMin =
-            z == bloodPool ? 0 : (z == myocardium ? p.r1 : p.r2);
-        const scalar rMax =
-            z == bloodPool ? p.r1 : (z == myocardium ? p.r2 : GREAT);
-        const scalar size = Foam::cbrt(V[cellI]);
-        if (r < rMin - size || r > rMax + size)
-        {
-            ++misplaced;
-        }
-    }
-    reduce(unassigned, sumOp<label>());
-    reduce(misplaced, sumOp<label>());
-    if (unassigned > 0 || misplaced > 0)
-    {
-        FatalErrorInFunction
-            << unassigned << " cells lie in no sphericalShell cellZone and "
-            << misplaced << " cells lie farther than their own size outside "
-            << "the radial range of their zone." << exit(FatalError);
-    }
-
-    return zone;
-}
+// Layered: relative anisotropy of a torso layer conductivity, isotropic by
+// construction up to the round-off of the tensor read from the field
+const scalar layeredIsotropyTol = 1e-10;
 
 } // End anonymous namespace
 
@@ -158,50 +69,16 @@ manufacturedLeadFieldECGVerifier::manufacturedLeadFieldECGVerifier
     const List<vector>& electrodePositions
 )
 :
-    ecgVerificationModel
+    leadFieldECGVerifierBase
     (
         stateProvider, domainName, electrodeNames, electrodePositions
     ),
     reference_(referenceType::slab),
-    leadFieldPtr_(),
     slabK_(0),
     layers_(),
-    alpha_(0),
-    shellParams_(shellTransmissionMMS::defaultParams()),
-    leadFields_(),
-    shellZones_(),
-    heartCells_(),
-    interfaceBand_(),
-    surfaceCells_(),
-    electrodeCells_(),
-    electrodeCentroids_(),
-    referenceCentroid_(point::zero),
-    directPhi_(),
-    directStaticPhi_(),
-    heartPhi_(),
-    outputPtr_(),
-    sampleCount_(0),
-    exactScale_(0),
-    electrodeNorms_
-    (
-        quantityNames_.size(),
-        List<errorNorms>(electrodePositions.size())
-    ),
-    maxNorms_(quantityNames_.size()),
-    relativeGapNorms_(),
-    fieldErrors_(fieldRegionNames_.size(), FixedList<scalar, 3>(Zero)),
-    summaryWritten_(false)
+    alpha_(0)
 {
     read(dict);
-}
-
-
-ecgVerificationModel::Requirements
-manufacturedLeadFieldECGVerifier::requirements() const
-{
-    Requirements needs;
-    needs.needVm = true;
-    return needs;
 }
 
 
@@ -211,7 +88,7 @@ bool manufacturedLeadFieldECGVerifier::read(const dictionary& dict)
     const referenceType selected =
         referenceTypeNames.get("reference", verifierDict);
 
-    if (leadFieldPtr_.valid() && selected != reference_)
+    if (initialised() && selected != reference_)
     {
         FatalErrorInFunction
             << "The reference of " << type() << " is fixed at the first "
@@ -245,98 +122,43 @@ bool manufacturedLeadFieldECGVerifier::read(const dictionary& dict)
 }
 
 
-void manufacturedLeadFieldECGVerifier::writeManufacturedFields
-(
-    const fvMesh& mesh
-) const
+word manufacturedLeadFieldECGVerifier::referenceName() const
 {
-    using namespace shellTransmissionMMS;
+    return referenceTypeNames[reference_];
+}
 
-    if (reference_ != referenceType::sphericalShell)
+
+void manufacturedLeadFieldECGVerifier::initialiseReference
+(
+    const leadFieldConductor& lfc
+)
+{
+    if (reference_ == referenceType::slab)
     {
-        FatalErrorInFunction
-            << "The " << referenceTypeNames[reference_] << " reference of "
-            << type() << " prescribes no fields: its conductivities are those "
-            << "of the case." << exit(FatalError);
-    }
+        const passiveConductor::torsoSettings& torso =
+            lfc.conductor().torso();
 
-    if (Pstream::parRun())
-    {
-        FatalErrorInFunction
-            << "The sphericalShell lead-field conductivities are written on "
-            << "the undecomposed case; run in serial." << exit(FatalError);
-    }
-
-    const dimensionSet conductivityDim(-1, -3, 3, 0, 0, 2, 0);
-    const vectorField& C = mesh.C().primitiveField();
-    const unsigned int oldPrecision = IOstream::defaultPrecision(17);
-
-    const auto io = [&mesh](const word& name)
-    {
-        return IOobject(name, "0", mesh, IOobject::NO_READ, IOobject::NO_WRITE);
-    };
-
-    const auto copyInternalToPatches = [&mesh](auto& field)
-    {
-        forAll(mesh.boundary(), patchI)
-        {
-            if (polyPatch::constraintType(mesh.boundaryMesh()[patchI].type()))
-            {
-                continue;
-            }
-            field.boundaryFieldRef()[patchI] ==
-                field.boundaryField()[patchI].patchInternalField();
-        }
-    };
-
-    for (label i = 0; i < 2; ++i)
-    {
-        volSymmTensorField G
+        if
         (
-            io
-            (
-                i == 0
-              ? "ConductivityIntracellular"
-              : "ConductivityExtracellular"
-            ),
-            mesh,
-            dimensionedSymmTensor(conductivityDim, Zero),
-            "calculated"
-        );
-        forAll(C, cellI)
+            !torso.groundPatches.empty()
+         || !torso.surfaceCurrentPatches.empty()
+        )
         {
-            G[cellI] =
-                i == 0
-              ? Gi(C[cellI], shellParams_)
-              : Ge(C[cellI], shellParams_);
+            FatalErrorInFunction
+                << "The slab reference is insulated: it needs no ground "
+                << "or surface-current patches, but has "
+                << torso.groundPatches << " and "
+                << torso.surfaceCurrentPatches << "."
+                << exit(FatalError);
         }
-        copyInternalToPatches(G);
-        G.write();
-        Info<< "Wrote " << G.name() << " in 0." << endl;
     }
 
-    volScalarField sigma
-    (
-        io("bodyAndOrgansConductivity"),
-        mesh,
-        dimensionedScalar(conductivityDim, Zero),
-        "calculated"
-    );
-    const labelList zone(shellZones(mesh));
-    forAll(C, cellI)
+    slabK_ = manufacturedLeadFieldSlabK(lfc.Gi(), lfc.Ge());
+
+    if (reference_ == referenceType::layered)
     {
-        sigma[cellI] = sigmaB
-        (
-            C[cellI],
-            zone[cellI] == myocardium ? label(bath) : zone[cellI],
-            shellParams_
-        );
+        initialiseLayered(lfc);
     }
-    copyInternalToPatches(sigma);
-    sigma.write();
-    Info<< "Wrote " << sigma.name() << " in 0." << endl;
-
-    IOstream::defaultPrecision(oldPrecision);
 }
 
 
@@ -347,16 +169,18 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
 {
     const fvMesh& baseMesh = stateProvider_.baseMesh();
 
-    if (!lfc.groundPatches().empty())
+    const passiveConductor::torsoSettings& torso = lfc.conductor().torso();
+
+    if (!torso.pinsReference())
     {
         FatalErrorInFunction
             << "The layered reference is pinned: it needs no ground patches, "
-            << "but has " << lfc.groundPatches() << "." << exit(FatalError);
+            << "but has " << torso.groundPatches << "." << exit(FatalError);
     }
 
     // alpha = I n_x on every surface-current face; no net current
-    const wordList& patches = lfc.surfaceCurrentPatches();
-    const scalarList& currents = lfc.surfaceCurrentValues();
+    const wordList& patches = torso.surfaceCurrentPatches;
+    const scalarList& currents = torso.surfaceCurrentValues;
     scalar alphaMin = GREAT;
     scalar alphaMax = -GREAT;
     scalar netCurrent = 0;
@@ -395,7 +219,11 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
     }
     else
     {
-        if (alphaMax - alphaMin > 1e-12*max(mag(alphaMin), mag(alphaMax)))
+        if
+        (
+            alphaMax - alphaMin
+          > layeredCurrentTol*max(mag(alphaMin), mag(alphaMax))
+        )
         {
             FatalErrorInFunction
                 << "The layered reference needs current times n_x equal on "
@@ -403,7 +231,7 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
                 << " to " << alphaMax << " on " << patches << "."
                 << exit(FatalError);
         }
-        if (mag(netCurrent) > 1e-12*grossCurrent)
+        if (mag(netCurrent) > layeredCurrentTol*grossCurrent)
         {
             FatalErrorInFunction
                 << "The layered reference is insulated apart from the "
@@ -498,7 +326,7 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
             tensorField(layerSigma[layer]),
             "layered reference, " + layerNames[layer] + " layer"
         );
-        if (mag(s - s.xx()*tensor::I) > 1e-10*mag(s))
+        if (mag(s - s.xx()*tensor::I) > layeredIsotropyTol*mag(s))
         {
             FatalErrorInFunction
                 << "The layered reference needs an isotropic torso "
@@ -514,676 +342,48 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
 }
 
 
-void manufacturedLeadFieldECGVerifier::initialiseShell
-(
-    const leadFieldConductor& lfc
-)
-{
-    using namespace shellTransmissionMMS;
-
-    const passiveConductor& conductor = lfc.conductor();
-    const fvMesh& baseMesh = stateProvider_.baseMesh();
-
-    if
-    (
-        !lfc.groundPatches().empty()
-     || !lfc.surfaceCurrentPatches().empty()
-    )
-    {
-        FatalErrorInFunction
-            << "The sphericalShell reference is pinned and takes its outer "
-            << "current from the solution: it needs no ground or "
-            << "surface-current patches, but has " << lfc.groundPatches()
-            << " and " << lfc.surfaceCurrentPatches() << "."
-            << exit(FatalError);
-    }
-    if (conductor.totalWallConductivity())
-    {
-        FatalErrorInFunction
-            << "The sphericalShell reference seals the intracellular "
-            << "potential at the heart wall: it needs the bidomain conductor."
-            << exit(FatalError);
-    }
-
-    // Zones from the cellZones against the conductor's heart cells, and the
-    // torso conductivity against sigmaB
-    shellZones_ = shellZones(baseMesh);
-    const vectorField& C = baseMesh.C().primitiveField();
-    const tensorField& sigma = conductor.sigmaTotal().primitiveField();
-    label misplaced = 0;
-    scalar worst = 0;
-    forAll(C, cellI)
-    {
-        const label zone = shellZones_[cellI];
-        if (heartCells_[cellI] != (zone == myocardium))
-        {
-            ++misplaced;
-        }
-        else if (!heartCells_[cellI])
-        {
-            const tensor exact = sigmaB(C[cellI], zone, shellParams_)*tensor::I;
-            worst = max(worst, mag(sigma[cellI] - exact)/mag(exact));
-        }
-    }
-
-    // Gi and Ge of the heart cells
-    const vectorField& Ch = lfc.Gi().mesh().C().primitiveField();
-    const tensorField& GiI = lfc.Gi().primitiveField();
-    const tensorField& GeI = lfc.Ge().primitiveField();
-    forAll(Ch, cellI)
-    {
-        const tensor gi = Gi(Ch[cellI], shellParams_) & tensor::I;
-        const tensor ge = Ge(Ch[cellI], shellParams_) & tensor::I;
-        worst = max(worst, mag(GiI[cellI] - gi)/mag(gi));
-        worst = max(worst, mag(GeI[cellI] - ge)/mag(ge));
-    }
-    reduce(misplaced, sumOp<label>());
-    reduce(worst, maxOp<scalar>());
-
-    if (misplaced > 0)
-    {
-        FatalErrorInFunction
-            << misplaced << " cells of the cellZone myocardium differ from "
-            << "the conductor's heart cells." << exit(FatalError);
-    }
-    if (worst > shellConductivityTol)
-    {
-        FatalErrorInFunction
-            << "The case conductivities differ from the sphericalShell "
-            << "solution's at the cell centres by up to " << worst
-            << " (relative); write them with setManufacturedFields."
-            << exit(FatalError);
-    }
-
-    forAll(electrodePositions_, e)
-    {
-        if (zoneOf(electrodePositions_[e], shellParams_) == myocardium)
-        {
-            FatalErrorInFunction
-                << "Electrode " << electrodeNames_[e] << " at "
-                << electrodePositions_[e] << " lies in the myocardium of the "
-                << "sphericalShell solution." << exit(FatalError);
-        }
-    }
-
-    leadFields_.setSize(electrodeNames_.size());
-    forAll(electrodeNames_, e)
-    {
-        leadFields_.set
-        (
-            e,
-            new volScalarField
-            (
-                IOobject
-                (
-                    "leadField_" + electrodeNames_[e],
-                    baseMesh.time().constant(),
-                    baseMesh,
-                    IOobject::MUST_READ,
-                    IOobject::NO_WRITE,
-                    IOobject::NO_REGISTER
-                ),
-                baseMesh
-            )
-        );
-    }
-}
-
-
-tmp<volScalarField> manufacturedLeadFieldECGVerifier::shellSource
-(
-    const scalar t,
-    const dimensionSet& dims
-) const
-{
-    using namespace shellTransmissionMMS;
-
-    const fvMesh& baseMesh = stateProvider_.baseMesh();
-
-    tmp<volScalarField> tS
-    (
-        new volScalarField
-        (
-            IOobject
-            (
-                "shellPhiESource",
-                baseMesh.time().timeName(),
-                baseMesh,
-                IOobject::NO_READ,
-                IOobject::NO_WRITE,
-                IOobject::NO_REGISTER
-            ),
-            baseMesh,
-            dimensionedScalar(dims, 0),
-            "zeroGradient"
-        )
-    );
-    scalarField& S = tS.ref().primitiveFieldRef();
-
-    // div(K grad phi) = b + S in every zone
-    const vectorField& C = baseMesh.C().primitiveField();
-    forAll(C, cellI)
-    {
-        S[cellI] = phiESource(C[cellI], t, shellZones_[cellI], shellParams_);
-    }
-
-    // The exact outward current g on the insulated outer boundary moves into
-    // the owner cell's balance: S -= g |Sf|/V
-    const scalarField& V = baseMesh.V().field();
-    forAll(baseMesh.boundary(), patchI)
-    {
-        const fvPatch& patch = baseMesh.boundary()[patchI];
-        if (patch.coupled() || isA<emptyFvPatch>(patch))
-        {
-            continue;
-        }
-        const vectorField nf(patch.nf());
-        const vectorField& Cf = patch.Cf();
-        const scalarField& magSf = patch.magSf();
-        const labelUList& cells = patch.faceCells();
-        forAll(cells, faceI)
-        {
-            const point& pf = Cf[faceI];
-            const scalar g =
-                sigmaB(pf, bath, shellParams_)
-               *(nf[faceI] & gradPhiE(pf, t, bath, shellParams_));
-            S[cells[faceI]] -= g*magSf[faceI]/V[cells[faceI]];
-        }
-    }
-
-    // The pure-Neumann problem needs a source of zero integral
-    S -= gSum(V*S)/gSum(V);
-
-    return tS;
-}
-
-
-void manufacturedLeadFieldECGVerifier::initialise()
-{
-    const IOdictionary& electroProperties =
-        mesh_.time().lookupObject<IOdictionary>("electroProperties");
-
-    leadFieldPtr_.reset(new leadFieldECG(electroProperties, domainName_));
-    leadFieldPtr_->load(stateProvider_, electrodeNames_);
-
-    const leadFieldConductor& lfc = leadFieldPtr_->conductor();
-    const fvMesh& baseMesh = stateProvider_.baseMesh();
-
-    // Region masks of the phiStatic rows and of the reference checks
-    heartCells_ = boolList(baseMesh.nCells(), false);
-    for (const label cellI : lfc.conductor().heartCellToBaseCell())
-    {
-        heartCells_[cellI] = true;
-    }
-    interfaceBand_ =
-        verificationUtils::interfaceBandCells(baseMesh, heartCells_);
-    surfaceCells_ = verificationUtils::boundaryAdjacentCells(baseMesh);
-
-    switch (reference_)
-    {
-        case referenceType::slab:
-        {
-            if
-            (
-                !lfc.groundPatches().empty()
-             || !lfc.surfaceCurrentPatches().empty()
-            )
-            {
-                FatalErrorInFunction
-                    << "The slab reference is insulated: it needs no ground "
-                    << "or surface-current patches, but has "
-                    << lfc.groundPatches() << " and "
-                    << lfc.surfaceCurrentPatches() << "."
-                    << exit(FatalError);
-            }
-            slabK_ = manufacturedLeadFieldSlabK(lfc.Gi(), lfc.Ge());
-            break;
-        }
-        case referenceType::layered:
-        {
-            slabK_ = manufacturedLeadFieldSlabK(lfc.Gi(), lfc.Ge());
-            initialiseLayered(lfc);
-            break;
-        }
-        case referenceType::sphericalShell:
-        {
-            initialiseShell(lfc);
-            break;
-        }
-    }
-
-    // Electrode cells, their centroids and the centroid of the pinned cell
-    electrodeCells_ = lfc.electrodeCells();
-    electrodeCentroids_.setSize(electrodeCells_.size(), point::zero);
-    forAll(electrodeCells_, e)
-    {
-        if (electrodeCells_[e] >= 0)
-        {
-            electrodeCentroids_[e] = baseMesh.C()[electrodeCells_[e]];
-        }
-    }
-    for (point& c : electrodeCentroids_)
-    {
-        reduce(c, sumOp<point>());
-    }
-
-    if (lfc.groundPatches().empty())
-    {
-        const label refCell = lfc.referenceCell();
-        referenceCentroid_ =
-            refCell >= 0 ? baseMesh.C()[refCell] : point::zero;
-        reduce(referenceCentroid_, sumOp<point>());
-    }
-
-    directPhi_.reset(lfc.forwardPotential().ptr());
-    directStaticPhi_.reset(lfc.forwardPotential().ptr());
-    heartPhi_.reset(lfc.heartPotential().ptr());
-
-    if (Pstream::master())
-    {
-        wordList columns;
-        for (const word& name : electrodeNames_)
-        {
-            for
-            (
-                const word& column
-              : {
-                    "leadField", "direct", "exactPoint", "exactCentroid",
-                    "leadFieldStatic", "directStatic"
-                }
-            )
-            {
-                columns.append(word(column) + "_" + name);
-            }
-        }
-        outputPtr_ = ecgModelIO::openTimeSeries
-        (
-            mesh_.time().globalPath()/"postProcessing",
-            "manufacturedLeadFieldECG_" + domainName_ + ".dat",
-            columns
-        );
-        outputPtr_->precision(std::numeric_limits<scalar>::max_digits10);
-    }
-
-    Info<< type() << ": reference " << referenceTypeNames[reference_];
-    if (reference_ != referenceType::sphericalShell)
-    {
-        Info<< ", k " << slabK_;
-    }
-    if (reference_ == referenceType::layered)
-    {
-        Info<< ", alpha " << alpha_ << ", interfaces " << layers_.xLeft
-            << " " << layers_.xRight << ", sigma outer left "
-            << layers_.sigmaOuterLeft << ", inner left "
-            << layers_.sigmaInnerLeft << ", heart " << layers_.sigmaHeart
-            << ", inner right " << layers_.sigmaInnerRight
-            << ", outer right " << layers_.sigmaOuterRight;
-    }
-    Info<< ", electrode cell centroids " << electrodeCentroids_ << endl;
-}
-
-
 scalar manufacturedLeadFieldECGVerifier::exactVm
 (
     const point& p,
     const scalar t
 ) const
 {
-    switch (reference_)
-    {
-        case referenceType::slab:
-        case referenceType::layered:
-            return manufacturedLeadFieldSlabVm(p, t);
-        case referenceType::sphericalShell:
-            return shellTransmissionMMS::Vm(p, t, shellParams_);
-    }
-    return 0;
+    return manufacturedLeadFieldSlabVm(p, t);
 }
 
 
-scalar manufacturedLeadFieldECGVerifier::exactPhi
+scalar manufacturedLeadFieldECGVerifier::referencePhi
 (
     const point& p,
     const scalar t,
-    const label zone
+    const label
 ) const
 {
-    const leadFieldConductor& lfc = leadFieldPtr_->conductor();
-
-    scalar phi = 0;
-    scalar gauge = 0;
-    switch (reference_)
-    {
-        case referenceType::slab:
-            phi = manufacturedLeadFieldSlabPhi(p, t, slabK_);
-            gauge = manufacturedLeadFieldSlabPhi(referenceCentroid_, t, slabK_);
-            break;
-        case referenceType::layered:
-            phi = manufacturedLeadFieldLayeredPhi(p, t, slabK_, alpha_, layers_);
-            gauge = manufacturedLeadFieldLayeredPhi
-            (
-                referenceCentroid_, t, slabK_, alpha_, layers_
-            );
-            break;
-        case referenceType::sphericalShell:
-        {
-            using namespace shellTransmissionMMS;
-            phi = phiE
-            (
-                p, t, zone < 0 ? zoneOf(p, shellParams_) : zone, shellParams_
-            );
-            gauge = phiE
-            (
-                referenceCentroid_,
-                t,
-                zoneOf(referenceCentroid_, shellParams_),
-                shellParams_
-            );
-            break;
-        }
-    }
-
-    // A pinned conductor fixes the constant at the pinned cell; with ground
-    // patches the reference is absolute
     return
-        lfc.groundPatches().empty()
-      ? phi - gauge + lfc.referenceValue()
-      : phi;
+        reference_ == referenceType::slab
+      ? manufacturedLeadFieldSlabPhi(p, t, slabK_)
+      : manufacturedLeadFieldLayeredPhi(p, t, slabK_, alpha_, layers_);
 }
 
 
-void manufacturedLeadFieldECGVerifier::solveDirect
-(
-    const volScalarField& Vm,
-    volScalarField& phi,
-    scalarField& values,
-    const volScalarField* extraSource
-)
+void manufacturedLeadFieldECGVerifier::reportParameters(Ostream& os) const
 {
-    const leadFieldConductor& lfc = leadFieldPtr_->conductor();
-    const passiveConductor& conductor = lfc.conductor();
-    const dictionary& solverDict =
-        phi.mesh().solverDict(passiveConductor::potentialName);
-    const leadFieldConductor::fixedPointControls fixedPoint
-    (
-        leadFieldConductor::fixedPointControls::read(phi.mesh())
-    );
-    const scalar directTolerance = fixedPoint.tolerance;
-    const label directMaxPasses = fixedPoint.maxPasses;
-    tmp<volScalarField> tb(conductor.heartSource(Vm));
-    if (extraSource)
+    os  << ", k " << slabK_;
+    if (reference_ == referenceType::layered)
     {
-        tb.ref().primitiveFieldRef() += extraSource->primitiveField();
-    }
-    volScalarField& heartPhi = heartPhi_.ref();
-
-    const scalarField& phiI = phi.primitiveField();
-    scalarField phiPrev(phiI.size());
-    scalar change = GREAT;
-    label pass = 0;
-
-    while
-    (
-        pass < leadFieldConductor::fixedPointControls::minPasses
-     || change >= directTolerance
-    )
-    {
-        if (pass == directMaxPasses)
-        {
-            FatalErrorInFunction
-                << "Direct forward solve not converged after " << pass
-                << " passes; last relative change " << change
-                << " (tolerance " << directTolerance << ")."
-                << exit(FatalError);
-        }
-
-        phiPrev = phiI;
-
-        // The heart companion takes the base values before each assembly
-        conductor.fillHeart(phi, heartPhi);
-
-        tmp<fvScalarMatrix> tEqn(conductor.assemble(phi, heartPhi, &tb()));
-        conductor.applyReference
-        (
-            tEqn.ref(), phi, lfc.referenceCell(), lfc.referenceValue()
-        );
-        solve(tEqn.ref(), solverDict);
-
-        ++pass;
-        change = gMax(mag(phiI - phiPrev))/max(gMax(mag(phiI)), VSMALL);
-    }
-
-    values.setSize(electrodeCells_.size());
-    forAll(electrodeCells_, e)
-    {
-        values[e] = electrodeCells_[e] >= 0 ? phiI[electrodeCells_[e]] : 0;
-    }
-    Pstream::listCombineReduce(values, plusEqOp<scalar>());
-}
-
-
-void manufacturedLeadFieldECGVerifier::recordFieldError(const scalar t)
-{
-    const fvMesh& baseMesh = stateProvider_.baseMesh();
-    const scalarField& phi = directStaticPhi_().primitiveField();
-    const vectorField& C = baseMesh.C().primitiveField();
-    const scalarField& V = baseMesh.V().field();
-
-    // Per region: sum |e| V, sum e^2 V, sum V, max |e|
-    List<FixedList<scalar, 4>> sums(fieldRegionNames_.size(), Zero);
-    scalar maxE = -1;
-    point maxAt = point::zero;
-    forAll(C, cellI)
-    {
-        const label zone =
-            reference_ == referenceType::sphericalShell ? shellZones_[cellI] : -1;
-        const scalar e = mag(phi[cellI] - exactPhi(C[cellI], t, zone));
-        const bool inHeart = heartCells_[cellI];
-        const bool member[5] =
-        {
-            true, inHeart, !inHeart, interfaceBand_[cellI], surfaceCells_[cellI]
-        };
-        for (label r = 0; r < 5; ++r)
-        {
-            if (member[r])
-            {
-                sums[r][0] += e*V[cellI];
-                sums[r][1] += sqr(e)*V[cellI];
-                sums[r][2] += V[cellI];
-                sums[r][3] = max(sums[r][3], e);
-            }
-        }
-        if (e > maxE)
-        {
-            maxE = e;
-            maxAt = C[cellI];
-        }
-    }
-
-    forAll(sums, r)
-    {
-        for (label k = 0; k < 3; ++k)
-        {
-            reduce(sums[r][k], sumOp<scalar>());
-        }
-        reduce(sums[r][3], maxOp<scalar>());
-        const scalar vol = max(sums[r][2], VSMALL);
-        fieldErrors_[r][0] = max(fieldErrors_[r][0], sums[r][0]/vol);
-        fieldErrors_[r][1] = max(fieldErrors_[r][1], Foam::sqrt(sums[r][1]/vol));
-        fieldErrors_[r][2] = max(fieldErrors_[r][2], sums[r][3]);
-    }
-
-    const scalar globalMax = returnReduce(maxE, maxOp<scalar>());
-    if (maxE == globalMax)
-    {
-        Pout<< type() << ": largest phiStatic error " << globalMax
-            << " at " << maxAt << endl;
+        os  << ", alpha " << alpha_ << ", interfaces " << layers_.xLeft
+            << " " << layers_.xRight << ", sigma outer left "
+            << layers_.sigmaOuterLeft << ", inner left "
+            << layers_.sigmaInnerLeft << ", heart " << layers_.sigmaHeart
+            << ", inner right " << layers_.sigmaInnerRight
+            << ", outer right " << layers_.sigmaOuterRight;
     }
 }
 
 
-void manufacturedLeadFieldECGVerifier::record
-(
-    const List<scalar>& numericValues
-)
+void manufacturedLeadFieldECGVerifier::writeParameters(Ostream& os) const
 {
-    if (!leadFieldPtr_.valid())
-    {
-        initialise();
-    }
-
-    const volScalarField& Vm = requireVm();
-    const scalar t = mesh_.time().value();
-    const label nElectrodes = electrodeNames_.size();
-
-    // Direct forward on Vm_h
-    scalarField direct;
-    solveDirect(Vm, directPhi_.ref(), direct);
-
-    // Lead field and direct forward on the exact Vm at the cell centres
-    volScalarField VmExact
-    (
-        IOobject
-        (
-            Vm.name(), Vm.instance(), Vm.mesh(),
-            IOobject::NO_READ, IOobject::NO_WRITE, IOobject::NO_REGISTER
-        ),
-        Vm
-    );
-    const vectorField& centres = Vm.mesh().C().primitiveField();
-    forAll(centres, cellI)
-    {
-        VmExact.primitiveFieldRef()[cellI] = exactVm(centres[cellI], t);
-    }
-    VmExact.correctBoundaryConditions();
-
-    scalarField leadFieldStatic;
-    leadFieldPtr_->evaluate(VmExact, leadFieldStatic);
-    scalarField directStatic;
-    if (reference_ == referenceType::sphericalShell)
-    {
-        const tmp<volScalarField> tS
-        (
-            shellSource
-            (
-                t,
-                leadFieldPtr_->conductor().conductor()
-                    .heartSource(VmExact)().dimensions()
-            )
-        );
-        const scalarField& S = tS().primitiveField();
-        const scalarField& V = stateProvider_.baseMesh().V().field();
-        forAll(leadFieldStatic, e)
-        {
-            leadFieldStatic[e] += gSum(leadFields_[e].primitiveField()*V*S);
-        }
-        solveDirect(VmExact, directStaticPhi_.ref(), directStatic, &tS());
-    }
-    else
-    {
-        solveDirect(VmExact, directStaticPhi_.ref(), directStatic);
-    }
-
-    scalarField exactPoint(nElectrodes);
-    scalarField exactCentroid(nElectrodes);
-    forAll(exactPoint, e)
-    {
-        exactPoint[e] = exactPhi(electrodePositions_[e], t);
-        exactCentroid[e] = exactPhi(electrodeCentroids_[e], t);
-    }
-
-    // Errors per quantity, in quantityNames_ order
-    List<scalarField> errors(quantityNames_.size());
-    errors[0] = scalarField(numericValues) - direct;
-    errors[1] = leadFieldStatic - directStatic;
-    errors[2] = leadFieldStatic - exactPoint;
-    errors[3] = leadFieldStatic - exactCentroid;
-    errors[4] = directStatic - exactPoint;
-    errors[5] = directStatic - exactCentroid;
-    errors[6] = exactPoint - exactCentroid;
-
-    ++sampleCount_;
-    forAll(errors, q)
-    {
-        forAll(errors[q], e)
-        {
-            electrodeNorms_[q][e].add(errors[q][e]);
-        }
-        maxNorms_[q].add(max(mag(errors[q])));
-    }
-    recordFieldError(t);
-
-    relativeGapNorms_.add
-    (
-        max(mag(errors[0]))/max(max(mag(direct)), VSMALL)
-    );
-    exactScale_ = max(exactScale_, max(mag(exactPoint)));
-
-    if (Pstream::master())
-    {
-        List<scalar> row;
-        forAll(electrodeNames_, e)
-        {
-            row.append(numericValues[e]);
-            row.append(direct[e]);
-            row.append(exactPoint[e]);
-            row.append(exactCentroid[e]);
-            row.append(leadFieldStatic[e]);
-            row.append(directStatic[e]);
-        }
-        ecgModelIO::writeRow(outputPtr_.ref(), t, row);
-    }
-
-    if (verificationUtils::shouldReportManufacturedErrors(Vm))
-    {
-        writeSummary();
-    }
-}
-
-
-void manufacturedLeadFieldECGVerifier::writeSummary()
-{
-    if (summaryWritten_ || sampleCount_ == 0)
-    {
-        return;
-    }
-    summaryWritten_ = true;
-
-    // Reduced on every rank before the master writes
-    const label nCells =
-        verificationUtils::globalManufacturedCellCount
-        (
-            stateProvider_.baseMesh()
-        );
-    const label nHeartCells =
-        verificationUtils::globalManufacturedCellCount(mesh_);
-
-    if (!Pstream::master())
-    {
-        return;
-    }
-
-    const fileName outputFile
-    (
-        mesh_.time().globalPath()/"postProcessing"
-      / ("manufacturedLeadFieldECGSummary_" + domainName_ + ".dat")
-    );
-    OFstream os(outputFile);
-    os.precision(std::numeric_limits<scalar>::max_digits10);
-
-    const scalar n = sampleCount_;
-    const auto writeRow = [&os, n](const word& name, const errorNorms& norms)
-    {
-        os  << name << " " << norms.l1/n << " " << Foam::sqrt(norms.l2/n)
-            << " " << norms.linf << "\n";
-    };
-
-    os  << "# Manufactured lead-field ECG summary\n"
-        << "# reference " << referenceTypeNames[reference_] << "\n";
-    if (reference_ != referenceType::sphericalShell)
-    {
-        os  << "# k " << slabK_ << "\n";
-    }
+    os  << "# k " << slabK_ << "\n";
     if (reference_ == referenceType::layered)
     {
         os  << "# alpha " << alpha_ << "\n"
@@ -1195,41 +395,6 @@ void manufacturedLeadFieldECGVerifier::writeSummary()
             << "# sigmaInnerRight " << layers_.sigmaInnerRight << "\n"
             << "# sigmaOuterRight " << layers_.sigmaOuterRight << "\n";
     }
-    os  << "# cells " << nCells << "\n"
-        << "# heartCells " << nHeartCells << "\n"
-        << "# samples " << sampleCount_ << "\n"
-        << "# time " << mesh_.time().value() << "\n"
-        << "# exactScale " << exactScale_ << "\n"
-        << "# Errors over the samples: <quantity> is the maximum over the "
-        << "electrodes, <quantity>_<electrode> one electrode;\n"
-        << "# leadField-direct_relative is that maximum divided by the "
-        << "largest |direct|\n"
-        << "# row L1 L2 Linf\n";
-
-    writeRow("leadField-direct_relative", relativeGapNorms_);
-    forAll(fieldRegionNames_, r)
-    {
-        os  << fieldRegionNames_[r] << " " << fieldErrors_[r][0] << " "
-            << fieldErrors_[r][1] << " " << fieldErrors_[r][2] << "\n";
-    }
-    forAll(quantityNames_, q)
-    {
-        writeRow(quantityNames_[q], maxNorms_[q]);
-        forAll(electrodeNames_, e)
-        {
-            writeRow
-            (
-                quantityNames_[q] + "_" + electrodeNames_[e],
-                electrodeNorms_[q][e]
-            );
-        }
-    }
-}
-
-
-void manufacturedLeadFieldECGVerifier::end()
-{
-    writeSummary();
 }
 
 } // End namespace Foam

@@ -24,133 +24,64 @@ License
 namespace Foam
 {
 
-namespace
-{
-
-label nearestCell
+labelList ecgElectrodeCells
 (
     const fvMesh& mesh,
-    const point& samplePoint,
-    scalar& nearestDistanceSqr
+    const wordList& names,
+    const List<vector>& points
 )
-{
-    label nearestCellI = -1;
-    nearestDistanceSqr = GREAT;
-
-    const vectorField& centres = mesh.C().primitiveField();
-
-    forAll(centres, cellI)
-    {
-        const scalar distSqr = Foam::magSqr(centres[cellI] - samplePoint);
-
-        if (distSqr < nearestDistanceSqr)
-        {
-            nearestDistanceSqr = distSqr;
-            nearestCellI = cellI;
-        }
-    }
-
-    return nearestCellI;
-}
-
-} // End anonymous namespace
-
-
-labelList ecgElectrodeCells(const fvMesh& mesh, const List<vector>& points)
 {
     labelList cells(points.size(), -1);
 
     forAll(points, pointI)
     {
-        cells[pointI] = mesh.findCell(points[pointI]);
+        label cellI = mesh.findCell(points[pointI]);
+        const label ownerCount =
+            returnReduce(label(cellI >= 0 ? 1 : 0), sumOp<label>());
 
-        label ownerCount = cells[pointI] >= 0 ? 1 : 0;
-        reduce(ownerCount, sumOp<label>());
-        const label initialOwnerCount = ownerCount;
-
-        if (ownerCount != 1)
+        if (ownerCount == 0)
         {
-            scalar localDistanceSqr = GREAT;
-            label localCandidate = -1;
+            FatalErrorInFunction
+                << "Electrode '" << names[pointI] << "' at " << points[pointI]
+                << " lies outside mesh '" << mesh.name() << "': no cell "
+                << "contains it. Torso ECG electrodes must lie in the mesh."
+                << exit(FatalError);
+        }
 
-            if (ownerCount == 0)
-            {
-                localCandidate =
-                    nearestCell
-                    (
-                        mesh,
-                        points[pointI],
-                        localDistanceSqr
-                    );
-            }
-            else if (cells[pointI] >= 0)
-            {
-                localCandidate = cells[pointI];
-                localDistanceSqr =
-                    Foam::magSqr
-                    (
-                        mesh.C().primitiveField()[localCandidate]
-                      - points[pointI]
-                    );
-            }
-
-            scalar globalDistanceSqr = localDistanceSqr;
-            reduce(globalDistanceSqr, minOp<scalar>());
+        if (ownerCount > 1)
+        {
+            const scalar distanceSqr =
+                cellI >= 0
+              ? Foam::magSqr(mesh.C().primitiveField()[cellI] - points[pointI])
+              : GREAT;
+            const scalar nearestSqr =
+                returnReduce(distanceSqr, minOp<scalar>());
 
             const bool isNearest
             (
-                localCandidate >= 0
-             && Foam::mag(localDistanceSqr - globalDistanceSqr)
-              <= max(SMALL, ROOTSMALL*max(scalar(1), globalDistanceSqr))
+                cellI >= 0
+             && Foam::mag(distanceSqr - nearestSqr)
+              <= max(SMALL, ROOTSMALL*max(scalar(1), nearestSqr))
             );
-
-            label ownerProc = isNearest ? Pstream::myProcNo() : Pstream::nProcs();
-            reduce(ownerProc, minOp<label>());
-
-            cells[pointI] =
+            const label ownerProc = returnReduce
             (
-                isNearest
-             && Pstream::myProcNo() == ownerProc
-              ? localCandidate
-              : -1
+                isNearest ? Pstream::myProcNo() : Pstream::nProcs(),
+                minOp<label>()
             );
 
-            ownerCount = cells[pointI] >= 0 ? 1 : 0;
-            reduce(ownerCount, sumOp<label>());
-
-            if (cells[pointI] >= 0)
+            if (Pstream::myProcNo() != ownerProc)
             {
-                if (initialOwnerCount == 0)
-                {
-                    Info<< "ecgElectrodeCells: electrode at " << points[pointI]
-                        << " is outside findCell ownership; using nearest cell "
-                        << cells[pointI]
-                        << " at distance " << Foam::sqrt(globalDistanceSqr)
-                        << " on mesh '" << mesh.name() << "'."
-                        << nl;
-                }
-                else
-                {
-                    Info<< "ecgElectrodeCells: electrode at " << points[pointI]
-                        << " has ambiguous parallel findCell ownership; "
-                        << "using nearest owner cell "
-                        << cells[pointI]
-                        << " at distance " << Foam::sqrt(globalDistanceSqr)
-                        << " on mesh '" << mesh.name() << "'."
-                        << nl;
-                }
+                cellI = -1;
             }
+
+            Info<< "ecgElectrodeCells: electrode '" << names[pointI]
+                << "' at " << points[pointI] << " lies in a cell of "
+                << ownerCount << " processors; using the cell of processor "
+                << ownerProc << " at distance " << Foam::sqrt(nearestSqr)
+                << " on mesh '" << mesh.name() << "'." << nl;
         }
 
-        if (ownerCount != 1)
-        {
-            FatalErrorInFunction
-                << "Electrode at " << points[pointI]
-                << " must be owned by exactly one processor/cell in mesh '"
-                << mesh.name() << "', but owner count is "
-                << ownerCount << "."
-                << exit(FatalError);
-        }
+        cells[pointI] = cellI;
     }
 
     return cells;

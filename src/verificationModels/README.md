@@ -10,7 +10,7 @@ Built-in verification: verifiers that compare a run with a manufactured solution
 | `bidomainVerification/` | `manufacturedFDABidomainVerifier` |
 | `bathBidomainVerification/` | `manufacturedFDABathBidomainVerifier` |
 | `eikonalVerification/` | `manufacturedEikonalVerifier` |
-| `ecgVerification/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier`, `manufacturedLeadFieldECGVerifier` |
+| `ecgVerification/` | `manufacturedPseudoECGVerifier`, `manufacturedEikonalECGVerifier`, `manufacturedLeadFieldECGVerifier`, `manufacturedShellLeadFieldECGVerifier` |
 | `coupledVerification/` | `coupled1D3DMonodomainVerifier` |
 | `electromechanicsVerification/` | `manufacturedElectromechanicsVerifier` |
 

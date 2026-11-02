@@ -31,6 +31,8 @@ same    monodomainExplicit                   monodomainPseudoECG                
 same    bidomain                             bidomainPseudoECG                                0.005/Vm
 same    eikonal                              eikonalECG                                       1/activationTime
 same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE
+same    bidomainWithoutTorsoECG              bidomainLeadFieldECG                             0.00336323/Vm
+same    bidomainWithoutTorsoECG              bidomainLeadFieldECG                             0.00336323/phiE
 
 # Parallel runs must reproduce the serial ones up to round-off: rtol covers
 # the 8 significant digits written, atol the round-off in values near zero

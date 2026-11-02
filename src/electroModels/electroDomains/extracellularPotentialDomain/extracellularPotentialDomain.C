@@ -26,9 +26,6 @@ License
 #include "addToRunTimeSelectionTable.H"
 #include "OStringStream.H"
 #include "dimVoltage.H"
-#include "fixedGradientFvPatchFields.H"
-#include "fixedValueFvPatchFields.H"
-#include "zeroGradientFvPatchFields.H"
 #include "surfaceFields.H"
 #include "nonOrthogonalCorrectorLoop.H"
 
@@ -46,14 +43,12 @@ addToRunTimeSelectionTable
 namespace
 {
 
-// Resolve the non-orthogonal corrector count from the PIMPLE dictionary.
+// The non-orthogonal corrector count of the PIMPLE dictionary (required)
 label resolveNonOrthogonalCorrectors(const fvMesh& baseMesh)
 {
-    const dictionary& pimpleDict =
-        baseMesh.solutionDict().subOrEmptyDict("PIMPLE");
+    const dictionary& pimpleDict = baseMesh.solutionDict().subDict("PIMPLE");
 
-    const label nCorr =
-        pimpleDict.lookupOrDefault<label>("nNonOrthogonalCorrectors", 0);
+    const label nCorr = pimpleDict.get<label>("nNonOrthogonalCorrectors");
 
     if (nCorr < 0)
     {
@@ -66,50 +61,41 @@ label resolveNonOrthogonalCorrectors(const fvMesh& baseMesh)
 }
 
 
-wordList potentialPatchTypes
+const volScalarField& requireHeartVm
 (
-    const fvMesh& mesh,
-    const passiveConductor::torsoSettings& torso
+    const myocardiumDomainInterface& heartDomain
 )
 {
-    wordList patchTypes
-    (
-        mesh.boundary().size(),
-        zeroGradientFvPatchScalarField::typeName
-    );
+    const volScalarField* VmPtr = heartDomain.VmPtr();
 
-    forAll(torso.groundPatches, patchI)
+    if (!VmPtr)
     {
-        const label patchID =
-            mesh.boundaryMesh().findPatchID(torso.groundPatches[patchI]);
-        patchTypes[patchID] = fixedValueFvPatchScalarField::typeName;
+        FatalErrorInFunction
+            << "Heart domain does not expose Vm."
+            << exit(FatalError);
     }
 
-    forAll(torso.surfaceCurrentPatches, patchI)
-    {
-        patchTypes
-        [
-            mesh.boundaryMesh().findPatchID(torso.surfaceCurrentPatches[patchI])
-        ] = fixedGradientFvPatchScalarField::typeName;
-    }
-
-    return patchTypes;
+    return *VmPtr;
 }
 
 
-void applyGroundPatchValues
+volScalarField& requireHeartPhiE
 (
-    volScalarField& phiE,
-    const passiveConductor::torsoSettings& torso
+    const myocardiumDomainInterface& heartDomain
 )
 {
-    forAll(torso.groundPatches, patchI)
-    {
-        const label patchId =
-            phiE.mesh().boundaryMesh().findPatchID(torso.groundPatches[patchI]);
+    const volScalarField* phiEPtr = heartDomain.phiEPtr();
 
-        phiE.boundaryFieldRef()[patchId] = torso.groundValues[patchI];
+    if (!phiEPtr)
+    {
+        FatalErrorInFunction
+            << "Matched intracellular assembly requires the heart phiE field."
+            << exit(FatalError);
     }
+
+    // The bidomain heart's phiE, which the bath assembles as the heart
+    // companion of the global phiE
+    return const_cast<volScalarField&>(*phiEPtr);
 }
 
 
@@ -125,29 +111,78 @@ extracellularPotentialDomain::extracellularPotentialDomain
 :
     baseMesh_(baseMesh),
     heartDomain_(heartDomain),
-    torso_
-    (
-        passiveConductor::torsoSettings::read
-        (
-            baseMesh, electroProperties.subDict("torso")
-        )
-    ),
+    heartVm_(requireHeartVm(heartDomain)),
+    heartPhiE_(requireHeartPhiE(heartDomain)),
+    conductorPtr_(),
     phiEPtr_(),
     VmGlobalPtr_(),
-    hasDirichletPatch_(false),
     nNonOrthogonalCorrectors_
     (
         resolveNonOrthogonalCorrectors(baseMesh)
     ),
-    sealedHeartBoundary_
-    (
-        electroProperties.subDict
-        (
-            electroProperties.get<word>("myocardiumSolver") + "Coeffs"
-        ).get<Switch>("sealedHeartBoundary")
-    ),
     manufacturedEvaluationTime_(baseMesh.time().value())
 {
+    const labelUList* heartCellMapPtr = heartDomain_.subsetCellMapPtr();
+    const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
+    const fvMesh& heartMesh =
+        static_cast<const electroStateProvider&>(heartDomain_).mesh();
+
+    if (!heartCellMapPtr)
+    {
+        FatalErrorInFunction
+            << "Unified phiE requires the myocardium domain to expose a "
+            << "subset cell map to the base mesh."
+            << exit(FatalError);
+    }
+
+    if (!heartFaceMapPtr)
+    {
+        FatalErrorInFunction
+            << "Matched intracellular assembly requires the heart/base "
+            << "face map."
+            << exit(FatalError);
+    }
+
+    const volTensorField* GiPtr = heartDomain_.intracellularConductivityPtr();
+    const volTensorField* GePtr = heartDomain_.extracellularConductivityPtr();
+
+    if (!GiPtr || !GePtr)
+    {
+        FatalErrorInFunction
+            << "extracellularPotentialDomain requires split intracellular and "
+            << "extracellular conductivities from a bidomain myocardium."
+            << exit(FatalError);
+    }
+
+    // The bidomain intracellular potential is insulated at the heart wall,
+    // so the heart side of heart-torso faces carries Ge
+    const bool totalWallConductivity = false;
+
+    conductorPtr_.reset
+    (
+        new passiveConductor
+        (
+            baseMesh_,
+            heartMesh,
+            *heartCellMapPtr,
+            *heartFaceMapPtr,
+            *GiPtr,
+            *GePtr,
+            passiveConductor::torsoSettings::read
+            (
+                baseMesh_, electroProperties.subDict("torso")
+            ),
+            electroProperties.subDict
+            (
+                electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+            ).get<Switch>("sealedHeartBoundary"),
+            heartVm_,
+            totalWallConductivity
+        )
+    );
+    const passiveConductor::torsoSettings& torso = conductorPtr_->torso();
+    const wordList expectedTypes(torso.patchTypes(baseMesh_, true));
+
     phiEPtr_.reset
     (
         new volScalarField
@@ -162,11 +197,10 @@ extracellularPotentialDomain::extracellularPotentialDomain
             ),
             baseMesh_,
             dimensionedScalar("phiE", dimVoltage, 0.0),
-            potentialPatchTypes(baseMesh_, torso_)
+            expectedTypes
         )
     );
     {
-        const wordList expectedTypes(potentialPatchTypes(baseMesh_, torso_));
         const auto& bf = phiEPtr_().boundaryField();
         OStringStream mismatches;
         label nMismatched = 0;
@@ -199,20 +233,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
         }
     }
 
-    applyGroundPatchValues(phiEPtr_(), torso_);
+    torso.setGroundValues(phiEPtr_());
     sealedWallPolicy::publish(phiEPtr_(), false);
-
-    {
-        const auto& bf = phiEPtr_().boundaryField();
-        forAll(bf, patchI)
-        {
-            if (isA<fixedValueFvPatchScalarField>(bf[patchI]))
-            {
-                hasDirichletPatch_ = true;
-                break;
-            }
-        }
-    }
 
     VmGlobalPtr_.reset
     (
@@ -236,7 +258,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
     {
         if
         (
-            hasDirichletPatch_
+            !torso.pinsReference()
          && model->requiresPhiECompatibilityProjection()
         )
         {
@@ -296,99 +318,16 @@ extracellularPotentialDomain::extracellularPotentialDomain
         }
     }
 
-    const labelUList* heartCellMapPtr = heartDomain_.subsetCellMapPtr();
-    const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
-    const fvMesh& heartMesh =
-        static_cast<const electroStateProvider&>(heartDomain_).mesh();
-
-    if (!heartCellMapPtr)
-    {
-        FatalErrorInFunction
-            << "Unified phiE requires the myocardium domain to expose a "
-            << "subset cell map to the base mesh."
-            << exit(FatalError);
-    }
-
-    if (!heartFaceMapPtr)
-    {
-        FatalErrorInFunction
-            << "Matched intracellular assembly requires the heart/base "
-            << "face map."
-            << exit(FatalError);
-    }
-
-    const volTensorField* GiPtr = heartDomain_.intracellularConductivityPtr();
-    const volTensorField* GePtr = heartDomain_.extracellularConductivityPtr();
-
-    if (!GiPtr || !GePtr)
-    {
-        FatalErrorInFunction
-            << "extracellularPotentialDomain requires split intracellular and "
-            << "extracellular conductivities from a bidomain myocardium."
-            << exit(FatalError);
-    }
-
-    const volScalarField* heartVmPtr = heartDomain_.VmPtr();
-
-    if (!heartVmPtr)
-    {
-        FatalErrorInFunction
-            << "Heart domain does not expose Vm."
-            << exit(FatalError);
-    }
-
-    const autoPtr<volScalarField> bathSigmaPtr
-    (
-        passiveConductor::readTorsoConductivity
-        (
-            baseMesh_, torso_.conductivityField, true
-        )
-    );
-
-    conductorPtr_.reset
-    (
-        new passiveConductor
-        (
-            baseMesh_,
-            heartMesh,
-            *heartCellMapPtr,
-            *heartFaceMapPtr,
-            *GiPtr,
-            *GePtr,
-            bathSigmaPtr(),
-            torso_.cellZones,
-            torso_.interfaceConductivityInterpolation,
-            sealedHeartBoundary_,
-            *heartVmPtr,
-            false
-        )
-    );
     heartDomain_.bindExternalPhiE
     (
         phiEPtr_(), conductorPtr_->heartCellToBaseCell()
     );
 }
 
-label extracellularPotentialDomain::referenceCell() const
-{
-    torso_.requirePhiERefPoint("extracellularPotentialDomain");
-
-    return conductorPtr_->referenceCell(torso_.phiERefPoint);
-}
-
 void extracellularPotentialDomain::scatterHeartVm()
 {
-    const volScalarField* heartVmPtr = heartDomain_.VmPtr();
-
-    if (!heartVmPtr)
-    {
-        FatalErrorInFunction
-            << "Heart domain does not expose Vm."
-            << exit(FatalError);
-    }
-
     scalarField& VmGlobal = VmGlobalPtr_().primitiveFieldRef();
-    const scalarField& heartVm = heartVmPtr->primitiveField();
+    const scalarField& heartVm = heartVm_.primitiveField();
     VmGlobal = 0.0;
 
     const labelList& heartCellToBaseCell =
@@ -470,84 +409,20 @@ void extracellularPotentialDomain::prepareTimeStep(scalar t0, scalar dt)
 
 void extracellularPotentialDomain::solvePhiEOnce()
 {
-    forAll(torso_.surfaceCurrentPatches, patchI)
-    {
-        const label patchId =
-            baseMesh_.boundaryMesh().findPatchID(torso_.surfaceCurrentPatches[patchI]);
+    const passiveConductor& conductor = conductorPtr_();
+    const passiveConductor::torsoSettings& torso = conductor.torso();
 
-        if (patchId < 0)
-        {
-            FatalErrorInFunction
-                << "Cannot find extracellularPotentialDomain surface-current patch '"
-                << torso_.surfaceCurrentPatches[patchI] << "' on mesh '"
-                << baseMesh_.name() << "'."
-                << exit(FatalError);
-        }
-
-        fixedGradientFvPatchScalarField& phiEPatch =
-            refCast<fixedGradientFvPatchScalarField>
-            (
-                phiEPtr_().boundaryFieldRef()[patchId]
-            );
-
-        tmp<tensorField> tSigmaPatch =
-            conductorPtr_->sigmaTotal()
-                .boundaryField()[patchId].patchInternalField();
-        const tensorField& sigmaPatch = tSigmaPatch();
-        tmp<vectorField> tNf(phiEPatch.patch().nf());
-        const vectorField& nf = tNf();
-        scalarField& gradient = phiEPatch.gradient();
-
-        forAll(gradient, faceI)
-        {
-            const scalar sigmaN =
-                nf[faceI] & (sigmaPatch[faceI] & nf[faceI]);
-
-            if (sigmaN <= SMALL)
-            {
-                FatalErrorInFunction
-                    << "Surface-current patch '"
-                    << torso_.surfaceCurrentPatches[patchI]
-                    << "' found non-positive normal conductivity " << sigmaN
-                    << " on face " << faceI << "."
-                    << exit(FatalError);
-            }
-
-            gradient[faceI] = torso_.surfaceCurrentValues[patchI]/sigmaN;
-        }
-
-        phiEPatch.evaluate();
-    }
-
-    const volScalarField* VmPtr = heartDomain_.VmPtr();
-
-    if (!VmPtr)
-    {
-        FatalErrorInFunction
-            << "extracellularPotentialDomain requires the heart Vm field."
-            << exit(FatalError);
-    }
-
-    volScalarField* heartPhiEPtr = const_cast<volScalarField*>
-    (
-        heartDomain_.phiEPtr()
-    );
-    if (!heartPhiEPtr)
-    {
-        FatalErrorInFunction
-            << "Matched intracellular assembly requires the heart phiE field."
-            << exit(FatalError);
-    }
+    conductor.setSurfaceCurrents(phiEPtr_());
 
     setExposedPhiETrace
     (
-        *heartPhiEPtr, phiEPtr_(), conductorPtr_->heartCellToBaseCell(),
+        heartPhiE_, phiEPtr_(), conductor.heartCellToBaseCell(),
         *heartDomain_.subsetFaceMapPtr(),
         *heartDomain_.extracellularConductivityPtr(),
-        conductorPtr_->sigmaTotal()
+        conductor.sigmaTotal()
     );
 
-    tmp<volScalarField> trhsGlobal(conductorPtr_->heartSource(*VmPtr));
+    tmp<volScalarField> trhsGlobal(conductor.heartSource(heartVm_));
     volScalarField& rhsGlobal = trhsGlobal.ref();
 
     if (const electroVerificationModel* model = verifier())
@@ -565,10 +440,10 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     tmp<fvScalarMatrix> tphiEqn
     (
-        conductorPtr_->assemble
+        conductor.assemble
         (
             phiEPtr_(),
-            *heartPhiEPtr,
+            heartPhiE_,
             &rhsGlobal,
             storeFlux ? &correction : nullptr
         )
@@ -582,7 +457,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     if
     (
-        !hasDirichletPatch_
+        torso.pinsReference()
      && verifier()
      && verifier()->requiresPhiECompatibilityProjection()
     )
@@ -590,13 +465,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
         projectCompatibility(phiEqn);
     }
 
-    if (!hasDirichletPatch_)
-    {
-        conductorPtr_->applyReference
-        (
-            phiEqn, phiEPtr_(), referenceCell(), torso_.phiEReferenceValue
-        );
-    }
+    conductor.applyReference(phiEqn, torso.phiEReferenceValue);
 
     solve(phiEqn);
 

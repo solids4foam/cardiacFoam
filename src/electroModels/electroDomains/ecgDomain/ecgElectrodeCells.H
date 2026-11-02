@@ -19,11 +19,12 @@ Function
     ecgElectrodeCells
 
 Description
-    Cell of each electrode point, owned by exactly one processor.
+    Cell of each electrode of a torso ECG, owned by exactly one processor.
 
-    The cell is the containing cell from findCell. A point outside the mesh,
-    or found by more than one processor, takes the nearest cell centre; ties
-    go to the lowest processor. Any other outcome is fatal.
+    The cell is the containing cell from findCell. An electrode outside the
+    mesh is fatal and named. A point found by more than one processor (on a
+    processor boundary) takes the containing cell whose centre is nearest;
+    ties go to the lowest processor.
 
 SourceFiles
     ecgElectrodeCells.C
@@ -41,9 +42,14 @@ Author
 namespace Foam
 {
 
-//- Owner cell of each point on mesh, unique across processors (-1 where not
-//  owned)
-labelList ecgElectrodeCells(const fvMesh& mesh, const List<vector>& points);
+//- Owner cell of each electrode point on mesh, unique across processors
+//  (-1 where not owned); names name the electrodes in the fatal error
+labelList ecgElectrodeCells
+(
+    const fvMesh& mesh,
+    const wordList& names,
+    const List<vector>& points
+);
 
 } // End namespace Foam
 

@@ -284,12 +284,8 @@ int main(int argc, char* argv[])
     );
     const dictionary& coeffs = electroProperties.subDict("bidomainSolverCoeffs");
     const dictionary& verification = coeffs.subDict("verificationModel");
-    const scalar k = verification.lookupOrDefault<scalar>
-    (
-        "k",
-        1.0/Foam::sqrt(2.0)
-    );
-    const scalar alpha = verification.lookupOrDefault<scalar>("alpha", 0.01);
+    const scalar k = verification.get<scalar>("k");
+    const scalar alpha = verification.get<scalar>("alpha");
     // electrodePair has no Dirichlet ground patch, so phiE floats: the
     // manufactured phiEExact() below carries a fixed additive constant that
     // pins the groundElectrode variant's phiE(x=-1)=0, and the numerical
@@ -300,11 +296,17 @@ int main(int argc, char* argv[])
     // treatment manufacturedFDABathBidomainVerifier.C applies to its own
     // phiE/phiI norms. groundElectrode's Dirichlet patch fixes the constant
     // physically, so it is compared as-is (means below are then both zero).
-    const word fdaBathVariant = verification.lookupOrDefault<word>
+    const word fdaBathVariant = verification.get<word>("fdaBathVariant");
+    if
     (
-        "fdaBathVariant",
-        "groundElectrode"
-    );
+        fdaBathVariant != "groundElectrode"
+     && fdaBathVariant != "electrodePair"
+    )
+    {
+        FatalIOErrorInFunction(verification)
+            << "fdaBathVariant must be groundElectrode or electrodePair; "
+            << "found " << fdaBathVariant << '.' << exit(FatalIOError);
+    }
     const bool electrodePair = (fdaBathVariant == "electrodePair");
     tmp<volTensorField> sigmaEFieldTmp = readConductivityField
     (

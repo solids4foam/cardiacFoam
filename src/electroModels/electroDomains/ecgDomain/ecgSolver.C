@@ -28,12 +28,15 @@ defineTypeNameAndDebug(ecgSolver, 0);
 defineRunTimeSelectionTable(ecgSolver, dictionary);
 
 
+word ecgSolver::selectedType(const dictionary& dict)
+{
+    return dict.get<word>("ecgSolver");
+}
+
+
 autoPtr<ecgSolver> ecgSolver::New(const dictionary& dict)
 {
-    const word solverType
-    (
-        dict.lookupOrDefault<word>("ecgSolver", "pseudoECG")
-    );
+    const word solverType(selectedType(dict));
 
     Info<< "Selecting ecgSolver " << solverType << nl;
 

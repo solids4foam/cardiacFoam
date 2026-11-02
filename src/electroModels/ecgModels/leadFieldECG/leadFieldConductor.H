@@ -20,22 +20,24 @@ Class
 
 Description
     The heart+torso passiveConductor of a torsoECG domain with torsoCoupling
-    leadField, built from electroProperties, with its electrodes, reference
-    and signature.
+    leadField, built from electroProperties, with its electrodes and
+    signature.
 
     - Coupling: torsoCoupling must be leadField.
     - Heart: the myocardium cellZone sub-mesh (createMyocardiumMeshSubset).
     - Myocardium: bidomainSolver or monodomainSolver; eikonalSolver is not
       supported.
-    - Gi, Ge: bidomainSolver reads them from its Coeffs; monodomainSolver
-      reads them from the ECG domain entry with the same keys.
-      For monodomainSolver the Coeffs conductivity must equal
-      Gi (Gi+Ge)^-1 Ge in every cell.
-    - Torso: the top-level torso block of electroProperties.
+    - Gi, Ge: bidomainSolver: those of the running myocardium, or read from
+      its Coeffs when built from the case alone; monodomainSolver reads them
+      from the ECG domain entry with the same keys. For monodomainSolver
+      the Coeffs conductivity must equal Gi (Gi+Ge)^-1 Ge in every cell.
+    - Torso: the top-level torso block of electroProperties
+      (passiveConductor::torsoSettings).
     - Sealing: sealedHeartBoundary of the Coeffs, with a heart field Vm
       that is zeroGradient on every non-coupled patch.
-    - Electrodes: each lies in a torso cell; an electrode whose cell is a
-      myocardium cell is fatal.
+    - Electrodes: those of the ECG domain (readEcgElectrodes); each lies in
+      a torso cell of the mesh (ecgElectrodeCells); an electrode outside the
+      mesh or in a myocardium cell is fatal.
     - bidomainSolver: bathHeartPhiETrace must be zeroGradient, the heart
       phiE companion the conductor assembles.
 
@@ -43,7 +45,8 @@ Description
     its own. Built from a running myocardium, they are the myocardium's
     sub-mesh and Vm.
 
-    The conductor's base-mesh fields and its Gi and Ge are not registered.
+    The conductor's base-mesh fields and the Gi and Ge it reads are not
+    registered.
 
 SourceFiles
     leadFieldConductor.C
@@ -56,9 +59,11 @@ Author
 #define leadFieldConductor_H
 
 #include "passiveConductor.H"
+#include "bidomainSolver.H"
+#include "ecgElectrodes.H"
+#include "electroStateProvider.H"
 #include "fvMeshSubset.H"
 #include "dictionary.H"
-#include "scalarList.H"
 
 namespace Foam
 {
@@ -70,50 +75,52 @@ class leadFieldConductor
     // Myocardium solver type (Coeffs name without "Coeffs").
     const word solverType_;
 
+    // The myocardium is a bidomainSolver (else a monodomainSolver).
+    const bool bidomain_;
+
     // bidomainSolver heart phiE trace at the heart-torso wall.
-    word bathHeartPhiETrace_;
+    bidomainSolver::heartPhiETrace bathHeartPhiETrace_;
+
+    Switch sealedHeartBoundary_;
 
     // Myocardium cellZone of the base mesh.
     word myocardiumZone_;
+
+    // Electrodes of the ECG domain.
+    const ecgElectrodes electrodes_;
 
     // Heart sub-mesh: owned, or the running myocardium's.
     autoPtr<fvMeshSubset> ownSubsetPtr_;
     const fvMeshSubset* subsetPtr_;
 
-    // Heart conductivities on the heart sub-mesh.
-    autoPtr<volTensorField> GiPtr_;
-    autoPtr<volTensorField> GePtr_;
-
-    // Torso conductivity on the base mesh and its cellZones.
-    autoPtr<volScalarField> torsoConductivityPtr_;
-    wordList torsoCellZones_;
-
-    word interfaceConductivityInterpolation_;
-    Switch sealedHeartBoundary_;
+    // Heart conductivities on the heart sub-mesh: read and owned, or the
+    // running bidomain myocardium's.
+    autoPtr<volTensorField> ownGiPtr_;
+    autoPtr<volTensorField> ownGePtr_;
+    const volTensorField* GiPtr_;
+    const volTensorField* GePtr_;
 
     // Heart field whose patch types decide sealing: owned, or the
     // running myocardium's Vm.
     autoPtr<volScalarField> ownSealingFieldPtr_;
     const volScalarField* sealingFieldPtr_;
 
-    wordList electrodeNames_;
-    List<vector> electrodePositions_;
-
     // Base cell of each electrode on its owning processor, -1 elsewhere.
     labelList electrodeCells_;
 
-    wordList groundPatches_;
-    scalarList groundValues_;
-    wordList surfaceCurrentPatches_;
-    scalarList surfaceCurrentValues_;
-
-    // Reference pin, used when there is no ground patch.
-    bool hasReferencePoint_;
-    point referencePoint_;
-    scalar referenceValue_;
-    label referenceCell_;
-
     autoPtr<passiveConductor> conductorPtr_;
+
+    // Members from electroProperties, the ECG domain entry name and the
+    // electrodes; checks the coupling, the myocardium solver type and its
+    // cellZone. The heart, conductivities and conductor are set by the
+    // public constructors.
+    leadFieldConductor
+    (
+        const fvMesh& baseMesh,
+        const dictionary& electroProperties,
+        const word& ecgDomainName,
+        const ecgElectrodes& electrodes
+    );
 
     // Check the coupling, the myocardium solver type and its cellZone.
     void checkMyocardium
@@ -122,32 +129,37 @@ class leadFieldConductor
         const word& ecgDomainName
     ) const;
 
-    // Read conductivities, torso and electrodes; build the conductor.
+    // Set Gi and Ge (from heart, a running bidomain myocardium, when given)
+    // and build the conductor and the electrode cells.
     void build
     (
         const dictionary& electroProperties,
-        const word& ecgDomainName
+        const word& ecgDomainName,
+        const electroStateProvider* heart
     );
 
-    // Read Gi and Ge; check the monodomain conductivity against them.
-    void readHeartConductivities
+    // Set Gi and Ge; check the monodomain conductivity against them.
+    void setHeartConductivities
     (
         const dictionary& electroCoeffs,
-        const dictionary& ecgDict
-    );
-
-    // Read the torso, interface and reference keys.
-    void readTorso(const dictionary& torsoDict);
-
-    void readElectrodes
-    (
-        const dictionary& electroProperties,
-        const dictionary& ecgDict
+        const dictionary& ecgDict,
+        const electroStateProvider* heart
     );
 
     // Locate the electrode cells; fatal for an electrode in a myocardium
     // cell.
     void locateElectrodes(const dictionary& ecgDict);
+
+    // Zero potential named phiE on mesh (unregistered) with the patch
+    // types, whose wall-gradient states (seal) are published unless the
+    // forward's potential of the same name on mesh has published them
+    tmp<volScalarField> newPotential
+    (
+        const fvMesh& mesh,
+        const dimensionSet& dims,
+        const wordList& patchTypes,
+        const bool seal
+    ) const;
 
 
 public:
@@ -176,7 +188,8 @@ public:
 
 
     //- Construct from the base mesh, the top-level electroProperties and
-    //  the name of the ECG domain entry in its ecgDomains
+    //  the name of the ECG domain entry in its ecgDomains, whose electrodes
+    //  are read (readEcgElectrodes)
     leadFieldConductor
     (
         const fvMesh& baseMesh,
@@ -184,15 +197,17 @@ public:
         const word& ecgDomainName
     );
 
-    //- Construct on the sub-mesh of a running myocardium, whose Vm decides
-    //  sealing, from the top-level electroProperties and the ECG domain
-    //  entry name
+    //- Construct on a running myocardium (its sub-mesh, its Vm, which
+    //  decides sealing, and the Gi and Ge of a bidomain myocardium) from
+    //  the top-level electroProperties, the ECG domain entry name and the
+    //  electrodes of the ECG domain
     leadFieldConductor
     (
-        const fvMeshSubset& heartSubset,
-        const volScalarField& Vm,
+        const electroStateProvider& heart,
         const dictionary& electroProperties,
-        const word& ecgDomainName
+        const word& ecgDomainName,
+        const wordList& electrodeNames,
+        const List<vector>& electrodePositions
     );
 
     leadFieldConductor(const leadFieldConductor&) = delete;
@@ -218,28 +233,17 @@ public:
 
     const volTensorField& Gi() const
     {
-        return GiPtr_();
+        return *GiPtr_;
     }
 
     const volTensorField& Ge() const
     {
-        return GePtr_();
-    }
-
-    //- Heart field Vm whose patch types decide sealing
-    const volScalarField& sealingField() const
-    {
-        return *sealingFieldPtr_;
-    }
-
-    const List<vector>& electrodePositions() const
-    {
-        return electrodePositions_;
+        return *GePtr_;
     }
 
     const wordList& electrodeNames() const
     {
-        return electrodeNames_;
+        return electrodes_.names;
     }
 
     //- Base (torso) cell of each electrode on its owning processor, -1
@@ -247,41 +251,6 @@ public:
     const labelList& electrodeCells() const
     {
         return electrodeCells_;
-    }
-
-    //- Pinned base cell on its owning processor; -1 elsewhere and when
-    //  ground patches fix the constant
-    label referenceCell() const
-    {
-        return referenceCell_;
-    }
-
-    scalar referenceValue() const
-    {
-        return referenceValue_;
-    }
-
-    const wordList& groundPatches() const
-    {
-        return groundPatches_;
-    }
-
-    //- Value of each ground patch, in groundPatches() order
-    const scalarList& groundValues() const
-    {
-        return groundValues_;
-    }
-
-    const wordList& surfaceCurrentPatches() const
-    {
-        return surfaceCurrentPatches_;
-    }
-
-    //- Current of each surface-current patch, in surfaceCurrentPatches()
-    //  order
-    const scalarList& surfaceCurrentValues() const
-    {
-        return surfaceCurrentValues_;
     }
 
     //- Decomposition-independent signature: the operator (adjoint), global

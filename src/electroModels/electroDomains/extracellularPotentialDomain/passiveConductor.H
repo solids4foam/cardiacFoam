@@ -19,9 +19,16 @@ Class
     passiveConductor
 
 Description
-    Passive heart+torso conductor on the base mesh: the cell and face
+    Passive heart+torso conductor on the base mesh, built from the torso
+    block of electroProperties (torsoSettings): the cell and face
     conductivities, the operator for a base-mesh potential and its heart
-    companion, the reference pin and the heart intracellular source.
+    companion, the boundary data of the potential (patch types, ground
+    values, surface currents), the reference pin and the heart intracellular
+    source.
+
+    Its two users are the bath (extracellularPotentialDomain, which solves
+    phiE with a bidomain heart every step) and the lead fields of torsoECG
+    (leadFieldConductor, buildLeadFields and leadFieldECG).
 
     The extracellular/torso part is assembled on the base mesh. The
     intracellular part is assembled on the heart sub-mesh and injected
@@ -37,6 +44,9 @@ Description
     distance-weighted harmonic mean of the two conductivities, which carries
     the exact flux of a potential that is linear on each side; torso faces
     between equal conductivities take the linear one.
+
+    Ground patches fix the constant of the potential; without them the cell
+    containing phiERefPoint is pinned to phiEReferenceValue.
 
     The potential is named phiE on the base and heart meshes. With
     interfaceConductivityInterpolation conormalHarmonic, the solver entry of
@@ -68,6 +78,7 @@ Author
 #include "fvMesh.H"
 #include "autoPtr.H"
 #include "Switch.H"
+#include "Enum.H"
 #include "dictionary.H"
 #include "point.H"
 #include "wordList.H"
@@ -80,6 +91,21 @@ namespace Foam
 class passiveConductor
 {
 public:
+
+    //- Face conductivity of the heart-torso faces
+    enum class interfaceInterpolation
+    {
+        //- Distance-weighted harmonic mean; standard cell gradient in the
+        //  cross term
+        distanceWeightedHarmonic,
+
+        //- Conormal harmonic mean; jump-aware cell gradient in the cross
+        //  term (interfaceGradient)
+        conormalHarmonic
+    };
+
+    static const Enum<interfaceInterpolation> interfaceInterpolationNames;
+
 
     //- Explicit face terms of the assembled operator, for flux diagnostics
     struct faceCorrection
@@ -94,8 +120,7 @@ public:
 
 
     //- The keys of the top-level torso block of electroProperties: the
-    //  single reader of these keys. The interface option is checked by the
-    //  passiveConductor constructor.
+    //  single reader of these keys
     struct torsoSettings
     {
         //- Torso cellZones (cellZones, required)
@@ -105,11 +130,9 @@ public:
         //  required)
         word conductivityField;
 
-        //- Heart-torso faces carry the flux-continuous face conductivity
-        //  (interfaceConductivityInterpolation, required):
-        //  distanceWeightedHarmonic uses the standard cell gradient for its
-        //  cross term, conormalHarmonic the jump-aware one
-        word interfaceConductivityInterpolation;
+        //- Face conductivity of the heart-torso faces
+        //  (interfaceConductivityInterpolation, required)
+        interfaceInterpolation interface;
 
         //- Dirichlet patches and their values
         wordList groundPatches;
@@ -119,32 +142,40 @@ public:
         wordList surfaceCurrentPatches;
         scalarList surfaceCurrentValues;
 
-        //- phiERefPoint is present; the point and the pinned value
-        //  (default 0) are read whether or not ground patches exist
-        bool hasPhiERefPoint;
+        //- phiERefPoint and the value pinned at its cell, both required
+        //  without ground patches; not read (zero) with ground patches
         point phiERefPoint;
         scalar phiEReferenceValue;
 
         //- Read from dict. Every ground and surface-current patch must be
-        //  a patch of mesh and no patch may be in both lists.
+        //  a patch of mesh and no patch may be in both lists; without
+        //  ground patches phiERefPoint and phiEReferenceValue are required.
         static torsoSettings read
         (
             const fvMesh& mesh,
             const dictionary& dict
         );
 
-        //- FATAL unless phiERefPoint is present; owner names the caller
-        void requirePhiERefPoint(const word& owner) const;
-    };
+        //- True when no ground patch fixes the constant of the potential,
+        //  which is then pinned at phiERefPoint
+        bool pinsReference() const
+        {
+            return groundPatches.empty();
+        }
 
-    //- Read the torso scalar conductivity field fieldName on mesh
-    //  (MUST_READ at its latest instance)
-    static autoPtr<volScalarField> readTorsoConductivity
-    (
-        const fvMesh& mesh,
-        const word& fieldName,
-        const bool registerObject
-    );
+        //- Patch types of the potential on mesh: fixedValue on the ground
+        //  patches, fixedGradient on the surface-current patches when
+        //  surfaceCurrents (zeroGradient otherwise), zeroGradient on the
+        //  other patches
+        wordList patchTypes
+        (
+            const fvMesh& mesh,
+            const bool surfaceCurrents
+        ) const;
+
+        //- Set the ground values on the ground patches of psi
+        void setGroundValues(volScalarField& psi) const;
+    };
 
 
 private:
@@ -156,8 +187,10 @@ private:
     const volTensorField& Gi_;
     const volScalarField& sealingField_;
 
-    // Face interpolation on heart-torso faces.
-    const word interfaceConductivityInterpolation_;
+    // Torso block: zones, conductivity, interface, boundary data and
+    // reference.
+    const torsoSettings torso_;
+
     const Switch sealedHeartBoundary_;
 
     // Jump-aware gradient passes of the corrections (conormalHarmonic),
@@ -181,6 +214,10 @@ private:
     // Extracellular/torso face coefficient of the base-mesh operator.
     autoPtr<surfaceTensorField> sigmaExtracellularfPtr_;
 
+    // Pinned base cell on its owning processor; -1 elsewhere and when
+    // ground patches fix the constant.
+    label referenceCell_;
+
     // Build and check the heart -> base cell and face maps.
     void buildHeartScatterMap
     (
@@ -193,9 +230,35 @@ private:
     void assembleConductivities
     (
         const volTensorField& Ge,
-        const volScalarField& torsoConductivity,
-        const wordList& torsoCellZones
+        const volScalarField& torsoConductivity
     );
+
+    // Cell gradient of psi of the conormalHarmonic corrections: the
+    // standard gradient refined by the jump-aware passes
+    tmp<volVectorField> jumpAwareGradient(const volScalarField& psi) const;
+
+    // Torso operator with conormalHarmonic heart-torso faces: normal
+    // Laplacian, stabilisation and cross term, the source, then the
+    // non-orthogonal correction of the jump-aware gradient
+    tmp<fvScalarMatrix> conormalOperator
+    (
+        volScalarField& psi,
+        const volScalarField* source,
+        faceCorrection* correction
+    ) const;
+
+    // Torso operator with distanceWeightedHarmonic heart-torso faces:
+    // tensor Laplacian and stabilisation, then the source
+    tmp<fvScalarMatrix> harmonicOperator
+    (
+        volScalarField& psi,
+        const volScalarField* source,
+        faceCorrection* correction
+    ) const;
+
+    // Add the heart intracellular block, assembled on heartPsi, to the
+    // base-mesh matrix through the heart -> base maps
+    void addHeartBlock(fvScalarMatrix& eqn, volScalarField& heartPsi) const;
 
 
 public:
@@ -226,17 +289,22 @@ public:
         const bool registerObject
     );
 
+    //- Cell of mesh containing p, on the one processor whose cell contains
+    //  it (-1 elsewhere); fatal unless exactly one processor has one
+    static label locateReferenceCell(const fvMesh& mesh, const point& p);
+
 
     //- Construct from the base mesh, the heart sub-mesh with its cell and
     //  face maps to the base mesh, Gi and Ge on the heart mesh, the torso
-    //  conductivity on the base mesh and its cellZones, the heart-torso face
-    //  interpolation, the seal flag and the heart field whose patch types
-    //  decide sealing. With conormalHarmonic, nInterfaceGradientCorrectors
-    //  (required, at least 1) is read from the phiE entry of the solvers of
-    //  fvSolution of the base mesh. totalWallConductivity selects Gi + Ge
-    //  (true) or Ge (false) on the heart side of heart-torso faces.
-    //  registerFields false keeps the base-mesh fields out of the base-mesh
-    //  registry (their names stay the same).
+    //  block (its conductivity field is read from the base mesh), the seal
+    //  flag and the heart field whose patch types decide sealing. With
+    //  conormalHarmonic, nInterfaceGradientCorrectors (required, at least
+    //  1) is read from the phiE entry of the solvers of fvSolution of the
+    //  base mesh.
+    //  totalWallConductivity selects Gi + Ge (true) or Ge (false) on the
+    //  heart side of heart-torso faces. registerFields false keeps the
+    //  base-mesh fields out of the base-mesh registry (their names stay the
+    //  same).
     passiveConductor
     (
         const fvMesh& baseMesh,
@@ -245,9 +313,7 @@ public:
         const labelUList& heartFaceMap,
         const volTensorField& Gi,
         const volTensorField& Ge,
-        const volScalarField& torsoConductivity,
-        const wordList& torsoCellZones,
-        const word& interfaceConductivityInterpolation,
+        const torsoSettings& torso,
         const Switch sealedHeartBoundary,
         const volScalarField& sealingField,
         const bool totalWallConductivity,
@@ -278,14 +344,14 @@ public:
     //  heart cells and correct its boundary conditions
     void fillHeart(const volScalarField& psi, volScalarField& heartPsi) const;
 
-    //- Pin refCell to value when psi has no fixedValue patch
-    void applyReference
-    (
-        fvScalarMatrix& eqn,
-        const volScalarField& psi,
-        const label refCell,
-        const scalar value
-    ) const;
+    //- Set the gradient I/(n.sigmaTotal.n) of the surface current I on the
+    //  surface-current patches of psi (fixedGradient) and evaluate them;
+    //  fatal for a non-positive normal conductivity
+    void setSurfaceCurrents(volScalarField& psi) const;
+
+    //- Pin the reference cell to value (no-op when ground patches fix the
+    //  constant)
+    void applyReference(fvScalarMatrix& eqn, const scalar value) const;
 
     //- Stencil of the explicit part of the operator as probedOperator
     //  hops, outermost first: the divergence and face interpolation (face),
@@ -294,12 +360,22 @@ public:
     //  is leastSquares or Gauss linear, point otherwise)
     List<probedOperator::hop> explicitStencil() const;
 
-    //- Base cell containing p, owned by exactly one partition (-1 elsewhere)
-    label referenceCell(const point& p) const;
-
     //- Heart source b = -laplacian(insulated Gi, Vm), scattered to the
     //  base mesh (zero in torso cells)
     tmp<volScalarField> heartSource(const volScalarField& Vm) const;
+
+    //- The torso block the conductor is built from
+    const torsoSettings& torso() const
+    {
+        return torso_;
+    }
+
+    //- Pinned base cell on its owning processor; -1 elsewhere and when
+    //  ground patches fix the constant
+    label referenceCell() const
+    {
+        return referenceCell_;
+    }
 
     const labelList& heartCellToBaseCell() const
     {
@@ -316,22 +392,6 @@ public:
     const volTensorField& sigmaIntracellular() const
     {
         return sigmaIglobalPtr_();
-    }
-
-    //- Extracellular/torso face conductivity of the base-mesh operator
-    const surfaceTensorField& sigmaExtracellularFace() const
-    {
-        return sigmaExtracellularfPtr_();
-    }
-
-    const word& interfaceConductivityInterpolation() const
-    {
-        return interfaceConductivityInterpolation_;
-    }
-
-    Switch sealedHeartBoundary() const
-    {
-        return sealedHeartBoundary_;
     }
 
     //- Jump-aware gradient passes of the corrections (conormalHarmonic),

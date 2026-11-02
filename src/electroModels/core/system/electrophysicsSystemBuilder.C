@@ -360,17 +360,6 @@ void configureECGDomains
                 continue;
             }
 
-            // An ECG reads the myocardium (and bath) state directly, and
-            // torsoCoupling couples the torso, so there is nothing to couple
-            // an ECG domain through
-            if (e.dict().found("coupling"))
-            {
-                FatalIOErrorInFunction(e.dict())
-                    << "ECG domain '" << e.keyword()
-                    << "' has a coupling entry, but ECG domains take no "
-                    << "coupling." << exit(FatalIOError);
-            }
-
             ecgDomainNames.append(e.keyword());
             ecgDomainDicts.append(&e.dict());
         }
@@ -395,7 +384,7 @@ void configureECGDomains
         const dictionary& domainDict = *ecgDomainDicts[i];
         const word ecgSolverType
         (
-            domainDict.lookupOrDefault<word>("ecgSolver", "pseudoECG")
+            ecgSolver::selectedType(domainDict)
         );
 
         if (ecgDomainsByName.found(domainName))

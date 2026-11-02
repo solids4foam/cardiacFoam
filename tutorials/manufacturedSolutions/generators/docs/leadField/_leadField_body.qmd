@@ -476,7 +476,7 @@ In cardiacFoam:
   `bloodPool` and `bath`,
   `distanceWeightedHarmonic`; myocardium `bidomainSolver` with
   `sealedHeartBoundary true` and `conductivitySource field`;
-- verifier `manufacturedLeadFieldECGVerifier`, `reference sphericalShell`.
+- verifier `manufacturedShellLeadFieldECGVerifier`.
 
 ## Construction
 

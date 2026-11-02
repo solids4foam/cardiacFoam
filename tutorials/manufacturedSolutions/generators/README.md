@@ -308,8 +308,8 @@ python -m pytest test_shell_bidomain_mms.py
 and the extracellular current are continuous and `n . Gi grad phiI = 0` on
 both spheres, with rotated full heart tensors and a spatially varying bath
 conductivity. Each zone formula extends smoothly across the spheres. Its
-header serves `manufacturedLeadFieldECGVerifier` (`reference sphericalShell`,
-case `leadFieldECG/sphericalShell`). Its fields, sources and conductivities
+header serves `manufacturedShellLeadFieldECGVerifier` (case
+`leadFieldECG/sphericalShell`). Its fields, sources and conductivities
 are written out in the "Curved conductor" section of
 `docs/leadField/leadField_mms.pdf`; the geometry, the tensors and the smooth
 fields are the shared fragments of the sealed shells, and the self-checks

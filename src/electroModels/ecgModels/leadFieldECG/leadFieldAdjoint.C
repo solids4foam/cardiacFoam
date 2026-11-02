@@ -215,7 +215,10 @@ void leadFieldAdjoint::checkReproduction() const
             << "Gradient schemes: "
             << gradSchemesText(lfc_.baseMesh(), lfc_.heartMesh()).c_str()
             << "; interface option "
-            << lfc_.conductor().interfaceConductivityInterpolation()
+            << passiveConductor::interfaceInterpolationNames
+               [
+                   lfc_.conductor().torso().interface
+               ]
             << ", nInterfaceGradientCorrectors "
             << lfc_.conductor().nInterfaceGradientCorrectors() << '.'
             << exit(FatalError);

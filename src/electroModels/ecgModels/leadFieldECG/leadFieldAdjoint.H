@@ -109,12 +109,6 @@ public:
     void operator=(const leadFieldAdjoint&) = delete;
 
 
-    //- Number of probes
-    label nColours() const
-    {
-        return CPtr_->nColours();
-    }
-
     //- C^T z
     tmp<scalarField> applyTranspose(const scalarField& z) const
     {

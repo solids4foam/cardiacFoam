@@ -40,45 +40,25 @@ leadFieldECG::leadFieldECG
 void leadFieldECG::load
 (
     const electroStateProvider& provider,
-    const wordList& electrodeNames
+    const wordList& electrodeNames,
+    const List<vector>& electrodePositions
 )
 {
-    const fvMeshSubset* subsetPtr = provider.meshSubsetPtr();
-    if (!subsetPtr)
-    {
-        FatalIOErrorInFunction(electroProperties_)
-            << "ECG domain '" << ecgDomainName_ << "' needs the myocardium on "
-            << "a cellZone of the heart+torso mesh; set cellZone in "
-            << electroProperties_.get<word>("myocardiumSolver") << "Coeffs."
-            << exit(FatalIOError);
-    }
-
-    const volScalarField* VmPtr = provider.VmPtr();
-    if (!VmPtr)
-    {
-        FatalErrorInFunction
-            << "ECG domain '" << ecgDomainName_ << "' needs the myocardium Vm."
-            << exit(FatalError);
-    }
-
     conductorPtr_.reset
     (
         new leadFieldConductor
         (
-            *subsetPtr, *VmPtr, electroProperties_, ecgDomainName_
+            provider,
+            electroProperties_,
+            ecgDomainName_,
+            electrodeNames,
+            electrodePositions
         )
     );
     const leadFieldConductor& lfc = conductorPtr_();
+    const passiveConductor::torsoSettings& torso = lfc.conductor().torso();
     const wordList& names = lfc.electrodeNames();
     const fvMesh& mesh = provider.baseMesh();
-
-    if (names != electrodeNames)
-    {
-        FatalErrorInFunction
-            << "Electrodes " << names << " of the lead-field conductor differ "
-            << "from the ECG domain's " << electrodeNames << "."
-            << exit(FatalError);
-    }
 
     // Files in constant/[region/] of this (processor) case
     const auto io = [&mesh](const word& name)
@@ -128,9 +108,9 @@ void leadFieldECG::load
     }
 
     const bool hasConstant =
-        max(mag(lfc.groundValues())) > 0
-     || max(mag(lfc.surfaceCurrentValues())) > 0
-     || (lfc.groundPatches().empty() && lfc.referenceValue() != 0);
+        max(mag(torso.groundValues)) > 0
+     || max(mag(torso.surfaceCurrentValues)) > 0
+     || (torso.pinsReference() && torso.phiEReferenceValue != 0);
     const tmp<scalarField> tb
     (
         hasConstant ? lfc.constantSource() : tmp<scalarField>()
@@ -156,8 +136,8 @@ void leadFieldECG::load
         }
     }
 
-    Info<< "torsoECG lead fields: " << names.size() << " lead fields, constant terms "
-        << constants_ << endl;
+    Info<< "torsoECG lead fields: " << names.size()
+        << " lead fields, constant terms " << constants_ << endl;
 }
 
 

@@ -20,6 +20,7 @@ License
 #include "ecgDomain.H"
 #include "ecgModelIO.H"
 #include "ecgVerificationModel.H"
+#include "ecgElectrodes.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -35,12 +36,6 @@ defineTypeNameAndDebug(ecgDomain, 0);
 
 namespace
 {
-
-word selectedECGSolverType(const dictionary& dict)
-{
-    return dict.lookupOrDefault<word>("ecgSolver", "pseudoECG");
-}
-
 
 word outputFileName(const word& solverType)
 {
@@ -72,35 +67,12 @@ void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
 
 void ecgDomain::readElectrodes(const dictionary& dict)
 {
-    electrodeNames_.clear();
-    electrodePositions_.clear();
-
-    const dictionary* eDictPtr = dict.findDict("electrodePositions");
-
-    if (!eDictPtr)
-    {
-        eDictPtr = inheritedElectrodePositionsPtr_;
-    }
-
-    if (!eDictPtr || eDictPtr->empty())
-    {
-        FatalIOErrorInFunction(dict)
-            << "ECG domain " << dict.dictName() << " has no electrodes: "
-            << "give electrodePositions in the domain or in ecgDomains."
-            << exit(FatalIOError);
-    }
-
-    const dictionary& eDict = *eDictPtr;
-    const wordList names(eDict.toc());
-
-    electrodeNames_.setSize(names.size());
-    electrodePositions_.setSize(names.size());
-
-    forAll(names, i)
-    {
-        electrodeNames_[i]     = names[i];
-        electrodePositions_[i] = eDict.get<vector>(names[i]);
-    }
+    const ecgElectrodes electrodes
+    (
+        readEcgElectrodes(dict, inheritedElectrodePositionsPtr_)
+    );
+    electrodeNames_ = electrodes.names;
+    electrodePositions_ = electrodes.positions;
 
     Info<< "ECG electrodes (" << electrodeNames_.size() << "):" << nl;
     forAll(electrodeNames_, i)
@@ -189,7 +161,7 @@ ecgDomain::ecgDomain
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
     domainName_(domainName),
-    solverType_(selectedECGSolverType(dict)),
+    solverType_(ecgSolver::selectedType(dict)),
     outputPtr_(),
     solverPtr_(ecgSolver::New(dict)),
     verificationModelPtr_(),

@@ -56,27 +56,23 @@ class extracellularPotentialDomain
     // Heart-side data sources (non-owning).
     myocardiumDomainInterface& heartDomain_;
 
-    // Keys of the top-level torso block: cellZones,
-    // conductivity field, interface interpolation, ground and
-    // surface-current patches and the reference pin.
-    const passiveConductor::torsoSettings torso_;
+    // Heart Vm and the heart phiE companion of the operator.
+    const volScalarField& heartVm_;
+    volScalarField& heartPhiE_;
+
+    //- Passive heart+bath operator built from the top-level torso block,
+    //  with its conductivities, boundary data, reference and heart -> base
+    //  map
+    autoPtr<passiveConductor> conductorPtr_;
 
     // Global potential and the V_m field projected to the base mesh.
     autoPtr<volScalarField> phiEPtr_;
     autoPtr<volScalarField> VmGlobalPtr_;
 
-    // True if any phiE patch is Dirichlet (fixedValue); when true, the
-    // linear system is already non-singular and we MUST NOT inject an
-    // additional setReference pin (it would over-determine the problem
-    // with a value that need not match the analytical phiE).
-    bool hasDirichletPatch_;
-
-
     //- Shared number of additional corrected-Laplacian assemblies, read from
-    //  PIMPLE/nNonOrthogonalCorrectors and used consistently for phiE and Vm.
+    //  PIMPLE/nNonOrthogonalCorrectors (required) and used for phiE and Vm.
     //  Zero means one equation solve.
     label nNonOrthogonalCorrectors_;
-    Switch sealedHeartBoundary_;
 
     //- Time at which manufactured data are evaluated
     scalar manufacturedEvaluationTime_;
@@ -86,12 +82,6 @@ class extracellularPotentialDomain
 
     //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
     autoPtr<volVectorField> interfaceGradientPtr_;
-
-    //- Passive heart+bath operator, conductivities and heart -> base map
-    autoPtr<passiveConductor> conductorPtr_;
-
-    // Locate the reference cell on the base mesh (parallel-safe).
-    label referenceCell() const;
 
     //- Assemble and solve the global phiE equation once.
     void solvePhiEOnce();

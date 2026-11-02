@@ -54,48 +54,26 @@ torsoECG::torsoECG(const dictionary& dict)
 }
 
 
-void torsoECG::buildElectrodeCells(const ecgDomain& domain)
-{
-    const volScalarField* phiEPtr = domain.phiEPtr();
-
-    if (!phiEPtr)
-    {
-        FatalErrorInFunction
-            << "torsoECG requires a global phiE field from the ECG "
-            << "state provider."
-            << exit(FatalError);
-    }
-
-    const fvMesh& phiEMesh = phiEPtr->mesh();
-    const List<vector>& electrodes = domain.electrodePositions();
-
-    electrodeCells_ = ecgElectrodeCells(phiEMesh, electrodes);
-
-    Info<< "torsoECG: located " << electrodes.size()
-        << " electrodes on phiE mesh '" << phiEMesh.name() << "'."
-        << endl;
-
-    cellsBuilt_ = true;
-}
-
-
 void torsoECG::sample(const ecgDomain& domain, scalarField& values)
 {
+    const volScalarField& phiEField = domain.phiE();
+
     if (!cellsBuilt_)
     {
-        buildElectrodeCells(domain);
+        electrodeCells_ = ecgElectrodeCells
+        (
+            phiEField.mesh(),
+            domain.electrodeNames(),
+            domain.electrodePositions()
+        );
+        cellsBuilt_ = true;
+
+        Info<< "torsoECG: located " << electrodeCells_.size()
+            << " electrodes on phiE mesh '" << phiEField.mesh().name()
+            << "'." << endl;
     }
 
-    const volScalarField* phiEPtr = domain.phiEPtr();
-
-    if (!phiEPtr)
-    {
-        FatalErrorInFunction
-            << "torsoECG requires phiE, but domain.phiEPtr() returned null."
-            << exit(FatalError);
-    }
-
-    const scalarField& phiE = phiEPtr->primitiveField();
+    const scalarField& phiE = phiEField.primitiveField();
 
     values.setSize(electrodeCells_.size());
     values = 0.0;
@@ -136,7 +114,10 @@ void torsoECG::solve
 
     if (!leadFieldPtr_->loaded())
     {
-        leadFieldPtr_->load(domain, domain.electrodeNames());
+        leadFieldPtr_->load
+        (
+            domain, domain.electrodeNames(), domain.electrodePositions()
+        );
     }
 
     leadFieldPtr_->evaluate(domain.Vm(), values);
