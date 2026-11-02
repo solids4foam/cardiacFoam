@@ -1,7 +1,7 @@
 # monodomain1D3DCube
 
 Coupled 1D-3D monodomain manufactured solution: a reaction-diffusion Purkinje
-graph and the 3D myocardium on the unit cube, joined at two Purkinje-ventricular
+graph and the 3D myocardium on the unit cube, joined at two Purkinje-myocardial
 junctions (PVJs) by `reactionDiffusionPvjCoupler`. It checks the node-edge graph
 operator, the 3D monodomain operator and the PVJ source (sampling the tissue
 voltage, depositing the junction current) under joint refinement, for
@@ -68,8 +68,8 @@ S_c = w (V1D(t) - Vm(x))/(R_pvj W)  (implicit: the local operator)
 ```
 
 `W` and `<F>` come from Gauss quadrature in spherical coordinates about the
-terminal (exact for a terminal on a flat face and for one on the inner sphere
-of the shell); the tissue forcing is the average of `S_c` over each cell,
+terminal (exact for a terminal on a flat face, for one on the inner sphere
+of the shell and for a full ball inside the tissue); the tissue forcing is the average of `S_c` over each cell,
 integrated over `K cap B` by tetrahedral subdivision with the sphere clipped
 at a cut size of `R/96` (uniform, gaussian), `R/48` (linear) or `R/24`
 (cosine). Both forcings are evaluated at the new time level `t0 + dt` of each
@@ -122,7 +122,7 @@ with `run ./Allclean first` if a mesh log exists.
 | `-coupling unidirectional\|bidirectional` | PVJ `couplingMode` | unidirectional |
 | `-pvj explicit\|implicit` | PVJ `pvjCouplingScheme` (unidirectional only) | explicit |
 | `-rPvj x` | junction resistance | 1 |
-| `-kernel uniform\|linear\|gaussian\|cosine` | PVJ `pvjKernel` | linear |
+| `-kernel uniform\|linear\|gaussian\|cosine` | PVJ `pvjKernel` (`uniform`: top-hat; `gaussian`: truncated Gaussian) | linear |
 | `-radius x` | PVJ `pvjRadius` | 0.11 |
 | `-reference discrete\|continuum` | junction forcing of `coupled1D3DMonodomainVerifier` | discrete |
 | `-dt x` | time step | `endTime/ceil(endTime/(0.008971136 (10/N)^2))` |
@@ -155,7 +155,9 @@ Outputs:
   - `verification/coupled1D3DMonodomain_local.csv`: final-time tissue errors
     over the cells within `R` and `2R` of each terminal, and the errors of the
     graph terminal voltage, the gathered tissue voltage and the junction
-    current against the continuum ones (the step maxima are continuum only)
+    current against the continuum ones (the step maxima are continuum only),
+    and the far-field tissue error over the cells at least `farFieldDistance`
+    from every terminal
 
 Regression (the defaults: `N = 20`, the 21-node graph, unidirectional explicit
 transfer, serial): the 3D errors with their boundary and gradient rows, the
@@ -176,4 +178,4 @@ tables.
 | [graphConvergence](setup/studies/graphConvergence/README.md) | spatial order of the graph operator alone, at a fixed time step |
 | [coupledConvergence](setup/studies/coupledConvergence/README.md) | joint 1D-3D order of the fields and the junction source, for unidirectional transfer with both assemblies and for bidirectional transfer |
 | [weakCouplingControl](setup/studies/weakCouplingControl/README.md) | whether the tissue and graph errors depend on the junction |
-| [continuumCoupling](setup/studies/continuumCoupling/README.md) | the junction against its continuum definition: map convergence of every kernel, support-local orders, a junction-suppression control, charge balance and the time-step order |
+| [continuumCoupling](setup/studies/continuumCoupling/README.md) | the junction against its continuum definition: map convergence of every kernel, support-local orders, a junction-suppression control, charge balance and the time-step order, on this cube and on the tetrahedral shell of [monodomain1D3DShell](../monodomain1D3DShell/README.md) (supports on the endocardium, inside the wall and overlapping), with the radius fixed and tied to the mesh |

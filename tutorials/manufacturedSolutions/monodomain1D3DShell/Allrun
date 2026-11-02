@@ -165,8 +165,9 @@ echo "reference continuum;" > local/couplingVerification
 # (-0.5 graphY 0) and (0.5 graphY 0), n edges per branch. graphY 0: across the
 # cavity, terminals on the endocardium; graphY > 0: terminals inside the wall.
 # -graphY2 adds a second chain on y = graphY2, its root joined to the first
-# root by one edge along y (x = 0, where the graph field and its flux vanish,
-# so the joining node is a branch point of degree three)
+# root by one edge along y at x = 0. The graph field depends on x only and
+# vanishes there, so the joining edge carries no current and the joined roots
+# are branch points of degree three that the field satisfies exactly
 awk -v N="$N" -v y1="$graphY" -v y2="$graphY2" 'BEGIN {
     n = int((N + 1)/2)
     h = 0.5/n

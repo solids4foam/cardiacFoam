@@ -10,8 +10,8 @@ own map, so the discrete map's error reaches the solution. Five questions:
    continuum map, for each kernel? (`coupled1D3DMonodomain_map.csv`, every
    kernel from every run.)
 2. **Coupled order.** At what order do the errors local to the supports, the
-   graph terminal voltage and the junction current converge, for the linear,
-   cosine and uniform kernels?
+   graph terminal voltage and the junction current converge, for the uniform
+   (top-hat), linear, gaussian (truncated Gaussian) and cosine kernels?
 3. **Suppression control.** Does suppressing the junction (`R_pvj = 1e6`)
    change the support-local tissue error by order one? Under the discrete
    reference it changed the whole-domain tissue L2 error by 0.4%
@@ -21,9 +21,10 @@ own map, so the discrete map's error reaches the solution. Five questions:
 5. **Time-step order.** At a fixed mesh, what is the observed order in `dt`
    of the coupled solution, with the junction active and suppressed?
 
-Item 2 to 4 are repeated with each support cut by the sealed curved
-endocardium of [monodomain1D3DShell](../../../../monodomain1D3DShell/README.md)
-on tetrahedra.
+Items 2 to 5 are repeated on tetrahedra with the sealed shell of
+[monodomain1D3DShell](../../../../monodomain1D3DShell/README.md): supports cut
+by the curved endocardium, full-ball supports inside the wall, and overlapping
+supports (see Ladders).
 
 ## Ladders
 
@@ -227,7 +228,7 @@ Tissue error with the junction (`R_pvj = 1`) over the error without it
 | case | within R | within 2R | whole domain | far field |
 |---|---|---|---|---|
 | box, N = 16 / 96 | 437 / 337 | 248 / 223 | 61 / 54 | 1.05 / 1.01 |
-| shell, N = 10 / 28 | 22 / 16 | 10 / 7.3 | 2.5 / 1.8 | 1.0 / 1.0 |
+| shell, N = 10 / 28 (mean over three meshes of the ratios) | 21 / 17 | 10.8 / 7.4 | 2.41 / 1.76 | 1.04 / 1.01 |
 
 With the map-based forcing (`-reference discrete`) the junction lowers the
 box support error by 33-35% and the whole-domain error by 0.38%: the map's
@@ -302,7 +303,7 @@ Junction current error relative to the current, `|I_h - I_c|/|I_c|`, at
 one step before the end; the junction was not unstable.
 
 The relative current error, and likewise the graph terminal voltage error,
-is set by `R/h`: the two meshes agree to about 10%. The support-local error
+is set by `R/h`: the two meshes differ by 8 to 17%, the coarser one higher. The support-local error
 at fixed `R/h` roughly doubles from `N = 40` to `N = 64` (the shrinking
 support sharpens the source), and the far field scales with `h^2` alone
 (1.2e-4 to 4.7e-5). For the linear kernel the current error falls roughly as
@@ -343,7 +344,7 @@ cosine, suppressed) or of seed 1 (uniform, gaussian); values at `N = 28`
 | kernel | support L2 | junction current | graph `V1D` at the terminal | far field |
 |---|---|---|---|---|
 | uniform | 1.44 +- 0.09 (1.4e-2) | 1.86 +- 0.11 (3.9e-3) | 1.21 +- 0.19 | 1.59 +- 0.07 |
-| linear | 1.95 +- 0.06 (3.7e-3) | 2.15 +- 0.11 (1.8e-3) | 1.61 +- 0.12 | 1.53 +- 0.02 |
+| linear | 1.95 +- 0.06 (3.7e-3) | 2.20 +- 0.12 (1.8e-3) | 1.61 +- 0.12 | 1.53 +- 0.02 |
 | gaussian | 1.66 +- 0.11 (7.3e-3) | 1.65 +- 0.09 (3.7e-3) | 1.12 +- 0.18 | 1.51 +- 0.06 |
 | cosine | 1.85 +- 0.05 (6.1e-3) | 1.83 +- 0.06 (3.0e-3) | 1.29 +- 0.06 | 1.52 +- 0.02 |
 | linear, junction suppressed | 1.76 +- 0.04 (2.2e-4) | - | 1.64 +- 0.08 | 1.50 +- 0.03 |
@@ -358,7 +359,7 @@ suppressed, seed 1 and the per-level `dt` of the
 study, this case reproduces that study's whole-domain `Vm` L2 errors to
 1.4e-7 relative: pairwise orders 1.66, 1.64, 1.87 at `T = 0.2` and 2.38,
 1.98, 1.95 at `T = 2`, against 1.39, 1.49, 1.75 at `T = 0.1`. The
-mesh-integrated normalisation exceeds the exact one by 2.0e-2 (`N = 10`) to
+mesh-integrated normalisation exceeds the exact one by 2.1e-2 (`N = 10`) to
 2.8e-3 (`N = 28`), about second order: the flat facets place part of the
 mesh inside the true cavity sphere. On 4 ranks the `N = 14` run reproduces
 the serial one to about 1e-10.
@@ -366,9 +367,10 @@ the serial one to about 1e-10.
 The continuum normalisation is taken over the true tissue part of the ball,
 but the cell integrals cover the faceted mesh, so the reference deposit
 itself integrates to `I (1 + delta)` with `delta = sum omega_K/Wc - 1`
-(`meshIntegratedNormalisationError` in `_map.csv`): 2.0e-2, 1.1e-2, 5.2e-3,
-2.8e-3 for `N = 10` to 28 (linear, mean of three seeds), the same size as the
-relative junction current error at each level (2.3e-2 to 2.3e-3). On the
+(`meshIntegratedNormalisationError` in `_map.csv`): 2.1e-2, 1.1e-2, 5.2e-3,
+2.8e-3 for `N = 10` to 28 (linear, mean of three seeds and both terminals),
+the same size as the relative junction current error at each level (2.0e-2
+to 2.3e-3). On the
 endocardium the junction order therefore cannot be separated from the
 second-order convergence of the faceted wall; the interior terminals below
 have no facet in their supports. Per terminal (mean of three seeds, fit over
@@ -395,13 +397,16 @@ least-squares orders over the four levels, values at `N = 28`.
 
 The exact current is about 1.057; the seed-to-seed spread of the linear
 current error at `N = 28` is 7.7%. Under unidirectional transfer the graph
-error is the standalone graph error for every kernel. The far field and the
-whole-domain error converge at 1.56 and 1.99, the shell operator's orders in
-this window (1.54, 1.54 with the junction suppressed). The bidirectional
-charge balance is 9.4e-14 or better.
+error is the standalone graph error for every kernel. The far field converges
+at 1.56 (1.54 with the junction suppressed, the shell operator's order in this
+window); the whole-domain error converges at 1.99 with the junction and 1.54
+without it, consistent with the junction's local error, which converges
+faster, dominating the whole-domain norm on the coarse levels. The
+bidirectional charge balance is 9.4e-14 or better.
 
 Suppression (linear, unidirectional, error with the junction over error with
-it suppressed): within `R` 18.2, 13.9, 10.8, 10.3; whole domain 2.46, 1.96,
+it suppressed, mean over meshes and terminals of the ratios): within `R` 18.5,
+13.9, 10.8, 10.3; whole domain 2.46, 1.96,
 1.65, 1.56; far field 1.03, 1.01, 1.01, 1.01 (`N = 10` to 28).
 
 Time step at `N = 14`, junction active, `dt = 4.5e-3` halved four times:
@@ -426,6 +431,6 @@ unidirectional), support cells 62-1379, fit over `N = 10-28`:
 Linear kernel, regime (a), `N = 16-96`, terminal 0, fit over `N >= 32`:
 junction current 1.93 +- 0.12 (3.4e-3 at `N = 96`), support L2 2.10 +- 0.13
 (9.6e-3), far field 2.00 (2.1e-5). The bidirectional ladder gives 1.93
-(3.3e-3), 2.09 (9.8e-3) and 2.00 (2.1e-5): the tissue-side junction does not
-depend on the direction of transfer. The graph terminal error is the
+(3.3e-3), 2.09 (9.8e-3) and 2.00 (2.1e-5): the tissue-side junction errors
+differ by 4 to 5% between the two directions and converge at the same orders. The graph terminal error is the
 standalone graph error (4.7e-7 at `N = 96`).

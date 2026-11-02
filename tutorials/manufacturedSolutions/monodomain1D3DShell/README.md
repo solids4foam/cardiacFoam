@@ -1,11 +1,12 @@
 # monodomain1D3DShell
 
-The 1D-3D junction of [monodomain1D3DCube](../monodomain1D3DCube/README.md) with each
-support cut by a sealed curved wall, on tetrahedra. The myocardium is the
-sealed-shell monodomain problem of
+The 1D-3D junction of [monodomain1D3DCube](../monodomain1D3DCube/README.md) on
+tetrahedra, with the supports cut by a sealed curved wall, inside the wall, or
+overlapping. The myocardium is the sealed-shell monodomain problem of
 [monodomainPseudoECG/sphericalShell](../monodomainPseudoECG/sphericalShell/README.md)
-on gmsh tetrahedra; a Purkinje graph crosses the cavity on the `x` axis and
-ends at two terminals on the endocardium, `(-0.5, 0, 0)` and `(0.5, 0, 0)`.
+on gmsh tetrahedra. By default a Purkinje graph crosses the cavity on the `x`
+axis and ends at two terminals on the endocardium, `(-0.5, 0, 0)` and
+`(0.5, 0, 0)`; `-graphY` and `-graphY2` move them (below).
 The junction forcing is the continuum one (`reference continuum`, see
 [monodomain1D3DCube](../monodomain1D3DCube/README.md#continuum-reference)), with the
 continuum normalisation taken over the part of the support ball outside the
@@ -41,10 +42,12 @@ Two variants move the terminals off the endocardium:
   continuum normalisation and the mesh agree up to the cell clipping.
   `y = 0.5590169943749474` gives `r = 0.75`, the centre of the wall.
 - `-graphY2 y2` adds a second chain on `(x, y2, 0)` with its own two
-  terminals, joined to the first root by one edge along `y` at `x = 0`. There
-  `V1D` and its slope along the chain vanish, so the joining edge carries no
-  current and the joining node is a branch point of degree three that the
-  manufactured field satisfies exactly. With `|y2 - y| < R` each terminal lies
+  terminals, joined to the first root by one edge along `y` at `x = 0`, where
+  `V1D` vanishes. `V1D` depends on `x` only, so it is zero along the whole
+  joining edge, which carries no current; at each joined root the two
+  branches of its chain keep the flux balance of the straight chain, so the
+  node, a branch point of degree three, satisfies the graph equations with the
+  same field. With `|y2 - y| < R` each terminal lies
   in its neighbour's support and the supports overlap.
 
 `V1D` depends on `x` only, so both variants keep the graph field and its
@@ -68,7 +71,7 @@ operator `I_c w/W`.
 | `-seed n` | gmsh random seed | 1 |
 | `-coupling unidirectional\|bidirectional` | PVJ `couplingMode` | bidirectional |
 | `-rPvj x` | junction resistance | 1 |
-| `-kernel uniform\|linear\|gaussian\|cosine` | PVJ `pvjKernel` | linear |
+| `-kernel uniform\|linear\|gaussian\|cosine` | PVJ `pvjKernel` (`uniform`: top-hat; `gaussian`: truncated Gaussian) | linear |
 | `-radius x` | PVJ `pvjRadius` | 0.2 |
 | `-graphY y` | graph on the line `y`: terminals inside the wall | 0 (on the endocardium) |
 | `-graphY2 y` | second chain on the line `y`, joined at `x = 0` | none |

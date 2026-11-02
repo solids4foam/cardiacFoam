@@ -853,9 +853,11 @@ $|\mathbf x_k|+r_{\mathrm{PVJ}}\le r_2$ the support is the full ball,
 $-1\le\mu\le1$, and $W_k$ is twice the half-ball mass of @tbl-pvj-kernels.
 
 *Overlapping supports.* The second chain's root is joined to the first root by
-one edge along $y$ at $x=0$, where $V_{1D}$ and its slope along both chains
-vanish; the joining edge therefore carries no current and the joining node, of
-degree three, satisfies the graph equations with the same field. The four
+one edge along $y$ at $x=0$, where $V_{1D}$ vanishes. $V_{1D}$ depends on $x$
+only, so it is zero along the whole joining edge, which carries no current; at
+each joined root the two branches of its chain keep the flux balance of the
+straight chain, so the node, of degree three, satisfies the graph equations
+with the same field. The four
 terminals deposit their currents independently, and the source is the sum of
 the four kernel-weighted depositions of @sec-coupled.
 
@@ -874,9 +876,10 @@ the polar range of its placement.
 With the junction suppressed ($R_{\mathrm{PVJ}}=10^{6}$) and terminals on the
 endocardium, the tissue reproduces the sealed-shell ladder of @sec-shell on the
 same meshes to $1.4\times10^{-7}$. For a terminal on the endocardium the sum of
-the cell integrals of $w_k$ exceeds the continuum $W_k$ by the volume the flat
-facets place inside the cavity, $2.0\times10^{-2}$ at $N=10$ to
-$2.8\times10^{-3}$ at $N=28$ relative.
+the cell integrals of $w_k$ exceeds the continuum $W_k$ by the kernel-weighted
+volume the flat facets place inside the cavity, $2.1\times10^{-2}$ at $N=10$
+to $2.8\times10^{-3}$ at $N=28$ relative (mean over the terminals and three
+meshes).
 
 ## Regeneration
 
