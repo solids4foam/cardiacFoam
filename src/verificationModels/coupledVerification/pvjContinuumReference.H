@@ -48,7 +48,6 @@ Description
 
 SourceFiles
     pvjContinuumReference.C
-
 \*---------------------------------------------------------------------------*/
 
 #ifndef pvjContinuumReference_H
