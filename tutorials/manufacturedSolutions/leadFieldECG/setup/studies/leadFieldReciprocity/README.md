@@ -44,7 +44,7 @@ This study adds:
 
 The `parallel` rows run on 2 ranks; every other run is serial. The largest
 `phiE` iteration count is 667 (`bidomain_tet_N28`), below the
-`maxIter 100000` of `system/fvSolution`.
+`maxIter 5000` of `system/fvSolution`.
 
 All runs use `-endTime 0.02` (two samples, `dt = 0.01`) and build 13 lead
 fields, one per electrode. The electrodes are those of the case, in three

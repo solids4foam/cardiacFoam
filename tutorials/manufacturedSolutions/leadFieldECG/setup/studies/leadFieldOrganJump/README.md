@@ -55,7 +55,7 @@ tolerance of `system/fvSolution`. On hexahedra the lead fields need 5 or 6
 passes and each direct solve 2. On tetrahedra the lead fields need 38 to 64
 passes and each direct solve 39 to 77, within the `maxPasses 100` of
 `system/fvSolution`. The largest `phiE` iteration count is 888
-(`layered_tet_N40`), below the `maxIter 100000` of `system/fvSolution`.
+(`layered_tet_N40`), below the `maxIter 5000` of `system/fvSolution`.
 
 ## Execution
 

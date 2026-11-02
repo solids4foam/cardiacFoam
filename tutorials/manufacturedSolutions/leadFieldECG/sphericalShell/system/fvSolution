@@ -34,7 +34,7 @@ solvers
         tolerance       1e-15;
         relTol          0.0;
         // PCG iteration cap; the study README gives the counts reached
-        maxIter         100000;
+        maxIter         5000;
     }
 
     // buildLeadFields: leadField for the passes of the fixed point,

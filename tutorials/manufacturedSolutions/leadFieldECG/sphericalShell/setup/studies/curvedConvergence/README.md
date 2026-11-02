@@ -46,7 +46,7 @@ on the tetrahedra, each to the `leadFieldFixedPoint` tolerance `1e-10` of
 the case. The exception is the seed 2 tetrahedra at `N = 12`, which need
 496 to 620 passes, within the `maxPasses 1000` of `system/fvSolution`.
 The largest `phiE` iteration count is 644 (`tet_N20`), below the
-`maxIter 100000` of `system/fvSolution`.
+`maxIter 5000` of `system/fvSolution`.
 
 All levels and seeds run in parallel on 6 ranks (`parallel`, the case's
 `decomposeParDict`).
