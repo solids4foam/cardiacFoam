@@ -19,7 +19,7 @@ rebuild each problem in another code.
 ## Domain and governing equations
 
 The conductor is the heart $\Omega_H$ (the cellZone `myocardium`) and the
-torso $\Omega_B$ (the bath cellZones of the ECG domain), with the interface
+torso $\Omega_B$ (the cellZones of the `torso` block), with the interface
 $\Gamma_{HB}=\partial\Omega_H\cap\partial\Omega_B$ and the outer boundary
 $\Gamma_B=\partial\Omega_B\setminus\Gamma_{HB}$. For a given transmembrane
 potential $V_m$ in the heart, the passive potential $\phi$ solves
@@ -62,8 +62,9 @@ without solving for $\phi$ at each sample [@geselowitz1967bioelectric];
 torso: `buildLeadFields` and `torsoECG` stop with a fatal error when an
 electrode cell is a heart cell. Each case has two kinds of electrode, recorded
 in the same way. The eight body-surface electrodes `surface1` to `surface8`
-lie just inside the outer boundary of the conductor, in cells with a face on
-it; they are the ECG. The interior probes lie inside the torso, in the bath
+lie just inside the outer boundary of the conductor, 0.003 inside the faces
+of the slabs and 0.03 inside the outer sphere of the curved conductor; they
+are the ECG. The interior probes lie inside the torso, in the bath
 ball or next to the heart, and test the same channel where the potential and
 its error differ from those at the surface.
 
@@ -442,20 +443,21 @@ hold everywhere. Conductivities are in S m$^{-1}$.
   potential at $(0.7413,\,0.0317,\,0.0291)$, in the heart; that pin does not
   enter the conductor.
 - Electrodes: eight on the body surface, spread over the outer sphere at
-  $\lvert\mathbf x\rvert=1.495$, inside its faceted surface at every level
-  and off the coordinate planes and the block seams of the cubed sphere, and
-  four interior probes:
+  $\lvert\mathbf x\rvert=1.47$, 0.03 below it and inside its faceted surface
+  at every level (the flat outer faces of the coarsest cubed sphere lie up to
+  0.02 inside $\lvert\mathbf x\rvert=1.5$), off the coordinate planes and
+  the block seams of the cubed sphere, and four interior probes:
 
 | electrode | $\mathbf r_e$ | $\lvert\mathbf r_e\rvert$ | zone |
 |:--------|:------------------|:------|:--------------------|
-| `surface1` | $(1.2436,\,0.8151,\,-0.1553)$ | 1.495 | `bath`, body surface |
-| `surface2` | $(0.2050,\,0.6740,\,1.3186)$ | 1.495 | `bath`, body surface |
-| `surface3` | $(1.1945,\,-0.8631,\,-0.2517)$ | 1.495 | `bath`, body surface |
-| `surface4` | $(-0.2551,\,1.4080,\,-0.4329)$ | 1.495 | `bath`, body surface |
-| `surface5` | $(-0.3258,\,-0.8777,\,1.1656)$ | 1.495 | `bath`, body surface |
-| `surface6` | $(0.1488,\,-0.3633,\,-1.4425)$ | 1.495 | `bath`, body surface |
-| `surface7` | $(-1.4160,\,0.4317,\,0.2089)$ | 1.495 | `bath`, body surface |
-| `surface8` | $(-0.8375,\,-1.1858,\,-0.3569)$ | 1.495 | `bath`, body surface |
+| `surface1` | $(1.2228,\,0.8015,\,-0.1527)$ | 1.47 | `bath`, body surface |
+| `surface2` | $(0.2016,\,0.6627,\,1.2966)$ | 1.47 | `bath`, body surface |
+| `surface3` | $(1.1745,\,-0.8486,\,-0.2475)$ | 1.47 | `bath`, body surface |
+| `surface4` | $(-0.2508,\,1.3845,\,-0.4257)$ | 1.47 | `bath`, body surface |
+| `surface5` | $(-0.3203,\,-0.8630,\,1.1461)$ | 1.47 | `bath`, body surface |
+| `surface6` | $(0.1463,\,-0.3572,\,-1.4184)$ | 1.47 | `bath`, body surface |
+| `surface7` | $(-1.3923,\,0.4245,\,0.2054)$ | 1.47 | `bath`, body surface |
+| `surface8` | $(-0.8235,\,-1.1660,\,-0.3509)$ | 1.47 | `bath`, body surface |
 | `outerNear` | $(0.0517,\,1.0713,\,0.0811)$ | 1.076 | `bath`, next to the heart |
 | `outerSide` | $(-1.2117,\,-0.4313,\,0.6271)$ | 1.431 | `bath` |
 | `outerFar` | $(0.9113,\,0.8121,\,-0.6730)$ | 1.394 | `bath` |
@@ -663,13 +665,13 @@ solution's at the cell centres by more than $10^{-10}$ relative, or when an
 electrode lies in the heart. `leadfield_reference.py --self-check` asserts
 that the twelve electrodes and the reference point lie in the zones of the
 table above and that the body-surface electrodes lie at
-$\lvert\mathbf x\rvert=1.495$, and `figures.py` that $\boldsymbol\sigma_i$ and
+$\lvert\mathbf x\rvert=1.47$, and `figures.py` that $\boldsymbol\sigma_i$ and
 $\boldsymbol\sigma_e$ have the same eigenvectors. `--check-run` compares the run with
 `shell_mms.py` as in @sec-slab-checks. On the tetrahedra of the figures the
 gauge and the centroid values agree to $3\times10^{-16}$. On the cubed sphere
 the cells are not affine and their outer faces are curved: the pinned-cell
 centroid is not recomputed, and the centroid values are checked at the
-six-digit centroids of the log, to $3\times10^{-6}$ at $N=8$ and $N=12$.
+six-digit centroids of the log, to $3.4\times10^{-6}$ at $N=8$ and $N=12$.
 
 ## Figures
 

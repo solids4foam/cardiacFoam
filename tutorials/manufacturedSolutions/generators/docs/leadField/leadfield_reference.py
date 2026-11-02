@@ -60,10 +60,10 @@ BUILTIN_SLAB_ELECTRODES = {
     "nearRight": (1.0187, 0.3719, 0.4613)}
 BUILTIN_SLAB_PIN = (-0.9013, 0.0437, 0.0437)
 BUILTIN_SHELL_ELECTRODES = {
-    "surface1": (1.2436, 0.8151, -0.1553), "surface2": (0.2050, 0.6740, 1.3186),
-    "surface3": (1.1945, -0.8631, -0.2517), "surface4": (-0.2551, 1.4080, -0.4329),
-    "surface5": (-0.3258, -0.8777, 1.1656), "surface6": (0.1488, -0.3633, -1.4425),
-    "surface7": (-1.4160, 0.4317, 0.2089), "surface8": (-0.8375, -1.1858, -0.3569),
+    "surface1": (1.2228, 0.8015, -0.1527), "surface2": (0.2016, 0.6627, 1.2966),
+    "surface3": (1.1745, -0.8486, -0.2475), "surface4": (-0.2508, 1.3845, -0.4257),
+    "surface5": (-0.3203, -0.8630, 1.1461), "surface6": (0.1463, -0.3572, -1.4184),
+    "surface7": (-1.3923, 0.4245, 0.2054), "surface8": (-0.8235, -1.1660, -0.3509),
     "outerNear": (0.0517, 1.0713, 0.0811), "outerSide": (-1.2117, -0.4313, 0.6271),
     "outerFar": (0.9113, 0.8121, -0.6730), "pool": (0.1131, -0.0733, 0.2117)}
 BUILTIN_SHELL_PIN = (1.3137, 0.0371, 0.0459)
@@ -248,6 +248,12 @@ def check_slab_electrodes():
         ["surface%d" % i for i in range(1, 9)]
 
 
+# The body-surface electrodes of the curved conductor lie 0.03 below the
+# outer sphere r3 = 1.5, inside the flat outer faces of the cubed sphere at
+# every level of the studies
+SHELL_SURFACE_RADIUS = 1.47
+
+
 def check_shell_zones():
     e, pin = case_points("shell")
     zones = dict(zip(e, shell_zone(np.array(list(e.values())))))
@@ -257,7 +263,8 @@ def check_shell_zones():
     assert shell_zone(pin[None, :])[0] == 2
     r = {n: float(np.linalg.norm(p)) for n, p in e.items()}
     assert all(v < 1.5 for v in r.values()), r
-    assert all(abs(r["surface%d" % i] - 1.495) < 1e-4 for i in range(1, 9)), r
+    assert all(abs(r["surface%d" % i] - SHELL_SURFACE_RADIUS) < 1e-4
+               for i in range(1, 9)), r
 
 
 def run_self_checks():
@@ -274,7 +281,7 @@ def _verifier_line(run):
     with open(os.path.join(run, "log.cardiacFoam")) as fh:
         lines = fh.read().splitlines()
     for i, line in enumerate(lines):
-        if line.startswith("manufacturedLeadFieldECGVerifier: reference"):
+        if re.match(r"manufactured(Shell)?LeadFieldECGVerifier: reference", line):
             out = [line.strip()]
             if line.rstrip().endswith("centroids"):
                 for nxt in lines[i + 1:]:

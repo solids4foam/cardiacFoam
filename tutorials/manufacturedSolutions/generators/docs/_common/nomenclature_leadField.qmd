@@ -23,7 +23,7 @@
 | $g_j$, $m_j$, $d_j$, $\mathbf n_j$ | wall corrections of sphere $j$; $\partial_n\omega$ on sphere $j$; normal of sphere $j$ out of the heart | -- | `g`, `m` (shell generator) |
 | $T$, $f_2$, $q_j$, $\beta_j$, $r_j$, $D_j$, $\kappa$ | common mode $A_T\sin(\nu t)$ with amplitude $A_T$ and angular frequency $\nu$, its field and its corrections | -- | `Tt`, `cmAmplitude`, `cmOmega`, `f2`, `q`, `betaR`, `D` (shell generator) |
 | $\mathbf r_e$, $c(e)$, $\mathbf x_{c(e)}$ | electrode position; the cell that contains it; its centroid | m | `electrodePositions`; `electrodeCells_`; `electrodeCentroids_` |
-| $e$ | an electrode: a body-surface electrode (`surface1` to `surface8`, in a cell with a face on the outer boundary) or an interior probe | -- | `electrodePositions` |
+| $e$ | an electrode: a body-surface electrode (`surface1` to `surface8`, just inside the outer boundary) or an interior probe | -- | `electrodePositions` |
 | $\Gamma_B$ | outer boundary of the conductor; its cells (a face on it) are the region of `phiStatic_surface` | -- | `phiStatic_surface` |
 | $\mathbf r_{\mathrm{ref}}$, $\mathbf x_{\mathrm{ref}}$, $\phi_{\mathrm{ref}}$ | reference point of the conductor; centroid of its cell; reference value | m; m; V | `phiERefPoint`; `referenceCentroid_`; `phiEReferenceValue` |
 | $\mathbf A$, $\mathbf b$, $\mathbf s$ | discrete forward operator; heart source $-\nabla_h\cdot(\boldsymbol\sigma_i\nabla_h V_m)$; extra source of the curved conductor | -- | `assemble`; `heartSource`; `shellSource` |
