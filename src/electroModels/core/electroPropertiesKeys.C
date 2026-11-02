@@ -340,7 +340,7 @@ void checkECGDomains
         dictionaryKeyCheck::checkKeys
         (
             *templatesPtr,
-            keys({"dt", "duration", "nBeats", "ionicModelConfig"})
+            keys({"dt", "duration", "nBeats", "ionicModelConfig", "regionStates"})
         );
 
         const wordList stimulusKey({"singleCellStimulus"});
@@ -386,7 +386,7 @@ void checkTissueCoeffs(const dictionary& coeffs)
             keys
             ({
                 "electroDomainCoupler", "conductionNetworkDomain",
-                "couplingMode", "pvjRadius", "pvjKernel",
+                "couplingMode", "pvjRadius", "pvjDelay", "pvjKernel",
                 "pvjCouplingScheme", "rPvj", "debugCoupling",
                 "verificationModel"
             })

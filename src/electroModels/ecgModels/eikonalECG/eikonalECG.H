@@ -36,7 +36,7 @@ Author
 #include "dictionary.H"
 #include "overrideTypeName.H"
 #include "volFields.H"
-#include "eikonalTemplateGenerator.H"
+#include "ionicTemplates.H"
 
 namespace Foam
 {
@@ -71,14 +71,7 @@ class eikonalECG
     bool personalizedTemplatesEnabled_;
     bool personalizedTemplatesGenerated_;
     dictionary personalizedTemplatesDict_;
-    List<eikonalECG_templates::DynamicTemplate> personalizedTemplates_;
-
-    //- Shared so calculateTransmuralWeights() and
-    //  generatePersonalizedTemplates() always agree on which dict is active.
-    const dictionary* findHeterogeneityDict
-    (
-        const dictionary& electroProperties
-    ) const;
+    List<ionicTemplates::DynamicTemplate> personalizedTemplates_;
 
     void calculateTransmuralWeights(const ecgDomain& domain);
 

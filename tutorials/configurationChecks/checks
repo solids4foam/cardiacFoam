@@ -46,6 +46,7 @@ monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion
 monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
 monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
 eikonalPurkinje                        slab  eikonalPurkinje                        pass
+eikonalPurkinjePvjDelay                slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
 # An ionic state of the graph model exported next to the coupling outputs;
 # in parallel each processor holds only its share of the graph nodes (#48)
 monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion    pass  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(IcouplingSource~Vm~v);}
@@ -54,6 +55,7 @@ monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
 bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
 eikonalECG                             slab  eikonalECG                             pass
+eikonalECGRegionStates                 slab  eikonalECGRegionStates                 pass
 twoEcgDomains                          slab  monodomainPseudoECG                    pass  ecgDomains/ECG2={ecgSolver~pseudoECG;sigmaExtracellular~0.2;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
@@ -134,6 +136,7 @@ unknownElectroDomainCoupler            slab  monodomainPurkinjeReactionDiffusion
 couplingToUnknownNetwork               slab  monodomainPurkinjeReactionDiffusion fail:bogusNetwork monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/conductionNetworkDomain=bogusNetwork
 missingCouplingMode                    slab  monodomainPurkinjeReactionDiffusion fail:couplingMode monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/couplingMode!
 twoConductionNetworkDomains            slab  monodomainPurkinjeReactionDiffusion fail:only~one~conduction~network~domain monodomainSolverCoeffs/conductionNetworkDomains/secondNetwork={conductionSystemDomain~purkinjeGraphModel;}
+pvjDelayWithReactionDiffusion          slab  monodomainPurkinjeReactionDiffusion fail:pvjDelay~is~not~used monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 ecgDomains/ECG/ecgSolver=bogusECG
 eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               ecgDomains/ECG/ecgSolver=eikonalECG
 eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!

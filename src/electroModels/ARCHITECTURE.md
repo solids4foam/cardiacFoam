@@ -235,11 +235,11 @@ The classes these models are built from:
 | `leadFieldConductor` | `leadFieldECG/` | `leadFieldECG`, `buildLeadFields`, the lead-field verifiers | The `passiveConductor` of an ECG domain: the heart sub-mesh, Gi and Ge (those of a running bidomain heart), the torso block, the electrodes of the ECG domain and the signature |
 | `leadFieldAdjoint` | `leadFieldECG/` | `buildLeadFields` | The transpose of the explicit part of the conductor's operator (`probedOperator`) and the self-checks of the build |
 
-`eikonalTemplateGenerator.C/H` and `tissueTemplates.H`, beside `eikonalECG`,
-build those single-cell templates: pacing a single-cell ionic model to
-steady state, capturing its action potential after a chosen stimulus (S1),
-and synthesizing the endo/mid/epi (or manufactured) templates `eikonalECG`
-samples from.
+`tissueTemplates.H`, beside `eikonalECG`, holds the compiled endo/mid/epi
+templates. Templates generated from an ionic model, one per
+`ionicHeterogeneity` region, come from `ionicModels/ionicTemplates`, which
+`eikonalECG` uses for Vm and `sequentialElectroMechanical` uses for the active
+tension Cai.
 
 ---
 
