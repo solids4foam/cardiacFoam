@@ -23,7 +23,10 @@ ddtSchemes
 gradSchemes
 {
     default         leastSquares;
-    grad(activationTime)   Gauss linear;
+    grad(Vm)   sealedWallLeastSquares;
+    grad(Vm.component(0))   sealedWallLeastSquares;
+    grad(activationTime)   sealedWallLeastSquares;
+    grad(activationTime.component(0))   sealedWallLeastSquares;
     limitedGrad     cellMDLimited leastSquares 1;
 }
 

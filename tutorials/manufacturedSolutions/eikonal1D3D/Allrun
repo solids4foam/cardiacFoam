@@ -1,0 +1,231 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1
+
+. "${WM_PROJECT_DIR:?}/bin/tools/RunFunctions"
+
+usage() {
+    cat <<EOF
+Usage: Allrun [OPTIONS]
+
+  -N n                  cells across the wall: gmsh size L/n (default 10)
+  -PeL value            Pe_L = c0 L/sqrt(m) (default 46)
+  -RoverL value         ball radius over wall thickness (default 0.25)
+  -ball constant|exact  constant: one terminal through the graph and the coupler,
+                        the ball held at its time; exact: no graph, the ball held
+                        at the exact field (default constant)
+  -seedProfile profile  flat, front or curvedFront: the seed time of the ball cells
+                        through the coupler (default front); applies to -ball constant
+                        with an isotropic tensor
+  -convection scheme    linearUpwind or upwind (default linearUpwind)
+  -axes "ax ay az"      speed ratios along the principal axes, turned about (1, 1, 1)
+                        (default "1 1 1"); the domain and the ball become ellipsoids,
+                        and the verifier holds a constant ball with no graph
+  -gradient scheme      sealed, stock, gaussLinear or pointCells for
+                        grad(activationTime) (default sealed)
+  -upstream scheme      gradient of the upstream face value: stockLimited, sealed,
+                        stock or pointCellsLimited (default stockLimited)
+  -conormalStabilisation
+                        conormal magnitude as the implicit diffusion coefficient
+  -relaxation x|none    equation relaxation (default 0.7)
+  -seed n               gmsh random seed (default 1)
+EOF
+    exit 1
+}
+
+N=10
+PeL=46
+RoverL=0.25
+ball=constant
+convection=linearUpwind
+axes="1 1 1"
+gradient=sealed
+upstream=stockLimited
+seedProfile=front
+seedProfileGiven=false
+stabilisation=false
+relaxation=0.7
+seed=1
+
+while [ $# -gt 0 ]
+do
+    case "$1" in
+        -N) N="$2"; shift ;;
+        -PeL) PeL="$2"; shift ;;
+        -RoverL) RoverL="$2"; shift ;;
+        -ball) ball="$2"; shift ;;
+        -convection) convection="$2"; shift ;;
+        -axes) axes="$2"; shift ;;
+        -gradient) gradient="$2"; shift ;;
+        -upstream) upstream="$2"; shift ;;
+        -seedProfile) seedProfile="$2"; seedProfileGiven=true; shift ;;
+        -conormalStabilisation) stabilisation=true ;;
+        -relaxation) relaxation="$2"; shift ;;
+        -seed) seed="$2"; shift ;;
+        *) usage ;;
+    esac
+    shift
+done
+
+case "$ball" in constant|exact) ;; *) usage ;; esac
+case "$convection" in linearUpwind|upwind) ;; *) usage ;; esac
+case "$gradient" in sealed|stock|gaussLinear|pointCells) ;; *) usage ;; esac
+case "$upstream" in stockLimited|sealed|stock|pointCellsLimited) ;; *) usage ;; esac
+case "$seedProfile" in flat|front|curvedFront) ;; *) usage ;; esac
+read -r ax ay az extra <<EOF
+$axes
+EOF
+for value in "$ax" "$ay" "$az"
+do
+    awk -v x="$value" 'BEGIN { exit !(x + 0 > 0) }' || { echo "-axes needs three positive numbers" 1>&2; exit 1; }
+done
+[ -z "$extra" ] || { echo "-axes needs three positive numbers" 1>&2; exit 1; }
+for value in "$N" "$PeL" "$RoverL" "$seed"
+do
+    awk -v x="$value" 'BEGIN { exit !(x + 0 > 0) }' || { echo "-N, -PeL, -RoverL and -seed need positive numbers" 1>&2; exit 1; }
+done
+if [ -e log.gmsh ]
+then
+    echo "A mesh log exists; run ./Allclean first" 1>&2
+    exit 2
+fi
+for tool in gmsh gmshToFoam
+do
+    command -v "$tool" > /dev/null || { echo "$tool not found" 1>&2; exit 1; }
+done
+# Principal axes turned about (1, 1, 1), so that no axis lines up with the coordinates
+angle=0.7
+[ "$seedProfileGiven" = false ] || [ "$ball" = constant ] || usage
+isotropic=$(awk -v a="$ax" -v b="$ay" -v c="$az" 'BEGIN { print (a == 1 && b == 1 && c == 1) ? "true" : "false" }')
+
+# Wall thickness of the idealised human heart, and m = sigma/(chi Cm) with chi and Cm of
+# constant/electroProperties
+L=0.0131
+sigma=0.4978
+m=$(awk -v s="$sigma" 'BEGIN { printf "%.17g", s/1400 }')
+read -r c0 V Ro lc R Tk <<EOF
+$(awk -v Pe="$PeL" -v L="$L" -v m="$m" -v a="$RoverL" -v N="$N" 'BEGIN {
+    s = sqrt(m); c0 = Pe*s/L; V = c0*s
+    printf "%.17g %.17g %.17g %.17g %.17g %.17g", c0, V, L*(1+a), L/N, a*L, 2*L/V }')
+EOF
+purkinjeCV=3.33
+
+rm -rf local
+mkdir local
+echo "c0 [ 0 0 -0.5 0 0 0 0 ] $c0;" > local/c0
+if [ "$stabilisation" = true ]
+then
+    echo "eikonalConormalStabilisation true;" > local/stabilisation
+fi
+if [ "$relaxation" != none ]
+then
+    cat > local/relaxation <<EOF
+relaxationFactors
+{
+    equations
+    {
+        "activationTime.*"  $relaxation;
+    }
+
+    fields
+    {
+    }
+}
+EOF
+fi
+case "$gradient" in
+    stock) grad=leastSquares ;;
+    gaussLinear) grad="Gauss linear" ;;
+    pointCells) grad=pointCellsLeastSquares ;;
+    *) grad=sealedWallLeastSquares ;;
+esac
+{
+    echo "grad(activationTime) $grad;"
+    echo "grad(activationTime.component(0)) $grad;"
+    if [ "$upstream" = pointCellsLimited ]
+    then
+        echo "limitedGrad cellMDLimited pointCellsLeastSquares 1;"
+    fi
+    if [ "$upstream" = stock ]
+    then
+        echo "limitedGrad leastSquares;"
+    fi
+} > local/gradient
+if [ "$convection" = upwind ]
+then
+    echo "div(phiU,activationTime) Gauss upwind;" > local/convection
+elif [ "$upstream" = sealed ]
+then
+    echo "div(phiU,activationTime) Gauss linearUpwind grad(activationTime);" > local/convection
+fi
+
+[ "$seedProfileGiven" = false ] || [ "$isotropic" = true ] || usage
+heldBall=$ball
+verifierSeed=flat
+if [ "$ball" = constant ] && [ "$isotropic" = true ]
+then
+    heldBall=none
+    verifierSeed=$seedProfile
+    cat > local/junction <<EOF
+conductionNetworkDomains
+{
+    purkinjeNetwork
+    {
+        conductionSystemDomain purkinjeGraphModel;
+        purkinjeGraphModelCoeffs
+        {
+            conductionSystemSolver eikonalSolver1D;
+            graphFile              purkinjeGraph;
+            purkinjeCV  [ 0 1 -1 0 0 0 0 ] $purkinjeCV;
+            chi         14000;
+            cm          0.01;
+            vm1DRest    -0.084;
+            rootStimulus { node 0; startTime 0.0; }
+            outputVariables { export (activationTime); debug (); }
+        }
+    }
+}
+domainCouplings
+{
+    purkinjeToMyocardium
+    {
+        electroDomainCoupler    eikonalPvjCoupler;
+        conductionNetworkDomain purkinjeNetwork;
+        pvjRadius               $R;
+        seedProfile             $seedProfile;
+        couplingMode            unidirectional;
+    }
+}
+EOF
+    edge=$(awk -v T="$Tk" -v CV="$purkinjeCV" 'BEGIN { printf "%.17g", T*CV }')
+    cat > constant/purkinjeGraph <<EOF
+FoamFile { version 2; format ascii; class dictionary; location "constant"; object purkinjeGraph; }
+rootNode 0;
+pvjNodes 1 (1);
+pvjLocations 1 ((0 0 0));
+conductionEdges 1 ( 4(0 1 $edge 1) );
+points 2 ((0 0 0) (0 0 0));
+EOF
+fi
+
+cat > local/verification <<EOF
+wallThickness   $L;
+ballRatio       $RoverL;
+terminalTime    $Tk;
+sigma           $sigma;
+axes            ($ax $ay $az);
+angle           $angle;
+heldBall        $heldBall;
+seedProfile     $verifierSeed;
+EOF
+
+runApplication gmsh -3 radial.geo.template -setnumber Ro "$Ro" -setnumber lc "$lc" -setnumber seed "$seed" -setnumber ax "$ax" -setnumber ay "$ay" -setnumber az "$az" -setnumber angle "$angle" -nt 1 -o radial.msh
+runApplication gmshToFoam radial.msh
+runApplication checkMesh
+if grep -q "Failed [0-9]* mesh checks" log.checkMesh
+then
+    echo "checkMesh failed; see log.checkMesh" 1>&2
+    exit 1
+fi
+
+runApplication setManufacturedFields
+runApplication cardiacFoam

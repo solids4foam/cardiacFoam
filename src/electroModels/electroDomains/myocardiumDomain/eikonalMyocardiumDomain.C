@@ -26,6 +26,8 @@ License
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
+#include "conormalStabilisation.H"
+#include "facePeclet.H"
 #include "sealedWallPolicy.H"
 #include "regionSplit.H"
 
@@ -537,6 +539,10 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     (
         electroProperties.lookup("eikonalAdvectionDiffusionApproach")
     ),
+    conormalStabilisation_
+    (
+        electroProperties.lookupOrDefault<Switch>("eikonalConormalStabilisation", false)
+    ),
     useGraphPrePopulation_
     (
         electroProperties.lookupOrDefault<Switch>("useGraphPrePopulation", true)
@@ -580,6 +586,14 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             c0_,
             eikonalAdvectionDiffusionApproach_
         );
+
+    if (conormalStabilisation_ && !eikonalAdvectionDiffusionApproach_)
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "eikonalConormalStabilisation needs "
+            << "eikonalAdvectionDiffusionApproach true."
+            << exit(FatalIOError);
+    }
 
     if (verificationModelPtr_)
     {
@@ -748,9 +762,9 @@ void eikonalMyocardiumDomain::advance
     }
     const volScalarField& Smms = tSmms();
 
-    // Manufactured pins hold the exact field and stay fixed
     const bool firstArrivalSeeds =
-        !(verificationModelPtr_.valid() && verificationModelPtr_->enabled());
+        !(verificationModelPtr_.valid() && verificationModelPtr_->enabled())
+     || verificationModelPtr_->releasesSeeds();
 
     boolList heldSeeds(constrainedCells.size(), true);
     labelList heldCells(constrainedCells);
@@ -788,20 +802,23 @@ void eikonalMyocardiumDomain::advance
             phiU_ = (fvc::interpolate(u_) & mesh().Sf());
             divPhiU_ = fvc::div(phiU_);
 
+            const tmp<surfaceTensorField> tMf
+            (
+                insulatedFaceConductivity(M_, activationTime_, sealedHeartBoundary_)
+            );
+
             fvScalarMatrix activationEqn
             (
-               -fvm::laplacian
-                (
-                    insulatedFaceConductivity
-                    (
-                        M_, activationTime_, sealedHeartBoundary_
-                    )(),
-                    activationTime_
-                )
+               -fvm::laplacian(tMf(), activationTime_)
               + fvm::div(phiU_, activationTime_)
               + fvm::SuSp(-divPhiU_, activationTime_)
              == one + Smms
             );
+
+            if (conormalStabilisation_)
+            {
+                activationEqn -= conormalStabilisation(tMf(), activationTime_);
+            }
 
             // c0 |grad psi|_M = u & grad psi with u lagged; a bounded div scheme keeps the transport monotone
             updateSeeds(activationEqn);
@@ -850,6 +867,22 @@ void eikonalMyocardiumDomain::advance
     Info<< "Activation seeds: " << returnReduce(constrainedCells.size(), sumOp<label>())
         << " cells, " << returnReduce(heldCells.size(), sumOp<label>())
         << " held, the equation reaches the others first" << endl;
+
+    if (eikonalAdvectionDiffusionApproach_)
+    {
+        reportFacePeclet
+        (
+            facePeclet
+            (
+                phiU_,
+                insulatedFaceConductivity
+                (
+                    M_, activationTime_, sealedHeartBoundary_
+                )()
+            )(),
+            activationTime_.name()
+        );
+    }
 }
 
 

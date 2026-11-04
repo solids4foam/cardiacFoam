@@ -319,6 +319,54 @@ void pvjMapper::depositImplicitCoupling
 }
 
 
+void pvjMapper::setSeedOffsets
+(
+    const word& profile,
+    const volTensorField& M,
+    const scalar c0
+)
+{
+    const bool curved = (profile == "curvedFront");
+    const vectorField& centres = mesh_.C();
+
+    terminalSeedOffsets_.setSize(terminalCellSets_.size());
+
+    forAll(terminalCellSets_, i)
+    {
+        const labelList& cells = terminalCellSets_[i];
+        scalarList& offsets = terminalSeedOffsets_[i];
+        offsets.setSize(cells.size());
+
+        forAll(cells, localI)
+        {
+            const label cellI = cells[localI];
+            const vector d(centres[cellI] - terminalLocations_[i]);
+            const scalar rho =
+                Foam::sqrt(max(d & (inv(M[cellI]) & d), scalar(0)));
+
+            if (curved)
+            {
+                // The front starts at the critical metric radius 2/c0, below
+                // which the curvature of the exact solution stops it
+                const scalar rhoC = 2/c0;
+                offsets[localI] = 0;
+                if (rho > rhoC)
+                {
+                    offsets[localI] =
+                        (rho - rhoC)/c0
+                      + 2*Foam::log(rho/rhoC)/sqr(c0)
+                      - 2*(1/rho - 1/rhoC)/pow3(c0);
+                }
+            }
+            else
+            {
+                offsets[localI] = rho/c0;
+            }
+        }
+    }
+}
+
+
 void pvjMapper::depositActivationTimes
 (
     const scalarField& terminalActivationTime,
@@ -348,14 +396,21 @@ void pvjMapper::depositActivationTimes
         forAll(terminalCellSets_[i], localI)
         {
             const label cellI = terminalCellSets_[i][localI];
+            const scalar seedTime =
+                terminalTime
+              + (
+                    terminalSeedOffsets_.size()
+                  ? terminalSeedOffsets_[i][localI]
+                  : 0.0
+                );
 
             if
             (
                 activationValues[cellI] < 0.0
-             || terminalTime < activationValues[cellI]
+             || seedTime < activationValues[cellI]
             )
             {
-                activationValues[cellI] = terminalTime;
+                activationValues[cellI] = seedTime;
             }
         }
     }

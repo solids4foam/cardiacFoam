@@ -331,3 +331,4 @@ docs/issues/
 
 # configuration checks: one run directory per check
 tutorials/configurationChecks/runs
+tutorials/manufacturedSolutions/eikonal1D3D/constant/purkinjeGraph

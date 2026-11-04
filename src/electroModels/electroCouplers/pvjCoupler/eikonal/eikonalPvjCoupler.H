@@ -39,6 +39,8 @@ class eikonalPvjCoupler
     public pvjCoupler
 {
     mutable scalarField terminalActivationBuffer_;
+    const word seedProfile_;
+    bool seedOffsetsSet_;
 
 public:
 

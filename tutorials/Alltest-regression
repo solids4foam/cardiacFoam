@@ -22,7 +22,8 @@ set -Eeuo pipefail
 #
 # A case that needs cardiacFoam built with solids4foam carries an empty
 # marker file regression/needs-solids4foam: in lightweight mode it exits 77
-# and the skip is expected. A case that cannot run on some OpenFOAM versions
+# and the skip is expected. A case that needs tools beyond OpenFOAM carries the
+# marker file regression/needs-tools: its exit 77 is expected. A case that cannot run on some OpenFOAM versions
 # lists them, one per line, in regression/skips-on-openfoam (for example
 # v2312): on those versions its exit 77 is expected. Any other exit 77 fails
 # the run.
@@ -31,6 +32,7 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REG_ROOT="${ROOT_DIR}/../tutorialsTest-regression"
 MARKER="regression/needs-solids4foam"
+TOOLS_MARKER="regression/needs-tools"
 VERSION_SKIPS="regression/skips-on-openfoam"
 
 listOnly=0
@@ -83,7 +85,7 @@ skipsThisVersion()
 
 expectedSkip()
 {
-    { [[ "${build_mode}" == "lightweight" ]] && needsSolids4Foam "$1"; } || skipsThisVersion "$1"
+    [[ -f "${ROOT_DIR}/$1/${TOOLS_MARKER}" ]] || { [[ "${build_mode}" == "lightweight" ]] && needsSolids4Foam "$1"; } || skipsThisVersion "$1"
 }
 
 if (( listOnly )); then

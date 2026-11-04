@@ -42,6 +42,7 @@ fails when this column and that discovery disagree.
 | `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
 | `manufacturedSolutions/eikonalECG/sphericalShell` | Verify the eikonal solver on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a cubed-sphere or gmsh-tetrahedra mesh | `eikonalSolver` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellEikonalVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured activation-time error summaries under `postProcessing/` |
 | `manufacturedSolutions/monodomain1D3D` | Verify 1D-3D monodomain coupling against manufactured solutions | `monodomainSolver` with 1D graph coupling and manufactured verifier | lightweight or full | `Alltest-regression` | 3-D and graph error summaries and coupling diagnostics under `postProcessing/` and `verification/` |
+| `manufacturedSolutions/eikonal1D3D` | Verify the eikonal path from a graph into tissue against an exact solution with no manufactured source | `eikonalSolver`, `eikonalSolver1D`, `eikonalPvjCoupler`, `manufacturedRadialEikonalVerifier` | lightweight or full | `Alltest-regression`, skipped without gmsh | `postProcessing/radial_errors.dat` |
 | `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `Alltest-regression` (expected skip in lightweight mode) | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
 | `idealizedHeart/electroHeart` | Run whole-ventricle electrophysiology with a Purkinje network and pseudo-ECG | `monodomainSolver`, `eikonalSolver` or the hybrid combination, selected at run time | lightweight or full | `Alltest-regression` (`monodomain` on the human tree; all variants and trees with `CARDIAC_REGRESSION_SCOPE=full`) | activation-time probes and pseudo-ECG series under `postProcessing/` |
 | `idealizedHeart/electroMechHeart` | Couple whole-ventricle electrophysiology to the solid on the same anatomy | `electroMechanicalModel` with monodomain electrophysiology | full only | `Alltest-regression` (expected skip in lightweight mode) | `Ta` and `D` probes on the solid, activation-time and `Vm` probes on the electro region |
@@ -87,7 +88,9 @@ mode their regression scripts exit 77 and the runner reports an expected
 skip. A case that cannot run on some OpenFOAM versions lists them in
 `regression/skips-on-openfoam`; today `manufacturedSolutions/bidomain/sphericalShell`
 lists `v2312`, where its Vm and ionic-state error rows differ from the
-reference in the CI image. Any other exit-77 skip fails the aggregate run.
+reference in the CI image. A case that needs tools beyond OpenFOAM has the marker
+`regression/needs-tools`; today `manufacturedSolutions/eikonal1D3D`. Any other exit-77
+skip fails the aggregate run.
 
 `CARDIAC_REGRESSION_SCOPE` selects how much a case checks: `standard` (the
 default) is the suite gate, `full` widens cases that offer a larger matrix.

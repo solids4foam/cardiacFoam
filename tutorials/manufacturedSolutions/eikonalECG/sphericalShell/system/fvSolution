@@ -61,4 +61,6 @@ relaxationFactors
 }
 
 
+#includeIfPresent "<case>/local/relaxation"
+
 // ************************************************************************* //

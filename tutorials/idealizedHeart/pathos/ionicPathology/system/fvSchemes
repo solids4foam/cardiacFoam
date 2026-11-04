@@ -23,6 +23,8 @@ ddtSchemes
 gradSchemes
 {
     default         leastSquares;
+    grad(Vm)   sealedWallLeastSquares;
+    grad(Vm.component(0))   sealedWallLeastSquares;
 }
 
 divSchemes

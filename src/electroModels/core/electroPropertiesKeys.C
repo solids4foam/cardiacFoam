@@ -57,7 +57,8 @@ const wordList tissueKeys
     "phiERefPoint", "phiEReferenceValue", "ecgDomains",
     "conductionNetworkDomains", "domainCouplings", "c0",
     "eikonalAdvectionDiffusionApproach", "stimulusLocationMin",
-    "stimulusLocationMax", "useGraphPrePopulation"
+    "stimulusLocationMax", "useGraphPrePopulation",
+    "eikonalConormalStabilisation"
 });
 
 // singleCellSolver, including its optional active-tension model
@@ -326,7 +327,7 @@ void checkTissueCoeffs(const dictionary& coeffs)
             keys
             ({
                 "electroDomainCoupler", "conductionNetworkDomain",
-                "couplingMode", "pvjRadius", "pvjDelay", "pvjKernel",
+                "couplingMode", "pvjRadius", "pvjDelay", "pvjKernel", "seedProfile",
                 "pvjCouplingScheme", "rPvj", "debugCoupling",
                 "verificationModel"
             })

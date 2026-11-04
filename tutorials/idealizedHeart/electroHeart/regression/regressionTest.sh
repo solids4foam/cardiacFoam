@@ -23,12 +23,17 @@ fi
 # CARDIAC_REGRESSION_SCOPE=full: every solver variant (monodomain, eikonal,
 # hybrid) on both trees (human, pig). Each combination has its own reference,
 # injection.<variant>.reference for human and injection.<variant>.pig.reference
-# for pig: monodomain activates the probe at 28.9 ms, hybrid at 30.1 ms, and
+# for pig: monodomain activates the probe at 28.6 ms, hybrid at 28.9 ms, and
 # eikonal solves one steady problem that writes only time 1.
 
 regression_init "Idealized heart injection regression test" \
     regression/injection.monodomain.reference "$@"
 regression_scope
+
+# Scotch can partition differently between runs, which moves the eikonal rows; a fixed
+# partition repeats them exactly.
+regression_edit system/decomposeParDict \
+    's/^method.*/method hierarchical; hierarchicalCoeffs { n (3 2 1); order xyz; }/'
 
 VARIANTS=(monodomain)
 TREES=(human)

@@ -41,6 +41,7 @@ class pvjMapper
     labelList terminalCellIDs_;
     List<labelList> terminalCellSets_;
     List<scalarList> terminalCellWeights_;
+    List<scalarList> terminalSeedOffsets_;
     scalarField sphereVolumes_;
 
 public:
@@ -81,6 +82,17 @@ public:
         volScalarField& sourceField,
         volScalarField& implicitSourceCoeff
     ) const;
+
+    //- Seed time of each support cell relative to its terminal, from the metric
+    //  distance rho = sqrt(d & inv(M) & d) to the terminal: rho/c0 for "front";
+    //  for "curvedFront" the source-free radial solution in an unbounded medium,
+    //  with rho/c0 + 2 log(rho)/c0^2 - 2/(c0^3 rho) measured from rho = 2/c0.
+    void setSeedOffsets
+    (
+        const word& profile,
+        const volTensorField& M,
+        scalar c0
+    );
 
     void depositActivationTimes
     (
