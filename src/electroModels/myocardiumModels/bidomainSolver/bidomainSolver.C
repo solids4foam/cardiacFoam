@@ -24,7 +24,7 @@ License
 #include "myocardiumDomain.H"
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
-#include "compatibilityProjection.H"
+#include "compatibilityImbalance.H"
 #include "conormalStabilisation.H"
 #include "exposedPhiETrace.H"
 #include "fvMeshSubset.H"
@@ -502,13 +502,12 @@ void bidomainSolver::solvePhiEImplicitOnce
           + conormalStabilisation(tGf(), phiE_)
          == rhs
         );
-        if (verifierPtr_ && verifierPtr_->requiresPhiECompatibilityProjection())
+        // Pure Neumann (no patch fixes the value): report the discrete
+        // imbalance the reference cell absorbs, then pin that cell
+        if (phiE_.needReference())
         {
-            projectCompatibility(phiEqn);
-        }
-        if (refCell >= 0)
-        {
-            phiEqn.setReference(refCell, phiEReferencePtr_->second(), true);
+            reportCompatibilityImbalance(phiEqn);
+            phiEqn.setReference(refCell, phiEReferencePtr_->second());
         }
         solve(phiEqn);
     }

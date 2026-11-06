@@ -4,7 +4,7 @@ sealedWall/sealedWallLeastSquaresVectors.C
 sealedWall/sealedWallLeastSquaresGrad.C
 interface/exposedPhiETrace.C
 interface/interfaceGradient.C
-pureNeumann/compatibilityProjection.C
+pureNeumann/compatibilityImbalance.C
 diffusion/conormalStabilisation.C
 probedOperator/probedOperator.C
 advection/facePeclet.C

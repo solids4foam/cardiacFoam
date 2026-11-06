@@ -395,7 +395,9 @@ The inner sphere is the patch `endocardium` and the outer sphere the patch
   `0/ConductivityExtracellular`);
 - ionic model `monodomainFDAManufactured` (`dimension "3D"`);
 - verifier `manufacturedShellBidomainVerifier`, which adds $I_{\mathrm{app}}$
-  and $s_e$ and requests the compatibility projection of the $\phi_e$ system.
+  and $s_e$, the latter with its volume-weighted cell mean removed so that
+  the pure-Neumann $\phi_e$ system is compatible on the mesh; the solver
+  applies no projection.
 
 ## Construction
 

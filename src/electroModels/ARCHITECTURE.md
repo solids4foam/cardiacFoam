@@ -160,8 +160,10 @@ domain. Implements `electroStateDomain`.
 - Rejects a start-time `phiE` file whose patch types differ from the ground
   and surface-current patches.
 
-- Applies a bound verification model's `phiE` source, boundary data, and
-  compatibility projection to the global equation.
+- Applies a bound verification model's `phiE` source to the global
+  equation. Without a ground patch (pure Neumann) it reports the discrete
+  imbalance of the equation, which the reference cell absorbs, at every
+  solve; it projects nothing.
 
 - Stores the heart-bath interface flux as `phiEInterfaceFlux`, and the cell
   gradient used by the face corrections of the `phiE` operator as

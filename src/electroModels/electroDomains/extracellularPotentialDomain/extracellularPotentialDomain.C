@@ -21,7 +21,7 @@ License
 #include "myocardiumDomainInterface.H"
 #include "electroVerificationModel.H"
 #include "sealedWallPolicy.H"
-#include "compatibilityProjection.H"
+#include "compatibilityImbalance.H"
 #include "exposedPhiETrace.H"
 #include "addToRunTimeSelectionTable.H"
 #include "OStringStream.H"
@@ -256,18 +256,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     if (const electroVerificationModel* model = verifier())
     {
-        if
-        (
-            !torso.pinsReference()
-         && model->requiresPhiECompatibilityProjection()
-        )
-        {
-            WarningInFunction
-                << "The phiE compatibility projection is ignored because a "
-                << "fixedValue patch determines the constant."
-                << endl;
-        }
-
         if (model->requiresInterfaceFluxDiagnostic())
         {
             if (!baseMesh_.fluxRequired(phiEPtr_().name()))
@@ -455,14 +443,11 @@ void extracellularPotentialDomain::solvePhiEOnce()
         interfaceGradientPtr_() = correction.gradient();
     }
 
-    if
-    (
-        torso.pinsReference()
-     && verifier()
-     && verifier()->requiresPhiECompatibilityProjection()
-    )
+    // Pure Neumann (no ground patch): report the discrete imbalance the
+    // reference cell absorbs
+    if (torso.pinsReference())
     {
-        projectCompatibility(phiEqn);
+        reportCompatibilityImbalance(phiEqn);
     }
 
     conductor.applyReference(phiEqn, torso.phiEReferenceValue);

@@ -16,30 +16,38 @@ License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
 Function
-    projectCompatibility
+    reportCompatibilityImbalance
 
 Description
-    Removes the discrete imbalance of a pure-Neumann system before its
-    reference cell is pinned: the sum of the source and of the non-coupled
-    boundary coefficients is subtracted, weighted by cell volume.
+    Discrete imbalance of a pure-Neumann potential equation: the sum of its
+    source and of its non-coupled boundary coefficients, which must vanish
+    for the singular system to have a solution. The equation is not changed.
+
+    The continuum problem is compatible. For a conservative operator with
+    insulated walls the imbalance is round-off; a non-zero value comes from
+    a non-conservative source, a wall that is not insulated, or unbalanced
+    surface currents. The reference cell of the solve absorbs it, so it is
+    reported, relative to the sum of the magnitudes of the same terms, every
+    time the equation is assembled.
 
 SourceFiles
-    compatibilityProjection.C
+    compatibilityImbalance.C
 
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#ifndef compatibilityProjection_H
-#define compatibilityProjection_H
+#ifndef compatibilityImbalance_H
+#define compatibilityImbalance_H
 
 #include "fvMatrices.H"
 
 namespace Foam
 {
 
-//- Remove the discrete imbalance of eqn and report it
-void projectCompatibility(fvScalarMatrix& eqn);
+//- Report the discrete imbalance of the pure-Neumann equation eqn and
+//  return it
+scalar reportCompatibilityImbalance(const fvScalarMatrix& eqn);
 
 }
 

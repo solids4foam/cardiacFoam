@@ -19,29 +19,33 @@ Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#include "compatibilityProjection.H"
+#include "compatibilityImbalance.H"
 
 // * * * * * * * * * * * * * * * * Functions * * * * * * * * * * * * * * * //
 
-void Foam::projectCompatibility(fvScalarMatrix& eqn)
+Foam::scalar Foam::reportCompatibilityImbalance(const fvScalarMatrix& eqn)
 {
     const fvMesh& mesh = eqn.psi().mesh();
 
     scalar imbalance = sum(eqn.source());
+    scalar scale = sum(mag(eqn.source()));
+
     forAll(eqn.boundaryCoeffs(), patchI)
     {
         if (!mesh.boundary()[patchI].coupled())
         {
             imbalance += sum(eqn.boundaryCoeffs()[patchI]);
+            scale += sum(mag(eqn.boundaryCoeffs()[patchI]));
         }
     }
+
     reduce(imbalance, sumOp<scalar>());
+    reduce(scale, sumOp<scalar>());
 
-    const scalarField& V = mesh.V();
-    eqn.source() -= V*(imbalance/gSum(V));
+    Info<< eqn.psi().name() << " pure-Neumann imbalance " << imbalance
+        << " (relative " << mag(imbalance)/max(scale, VSMALL) << ')' << nl;
 
-    Info<< eqn.psi().name() << " compatibility projection: imbalance "
-        << imbalance << nl;
+    return imbalance;
 }
 
 

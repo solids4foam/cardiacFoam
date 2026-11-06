@@ -118,12 +118,6 @@ public:
         (void)evaluationTime;
     }
 
-    //- Remove the discrete imbalance of a pure-Neumann phiE system before the reference cell is pinned
-    virtual bool requiresPhiECompatibilityProjection() const
-    {
-        return false;
-    }
-
     //- Store the face flux balanced by the phiE equation on heart-bath faces in phiEInterfaceFlux (A, owner->neighbour, extracellular part) and the gradient of its face corrections in phiEInterfaceGradient
     virtual bool requiresInterfaceFluxDiagnostic() const
     {
