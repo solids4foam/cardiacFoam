@@ -136,8 +136,15 @@ public:
         return activationTime_;
     }
 
-    const volTensorField& metric() const { return M_; }
-    scalar frontCoefficient() const { return c0_.value(); }
+    virtual const volTensorField* activationMetricPtr() const override
+    {
+        return &M_;
+    }
+
+    virtual const dimensionedScalar* frontCoefficientPtr() const override
+    {
+        return &c0_;
+    }
 
     virtual volScalarField& activationTimeField() override
     {

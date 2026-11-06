@@ -36,9 +36,9 @@ The case needs gmsh and gmshToFoam. Run `./Allclean` before running it again.
 | `-N` | cells across the wall: gmsh size `L/N` |
 | `-PeL` | `Pe_L` |
 | `-RoverL` | `R/L` |
-| `-ball constant` | one terminal through the graph and `eikonalPvjCoupler`, the ball at `Tk` |
+| `-ball constant` | one terminal through the graph and `eikonalPvjCoupler`, the ball seeded by `-seedProfile` |
 | `-ball exact` | no graph, the ball at the exact field, which isolates the operators from the ball |
-| `-seedProfile` | seed time of the ball cells through the coupler: `front` (`Tk + rho/c0`, default), `flat` (all at `Tk`) or `curvedFront` (the exact unbounded solution from `rho = 2/c0`), with `rho` the metric distance to the terminal |
+| `-seedProfile` | seed time of the ball cells through the coupler: `front` (`Tk + rho/c0`, default), `flat` (all at `Tk`) or `curvedFront` (the exact unbounded solution from `rho = 2/c0`), with `rho` the metric distance to the terminal; needs `-ball constant` and an isotropic tensor |
 | `-convection` | `linearUpwind` or `upwind` |
 | `-axes "ax ay az"` | speed ratios along the principal axes, turned about (1, 1, 1): the domain and the ball become ellipsoids, and the verifier holds a constant ball with no graph |
 | `-gradient` | `grad(activationTime)`: `sealed`, `stock`, `gaussLinear` or `pointCells` |

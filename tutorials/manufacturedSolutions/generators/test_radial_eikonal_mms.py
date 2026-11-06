@@ -55,3 +55,18 @@ def test_header_samples():
         Pe, a, s, w, time = map(float, row)
         assert abs(rad.slope(np.array(s), Pe, a) - w) < 1e-13
         assert abs(rad.scaled_time(np.array(s), Pe, a) - time) < 1e-11
+
+
+def test_seed_offset_slope_solves_unbounded_radial_equation():
+    # pvjMapper::setSeedOffsets integrates s = 1/c0 + 2/(c0^2 rho) + 2/(c0^3 rho^2)
+    # of c0 s - s' - 2 s/rho = 1 in the metric distance, from rho = 2/c0
+    c0 = 30.0
+    rho = np.linspace(2/c0, 5/c0, 7)
+    s = 1/c0 + 2/(c0**2*rho) + 2/(c0**3*rho**2)
+    ds = -2/(c0**2*rho**2) - 4/(c0**3*rho**3)
+    assert np.max(np.abs(c0*s - ds - 2*s/rho - 1)) < 1e-12
+    rhoC = 2/c0
+    offset = lambda r: (r - rhoC)/c0 + 2*np.log(r/rhoC)/c0**2 - 2*(1/r - 1/rhoC)/c0**3
+    assert abs(offset(rhoC)) < 1e-15
+    eps = 1e-7
+    assert np.max(np.abs((offset(rho + eps) - offset(rho - eps))/(2*eps) - s)) < 1e-7

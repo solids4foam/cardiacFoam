@@ -71,6 +71,7 @@ monodomainPurkinjeReactionDiffusionParallel slab monodomainPurkinjeReactionDiffu
 monodomainPurkinjeRestitutionEikonalParallel slab monodomainPurkinjeRestitutionEikonal pass np=2
 monodomainPurkinjeIonicExportParallel  slab  monodomainPurkinjeReactionDiffusion    pass  np=2  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(IcouplingSource~Vm~v);}
 eikonalPurkinjeParallel                slab  eikonalPurkinje                        pass  np=2
+eikonalPurkinjeSeedFlat                slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=flat
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
 bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2  skip=v2312
@@ -108,6 +109,8 @@ couplingToUnknownNetwork               slab  monodomainPurkinjeReactionDiffusion
 missingCouplingMode                    slab  monodomainPurkinjeReactionDiffusion fail:couplingMode monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/couplingMode!
 twoConductionNetworkDomains            slab  monodomainPurkinjeReactionDiffusion fail:only~one~conduction~network~domain monodomainSolverCoeffs/conductionNetworkDomains/secondNetwork={conductionSystemDomain~purkinjeGraphModel;}
 pvjDelayWithReactionDiffusion          slab  monodomainPurkinjeReactionDiffusion fail:pvjDelay~is~not~used monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
+seedProfileWithReactionDiffusion       slab  monodomainPurkinjeReactionDiffusion fail:seedProfile~is~used~only monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=front
+unknownSeedProfile                     slab  eikonalPurkinje                        fail:Unknown~seedProfile eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=bogus
 ecgDomainCoupling                      slab  monodomainPseudoECG         fail:ECG~domains~take~no~coupling monodomainSolverCoeffs/ecgDomains/ECG/coupling={electroDomainCoupler~reactionDiffusionPvjCoupler;}
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=bogusECG
 eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=eikonalECG

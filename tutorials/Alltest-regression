@@ -92,6 +92,7 @@ if (( listOnly )); then
     for c in "${CASES[@]}"; do
         tag=""
         needsSolids4Foam "$c" && tag="${tag}  (needs-solids4foam)"
+        [[ -f "${ROOT_DIR}/$c/${TOOLS_MARKER}" ]] && tag="${tag}  (needs-tools)"
         [[ -f "${ROOT_DIR}/$c/${VERSION_SKIPS}" ]] && tag="${tag}  (skips on: $(tr '\n' ' ' < "${ROOT_DIR}/$c/${VERSION_SKIPS}" | sed 's/ $//'))"
         echo "$c${tag}"
     done

@@ -1,8 +1,9 @@
 # Reference grammar: tutorials/regression/lib.sh.
 # error <field> <norm> <expected> <tolerance>
-# Case defaults with -seedProfile curvedFront: N 10, Pe_L 46, gmsh 4.15.2, seed 1. Tolerances
+# -seedProfile curvedFront -PeL 21 -N 20: gmsh 4.15.2, seed 1. Tolerances
 # cover the spread over gmsh mesh seeds 1 to 4.
-error  eps        L2  0.012174457  0.0082
-error  eps_bulk   L2  0.012102492  0.0081
-error  eps_wall   L2  0.0010218576  0.0016
-error  grad_bulk  L2  0.068243802  0.0023
+error  eps        L2  0.0013803195  0.00043
+error  eps_bulk   L2  0.0013711055  0.00043
+error  eps_wall   L2  0.00014083478  4.2e-05
+error  eps_ball   L2  7.4277726e-05  1.5e-05
+error  grad_bulk  L2  0.030072815  0.0006

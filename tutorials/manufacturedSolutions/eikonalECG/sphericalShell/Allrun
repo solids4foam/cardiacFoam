@@ -32,7 +32,8 @@ Options (parameters are written to local/ and included by the dictionaries):
   -relaxation x|none        equation relaxation of activationTime (default 0.9); none
                             removes the relaxationFactors block
   -eigenvalues "a b c"      conductivity eigenvalues in place of the default tensor
-  -fibreAngles "a b"        fibre angles in degrees at the two walls, with -eigenvalues
+  -fibreAngles "a b"        fibre angle at the inner wall and its rotation across the wall,
+                            in degrees, with -eigenvalues
   -pinnedRadius x           radius of the ball of pinned cells around the stimulus point
                             (default the header's rPin, 0.15)
   -ecg                      also run the eikonal ECG (eikonalECG, electrodes E1-E5) and its

@@ -30,11 +30,6 @@ regression_init "Idealized heart injection regression test" \
     regression/injection.monodomain.reference "$@"
 regression_scope
 
-# Scotch can partition differently between runs, which moves the eikonal rows; a fixed
-# partition repeats them exactly.
-regression_edit system/decomposeParDict \
-    's/^method.*/method hierarchical; hierarchicalCoeffs { n (3 2 1); order xyz; }/'
-
 VARIANTS=(monodomain)
 TREES=(human)
 if [[ "${REGRESSION_SCOPE}" == full ]]; then

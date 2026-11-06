@@ -97,7 +97,7 @@ with `run ./Allclean first` if a mesh log exists, and, for `-mesh tet`, when
 | `-conormalStabilisation` | conormal magnitude as the implicit diffusion coefficient (`eikonalConormalStabilisation true`) | off |
 | `-relaxation x\|none` | equation relaxation of `activationTime`; `none` removes the `relaxationFactors` block | 0.9 |
 | `-eigenvalues "a b c"` | conductivity eigenvalues in place of the default tensor | default tensor |
-| `-fibreAngles "a b"` | fibre angles in degrees at the two walls, with `-eigenvalues` | -20, 90 |
+| `-fibreAngles "a b"` | fibre angle at the inner wall and its rotation across the wall, in degrees, with `-eigenvalues` | -20, 90 |
 | `-pinnedRadius x` | radius of the ball of pinned cells | 0.15, the header's `rPin` |
 | `-ecg` | the eikonal ECG at E1-E5 and its shell reference (writes `local/ecg`) | off |
 | `-template singleEvent\|sine` | with `-ecg`: the manufactured ECG template and its sampling (writes `local/ecgTemplate` for `sine`) | singleEvent |

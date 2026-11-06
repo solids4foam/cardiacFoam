@@ -18,7 +18,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalPvjCoupler.H"
-#include "eikonalMyocardiumDomain.H"
 
 #include "addToRunTimeSelectionTable.H"
 
@@ -56,6 +55,14 @@ eikonalPvjCoupler::eikonalPvjCoupler
         FatalIOErrorInFunction(dict)
             << "Unknown seedProfile '" << seedProfile_
             << "'. Valid options are: flat, front, curvedFront."
+            << exit(FatalIOError);
+    }
+
+    if (seedProfile_ != "flat" && !primaryDomain_.activationMetricPtr())
+    {
+        FatalIOErrorInFunction(dict)
+            << "seedProfile " << seedProfile_ << " needs an eikonal myocardium. "
+            << "Set seedProfile flat for another tissue model."
             << exit(FatalIOError);
     }
 }
@@ -99,15 +106,12 @@ void eikonalPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 
     if (seedProfile_ != "flat" && !seedOffsetsSet_)
     {
-        const eikonalMyocardiumDomain* tissue =
-            dynamic_cast<const eikonalMyocardiumDomain*>(&primaryDomain_);
-        if (!tissue)
-        {
-            FatalErrorInFunction
-                << "seedProfile " << seedProfile_ << " needs an eikonal myocardium."
-                << exit(FatalError);
-        }
-        mapper_.setSeedOffsets(seedProfile_, tissue->metric(), tissue->frontCoefficient());
+        mapper_.setSeedOffsets
+        (
+            seedProfile_,
+            *primaryDomain_.activationMetricPtr(),
+            primaryDomain_.frontCoefficientPtr()->value()
+        );
         seedOffsetsSet_ = true;
     }
 

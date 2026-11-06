@@ -33,7 +33,19 @@ for seedProfile in front flat curvedFront; do
     fi
 
     echo "Seed profile: ${seedProfile}"
-    regression_run_or_fail -seedProfile "${seedProfile}"
+    # curvedFront needs its critical radius resolved: 2/Pe_L against h/L.
+    runArgs=(-seedProfile "${seedProfile}")
+    if [[ "${seedProfile}" == curvedFront ]]; then
+        runArgs+=(-PeL 21 -N 20)
+    fi
+
+    # An existing run holds one profile, which is the only one to check.
+    if (( REGRESSION_CHECK_ONLY )) \
+        && ! grep -qx "# seedProfile ${seedProfile}" postProcessing/radial_errors.dat; then
+        continue
+    fi
+
+    regression_run_or_fail "${runArgs[@]}"
 
     # A run that reaches the iteration cap still prints End
     regression_check_solver_logs -e 'PIMPLE: converged' || { regression_write_report; exit 1; }

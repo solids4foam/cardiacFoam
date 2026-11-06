@@ -132,8 +132,7 @@ sphere dilutes the current: at `2.5e-3` only 26% of the pig
 tree's intramural junctions captured the tissue within 40 ms under
 `hybrid`. At `1.65e-3` every junction of both trees captures; at `rPvj 1000`
 intramural junctions capture after ~11 ms against ~5 ms at the surface, so
-the pig tree activates slightly more slowly than the human tree (99% of the
-myocardium by 76 vs 74 ms under `hybrid`), and faster below `rPvj` 300
+the pig tree activates slightly more slowly than the human tree, and faster below `rPvj` 300
 (`untracked_development/idealizedHeart/pvjCouplingSweep`).
 "Inside the wall" counts PVJs deeper than 0.15 of the wall thickness. The
 generation record is `cases/idealizedBivEllipsoidPig` in

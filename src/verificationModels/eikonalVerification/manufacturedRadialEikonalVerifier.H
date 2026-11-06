@@ -22,9 +22,8 @@ Description
     Eikonal verifier with an exact solution and no manufactured source: a held
     ball of radius R inside a sealed sphere of radius Ro = L + R, with a constant
     conductivity sigma Q diag(a^2) Q^T that stretches both into ellipsoids (Q is
-    a rotation by angle about (1, 1, 1)). The first-arrival release stays on and
-    the deposited junction seeds stay in place, so the case exercises the
-    production path.
+    a rotation by angle about (1, 1, 1)). The first-arrival release stays on for
+    the deposited junction seeds, so the case exercises the production path.
 
     Entries of the verificationModel dictionary: wallThickness (L), ballRatio
     (R/L), terminalTime, sigma, axes, angle, and heldBall: none (the seeds come
@@ -108,7 +107,7 @@ public:
         return true;
     }
 
-    //- Hold the ball when no coupler seeds it; deposited seeds stay in place
+    //- Hold the ball when no coupler seeds it; deposited seeds are left to the release
     virtual void applyConstraints(volScalarField& activationTime) const override;
 
     //- No manufactured source: the exact field solves the production equation

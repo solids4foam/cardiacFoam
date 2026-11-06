@@ -20,11 +20,6 @@ fi
 regression_init "Eikonal sealed-shell manufactured-solution regression test" \
     regression/sphericalShell.reference "$@"
 
-# Scotch can partition differently between runs, which moves the eikonal rows; a fixed
-# partition repeats them exactly.
-regression_edit system/decomposeParDict \
-    's/^method.*/method hierarchical; hierarchicalCoeffs { n (4 1 1); order xyz; }/'
-
 regression_run_or_fail parallel
 
 REGRESSION_SUMMARY_FILE="$(regression_find_output \

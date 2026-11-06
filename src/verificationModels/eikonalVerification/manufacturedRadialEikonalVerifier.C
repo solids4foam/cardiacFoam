@@ -126,6 +126,13 @@ manufacturedRadialEikonalVerifier::manufacturedRadialEikonalVerifier
             << "'. Valid options are: flat, front, curvedFront."
             << exit(FatalIOError);
     }
+    if (seedProfile_ == "curvedFront" && 2/Pe_ > a_)
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "seedProfile curvedFront needs ballRatio at least 2/Pe = " << 2/Pe_
+            << ": the exact field holds outside the critical radius."
+            << exit(FatalIOError);
+    }
     if (seedProfile_ != "flat" && heldBall_ != "none")
     {
         FatalIOErrorInFunction(electroProperties)
@@ -189,7 +196,7 @@ void manufacturedRadialEikonalVerifier::validateConfiguration() const
         worst = max(worst, mag(conductivity_[cellI] - expected)/mag(expected));
     }
     reduce(worst, maxOp<scalar>());
-    if (worst > 1e-4)
+    if (worst > 1e-9)
     {
         FatalErrorInFunction
             << typeName << " needs the conductivity written by "

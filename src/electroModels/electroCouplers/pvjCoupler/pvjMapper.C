@@ -326,6 +326,12 @@ void pvjMapper::setSeedOffsets
     const scalar c0
 )
 {
+    if (profile != "front" && profile != "curvedFront")
+    {
+        FatalErrorInFunction
+            << "No seed offsets for profile " << profile << "." << exit(FatalError);
+    }
+
     const bool curved = (profile == "curvedFront");
     const vectorField& centres = mesh_.C();
 
