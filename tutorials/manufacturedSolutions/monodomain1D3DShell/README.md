@@ -84,5 +84,13 @@ the continuum-reference files `verification/coupled1D3DMonodomain_map.csv`,
 `_steps.csv` and `_local.csv` described in
 [monodomain1D3DCube](../monodomain1D3DCube/README.md#usage).
 
-There is no regression test; the study and its results are in
+Regression (the defaults, serial): the shell and graph error summaries, and
+for each terminal the support, terminal-voltage and junction-current errors,
+the charge imbalance, and the linear-kernel normalisation and gather errors.
+
+```bash
+./regression/regressionTest.sh
+```
+
+The study and its results are in
 [continuumCoupling](../monodomain1D3DCube/setup/studies/continuumCoupling/README.md).
