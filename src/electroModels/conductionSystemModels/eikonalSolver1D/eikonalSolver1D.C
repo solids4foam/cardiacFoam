@@ -52,8 +52,23 @@ addToRunTimeSelectionTable
 eikonalSolver1D::eikonalSolver1D(const fvMesh&, const dictionary& solverCoeffs)
 :
     purkinjeCV_("purkinjeCV", solverCoeffs),
+    useEdgeConductance_
+    (
+        solverCoeffs.lookupOrDefault<Switch>("useEdgeConductance", true)
+    ),
+    refConductance_
+    (
+        solverCoeffs.lookupOrDefault<scalar>("referenceConductance", 1.0)
+    ),
     warnedRootStartTimes_(false)
-{}
+{
+    if (useEdgeConductance_ && refConductance_ <= SMALL)
+    {
+        FatalIOErrorInFunction(solverCoeffs)
+            << "referenceConductance must be positive, not "
+            << refConductance_ << exit(FatalIOError);
+    }
+}
 
 
 void eikonalSolver1D::advance
@@ -65,7 +80,10 @@ void eikonalSolver1D::advance
 {
     // Dijkstra wavefront propagation on the conduction graph.
     //
-    // Activation time at node j: Tact[j] = Tact[i] + L_ij / c0
+    // Activation time at node j: Tact[j] = Tact[i] + L_ij / c_ij, with
+    // c_ij = c0 sqrt(g_ij/gRef) for edge conductance g_ij, as in
+    // restitutionEikonalSolver1D. A zero-conductance edge blocks conduction.
+    // With useEdgeConductance false, c_ij = c0 on every edge.
     //
     // O((N+E) log N) via a min-heap, versus O(N*E) for Bellman-Ford.
     // Correct for any connected graph with non-negative edge weights.
@@ -163,7 +181,21 @@ void eikonalSolver1D::advance
         {
             label  j     = G.adjNeighbours[k];
             label  eI    = G.adjEdges[k];
-            scalar t_new = Tact[i] + G.edgeLengths[eI] / c0;
+            scalar c     = c0;
+
+            if (useEdgeConductance_)
+            {
+                const scalar gRel = G.edgeConductances[eI]/refConductance_;
+
+                if (gRel <= SMALL)
+                {
+                    continue;
+                }
+
+                c *= Foam::sqrt(gRel);
+            }
+
+            scalar t_new = Tact[i] + G.edgeLengths[eI] / c;
 
             if (Tact[j] < 0 || t_new < Tact[j])
             {
