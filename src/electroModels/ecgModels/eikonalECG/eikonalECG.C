@@ -58,6 +58,7 @@ eikonalECG::eikonalECG(const dictionary& dict)
     weightsCalculated_(false),
     regionWeights_(),
     regionWeightGradients_(),
+    compiledCurveIndex_(),
     checkGradVm_(dict.lookupOrDefault<Switch>("checkGradVm", false)),
     personalizedTemplatesEnabled_(false),
     personalizedTemplatesGenerated_(false)
@@ -231,14 +232,13 @@ void eikonalECG::evaluateRegionTemplate
         return;
     }
 
-    // Compiled fallback is always exactly 3 fixed curves in
-    // [endo, mid, epi] order, matching
-    // synthesizeTransmuralBandRegions()'s own fixed ordering.
+    // Compiled fallback: 3 fixed curves [endo, mid, epi], selected by
+    // the region's name (compiledCurveIndex_), not by its position.
     const scalar* times = nullptr;
     const scalar* values = nullptr;
     int n = 0;
 
-    switch (regionI)
+    switch (compiledCurveIndex_[regionI])
     {
         case 0:
             times = eikonalECG_templates::endoTimes;
@@ -714,6 +714,35 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     forAll(regions, i)
     {
         regionNames[i] = regions[i].name;
+    }
+
+    if (!personalizedTemplatesEnabled_)
+    {
+        compiledCurveIndex_.setSize(nRegions);
+        forAll(regionNames, i)
+        {
+            if (regionNames[i] == "endocardialCells")
+            {
+                compiledCurveIndex_[i] = 0;
+            }
+            else if (regionNames[i] == "mCells")
+            {
+                compiledCurveIndex_[i] = 1;
+            }
+            else if (regionNames[i] == "epicardialCells")
+            {
+                compiledCurveIndex_[i] = 2;
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "eikonalECG compiled templates exist for regions "
+                    << "endocardialCells, mCells and epicardialCells; region '"
+                    << regionNames[i] << "' has no compiled template. Use "
+                    << "personalizedTemplates for other regions."
+                    << exit(FatalError);
+            }
+        }
     }
 
     forAll(tField, cellI)

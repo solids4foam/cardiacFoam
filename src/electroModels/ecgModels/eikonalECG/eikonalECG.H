@@ -77,6 +77,13 @@ class eikonalECG
     //  manufactured-template path, which uses one template.
     List<vectorField> regionWeightGradients_;
 
+    //- Compiled-template path only: which of the 3 compiled curves
+    //  [endo, mid, epi] region i uses, matched by region name
+    //  (endocardialCells, mCells, epicardialCells), so any subset of
+    //  regions (e.g. endocardial and epicardial only) selects the right
+    //  curves.
+    labelList compiledCurveIndex_;
+
     //- Optional diagnostic: also evaluate the ECG from fvc::grad of the
     //  reconstructed Vm and report the largest difference from the
     //  product-rule ECG. Off by default.
