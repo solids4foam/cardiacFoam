@@ -203,9 +203,6 @@ public:
   //- Evolve physics over a time-step
   virtual bool evolve();
 
-  //- Read electroProperties dictionary
-  virtual bool read();
-
   //- Write fields
   virtual void writeFields(const Time &runTime);
 
