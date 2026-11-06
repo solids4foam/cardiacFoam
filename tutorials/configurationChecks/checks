@@ -47,6 +47,7 @@ monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
 bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
 eikonalECG                             slab  eikonalECG                             pass
+eikonalECGGradientCheck                slab  eikonalECG                             pass  post=eikonalECGGradientCheck
 twoEcgDomains                          slab  monodomainPseudoECG                    pass  monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
