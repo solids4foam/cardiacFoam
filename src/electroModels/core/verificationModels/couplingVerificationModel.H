@@ -88,6 +88,22 @@ public:
         (void)phaseName;
     }
 
+    //- Called once the coupler has deposited the junction source into
+    //  the tissue for the step [t0, t0 + dt], before the tissue advances
+    virtual void recordPrimaryDeposit
+    (
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain,
+        scalar t0,
+        scalar dt
+    )
+    {
+        (void)primaryDomain;
+        (void)secondaryDomain;
+        (void)t0;
+        (void)dt;
+    }
+
     virtual void postProcess
     (
         tissueCouplingEndpoint& primaryDomain,

@@ -21,6 +21,7 @@ License
 #include "restitutionTemplates.H"
 #include "ionicModel.H"
 #include "purkinjeModelIO.H"
+#include "dictionaryKeyCheck.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -47,8 +48,13 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
     R_pvj_(),
     implicitCoupling_
     (
-        dict.lookupOrDefault<word>("pvjCouplingScheme", "explicit")
-     == "implicit"
+        dictionaryKeyCheck::getWord
+        (
+            dict,
+            "pvjCouplingScheme",
+            "explicit",
+            wordList({"explicit", "implicit"})
+        ) == "implicit"
     ),
     vmTemplateOffset_
     (
@@ -63,6 +69,13 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
         0
     )
 {
+    if (dict.found("seedProfile"))
+    {
+        FatalIOErrorInFunction(dict)
+            << "seedProfile is used only by eikonalPvjCoupler. Remove it."
+            << exit(FatalIOError);
+    }
+
     if (dict.found("rPvj"))
     {
         R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));
@@ -159,7 +172,7 @@ void eikonalMonodomainPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 
     for (label i = 0; i < nTerminalNodes; ++i)
     {
-        const scalar tact = terminalActivationBuffer_[i];
+        const scalar tact = terminalActivationBuffer_[i] + pvjDelay_;
 
         // If activated, compute the template voltage
         if (currentTime >= tact)

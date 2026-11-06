@@ -20,6 +20,7 @@ License
 #include "pvjCoupler.H"
 #include "electroDomainInterface.H"
 #include "purkinjeModelIO.H"
+#include "dictionaryKeyCheck.H"
 
 namespace Foam
 {
@@ -85,9 +86,16 @@ pvjCoupler::pvjCoupler
         primaryDomain.mesh(),
         networkTerminalDomain_.terminalLocations(),
         dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3),
-        dict.lookupOrDefault<word>("pvjKernel", "uniform")
+        dictionaryKeyCheck::getWord
+        (
+            dict,
+            "pvjKernel",
+            "uniform",
+            wordList({"uniform", "gaussian", "linear"})
+        )
     ),
     pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),
+    pvjDelay_(dict.lookupOrDefault<scalar>("pvjDelay", 0)),
     couplingMode_(parseCouplingMode(dict.get<word>("couplingMode"))),
     terminalCurrentBuffer_
     (
@@ -116,6 +124,13 @@ pvjCoupler::pvjCoupler
         0
     )
 {
+    if (pvjDelay_ < 0)
+    {
+        FatalIOErrorInFunction(dict)
+            << "pvjDelay must be zero or positive (s); got " << pvjDelay_
+            << exit(FatalIOError);
+    }
+
     if (!purkinjeModelIO::readGlobalField(lastObservedTissueActivation_))
     {
         lastObservedTissueActivation_.setSize

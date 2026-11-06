@@ -23,6 +23,7 @@ Verification models: `monodomainFDAManufactured`, `bidomainFDAManufactured`,
 ```text
 src/ionicModels/
 ├── ionicModel/                    # Base class, factory, selectors, batched/GPU support headers
+├── ionicTemplates/                # Per-region Vm and Cai single-cell templates, templateSignalProvider
 ├── verificationModels/
 │   ├── monodomainFDAManufactured/     # Manufactured monodomain ionic wrapper
 │   ├── bidomainFDAManufactured/       # Manufactured bidomain ionic wrapper

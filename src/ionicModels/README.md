@@ -55,6 +55,7 @@ Three manufactured-solution models, used by [verificationModels](../verification
 ```text
 src/ionicModels/
 ├── ionicModel/          # base classes, batched base, heterogeneity support
+├── ionicTemplates/      # per-region Vm and Cai templates from single cells
 ├── verificationModels/  # the three manufactured-solution models
 ├── <Name>/              # one folder per model, with its generated equations
 └── <Name>Batched/       # one folder per batched model

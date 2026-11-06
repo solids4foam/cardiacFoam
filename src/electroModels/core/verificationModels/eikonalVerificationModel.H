@@ -92,6 +92,13 @@ public:
         return true;
     }
 
+    //- Whether activation seeds follow first arrival under this verifier.
+    //  Manufactured pins hold the exact field and stay fixed.
+    virtual bool releasesSeeds() const
+    {
+        return false;
+    }
+
     //- Write the fields the manufactured solution prescribes.
     virtual void writeManufacturedFields(const fvMesh& mesh) const
     {

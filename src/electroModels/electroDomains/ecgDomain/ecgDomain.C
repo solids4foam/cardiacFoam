@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ecgDomain.H"
+#include "Switch.H"
 #include "ecgModelIO.H"
 #include "ecgVerificationModel.H"
 
@@ -123,9 +124,12 @@ void ecgDomain::readElectrodes(const dictionary& dict)
         eDictPtr = inheritedElectrodePositionsPtr_;
     }
 
-    if (!eDictPtr)
+    if (!eDictPtr || eDictPtr->empty())
     {
-        return;
+        FatalIOErrorInFunction(dict)
+            << "ECG domain " << dict.dictName() << " has no electrodes: "
+            << "give electrodePositions in the domain or in ecgDomains."
+            << exit(FatalIOError);
     }
 
     const dictionary& eDict = *eDictPtr;
@@ -233,6 +237,7 @@ ecgDomain::ecgDomain
     solverPtr_(ecgSolver::New(dict)),
     verificationModelPtr_(),
     numericValues_(),
+    writeEveryTimeStep_(dict.lookupOrDefault<Switch>("writeEveryTimeStep", false)),
     inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
     inheritedPotentialDomainPtr_(inheritedPotentialDomainPtr),
     electrodeNames_(),
@@ -310,7 +315,11 @@ void ecgDomain::evolve
         verificationModelPtr_->record(numericValues_);
     }
 
-    if (!solverPtr_->writesOwnTimeSeries() && mesh_.time().outputTime())
+    if
+    (
+        !solverPtr_->writesOwnTimeSeries()
+     && (writeEveryTimeStep_ || mesh_.time().outputTime())
+    )
     {
         ecgModelIO::writeRow
         (

@@ -20,6 +20,7 @@ License
 #include "sequentialElectroMechanical.H"
 #include "addToRunTimeSelectionTable.H"
 #include "fvcGrad.H"
+#include "dictionaryKeyCheck.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -75,9 +76,35 @@ sequentialElectroMechanical::sequentialElectroMechanical
         )
     ),
     verificationModelPtr_(),
-    activeTensionRequirements_(activeTensionModel_->requirements())
+    activeTensionRequirements_(activeTensionModel_->requirements()),
+    templateProviderPtr_(),
+    staticActivation_(false),
+    activationSolved_(false)
 {
     const ElectromechanicalSignalProvider* prov = electro().provider();
+
+    if
+    (
+        dictionaryKeyCheck::getWord
+        (
+            electroMechanicalProperties(),
+            "activeTensionSignal",
+            "electro",
+            wordList({"electro", "templates"})
+        ) == "templates"
+    )
+    {
+        templateProviderPtr_.reset
+        (
+            new templateSignalProvider
+            (
+                electro().mesh(),
+                electroMechanicalProperties().subDict("activeTensionTemplates")
+            )
+        );
+        staticActivation_ = !prov;
+        prov = templateProviderPtr_.get();
+    }
 
     if (prov)
     {
@@ -190,7 +217,13 @@ sequentialElectroMechanical::sequentialElectroMechanical
         activeTensionModel_->preconditionToRestingState(restingCai);
     }
 
-    if (prov && prePacingPtr && !activeTensionRestarted)
+    if
+    (
+        prov
+     && prePacingPtr
+     && !activeTensionRestarted
+     && !templateProviderPtr_.valid()
+    )
     {
         prePaceActiveTension(*prePacingPtr);
     }
@@ -431,6 +464,15 @@ void sequentialElectroMechanical::updateLambda()
 }
 
 
+void sequentialElectroMechanical::setDeltaT(Time& runTime)
+{
+    if (!staticActivation_)
+    {
+        electroMechanicalModel::setDeltaT(runTime);
+    }
+}
+
+
 bool sequentialElectroMechanical::evolve()
 {
     Info<< "Evolving " << type() << endl;
@@ -444,7 +486,11 @@ bool sequentialElectroMechanical::evolve()
         );
     }
 
-    electro().evolve();
+    if (!staticActivation_ || !activationSolved_)
+    {
+        electro().evolve();
+        activationSolved_ = true;
+    }
 
     // Update the fibre stretch from the (lagged) solid deformation before
     // evaluating the active tension.

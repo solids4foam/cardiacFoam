@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalPvjCoupler.H"
+#include "dictionaryKeyCheck.H"
 
 #include "addToRunTimeSelectionTable.H"
 
@@ -33,6 +34,18 @@ addToRunTimeSelectionTable
 );
 
 
+word eikonalPvjCoupler::seedProfile(const dictionary& dict)
+{
+    return dictionaryKeyCheck::getWord
+    (
+        dict,
+        "seedProfile",
+        "front",
+        wordList({"flat", "front", "curvedFront"})
+    );
+}
+
+
 eikonalPvjCoupler::eikonalPvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
@@ -41,8 +54,24 @@ eikonalPvjCoupler::eikonalPvjCoupler
 )
 :
     pvjCoupler(primaryDomain, secondaryDomain, dict),
-    terminalActivationBuffer_()
+    terminalActivationBuffer_(),
+    seedProfile_(seedProfile(dict)),
+    seedOffsetsSet_(false)
 {
+    if
+    (
+        seedProfile_ != "flat"
+     && (
+            !primaryDomain_.activationMetricPtr()
+         || !primaryDomain_.frontCoefficientPtr()
+        )
+    )
+    {
+        FatalIOErrorInFunction(dict)
+            << "seedProfile " << seedProfile_ << " needs an eikonal myocardium. "
+            << "Set seedProfile flat for another tissue model."
+            << exit(FatalIOError);
+    }
 }
 
 
@@ -72,6 +101,27 @@ void eikonalPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     (void)dt;
 
     networkTerminalDomain_.terminalActivationTime(terminalActivationBuffer_);
+
+    // Junction delay
+    for (scalar& t : terminalActivationBuffer_)
+    {
+        if (t >= 0)
+        {
+            t += pvjDelay_;
+        }
+    }
+
+    if (seedProfile_ != "flat" && !seedOffsetsSet_)
+    {
+        mapper_.setSeedOffsets
+        (
+            *primaryDomain_.activationMetricPtr(),
+            primaryDomain_.frontCoefficientPtr()->value(),
+            seedProfile_ == "curvedFront"
+        );
+        seedOffsetsSet_ = true;
+    }
+
     mapper_.depositActivationTimes
     (
         terminalActivationBuffer_,

@@ -10,6 +10,7 @@ The brain of the electrophysiology: it builds the system of domains a case needs
 - `staggeredElectrophysicsAdvanceScheme`: the advance scheme. It advances each domain in turn, with the couplers in between.
 - The interfaces the domains implement: `electroDomainInterface`, `electroStateProvider`, `electroStateDomain`, `electroVolumeFieldDomain`.
 - The abstract verifier bases, which the concrete verifiers in [src/verificationModels](../../verificationModels/README.md) inherit from.
+- `electroPropertiesKeys`: the keywords each block of `electroProperties` accepts. A misspelt or unknown keyword stops the run and the error names the closest valid one. Keywords starting with `_` are case variables for `$` substitution and `#ifeq`, and are always accepted.
 
 ## Folders
 

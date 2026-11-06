@@ -97,6 +97,24 @@ public:
         List<label>& algIndex,
         List<label>& rateIndex
     );
+
+    // Model state names, algebraic names and RATES_<state> names.
+    static wordList variableNames
+    (
+        const char* const stateNames[],
+        label nStates,
+        const char* const algNames[],
+        label nAlg
+    );
+
+    // Stop with a FatalError naming the unknown output variables, the
+    // closest valid name of each and every valid name.
+    static void reportUnknownVariables
+    (
+        const word& modelKind,
+        const wordList& unknown,
+        const wordList& valid
+    );
 };
 
 }

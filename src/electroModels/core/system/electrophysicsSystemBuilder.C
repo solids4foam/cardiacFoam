@@ -277,6 +277,16 @@ void configureConductionDomains
         couplingDicts
     );
 
+    // A network that no coupling links to the myocardium would be advanced
+    // without ever activating it
+    if (couplingDicts.empty())
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "conductionNetworkDomains holds " << conductionDomainNames
+            << ", but domainCouplings holds no coupling that links it to "
+            << "the myocardium." << exit(FatalIOError);
+    }
+
     forAll(couplingDicts, i)
     {
         const dictionary& couplingDict = *couplingDicts[i];

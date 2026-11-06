@@ -69,61 +69,6 @@ fileName casePath(fileName name, const Time& runTime)
 }
 
 
-//- State vector of a single-cell restart state file
-scalarField readSingleCellState
-(
-    const fileName& statePath,
-    const word& model,
-    label& stride
-)
-{
-    std::ifstream is(statePath.c_str(), std::ios::binary);
-    if (!is)
-    {
-        FatalErrorInFunction
-            << "Cannot open state file " << statePath
-            << exit(FatalError);
-    }
-
-    const restartStateIO::Header header =
-        restartStateIO::readHeader(is, statePath);
-
-    if (header.model != model)
-    {
-        FatalErrorInFunction
-            << "State file " << statePath << " is for ionic model '"
-            << header.model << "', but the case uses '" << model << "'."
-            << exit(FatalError);
-    }
-
-    if (header.rows != 1)
-    {
-        FatalErrorInFunction
-            << "State file " << statePath << " holds " << header.rows
-            << " cells; a single-cell state file is required."
-            << exit(FatalError);
-    }
-
-    if (stride >= 0 && header.stride != stride)
-    {
-        FatalErrorInFunction
-            << "State file " << statePath << " has " << header.stride
-            << " states per cell; the other region files have " << stride
-            << "."
-            << exit(FatalError);
-    }
-    stride = header.stride;
-
-    scalarField state(stride);
-    forAll(state, stateI)
-    {
-        state[stateI] = restartStateIO::readScalar(is, statePath);
-        restartStateIO::checkValue(state[stateI], statePath);
-    }
-
-    return state;
-}
-
 } // End anonymous namespace
 
 
@@ -280,7 +225,7 @@ int main(int argc, char *argv[])
         regionState.set
         (
             regionI,
-            new scalarField(readSingleCellState(statePath, model, stride))
+            new scalarField(restartStateIO::readSingleCellState(statePath, model, stride))
         );
 
         Info<< "    " << regionNames[regionI] << ": " << statePath << nl;

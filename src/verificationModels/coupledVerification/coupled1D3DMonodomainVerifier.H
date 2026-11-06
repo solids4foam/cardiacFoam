@@ -19,11 +19,33 @@ Class
     coupled1D3DMonodomainVerifier
 
 Description
-    Diagnostic verifier for the staged 1D-3D manufactured monodomain workflow.
+    Verifier for the coupled 1D-3D manufactured monodomain problem. The
+    tissue field is V3 = sqrt(1 + t) F3 (tissueField box: the FDA cube
+    field; shell: the sealed-shell field) and the graph field is
+    V1 = sqrt(1 + t) cos(pi (x - xOrigin)).
 
-    This verifier operates at the coupler level, meaning it receives both
-    the primary domain (3D myocardium) and secondary domain (1D graph) to
-    compare their values against the analytical coupled solutions.
+    reference discrete (the original self-consistency check): the junction
+    forcing is built with a second pvjMapper, so map errors cancel and only
+    the feedback of the discretisation error through the junction is seen.
+
+    reference continuum: the junction forcing is the continuum source of
+    pvjContinuumReference, normalised over the tissue part of the support
+    and averaged over each cell; the graph forcing uses the continuum
+    gathered voltage. The discrete map's error then reaches the solution.
+    The forcing is evaluated at the new time level t0 + dt of each phase,
+    so the staggered lag between graph and tissue is not reproduced.
+
+    Both references write, under verification/, the map and local files
+    below; continuum mode also writes the steps file:
+      coupled1D3DMonodomain_map.csv      discrete map vs continuum map of
+                                         every diagnostic kernel at t = 0
+      coupled1D3DMonodomain_steps.csv    per step: junction charge leaving
+                                         the graph (from its own budget) and
+                                         entering the tissue (from the
+                                         deposited source), and the
+                                         terminal currents
+      coupled1D3DMonodomain_local.csv    final-time errors local to each
+                                         support and at each terminal
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -35,15 +57,99 @@ Author
 #include "couplingVerificationModel.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
+#include "OFstream.H"
+#include "fvMesh.H"
+#include "pvjContinuumReference.H"
 
 namespace Foam
 {
 
 class coupled1D3DMonodomainVerifier : public couplingVerificationModel
 {
+    word reference_;
+    word tissueField_;
+    scalar xOrigin_;
+    wordList diagnosticKernels_;
+
     mutable bool diagnosticsWritten_;
     mutable scalarField exactPrimarySource_;
     mutable scalarField exactSecondaryAppliedCurrent_;
+
+    // Continuum map of the configured kernel, per terminal
+
+        bool continuumReady_;
+        scalar R_;
+        word kernel_;
+        scalarField Wc_;
+        scalarField Fc_;
+        List<labelList> refCells_;
+        List<scalarField> refOmega_;
+        List<scalarField> refOmegaF_;
+
+    // Per-step charge balance
+
+        scalarField graphVmOld_;
+        scalarField sourceBeforeDeposit_;
+        autoPtr<OFstream> stepFile_;
+        scalar maxChargeImbalance_;
+        scalarField maxCurrentError_;
+
+    bool continuum() const
+    {
+        return reference_ == "continuum";
+    }
+
+    //- Manufactured tissue field F3 (V3 = sqrt(1 + t) F3)
+    scalar tissueF(const point& x) const;
+
+    //- Manufactured graph field F1 (V1 = sqrt(1 + t) F1)
+    scalar graphF(const point& x) const;
+
+    pvjContinuumReference::support supportGeometry
+    (
+        const fvMesh& mesh,
+        const point& t,
+        scalar R
+    ) const;
+
+    //- Continuum map of the configured kernel; the cell integrals of w F
+    //  only for the implicit scheme's local operator
+    void initialiseContinuum
+    (
+        const fvMesh& mesh,
+        const pointField& terminalLocations,
+        bool implicitCoupling
+    );
+
+    void writeMapDiagnostics
+    (
+        const fvMesh& mesh,
+        const pointField& terminalLocations
+    ) const;
+
+    //- Continuum junction current at time t
+    scalarField continuumCurrent
+    (
+        const pointField& terminalLocations,
+        const scalarField& R_pvj,
+        scalar t
+    ) const;
+
+    void updateContinuumSource
+    (
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain,
+        scalar evaluationTime,
+        bool implicitCoupling,
+        bool bidirectionalCoupling,
+        const word& phaseName
+    );
+
+    void postProcessContinuum
+    (
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain
+    );
 
 public:
 
@@ -66,6 +172,14 @@ public:
         bool implicitCoupling,
         bool bidirectionalCoupling,
         const word& phaseName
+    ) override;
+
+    virtual void recordPrimaryDeposit
+    (
+        tissueCouplingEndpoint& primaryDomain,
+        electroDomainInterface& secondaryDomain,
+        scalar t0,
+        scalar dt
     ) override;
 
     virtual void postProcess

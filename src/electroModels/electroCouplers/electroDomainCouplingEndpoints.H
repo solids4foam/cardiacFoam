@@ -62,6 +62,18 @@ public:
         return nullptr;
     }
 
+    //- Metric tensor of an activation-time tissue, null for other tissue models.
+    virtual const volTensorField* activationMetricPtr() const
+    {
+        return nullptr;
+    }
+
+    //- Front coefficient c0 of an activation-time tissue, null for other tissue models.
+    virtual const dimensionedScalar* frontCoefficientPtr() const
+    {
+        return nullptr;
+    }
+
     //- Transmembrane voltage at the domain.
     virtual const volScalarField& Vm() const = 0;
 

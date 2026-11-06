@@ -20,11 +20,48 @@ License
 #include "pvjMapper.H"
 
 #include "PstreamReduceOps.H"
+#include "mathematicalConstants.H"
 
 #include <cmath>
 
 namespace Foam
 {
+
+const wordList pvjMapper::kernelTypes
+({
+    "uniform",
+    "linear",
+    "gaussian",
+    "cosine"
+});
+
+
+scalar pvjMapper::kernelWeight(const word& kernelType, scalar r, scalar R)
+{
+    if (kernelType == "uniform")
+    {
+        return 1.0;
+    }
+    if (kernelType == "linear")
+    {
+        return 1.0 - r/(R + VSMALL);
+    }
+    if (kernelType == "gaussian")
+    {
+        return std::exp(-4.5*r*r/(R*R + VSMALL));
+    }
+    if (kernelType == "cosine")
+    {
+        return 0.5*(1.0 + std::cos(constant::mathematical::pi*r/(R + VSMALL)));
+    }
+
+    FatalErrorInFunction
+        << "Unknown pvjKernel '" << kernelType << "'. Valid kernels: "
+        << kernelTypes << exit(FatalError);
+
+    return 0.0;
+}
+
 
 pvjMapper::pvjMapper
 (
@@ -42,6 +79,13 @@ pvjMapper::pvjMapper
     terminalCellWeights_(terminalLocations.size()),
     sphereVolumes_(terminalLocations.size(), 0.0)
 {
+    if (!kernelTypes.found(kernelType))
+    {
+        FatalErrorInFunction
+            << "Unknown pvjKernel '" << kernelType << "'. Valid kernels: "
+            << kernelTypes << exit(FatalError);
+    }
+
     const vectorField& centres = mesh_.C();
     const scalarField& cellVolumes = mesh_.V();
 
@@ -120,15 +164,7 @@ pvjMapper::pvjMapper
             const scalar r = mag(centres[cellI] - terminalLocations_[i]);
             if (r <= radius_)
             {
-                scalar w = 1.0;
-                if (kernelType == "gaussian")
-                {
-                    w = std::exp(-4.5 * r * r / (radius_ * radius_ + VSMALL));
-                }
-                else if (kernelType == "linear")
-                {
-                    w = 1.0 - r / (radius_ + VSMALL);
-                }
+                const scalar w = kernelWeight(kernelType, r, radius_);
 
                 cellsInRadius.append(cellI);
                 cellsInRadiusWeights.append(w);
@@ -319,6 +355,53 @@ void pvjMapper::depositImplicitCoupling
 }
 
 
+void pvjMapper::setSeedOffsets
+(
+    const volTensorField& M,
+    const scalar c0,
+    const bool curvedFront
+)
+{
+    const vectorField& centres = mesh_.C();
+
+    terminalSeedOffsets_.setSize(terminalCellSets_.size());
+
+    forAll(terminalCellSets_, i)
+    {
+        const labelList& cells = terminalCellSets_[i];
+        scalarList& offsets = terminalSeedOffsets_[i];
+        offsets.setSize(cells.size());
+
+        forAll(cells, localI)
+        {
+            const label cellI = cells[localI];
+            const vector d(centres[cellI] - terminalLocations_[i]);
+            const scalar rho =
+                Foam::sqrt(max(d & (inv(M[cellI]) & d), scalar(0)));
+
+            if (curvedFront)
+            {
+                // Measured from the metric radius 2/c0; the log and 1/rho
+                // terms diverge towards the terminal
+                const scalar rhoC = 2/c0;
+                offsets[localI] = 0;
+                if (rho > rhoC)
+                {
+                    offsets[localI] =
+                        (rho - rhoC)/c0
+                      + 2*Foam::log(rho/rhoC)/sqr(c0)
+                      - 2*(1/rho - 1/rhoC)/pow3(c0);
+                }
+            }
+            else
+            {
+                offsets[localI] = rho/c0;
+            }
+        }
+    }
+}
+
+
 void pvjMapper::depositActivationTimes
 (
     const scalarField& terminalActivationTime,
@@ -348,14 +431,21 @@ void pvjMapper::depositActivationTimes
         forAll(terminalCellSets_[i], localI)
         {
             const label cellI = terminalCellSets_[i][localI];
+            const scalar seedTime =
+                terminalTime
+              + (
+                    terminalSeedOffsets_.size()
+                  ? terminalSeedOffsets_[i][localI]
+                  : 0.0
+                );
 
             if
             (
                 activationValues[cellI] < 0.0
-             || terminalTime < activationValues[cellI]
+             || seedTime < activationValues[cellI]
             )
             {
-                activationValues[cellI] = terminalTime;
+                activationValues[cellI] = seedTime;
             }
         }
     }

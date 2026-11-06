@@ -21,6 +21,7 @@ License
 #include "fvc.H"
 #include "nonOrthogonalCorrectorLoop.H"
 #include "sealedWallPolicy.H"
+#include "dictionaryKeyCheck.H"
 
 namespace Foam
 {
@@ -369,9 +370,12 @@ myocardiumDomain::myocardiumDomain
     )),
     useExplicitAlgorithm_
     (
-        electroProperties_.lookupOrDefault<word>
+        dictionaryKeyCheck::getWord
         (
-            "solutionAlgorithm", "implicit"
+            electroProperties_,
+            "solutionAlgorithm",
+            "implicit",
+            wordList({"explicit", "implicit"})
         ) == "explicit"
     ),
     timeCouplingScheme_
@@ -870,7 +874,7 @@ scalar myocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
     surfaceVectorField n("n", mesh().Sf());
     n /= mesh().magSf();
 
-    const scalarField Df
+    const surfaceScalarField Df
     (
         (
             n
@@ -880,9 +884,31 @@ scalar myocardiumDomain::suggestExplicitDeltaT(scalar maxCo) const
       /(chi_*Cm_)
     );
 
-    const scalarField dx(1.0/mesh().deltaCoeffs());
+    const surfaceScalarField& deltaCoeffs = mesh().deltaCoeffs();
 
-    return maxCo*gMin(sqr(dx)/Df);
+    // dx^2/D over the internal faces and the coupled boundary faces, so that a
+    // decomposed mesh gives the limit of the undecomposed one: the faces on a
+    // processor boundary are internal faces of the whole mesh
+    scalar minRatio = GREAT;
+    forAll(Df, facei)
+    {
+        minRatio = min(minRatio, 1.0/(sqr(deltaCoeffs[facei])*Df[facei]));
+    }
+    forAll(Df.boundaryField(), patchi)
+    {
+        if (mesh().boundary()[patchi].coupled())
+        {
+            const scalarField& Dp = Df.boundaryField()[patchi];
+            const scalarField& dp = deltaCoeffs.boundaryField()[patchi];
+            forAll(Dp, facei)
+            {
+                minRatio = min(minRatio, 1.0/(sqr(dp[facei])*Dp[facei]));
+            }
+        }
+    }
+    reduce(minRatio, minOp<scalar>());
+
+    return maxCo*minRatio;
 }
 
 

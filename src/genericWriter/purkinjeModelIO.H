@@ -71,6 +71,9 @@ public:
 
     // Static Member Functions
 
+        //- Export names the network writes itself, without an ionic model
+        static const wordList& networkTokenNames();
+
         static ResolvedTokens filterTokens
         (
             const wordList& userExport,

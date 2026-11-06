@@ -1,0 +1,31 @@
+// Sealed ellipsoid with semi-axes Ro*(ax, ay, az) turned by angle about (1, 1, 1),
+// Delaunay tetrahedra of size lc. A sphere has ax = ay = az = 1. Set them with
+// gmsh -setnumber <name> <value>.
+
+SetFactory("OpenCASCADE");
+
+DefineConstant[
+    Ro = { 1.25, Name "Ro" }, lc = { 0.1, Name "lc" }, seed = { 1, Name "seed" },
+    ax = { 1, Name "ax" }, ay = { 1, Name "ay" }, az = { 1, Name "az" },
+    angle = { 0, Name "angle" }
+];
+
+Sphere(1) = {0, 0, 0, Ro};
+Dilate {{0, 0, 0}, {ax, ay, az}} { Volume{1}; }
+Rotate {{1, 1, 1}, {0, 0, 0}, angle} { Volume{1}; }
+
+Physical Volume("myocardium") = {1};
+Physical Surface("wall") = {Abs(Boundary{ Volume{1}; })};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.MeshSizeFromCurvature = 0;
+Mesh.Algorithm = 6;
+Mesh.Algorithm3D = 1;      // Delaunay: near-uniform, isotropic tets
+Mesh.Optimize = 1;
+Mesh.RandomSeed = seed;
+Mesh.MaxNumThreads1D = 1;  // one thread: the same mesh for the same lc and seed
+Mesh.MaxNumThreads2D = 1;
+Mesh.MaxNumThreads3D = 1;
+General.NumThreads = 1;
+Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format

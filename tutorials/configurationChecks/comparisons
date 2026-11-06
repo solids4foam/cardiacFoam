@@ -16,6 +16,9 @@ differ  monodomainImplicit                   monodomainSbdf2                    
 differ  monodomainExplicit                   monodomainCellZone                               0.005/Vm
 differ  monodomainImplicit                   bidomain                                         0.005/Vm
 differ  eikonal                              eikonalPurkinje                                  1/activationTime
+differ  eikonalPurkinje                      eikonalPurkinjePvjDelay                          1/activationTime
+differ  eikonalPurkinje                      eikonalPurkinjeSeedFlat                          1/activationTime
+differ  eikonalECG                           eikonalECGRegionStates                           postProcessing/eikonalECG.dat
 
 # Purkinje junction couplers must feed the network activation into the slab
 differ  monodomainExplicit                   monodomainPurkinjeReactionDiffusion              0.005/Vm
@@ -25,6 +28,7 @@ differ  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusion
 # Options that must not change the myocardium solution
 same    monodomainExplicit                   monodomainFieldConductivity                      0.005/Vm
 same    monodomainExplicit                   monodomainVerificationNone                       0.005/Vm
+same    monodomainExplicit                   monodomainCaseVariable                           0.005/Vm
 same    monodomainPurkinjeReactionDiffusion  monodomainPurkinjeIonicExport                    0.005/Vm
 same    monodomainExplicit                   monodomainPseudoECG                              0.005/Vm
 same    bidomain                             bidomainPseudoECG                                0.005/Vm

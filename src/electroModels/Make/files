@@ -1,5 +1,6 @@
 /* Core */
 core/electroModel.C
+core/electroPropertiesKeys.C
 core/electroStateDomain.C
 core/verificationModels/electroVerificationModel.C
 core/verificationModels/couplingVerificationModel.C
@@ -35,7 +36,6 @@ myocardiumModels/singleCellSolver/singleCellSolver.C
 /* ECG models */
 ecgModels/pseudoECGSolver/pseudoECGSolver.C
 ecgModels/eikonalECG/eikonalECG.C
-ecgModels/eikonalECG/eikonalTemplateGenerator.C
 ecgModels/torsoECG/torsoECG.C
 
 /* Conduction system models */

@@ -30,6 +30,23 @@ solvers
         tolerance       1e-11;
         relTol          0.1;
     }
+
+    "activationTime|activationTimeFinal"
+    {
+        solver          PCG;
+        preconditioner  none;
+        tolerance       1e-11;
+        relTol          1e-6;
+    }
+
+    asymmetric_activationTime
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-9;
+        relTol          0.01;
+        maxIter         1000;
+    }
 }
 
 PIMPLE
@@ -43,6 +60,11 @@ PIMPLE
             relTol          0.0;
             tolerance       1e-6;
         }
+        activationTime
+        {
+            relTol          0.0;
+            tolerance       1e-5;
+        }
     }
 }
 
@@ -51,6 +73,7 @@ relaxationFactors
     equations
     {
         psi    0.9;
+        "activationTime.*"  0.7;
     }
 }
 

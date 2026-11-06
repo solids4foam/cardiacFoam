@@ -132,8 +132,7 @@ sphere dilutes the current: at `2.5e-3` only 26% of the pig
 tree's intramural junctions captured the tissue within 40 ms under
 `hybrid`. At `1.65e-3` every junction of both trees captures; at `rPvj 1000`
 intramural junctions capture after ~11 ms against ~5 ms at the surface, so
-the pig tree activates slightly more slowly than the human tree (99% of the
-myocardium by 76 vs 74 ms under `hybrid`), and faster below `rPvj` 300
+the pig tree activates slightly more slowly than the human tree, and faster below `rPvj` 300
 (`untracked_development/idealizedHeart/pvjCouplingSweep`).
 "Inside the wall" counts PVJs deeper than 0.15 of the wall thickness. The
 generation record is `cases/idealizedBivEllipsoidPig` in
@@ -159,28 +158,20 @@ convection term, $c_0|\nabla\psi|_M = \mathbf u\cdot\nabla\psi$ with
 $\mathbf u = c_0 M\nabla\psi/|\nabla\psi|_M$, and solves it with a bounded
 reconstruction (`system/fvSchemes`: `div(phiU,activationTime) Gauss
 linearUpwind limitedGrad`, `limitedGrad cellMDLimited leastSquares 1`).
-`grad(activationTime)` sets the direction of $\mathbf u$ and is the
-activation gradient of the eikonal ECG.
+`grad(activationTime)` (`sealedWallLeastSquares`, with `sealedHeartBoundary
+true`) sets the direction of $\mathbf u$ and is the activation gradient of the
+eikonal ECG.
 
 The outer loop runs until the initial residual of `activationTime` is below
-1e-5 (`system/fvSolution`, relaxation 0.7 on every outer iteration). This
-mesh at `c0 29.7` sits at the Péclet threshold described below: the residual
-levels off near 5e-6 on four ranks (below 1e-6 in serial), with the same
-activation field, so the tolerance is set above that level.
-
-The cell Péclet number $Pe_h = h\,v/m$ (cell size over the diffusion length
-$m/v$, with $m$ the metric component and $v$ the conduction speed across the
-fibre) sets how far the residual falls. Above $Pe_h \approx 9$–13, that is
-for $c_0 h \gtrsim 75$–110 mm s$^{-1/2}$ with this case's conductivities,
-the field stays bounded and stops changing but the residual stalls at a
-plateau (about 5e-5 at `c0 60` on this mesh). On such meshes set the
-`activationTime` tolerance above the plateau.
+1e-5 (`system/fvSolution`, relaxation 0.7 on every outer iteration). Each solve
+logs the face Péclet number (`src/numericsModels/advection/facePeclet.H`).
 
 `c0 29.7` gives 0.56 m/s along the fibre and 0.25 m/s across
 ($c_0\sqrt{\sigma/(\chi C_m)}$), within measured human ventricular values.
 
-The Purkinje junction radius (`pvjRadius`) seeds a ball of activation, and
-the curvature of the front leaving it delays activation, so the radius acts
+The Purkinje junction radius (`pvjRadius`) seeds a ball of activation, each cell at
+the terminal time plus its metric distance over `c0` (`seedProfile front`), and
+the curvature of the front leaving it delays activation, so the radius acts weakly
 as the junction delay. Keep it fixed when comparing meshes.
 
 ## Execution
@@ -204,8 +195,8 @@ The regression runs `monodomain` on the human tree by default; with
 `constant/electroProperties` is a symlink to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
 `system/controlDict` is shared by the variants (`endTime 0.04`): the
-regression probe activates at 28.9 ms (`monodomain`) and 30.1 ms (`hybrid`)
-on the human tree, 31.9 and 34.0 ms on the pig tree; `eikonal` overrides its
+regression probe activates at 28.6 ms (`monodomain`) and 28.9 ms (`hybrid`)
+on the human tree, 32.5 and 34.5 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per
 `eikonalMyocardiumDomain::applyModelTimeControls`.
 

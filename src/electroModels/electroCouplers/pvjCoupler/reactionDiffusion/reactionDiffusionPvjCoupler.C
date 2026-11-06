@@ -117,6 +117,22 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
+    if (dict.found("seedProfile"))
+    {
+        FatalIOErrorInFunction(dict)
+            << "seedProfile is used only by eikonalPvjCoupler. Remove it."
+            << exit(FatalIOError);
+    }
+
+    if (pvjDelay_ > 0)
+    {
+        FatalIOErrorInFunction(dict)
+            << "pvjDelay is not used by reactionDiffusionPvjCoupler: the "
+            << "junction delay comes from rPvj and the junction load. Remove "
+            << "pvjDelay, or tune rPvj."
+            << exit(FatalIOError);
+    }
+
     if (couplingScheme_ != "explicit" && couplingScheme_ != "implicit")
     {
         FatalErrorInFunction
@@ -229,6 +245,17 @@ void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     }
 
     depositPrimaryCoupling();
+
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->recordPrimaryDeposit
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            t0,
+            dt
+        );
+    }
 
     networkTerminalDomain_.setTerminalCoupling
     (
