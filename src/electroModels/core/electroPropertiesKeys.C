@@ -57,7 +57,8 @@ const wordList tissueKeys
     "phiERefPoint", "phiEReferenceValue", "ecgDomains",
     "conductionNetworkDomains", "domainCouplings", "c0",
     "eikonalAdvectionDiffusionApproach", "stimulusLocationMin",
-    "stimulusLocationMax", "useGraphPrePopulation",
+    "stimulusLocationMax", "stimulusLocationMinList",
+    "stimulusLocationMaxList", "useGraphPrePopulation",
     "eikonalConormalStabilisation"
 });
 
