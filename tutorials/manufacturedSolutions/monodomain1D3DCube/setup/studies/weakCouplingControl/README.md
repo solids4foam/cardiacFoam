@@ -1,4 +1,4 @@
-# weakCouplingControl - monodomain1D3D
+# weakCouplingControl - monodomain1D3DCube
 
 The ladder of [coupledConvergence](../coupledConvergence/README.md) with
 unidirectional explicit transfer and `R_pvj = 1e6` (`-rPvj 1e6`): the junction

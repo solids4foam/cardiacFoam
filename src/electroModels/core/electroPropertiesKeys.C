@@ -243,7 +243,8 @@ void checkECGDomains(const dictionary& ecgDomains)
         ({
             "ecgSolver", "electrodePositions", "sampling",
             "sigmaExtracellular", "torsoSurface", "verificationModel",
-            "ecgVerificationModel", "personalizedTemplates", "coupling"
+            "ecgVerificationModel", "personalizedTemplates", "coupling",
+            "writeEveryTimeStep"
         }),
         wordRes(),
         wordList({"electrodePositions"})

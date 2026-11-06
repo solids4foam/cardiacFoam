@@ -144,6 +144,38 @@ def continuum_junction_source(points, t, radius=RADIUS, n=32, R_pvj=1.0):
     return sum(terminal_deposition(k, pts, t, radius, n, R_pvj) for k in range(len(TERMINALS)))
 
 
+# ---- kernel family ----------------------------------------------------------
+# Radial profiles phi(s), s = |x - x_k|/r_PVJ in [0, 1], of the four kernels of
+# cardiacFoam's pvjMapper (pvjKernel uniform, linear, gaussian, cosine); w_k is
+# phi on the ball and zero outside it.  The NumPy reference keeps the linear
+# kernel; the others are defined here for the construction document.
+
+_s = sp.Symbol("s", nonnegative=True)
+KERNEL_FAMILY = (
+    ("top-hat", "uniform", sp.Integer(1)),
+    ("linear", "linear", 1 - _s),
+    ("truncated Gaussian", "gaussian", sp.exp(-sp.Rational(9, 2)*_s**2)),
+    ("cosine", "cosine", (1 + sp.cos(sp.pi*_s))/2),
+)
+
+
+def half_ball_mass_factor(phi):
+    """int over a half ball of radius r of phi(|x - x_k|/r), divided by r^3:
+    2 pi int_0^1 phi(s) s^2 ds (a full ball has twice this)."""
+    return sp.simplify(2*sp.pi*sp.integrate(phi*_s**2, (_s, 0, 1)))
+
+
+def shell_tissue_condition():
+    """A point at distance r from a terminal on a sphere of radius rho (tissue
+    outside it) lies in the tissue when the cosine mu of its polar angle about
+    the outward normal satisfies mu >= -r/(2 rho): |x|^2 = rho^2 + r^2 +
+    2 rho r mu >= rho^2."""
+    mu = sp.Symbol("mu", real=True)
+    r, rho = sp.symbols("r rho", positive=True)
+    bound = sp.solve(sp.Eq(r**2 + 2*rho*r*mu, 0), mu)[0]
+    return mu, bound, r, rho
+
+
 def _check(condition, message):
     if not condition:
         raise AssertionError(message)
@@ -161,6 +193,14 @@ def run_self_checks():
                "V_1D - V_m differs from the exact current at terminal %d" % k)
         bound = 7*np.pi**2*RADIUS**2*np.sqrt(1 + t)
         _check(abs(continuum_sampling(k, t) - point) <= bound, "sampling exceeds the O(r^2) bound")
+    x, w = np.polynomial.legendre.leggauss(64)
+    x, w = 0.5*(x + 1), 0.5*w
+    for label, _, phi in KERNEL_FAMILY:
+        exact = float(half_ball_mass_factor(phi))
+        numeric = 2*np.pi*np.sum(w*sp.lambdify(_s, phi, "numpy")(x)*x**2)
+        _check(abs(exact - numeric) < 1e-12*exact, "half-ball mass of the %s kernel" % label)
+    mu, bound, r, rho = shell_tissue_condition()
+    _check(sp.simplify(bound + r/(2*rho)) == 0, "shell tissue condition is not mu >= -r/(2 rho)")
     _check(abs(quadrature.half_ball_kernel_integral(
         lambda p: np.ones(p.shape[1:]), TERMINALS[0], RADIUS, CUBE_LO, CUBE_HI, 32)[1]
         - kernel_mass()) < 1e-12*kernel_mass(), "kernel mass differs from pi r^3/6")
@@ -278,10 +318,29 @@ def latex_fragments():
             sp.Symbol("gap"), 7*sp.pi**2*sp.Symbol("r")**2*sp.sqrt(1 + t)),
             symbol_names={sp.Symbol("gap"): r"\left|\bar V_k - V_m(\mathbf x_k)\right|",
                           sp.Symbol("r"): r"r_{\mathrm{PVJ}}"}),
+        "coupled_kernel_family.tex": kernel_family_table(),
+        "coupled_shell_support.tex": "$$\n%s\n$$\n" % sp.latex(
+            sp.Ge(shell_tissue_condition()[0], shell_tissue_condition()[1]),
+            symbol_names={shell_tissue_condition()[3]: r"r_1"}),
         "coupled_params.tex": emit_parameter_fragment(
             [(r"r_{\mathrm{PVJ}}", RADIUS), (r"R_{\mathrm{PVJ}}", R_PVJ)]),
     }
     return {"latex/" + k: v for k, v in out.items()}
+
+
+def kernel_family_table():
+    """Markdown rows of the kernel family: profile, value and slope at the
+    support edge, and the half-ball mass in units of r_PVJ^3 (exact, then
+    numerical).  The caption follows the include in the document."""
+    rows = ["| Kernel | $\\phi(s)$, $0\\le s\\le1$ | $\\phi(1)$ | $\\phi'(1)$ "
+            "| $W_k/r_{\\mathrm{PVJ}}^3$, half ball | value |",
+            "|---|---|---|---|---|---|"]
+    for label, _, phi in KERNEL_FAMILY:
+        mass = half_ball_mass_factor(phi)
+        rows.append("| %s | $%s$ | $%s$ | $%s$ | $%s$ | %.6f |" % (
+            label, sp.latex(phi), sp.latex(sp.nsimplify(phi.subs(_s, 1))),
+            sp.latex(sp.simplify(sp.diff(phi, _s).subs(_s, 1))), sp.latex(mass), float(mass)))
+    return "\n".join(rows) + "\n"
 
 
 def render_outputs():

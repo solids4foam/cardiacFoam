@@ -18,7 +18,7 @@ fi
 # graph error summary against the references.
 
 regression_init "1D-3D monodomain manufactured-solution regression test" \
-    regression/monodomain1D3D.reference "$@"
+    regression/monodomain1D3DCube.reference "$@"
 
 regression_run_or_fail
 
@@ -35,5 +35,5 @@ regression_compare || true
 
 # The Purkinje graph errors
 REGRESSION_SUMMARY_FILE="${graphSummary}"
-regression_compare regression/monodomain1D3D.graph.reference || true
+regression_compare regression/monodomain1D3DCube.graph.reference || true
 regression_finish
