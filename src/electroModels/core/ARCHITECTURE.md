@@ -230,9 +230,9 @@ Current rules:
 - `conductionNetworkDomains` and `domainCouplings` are optional
 - At most one conduction network domain: the root stimulus starts a single
   network, and its outputs (`purkinjeNetwork.dat`, ...) have fixed names
-- Any number of ECG domains. The output file is named after the `ecgSolver`
-  (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`), not the domain, so two
-  domains with the same `ecgSolver` write the same file; that is a warning
+- One ECG domain per `ecgSolver`, holding all its electrodes; domains with
+  different solvers run together. The output file is named after the solver
+  (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`)
 - An ECG domain writes its time series at the output times; with
   `writeEveryTimeStep yes` it writes a row every time step, for QRS and
   waveform measurements independent of `writeInterval`
