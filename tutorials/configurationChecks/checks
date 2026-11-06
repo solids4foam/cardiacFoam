@@ -30,6 +30,9 @@ monodomainVerificationNone             slab  monodomainVerificationNone         
 monodomainCaseVariable                 slab  monodomainExplicit                     pass  monodomainSolverCoeffs/_caseVariable=1
 bidomain                               slab  bidomain                               pass
 eikonal                                slab  eikonal                                pass
+# Imported tetrahedra with no boundary faces: walls take the adjacent cell value
+eikonalVtkTets                         vtkTets  eikonalVtkTets                      pass
+eikonalVtkTetsFieldConductivity        vtkTets  eikonalVtkTets                      pass  eikonalSolverCoeffs/conductivitySource=field
 
 # ---- Conduction system (Purkinje) and junction couplers -----------------
 monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion    pass

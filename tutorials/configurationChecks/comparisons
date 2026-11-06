@@ -33,6 +33,8 @@ same    monodomainPurkinjeReactionDiffusion  monodomainPurkinjeIonicExport      
 same    monodomainExplicit                   monodomainPseudoECG                              0.005/Vm
 same    bidomain                             bidomainPseudoECG                                0.005/Vm
 same    eikonal                              eikonalECG                                       1/activationTime
+# An imported uniform conductivity, wall values included, equals the uniform entry
+same    eikonalVtkTets                       eikonalVtkTetsFieldConductivity                  1/activationTime
 same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE
 
 # Parallel runs must reproduce the serial ones up to round-off: rtol covers

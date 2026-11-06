@@ -10,6 +10,13 @@ and the imported fields in the current time directory (`0/` by default).
 newVtkUnstructuredToFoam myMesh.vtk -case ./myCase
 ```
 
+## Boundary values
+
+All boundary faces go to one `defaultFaces` patch. Each imported field takes
+its boundary value from the adjacent cell, or from the file's boundary face
+data where the file has any. A file of volume cells only, such as
+tetrahedra, therefore gets walls equal to the cells next to them.
+
 ## After import
 
 Imported coordinates are at source units, and every CELL_DATA field is

@@ -1,0 +1,9 @@
+#!/bin/bash
+# Import a box of tetrahedra written as volume cells only, with a uniform
+# conductivity tensor as cell data. The file has no boundary faces, so the
+# importer must take each wall value from the adjacent cell.
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication newVtkUnstructuredToFoam tets.vtk || exit 1
+runApplication setFieldDimensions || exit 1

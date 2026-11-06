@@ -81,17 +81,23 @@ void constructVolFields(fvMesh& mesh, const vtkUnstructuredReader& reader)
         fld.internalFieldRef().field() =
             UIndirectList<Type>(field, reader.cellMap());
 
-        // Fill boundary values
+        // Fill boundary values: the adjacent cell's value, replaced by the
+        // file's boundary face data where it has any. Without this, a file
+        // with volume cells only (e.g. tetrahedra) left every boundary value
+        // uninitialised.
         const auto& map = reader.faceMap();
-        if (map.size())
+        for (auto& pfld : fld.boundaryFieldRef())
         {
-            for (auto& pfld : fld.boundaryFieldRef())
-            {
-                const auto& pp = pfld.patch();
+            pfld = pfld.patchInternalField();
 
-                forAll(pfld, i)
+            const auto& pp = pfld.patch();
+
+            forAll(pfld, i)
+            {
+                const label bFacei = pp.patch().offset()+i;
+
+                if (bFacei < map.size() && map[bFacei] >= 0)
                 {
-                    const label bFacei = pp.patch().offset()+i;
                     pfld[i] = field[map[bFacei]];
                 }
             }
