@@ -70,6 +70,10 @@ class ecgDomain
     //- Reused output values buffer
     scalarField numericValues_;
 
+    //- Write the time series every time step (writeEveryTimeStep yes), not
+    //  only at the case's write times
+    bool writeEveryTimeStep_;
+
     const dictionary* inheritedElectrodePositionsPtr_;
 
     //- Disallow copy construct

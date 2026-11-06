@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "ecgDomain.H"
+#include "Switch.H"
 #include "ecgModelIO.H"
 #include "ecgVerificationModel.H"
 #include "ecgElectrodes.H"
@@ -166,6 +167,7 @@ ecgDomain::ecgDomain
     solverPtr_(ecgSolver::New(dict)),
     verificationModelPtr_(),
     numericValues_(),
+    writeEveryTimeStep_(dict.lookupOrDefault<Switch>("writeEveryTimeStep", false)),
     inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
     electrodeNames_(),
     electrodePositions_()
@@ -235,7 +237,11 @@ void ecgDomain::evolve
         verificationModelPtr_->record(numericValues_);
     }
 
-    if (!solverPtr_->writesOwnTimeSeries() && mesh_.time().outputTime())
+    if
+    (
+        !solverPtr_->writesOwnTimeSeries()
+     && (writeEveryTimeStep_ || mesh_.time().outputTime())
+    )
     {
         ecgModelIO::writeRow
         (

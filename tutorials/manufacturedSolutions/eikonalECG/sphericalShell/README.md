@@ -94,6 +94,10 @@ with `run ./Allclean first` if a mesh log exists, and, for `-mesh tet`, when
 | `-iterations n` | at most `n` outer iterations | 8000, stopped by the residual control |
 | `-exactStart` | start the iteration from the exact field outside the pinned cells (`initialiseExact`); with `-iterations 1` the field after one linearised solve from the exact one | off |
 | `-c0 x` | eikonal `c0` | 1 |
+| `-conormalStabilisation` | conormal magnitude as the implicit diffusion coefficient (`eikonalConormalStabilisation true`) | off |
+| `-relaxation x\|none` | equation relaxation of `activationTime`; `none` removes the `relaxationFactors` block | 0.9 |
+| `-eigenvalues "a b c"` | conductivity eigenvalues in place of the default tensor | default tensor |
+| `-fibreAngles "a b"` | fibre angle at the inner wall and its rotation across the wall, in degrees, with `-eigenvalues` | -20, 90 |
 | `-pinnedRadius x` | radius of the ball of pinned cells | 0.15, the header's `rPin` |
 | `-ecg` | the eikonal ECG at E1-E5 and its shell reference (writes `local/ecg`) | off |
 | `-template singleEvent\|sine` | with `-ecg`: the manufactured ECG template and its sampling (writes `local/ecgTemplate` for `sine`) | singleEvent |
@@ -203,9 +207,8 @@ the activation time stops changing, but it shortens every outer step.
   of the studies; raise it with `-iterations n`, which writes `local/outer`.
   A larger cap only removes the stop; it does not change the solution, and a
   run that converges stops at the tolerance whatever the cap.
-- Changing the relaxation. There is no `Allrun` option for it. In a copy of
-  the case, edit the factor in `system/fvSolution` with a text editor, or
-  delete the `relaxationFactors` block to run without relaxation. Do not use
+- Changing the relaxation: use `-relaxation x|none`, which writes
+  `local/relaxation`. Do not use
   `foamDictionary -set` or `-remove` on `system/fvSolution` or
   `constant/electroProperties`: it rewrites the file without its
   `#includeIfPresent` lines, so `-iterations` and `-formulation` no longer
@@ -218,7 +221,7 @@ the activation time stops changing, but it shortens every outer step.
   coarsest study meshes and falls below 1 in every direction from tet
   `N = 20` and hex `N = 40`, so diffusion carries much of the equation.
   `c0` is read from `eikonalSolverCoeffs` in `constant/electroProperties`
-  (edit it by hand, as above), and the exact solution and its source follow
+  (`-c0 x`), and the exact solution and its source follow
   it (`psi` scales as `1/c0`), so the same case runs with advection
   dominating. With larger `c0` the outer
   iteration does not reach `1e-8` on the tested meshes, with or without

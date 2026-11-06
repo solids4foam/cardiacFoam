@@ -19,7 +19,16 @@ Class
     pvjMapper
 
 Description
-    Mapper for PVJ coupling.
+    Mapper for PVJ coupling. Each terminal exchanges with the myocardium
+    cells whose centre lies within radius R of it, weighted by a radial
+    kernel w(r) and normalised by the discrete sum of w|K| over those cells:
+
+        uniform   w = 1
+        linear    w = 1 - r/R
+        gaussian  w = exp(-4.5 r^2/R^2), truncated at R
+        cosine    w = (1 + cos(pi r/R))/2
+
+    The cosine kernel is the only one whose value and slope vanish at R.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -41,9 +50,16 @@ class pvjMapper
     labelList terminalCellIDs_;
     List<labelList> terminalCellSets_;
     List<scalarList> terminalCellWeights_;
+    List<scalarList> terminalSeedOffsets_;
     scalarField sphereVolumes_;
 
 public:
+
+    //- Kernel names accepted by the constructor
+    static const wordList kernelTypes;
+
+    //- Kernel weight at distance r for support radius R (r <= R)
+    static scalar kernelWeight(const word& kernelType, scalar r, scalar R);
 
     pvjMapper
     (
@@ -52,6 +68,24 @@ public:
         scalar radius,
         const word& kernelType = "uniform"
     );
+
+    //- Local cells in the support of each terminal
+    const List<labelList>& terminalCellSets() const
+    {
+        return terminalCellSets_;
+    }
+
+    //- Kernel weight of each local support cell
+    const List<scalarList>& terminalCellWeights() const
+    {
+        return terminalCellWeights_;
+    }
+
+    //- Global sum of w|K| over each support: the discrete normalisation
+    const scalarField& supportNormalisation() const
+    {
+        return sphereVolumes_;
+    }
 
     void gatherVm3DPvjs
     (
@@ -81,6 +115,18 @@ public:
         volScalarField& sourceField,
         volScalarField& implicitSourceCoeff
     ) const;
+
+    //- Seed time of each support cell relative to its terminal, from the metric
+    //  distance rho = sqrt(d & inv(M) & d) to the terminal: rho/c0, or with
+    //  curvedFront the source-free radial solution in an unbounded medium,
+    //  rho/c0 + 2 log(rho)/c0^2 - 2/(c0^3 rho), measured from rho = 2/c0 and
+    //  zero inside it.
+    void setSeedOffsets
+    (
+        const volTensorField& M,
+        scalar c0,
+        bool curvedFront
+    );
 
     void depositActivationTimes
     (

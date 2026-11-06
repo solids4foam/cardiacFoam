@@ -16,6 +16,7 @@ The discretisation pieces the tissue solvers share: how a sealed heart wall and 
 | `pureNeumann/compatibilityProjection` | removes the discrete imbalance of a pure-Neumann potential equation before its reference cell is pinned |
 | `probedOperator/probedOperator` | a linear cell-to-cell operator stored as a sparse matrix by graph-coloured probing of the function that applies it, with its transpose |
 | `diffusion/conormalStabilisation` | term added to a tensor Laplacian that makes the face-conormal magnitude its implicit coefficient, so the correctors converge when the conductivity is oblique to the faces; zero at convergence |
+| `advection/facePeclet` | face Peclet number of an advection-diffusion operator with a tensor face diffusivity, and its log line |
 
 ## Folders
 
@@ -25,7 +26,8 @@ src/numericsModels/
 ├── interface/
 ├── pureNeumann/
 ├── diffusion/
-└── probedOperator/
+├── probedOperator/
+└── advection/
 ```
 
 ## What this does not own

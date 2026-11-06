@@ -234,6 +234,9 @@ Current rules:
 - Any number of ECG domains. The output file is named after the `ecgSolver`
   (`pseudoECG.dat`, `torsoECG.dat`, `eikonalECG.dat`), not the domain, so two
   domains with the same `ecgSolver` write the same file; that is a warning
+- An ECG domain writes its time series at the output times; with
+  `writeEveryTimeStep yes` it writes a row every time step, for QRS and
+  waveform measurements independent of `writeInterval`
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
 - `torso` and `torsoCoupling` (top level) are optional and given together;
   `torsoCoupling bath` builds the bath domain from `torso`,

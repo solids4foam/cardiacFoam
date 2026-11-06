@@ -141,6 +141,26 @@ manufacturedShellEikonalVerifier::manufacturedShellEikonalVerifier
 
     selfTest();
 
+    // Optional conductivity of the field, in place of the default tensor
+    const dictionary& verifierDict = electroProperties.subDict("verificationModel");
+    if (verifierDict.found("conductivityEigenvalues"))
+    {
+        const vector eigenvalues(verifierDict.get<vector>("conductivityEigenvalues"));
+        p_.gil = eigenvalues.x();
+        p_.git = eigenvalues.y();
+        p_.gin = eigenvalues.z();
+        const vector turn(verifierDict.getOrDefault<vector>("fibreAngles", vector(-20, 90, 0)));
+        p_.theta0 = degToRad(turn.x());
+        p_.theta1 = degToRad(turn.y());
+        const symmTensor Msi(inv(shellEikonalMMS::sigma(stimulusPoint(p_), p_)/(p_.chi*p_.cm)));
+        p_.Msi[0] = Msi.xx();
+        p_.Msi[1] = Msi.xy();
+        p_.Msi[2] = Msi.xz();
+        p_.Msi[3] = Msi.yy();
+        p_.Msi[4] = Msi.yz();
+        p_.Msi[5] = Msi.zz();
+    }
+
     // The family is exact for any front-speed constant
     p_.c0 = c0.value();
     validateConfiguration(chi, Cm);

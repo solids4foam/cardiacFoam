@@ -23,7 +23,7 @@ fi
 # CARDIAC_REGRESSION_SCOPE=full: every solver variant (monodomain, eikonal,
 # hybrid) on both trees (human, pig). Each combination has its own reference,
 # injection.<variant>.reference for human and injection.<variant>.pig.reference
-# for pig: monodomain activates the probe at 28.9 ms, hybrid at 30.1 ms, and
+# for pig: monodomain activates the probe at 28.6 ms, hybrid at 28.9 ms, and
 # eikonal solves one steady problem that writes only time 1.
 
 regression_init "Idealized heart injection regression test" \
@@ -51,6 +51,11 @@ for variant in "${VARIANTS[@]}"; do
     if ! regression_run "${variant}" "${tree}" parallel; then
         regression_fail "Allrun ${variant} ${tree} parallel did not complete"
         continue
+    fi
+    # A run that reaches the outer-iteration cap still prints End
+    if [[ "${variant}" == eikonal ]] \
+        && ! regression_check_solver_logs -e 'PIMPLE: converged'; then
+        regression_fail "eikonal ${tree}: the outer iteration did not converge"
     fi
     regression_compare "${refFile}" || true
     echo

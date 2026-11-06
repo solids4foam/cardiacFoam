@@ -63,6 +63,7 @@ class eikonalMyocardiumDomain
     surfaceScalarField phiU_;
     volScalarField divPhiU_;
     const Switch eikonalAdvectionDiffusionApproach_;
+    const Switch conormalStabilisation_; // Conormal magnitude as the implicit diffusion coefficient
     const Switch useGraphPrePopulation_; // Initial guess by graph relaxation from the constrained cells
     const Switch sealedHeartBoundary_;
     autoPtr<eikonalVerificationModel> verificationModelPtr_;
@@ -143,6 +144,16 @@ public:
     virtual const volScalarField& activationTime() const override
     {
         return activationTime_;
+    }
+
+    virtual const volTensorField* activationMetricPtr() const override
+    {
+        return &M_;
+    }
+
+    virtual const dimensionedScalar* frontCoefficientPtr() const override
+    {
+        return &c0_;
     }
 
     virtual volScalarField& activationTimeField() override

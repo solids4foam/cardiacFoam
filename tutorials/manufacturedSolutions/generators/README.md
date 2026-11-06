@@ -28,6 +28,7 @@ no solver output.
 | `pseudo_ecg_mms.py` | pseudo-ECG integrand and Gauss-Legendre reference of the cube fields |
 | `graph_monodomain_mms.py` | reaction-diffusion Purkinje graph field and the bidirectional terminal term |
 | `coupled_1d3d_mms.py` | continuum 1D-3D junction: half-ball kernel sampling, junction current, deposition |
+| `radial_eikonal_mms.py` | closed-form radial eikonal field with no source, evaluated by `manufacturedRadialEikonalReference.H`, without `--emit` |
 | `cartesian_eikonal_mms.py` | exponential activation time on the unit cube, d = 1, 2, 3 |
 | `eikonal_ecg_mms.py` | eikonal-driven ECG integrand, templates and Gauss-Legendre reference |
 | `shell_eikonal_mms.py` | activation time on the sealed shell, parametric in `c0`; critical-point report |

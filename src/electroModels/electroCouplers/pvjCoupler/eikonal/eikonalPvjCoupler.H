@@ -19,7 +19,10 @@ Class
     eikonalPvjCoupler
 
 Description
-    Eikonal PVJ coupler.
+    Eikonal PVJ coupler. seedProfile sets the seed time of the junction cells:
+    flat (the terminal time), front (plus the metric distance over c0) or
+    curvedFront (plus the radial source-free solution from the metric radius
+    2/c0).
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -39,10 +42,16 @@ class eikonalPvjCoupler
     public pvjCoupler
 {
     mutable scalarField terminalActivationBuffer_;
+    const word seedProfile_;
+    bool seedOffsetsSet_;
 
 public:
 
     OverrideTypeName("eikonalPvjCoupler");
+
+    //- The seedProfile of a coupler dictionary, checked against the valid
+    //  profiles; front when absent
+    static word seedProfile(const dictionary& dict);
 
     eikonalPvjCoupler
     (

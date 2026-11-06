@@ -7,5 +7,6 @@ interface/interfaceGradient.C
 pureNeumann/compatibilityProjection.C
 diffusion/conormalStabilisation.C
 probedOperator/probedOperator.C
+advection/facePeclet.C
 
 LIB = $(FOAM_USER_LIBBIN)/libnumericsModels

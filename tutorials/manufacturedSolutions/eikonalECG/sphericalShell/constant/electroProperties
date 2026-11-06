@@ -27,6 +27,7 @@ eikonalSolverCoeffs
     sealedHeartBoundary true;
     eikonalAdvectionDiffusionApproach true;
     #includeIfPresent "<case>/local/formulation"
+    #includeIfPresent "<case>/local/metric"
     useGraphPrePopulation true;
     stimulusLocationMin ( 10 10 10 );
     stimulusLocationMax ( 11 11 11 );

@@ -1,0 +1,9 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# error <field> <norm> <expected> <tolerance>
+# Case defaults with -seedProfile flat: gmsh 4.15.2, seed 1. Tolerances
+# cover the spread over gmsh mesh seeds 1 to 4.
+error  eps        L2  0.012167243  0.0051
+error  eps_bulk   L2  0.010191692  0.005
+error  eps_wall   L2  0.0065907566  0.0016
+error  eps_ball   L2  0.00085623422  0.0004
+error  grad_bulk  L2  0.070653808  0.0022

@@ -69,6 +69,13 @@ eikonalMonodomainPvjCoupler::eikonalMonodomainPvjCoupler
         0
     )
 {
+    if (dict.found("seedProfile"))
+    {
+        FatalIOErrorInFunction(dict)
+            << "seedProfile is used only by eikonalPvjCoupler. Remove it."
+            << exit(FatalIOError);
+    }
+
     if (dict.found("rPvj"))
     {
         R_pvj_ = scalarField(networkTerminalDomain_.terminalNodes().size(), dict.get<scalar>("rPvj"));

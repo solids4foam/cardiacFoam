@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     |
+    \\  /    A nd           |
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    sealedHeartBoundary true;
+    conductivitySource  field;
+    chi                 [ 0 -1 0 0 0 0 0 ] 140000;
+    cm                  [ -1 -4 4 0 0 2 0 ] 0.01;
+    c0                  [ 0 0 -0.5 0 0 0 0 ] 30;
+    eikonalAdvectionDiffusionApproach true;
+    useGraphPrePopulation true;
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    // No stimulus box: the ball sets the origin of the wave
+    stimulusLocationMin (1e6 1e6 1e6);
+    stimulusLocationMax (1e6 1e6 1e6);
+
+    #includeIfPresent "<case>/local/c0"
+    #includeIfPresent "<case>/local/stabilisation"
+    #includeIfPresent "<case>/local/junction"
+
+    verificationModel
+    {
+        type    manufacturedRadialEikonalVerifier;
+        #includeIfPresent "<case>/local/verification"
+    }
+}
+
+// ************************************************************************* //

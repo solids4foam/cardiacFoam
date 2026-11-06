@@ -4,6 +4,7 @@ EXE_INC = \
     -IpureNeumann \
     -Idiffusion \
     -IprobedOperator \
+    -Iadvection \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude
 

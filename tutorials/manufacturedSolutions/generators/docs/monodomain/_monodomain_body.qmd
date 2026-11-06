@@ -600,7 +600,7 @@ diagonal entry of the FDA tensor, tuned to the eigenvalue of $\cos(\pi x)$.
 Root $\mathbf x_{\mathrm{root}}$, terminals $\mathbf x_1$, $\mathbf x_2$ on
 the faces $x=0$ and $x=1$ of the tissue cube, each branch along $x$ with arc
 coordinate equal to $x$. In cardiacFoam this is the graph of the tutorial
-`monodomain1D3D` (graph files `purkinjeGraph.nodes<k>`, edge length
+`monodomain1D3DCube` (graph files `purkinjeGraph.nodes<k>`, edge length
 $1/(k-1)$), with the verifier `manufacturedGraphVerifier`; the tutorial sets
 the Purkinje fibre radius $\rho=1/\sqrt\pi$ m, so that $\pi\rho^2=1$.
 
@@ -669,17 +669,20 @@ The Purkinje graph of @sec-graph joined to the three-dimensional tissue of
 junction (PVJ) [@vergara2016coupled]. The tissue and the graph fields are
 chosen to differ at the terminals, so the junction currents are non-zero and
 known. The junction is defined here in continuum form: sampling of the tissue
-potential and deposition of the junction current with a linear kernel of
-finite radius about each terminal.
+potential and deposition of the junction current with a kernel of finite
+radius about each terminal, one of the four radial profiles of
+@tbl-pvj-kernels.
 
 Limitation. Any implementation samples and deposits with its own discrete map
 of the kernel. An exact junction source built with the solver's own discrete
-map (as cardiacFoam does) checks the coupled workflow against that map, not
-the map against the continuum coupling defined below; the difference between
-the discrete map and the continuum integrals is a mesh-dependent consistency
-error. The NumPy module holds the continuum junction only and does not port a
-discrete map. The case has no calibrated junction resistance and no explicit
-junction delay.
+map checks the coupled workflow against that map, not the map against the
+continuum coupling defined below; the difference between the discrete map and
+the continuum integrals is a mesh-dependent consistency error. cardiacFoam
+builds the exact source either way. The NumPy module holds the continuum
+junction of the linear kernel on a half ball only and does not port a discrete
+map; the other kernels, and the supports of @sec-coupled-shell, are integrated
+by cardiacFoam's `pvjContinuumReference`. The case has no calibrated junction
+resistance and no explicit junction delay.
 
 ## Problem instance
 
@@ -687,15 +690,28 @@ Tissue: the FDA cube of @sec-fda with $d=3$. Graph: @sec-graph. Junction:
 
 {{< include ../../latex/coupled_params.tex >}}
 
-In cardiacFoam this is the tutorial `monodomain1D3D`. Its coupler is
-`reactionDiffusionPvjCoupler` (`pvjKernel linear`, `pvjRadius`, `rPvj`) and
-its verifier `coupled1D3DMonodomainVerifier`.
+In cardiacFoam this is the tutorial `monodomain1D3DCube`. Its coupler is
+`reactionDiffusionPvjCoupler` (`pvjKernel`, `pvjRadius`, `rPvj`) and its
+verifier `coupled1D3DMonodomainVerifier`: with `reference continuum` it adds
+the continuum junction source defined below (`pvjContinuumReference`), with
+`reference discrete` the source built with the solver's own map.
 
 ## Construction
 
-The kernel of terminal $k$ is linear in the distance and is restricted to the
-domain. Both terminals lie on a face of the cube, so its support
-$B_k\cap\Omega$ is a half ball:
+The kernel of terminal $k$ is a radial profile $\phi$ of the distance,
+$w_k(\mathbf x)=\phi(|\mathbf x-\mathbf x_k|/r_{\mathrm{PVJ}})$ in the ball
+$B_k$ of radius $r_{\mathrm{PVJ}}$ and zero outside it, restricted to the
+domain. Both terminals lie on a face of the cube, so the support
+$B_k\cap\Omega$ is a half ball. The four profiles of cardiacFoam
+(`pvjKernel uniform`, `linear`, `gaussian`, `cosine`) are:
+
+{{< include ../../latex/coupled_kernel_family.tex >}}
+
+: Junction kernels. The value and slope at the support edge, $s=1$, set the
+regularity of the deposited source; $W_k$ is the kernel mass over a half ball,
+twice it over a full ball. {#tbl-pvj-kernels tbl-colwidths="[15,19,10,12,32,12]"}
+
+The linear kernel, the default, is
 
 {{< include ../../latex/coupled_kernel.tex >}}
 
@@ -718,6 +734,8 @@ over the cube is $I_{\mathrm{PVJ},k}$:
 
 In bidirectional transfer the graph loses the same current at the terminal
 (@sec-graph).
+
+![Junction kernels and supports. (a) The four kernel profiles of @tbl-pvj-kernels normalised to unit integral over a half ball. (b) The fraction of the sphere of radius $r$ about the terminal that lies in the tissue: one half on a flat face, $\tfrac12(1+r/(2r_1))$ on the inner sphere of the shell (@sec-coupled-shell), one inside the wall.](figures/pvj_kernels.png){#fig-pvj-kernels width=100%}
 
 ## Exact solution
 
@@ -763,6 +781,112 @@ python coupled_1d3d_mms.py --self-check
 ```
 
 `--emit` writes `reference/coupled_1d3d.py` (with the half-ball quadrature,
-NumPy only) and `latex/coupled_*.tex`. The generator owns no cardiacFoam
-header; the cardiacFoam verifier builds its exact source with the solver's
-discrete map and is not generated.
+NumPy only) and `latex/coupled_*.tex`, including the kernel family of
+@tbl-pvj-kernels with its exact half-ball masses and the support condition of
+@sec-coupled-shell. The generator owns no cardiacFoam header. The cardiacFoam
+verifier builds its exact source with the solver's discrete map or, with
+`reference continuum`, with `pvjContinuumReference`, whose quadrature is
+written from these definitions and is not generated.
+
+# Coupled junction on the sealed shell {#sec-coupled-shell}
+
+## Description and limitations
+
+The junction of @sec-coupled on tetrahedra, with each support cut by a curved
+wall, contained in the wall, or overlapping the support of a neighbouring
+terminal. The tissue is the sealed spherical shell of @sec-shell; the graph
+field is that of @sec-graph, shifted so that its slope vanishes at the
+terminals. Three placements of the terminals are used: on the endocardium,
+where the support is the ball minus the cavity; inside the wall, where it is a
+full ball; and two parallel graph chains whose terminals lie within each
+other's supports.
+
+Limitation. On a tetrahedral mesh the flat facets of the inner sphere place
+part of the mesh inside the true cavity. The continuum normalisation is taken
+over the true tissue, so for a terminal on the endocardium the cell integrals
+of the kernel over the faceted mesh differ from its continuum mass by a
+geometric term of second order in $h$; a terminal inside the wall has no facet
+in its support. The outer sphere is kept out of every support. No sympy
+generator emits the shell junction beyond its support condition; its integrals
+are computed by `pvjContinuumReference`.
+
+## Problem instance
+
+Tissue: the sealed shell of @sec-shell, $r_1=0.5$, $r_2=1$. Graph: a straight
+chain on the line $(x, y_g, 0)$ from $x=-0.5$ to $x=0.5$, root at $x=0$,
+$\lceil N/2\rceil$ equal edges per branch, terminals $(\mp0.5, y_g, 0)$.
+
+| placement | $y_g$ | terminal radius $|\mathbf x_k|$ | $r_{\mathrm{PVJ}}$ | support |
+|---|---|---|---|---|
+| endocardium | 0 | 0.5 | 0.2 | ball minus the cavity |
+| inside the wall | $\sqrt{0.3125}\approx0.559$ | 0.75 | 0.2 | full ball |
+| overlapping supports | 0.49 and 0.61 | 0.700, 0.789 | 0.15 | full balls, each containing the neighbouring terminal |
+
+: Placements of the shell junction; $R_{\mathrm{PVJ}}=1$. {#tbl-pvj-shell-placements tbl-colwidths="[20,20,16,10,34]"}
+
+In cardiacFoam this is the tutorial `monodomain1D3DShell` (gmsh tetrahedra;
+`-graphY` and `-graphY2` set $y_g$), with `manufacturedShellMonodomainVerifier`,
+`manufacturedGraphVerifier` (`xOrigin -0.5`) and
+`coupled1D3DMonodomainVerifier` (`tissueField shell`, `reference continuum`).
+
+## Construction
+
+The graph field is the field of @sec-graph shifted to $x\in[-0.5,0.5]$,
+$V_{1D}=\sqrt{1+t}\,\cos\big(\pi(x+0.5)\big)$, which depends on $x$ only:
+its slope along a chain vanishes at both terminals, with $V_{1D}=\pm\sqrt{1+t}$
+there, and for every $y_g$ the chain carries the same field. The tissue field
+is the shell field of @sec-shell. Sampling, current and deposition are those of
+@sec-coupled over the support $B_k\cap\Omega$ of each placement.
+
+*Terminal on the endocardium.* A point at distance $r$ from a terminal on the
+inner sphere lies in the tissue when the cosine $\mu$ of its polar angle about
+the outward normal satisfies
+
+{{< include ../../latex/coupled_shell_support.tex >}}
+
+so the support integrals run over $-r/(2r_1)\le\mu\le1$ instead of
+$0\le\mu\le1$, and the tissue fraction of each sphere grows from one half
+(@fig-pvj-kernels b).
+
+*Terminal inside the wall.* With $|\mathbf x_k|-r_{\mathrm{PVJ}}\ge r_1$ and
+$|\mathbf x_k|+r_{\mathrm{PVJ}}\le r_2$ the support is the full ball,
+$-1\le\mu\le1$, and $W_k$ is twice the half-ball mass of @tbl-pvj-kernels.
+
+*Overlapping supports.* The second chain's root is joined to the first root by
+one edge along $y$ at $x=0$, where $V_{1D}$ vanishes. $V_{1D}$ depends on $x$
+only, so it is zero along the whole joining edge, which carries no current; at
+each joined root the two branches of its chain keep the flux balance of the
+straight chain, so the node, of degree three, satisfies the graph equations
+with the same field. The four
+terminals deposit their currents independently, and the source is the sum of
+the four kernel-weighted depositions of @sec-coupled.
+
+## Exact solution
+
+$$
+I_{\mathrm{PVJ},k}=\frac{V_{1D}(\mathbf x_k)-\sqrt{1+t}\,\langle F\rangle_k}{R_{\mathrm{PVJ}}},
+$$
+
+with $\langle F\rangle_k$ the kernel mean of the shell's spatial factor over
+the support of terminal $k$, by spherical quadrature about the terminal over
+the polar range of its placement.
+
+## Self-checks
+
+With the junction suppressed ($R_{\mathrm{PVJ}}=10^{6}$) and terminals on the
+endocardium, the tissue reproduces the sealed-shell ladder of @sec-shell on the
+same meshes to $1.4\times10^{-7}$. For a terminal on the endocardium the sum of
+the cell integrals of $w_k$ exceeds the continuum $W_k$ by the kernel-weighted
+volume the flat facets place inside the cavity, $2.1\times10^{-2}$ at $N=10$
+to $2.8\times10^{-3}$ at $N=28$ relative (mean over the terminals and three
+meshes).
+
+## Regeneration
+
+```bash
+python coupled_1d3d_mms.py --emit
+python coupled_1d3d_mms.py --self-check
+```
+
+`--self-check` also checks the support condition above. The shell junction's
+integrals are computed by cardiacFoam's `pvjContinuumReference`.
