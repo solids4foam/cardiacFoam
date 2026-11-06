@@ -3,7 +3,7 @@
 #     summarize
 #
 # Description
-#     Convergence tables of the monodomain1D3D studies from the verifier
+#     Convergence tables of the monodomain1D3DCube studies from the verifier
 #     summaries of the run copies in a results folder: the 3D field summary
 #     postProcessing/3D_<n>_cells.dat, the graph summary
 #     postProcessing/graph_1D_<k>_nodes.dat and the PVJ source diagnostics

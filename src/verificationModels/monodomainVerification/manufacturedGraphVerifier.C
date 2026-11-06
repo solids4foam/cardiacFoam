@@ -93,7 +93,8 @@ manufacturedGraphVerifier::manufacturedGraphVerifier
 )
 :
     graphVerificationModel(dict),
-    errorsReported_(false)
+    errorsReported_(false),
+    xOrigin_(dict.lookupOrDefault<scalar>("xOrigin", 0))
 {}
 
 
@@ -116,7 +117,8 @@ void manufacturedGraphVerifier::preProcess
     const label dimension = model->geometricDimension();
     const scalar t = runTime.value();
 
-    scalarField X(nodeLocations.component(vector::X));
+    // The manufactured graph field is a function of x - xOrigin
+    scalarField X(nodeLocations.component(vector::X) - xOrigin_);
     scalarField Y(nodeLocations.component(vector::Y));
     scalarField Z(nodeLocations.component(vector::Z));
 
@@ -208,7 +210,8 @@ void manufacturedGraphVerifier::postProcess
     const scalar t = runTime.value();
     const label dimension = model->geometricDimension();
 
-    scalarField X(nodeLocations.component(vector::X));
+    // The manufactured graph field is a function of x - xOrigin
+    scalarField X(nodeLocations.component(vector::X) - xOrigin_);
     scalarField Y(nodeLocations.component(vector::Y));
     scalarField Z(nodeLocations.component(vector::Z));
 

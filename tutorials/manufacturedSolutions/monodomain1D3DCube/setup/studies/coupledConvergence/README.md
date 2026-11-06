@@ -1,4 +1,4 @@
-# coupledConvergence - monodomain1D3D
+# coupledConvergence - monodomain1D3DCube
 
 Joint refinement of the 3D mesh and the graph (`k = N + 1` nodes, edge length
 `1/N`) with `dt` proportional to `h^2`, with `R_pvj = 1`, for unidirectional

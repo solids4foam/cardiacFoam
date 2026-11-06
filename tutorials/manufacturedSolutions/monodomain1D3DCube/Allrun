@@ -14,8 +14,8 @@ Options (parameters are written to local/ and included by the dictionaries):
   parallel                  decomposePar, run cardiacFoam in parallel, reconstructPar
                             (-domain coupled only)
   -N n                      cells per unit length of the 3D cube (default 20)
-  -graph nodes003|nodes011|nodes021|nodes041|nodes081|nodes161
-                            Purkinje graph constant/purkinjeGraph.<graph>; default the
+  -graph nodes<k>           Purkinje graph constant/purkinjeGraph.nodes<k> (k = 3, 11, 17,
+                            21, 25, 33, 41, 49, 65, 81, 97, 161); default the
                             graph whose edge length is 1/N (nodes<N+1>)
   -domain coupled|graph     coupled: cardiacFoam on the coupled 1D-3D problem (default);
                             graph: runPurkinjeGraph on the graph alone, no junction
@@ -23,6 +23,12 @@ Options (parameters are written to local/ and included by the dictionaries):
                             PVJ couplingMode (default unidirectional)
   -pvj explicit|implicit    PVJ pvjCouplingScheme, tissue-side assembly (default explicit)
   -rPvj x                   junction resistance (default 1)
+  -kernel uniform|linear|gaussian|cosine
+                            PVJ pvjKernel (default linear)
+  -radius x                 PVJ pvjRadius (default 0.11)
+  -reference continuum|discrete
+                            junction forcing of coupled1D3DMonodomainVerifier: the
+                            continuum map or the solver's own discrete map (default)
   -dt x                     time step
   -endTime x                end time (default 0.1)
 
@@ -38,6 +44,9 @@ domain=coupled
 coupling=unidirectional
 pvj=explicit
 rPvj=1
+kernel=linear
+radius=0.11
+reference=discrete
 dt=
 endTime=0.1
 
@@ -86,7 +95,6 @@ do
             ;;
         -graph)
             needValue "$@"; graph="$2"; shift
-            oneOf -graph "$graph" nodes003 nodes011 nodes021 nodes041 nodes081 nodes161
             ;;
         -domain)
             needValue "$@"; domain="$2"; shift
@@ -103,6 +111,18 @@ do
         -rPvj)
             needValue "$@"; rPvj="$2"; shift
             positiveNumber -rPvj "$rPvj"
+            ;;
+        -kernel)
+            needValue "$@"; kernel="$2"; shift
+            oneOf -kernel "$kernel" uniform linear gaussian cosine
+            ;;
+        -radius)
+            needValue "$@"; radius="$2"; shift
+            positiveNumber -radius "$radius"
+            ;;
+        -reference)
+            needValue "$@"; reference="$2"; shift
+            oneOf -reference "$reference" continuum discrete
             ;;
         -dt)
             needValue "$@"; dt="$2"; shift
@@ -155,7 +175,10 @@ cat > local/coupling <<EOF
 couplingMode        $coupling;
 pvjCouplingScheme   $pvj;
 rPvj                $rPvj;
+pvjKernel           $kernel;
+pvjRadius           $radius;
 EOF
+echo "reference $reference;" > local/couplingVerification
 
 # Time step proportional to h^2, ending exactly at endTime
 if [ -z "$dt" ]

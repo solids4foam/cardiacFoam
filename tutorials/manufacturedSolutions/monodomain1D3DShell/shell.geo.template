@@ -1,0 +1,36 @@
+// Spherical heart shell r1 < |x| < r2, Delaunay tetrahedra of size lc. Set lc
+// and seed with gmsh -setnumber lc <value> -setnumber seed <value>. With gmsh
+// 4.15.2 and seed 1 it gives 4430 tetrahedra at lc = 1/6 and 18177 at lc = 1/10.
+
+SetFactory("OpenCASCADE");
+
+DefineConstant[ lc = { 1/6, Name "lc" }, seed = { 1, Name "seed" } ];
+
+r1 = 0.5;
+r2 = 1.0;
+e = 1e-6;
+
+Sphere(1) = {0, 0, 0, r2};
+Sphere(2) = {0, 0, 0, r1};
+BooleanDifference(3) = { Volume{1}; Delete; }{ Volume{2}; Delete; };
+
+inner() = Surface In BoundingBox{-r1 - e, -r1 - e, -r1 - e, r1 + e, r1 + e, r1 + e};
+outer() = Abs(Boundary{ Volume{3}; });
+outer() -= inner();
+
+Physical Volume("myocardium") = {3};
+Physical Surface("endocardium") = {inner()};
+Physical Surface("epicardium") = {outer()};
+
+Mesh.MeshSizeMin = lc;
+Mesh.MeshSizeMax = lc;
+Mesh.MeshSizeFromCurvature = 0;
+Mesh.Algorithm = 6;
+Mesh.Algorithm3D = 1;      // Delaunay: near-uniform, isotropic tets
+Mesh.Optimize = 1;
+Mesh.RandomSeed = seed;
+Mesh.MaxNumThreads1D = 1;  // one thread: the same mesh for the same lc and seed
+Mesh.MaxNumThreads2D = 1;
+Mesh.MaxNumThreads3D = 1;
+General.NumThreads = 1;
+Mesh.MshFileVersion = 2.2; // gmshToFoam requires the legacy msh2 format

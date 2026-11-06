@@ -239,6 +239,17 @@ void reactionDiffusionPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
 
     depositPrimaryCoupling();
 
+    if (verificationModelPtr_)
+    {
+        verificationModelPtr_->recordPrimaryDeposit
+        (
+            primaryDomain_,
+            secondaryDomain_,
+            t0,
+            dt
+        );
+    }
+
     networkTerminalDomain_.setTerminalCoupling
     (
         terminalCurrentBuffer_,

@@ -36,4 +36,4 @@
 | $\rho$, $V_k$ | Purkinje fibre radius; volume of graph node $k$ | m; m$^3$ | `purkinjeFibreRadius` |
 | $R_{\mathrm{PVJ}}$, $r_{\mathrm{PVJ}}$ | junction resistance; kernel radius | case units; m | `rPvj`; `pvjRadius` |
 | $I_{\mathrm{PVJ},k}$, $S_{\mathrm{PVJ}}$ | junction current of terminal $k$; junction source | case units | `continuum_current`; `continuum_junction_source` |
-| $w_k$, $B_k$, $\bar V_k$ | linear kernel of terminal $k$; ball of radius $r_{\mathrm{PVJ}}$ about $\mathbf x_k$; sampled tissue potential | --; --; V | `pvjKernel linear`; --; `continuum_sampling` |
+| $w_k$, $\phi$, $B_k$, $\bar V_k$ | kernel of terminal $k$ and its radial profile; ball of radius $r_{\mathrm{PVJ}}$ about $\mathbf x_k$; sampled tissue potential | --; --; --; V | `pvjKernel`; --; --; `continuum_sampling` |

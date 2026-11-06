@@ -305,13 +305,48 @@ def graph_fields(settings, outdir):
     fs.save(fig, outdir, "graph_1d3d_fields.png", settings)
 
 
+def junction_kernels(settings, outdir):
+    """(a) The four junction kernels normalised to unit integral over a half
+    ball; (b) the tissue fraction of the sphere of radius r about a terminal on
+    a flat face, on the inner sphere of the shell and inside the wall."""
+    s = np.linspace(0.0, 1.0, 401)
+    kernels = (("top-hat", np.ones_like(s), "#d62728"),
+               ("linear", 1.0 - s, fs.VM),
+               ("truncated Gaussian", np.exp(-4.5 * s * s), "#2ca02c"),
+               ("cosine", 0.5 * (1.0 + np.cos(np.pi * s)), "#ff7f0e"))
+    fig, axes = plt.subplots(1, 2, figsize=(13.6, 4.6), gridspec_kw={"wspace": 0.3})
+    ax = axes[0]
+    for name, w, color in kernels:
+        mass = 2.0 * np.pi * np.trapezoid(w * s * s, s)   # half ball, r_PVJ = 1
+        ax.plot(np.r_[s, 1.0, 1.15], np.r_[w / mass, 0.0, 0.0], color=color, label=name)
+    ax.set_xlim(0, 1.15)
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel(r"$|\mathbf{x}-\mathbf{x}_k|/r_{\mathrm{PVJ}}$")
+    ax.set_ylabel(r"$w_k/W_k$ in units of $r_{\mathrm{PVJ}}^{-3}$")
+    ax.set_title("(a) kernels, unit integral over a half ball", loc="left", fontsize=11)
+    ax.legend(frameon=False, fontsize=9)
+    ax = axes[1]
+    r1, radius = 0.5, 0.2
+    r = np.linspace(0.0, radius, 200)
+    ax.plot(r / radius, np.full_like(r, 0.5), color=fs.NEUTRAL, ls="--", label="flat face (cube)")
+    ax.plot(r / radius, 0.5 * (1.0 + r / (2.0 * r1)), color=fs.NEUTRAL,
+            label=r"inner sphere, $r_1=0.5$, $r_{\mathrm{PVJ}}=0.2$")
+    ax.plot(r / radius, np.ones_like(r), color=fs.NEUTRAL, ls=":", label="inside the wall")
+    ax.set_ylim(0.4, 1.05)
+    ax.set_xlabel(r"$r/r_{\mathrm{PVJ}}$")
+    ax.set_ylabel("tissue fraction of the sphere of radius $r$")
+    ax.set_title(r"(b) support $B_k\cap\Omega$ about the terminal", loc="left", fontsize=11)
+    ax.legend(frameon=False, fontsize=9, loc="center right")
+    fs.save(fig, outdir, "pvj_kernels.png", settings)
+
+
 def main():
     ap = fs.cli(__doc__, MESH_CASES)
     args = ap.parse_args()
     settings = fs.Settings(args.draft)
     outdir = args.outdir or os.path.join(HERE, "figures")
     for build in (fda_cube, rotated_cube, shell_monodomain, pseudo_ecg,
-                  graph_geometry, graph_fields):
+                  graph_geometry, graph_fields, junction_kernels):
         build(settings, outdir)
     fs.run_mesh_cases(args, MESH_CASES, outdir, settings)
 

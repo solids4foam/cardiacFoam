@@ -40,6 +40,9 @@ class manufacturedGraphVerifier : public graphVerificationModel
 {
     mutable bool errorsReported_;
 
+    //- Origin of the manufactured field along x (V = sqrt(1+t) cos(pi (x - xOrigin)))
+    scalar xOrigin_;
+
 public:
 
     OverrideTypeName("manufacturedGraphVerifier");
