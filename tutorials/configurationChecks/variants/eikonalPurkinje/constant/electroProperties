@@ -62,6 +62,7 @@ eikonalSolverCoeffs
         {
             conductionNetworkDomain purkinjeNetwork;
             electroDomainCoupler eikonalPvjCoupler;
+            seedProfile          front;
             pvjRadius            1e-3;
             couplingMode         unidirectional;
         }

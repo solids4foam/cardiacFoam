@@ -14,7 +14,7 @@ indexed="$(awk -F'|' '
         if ($6 ~ /Alltest-regression/) print path
     }' "${ROOT_DIR}/README.md" | sort)"
 
-discovered="$("${ROOT_DIR}/Alltest-regression" --list | sed -E 's/  \((needs-solids4foam|skips on:[^)]*)\)//g' | sort)"
+discovered="$("${ROOT_DIR}/Alltest-regression" --list | sed -E 's/  \((needs-solids4foam|needs-tools|skips on:[^)]*)\)//g' | sort)"
 
 missingFromIndex="$(comm -13 <(echo "${indexed}") <(echo "${discovered}"))"
 missingFromSuite="$(comm -23 <(echo "${indexed}") <(echo "${discovered}"))"

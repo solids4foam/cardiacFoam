@@ -8,7 +8,7 @@
 # at the apex, inside the stimulus region; probe 1 is mid-wall.
 #
 # The apex activates at 3.2 ms; the mid-wall probe has not activated by 10 ms.
-probe  postProcessing/CaiProbes/electro/0/activationTime  0.01   2  0.00323067    1e-5
+probe  postProcessing/CaiProbes/electro/0/activationTime  0.01   2  0.00321317    1e-5
 probe  postProcessing/CaiProbes/electro/0/activationTime  0.01   3  -1            1e-9
 # D: apex x and z, mid-wall y, at 5 and 10 ms.
 probe  postProcessing/Taprobes/solid/0/D                  0.005  2  2.92255e-05   1e-6

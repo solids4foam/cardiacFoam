@@ -117,6 +117,13 @@ reactionDiffusionPvjCoupler::reactionDiffusionPvjCoupler
     tissueVmBuffer_(),
     networkVmBuffer_()
 {
+    if (dict.found("seedProfile"))
+    {
+        FatalIOErrorInFunction(dict)
+            << "seedProfile is used only by eikonalPvjCoupler. Remove it."
+            << exit(FatalIOError);
+    }
+
     if (pvjDelay_ > 0)
     {
         FatalIOErrorInFunction(dict)

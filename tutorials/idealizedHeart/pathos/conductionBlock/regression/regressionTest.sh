@@ -15,11 +15,11 @@ fi
 
 # Confirms that severing a bundle branch blocks fast conduction. Two
 # activation-time probes: the LV Purkinje-myocardial-junction site (node 211,
-# the point electroHeart's regression requires to be activated by 28.9 ms)
+# the point electroHeart's regression requires to be activated by 28.6 ms)
 # and an RV site. In lbbb the LV probe must still read -1 at t = 0.035 s
 # while the RV probe has activated; in rbbb the roles swap. Myocardial spread
-# reaches the blocked LV point at 43.2 ms, so the cutoff separates block from
-# health with margin on both sides.
+# reaches the blocked LV point after the cutoff, which separates block from
+# health.
 #
 # The case's own controlDict runs to 0.7 s; the regression stops at 0.035 s
 # and runs in parallel, as the other whole-heart regressions do.

@@ -15,6 +15,7 @@ The discretisation pieces the tissue solvers share: how a sealed heart wall and 
 | `interface/interfaceGradient` | cell gradient of a potential whose normal derivative jumps across the heart-bath interface |
 | `pureNeumann/compatibilityProjection` | removes the discrete imbalance of a pure-Neumann potential equation before its reference cell is pinned |
 | `diffusion/conormalStabilisation` | term added to a tensor Laplacian that makes the face-conormal magnitude its implicit coefficient, so the correctors converge when the conductivity is oblique to the faces; zero at convergence |
+| `advection/facePeclet` | face Peclet number of an advection-diffusion operator with a tensor face diffusivity, and its log line |
 
 ## Folders
 
@@ -23,7 +24,8 @@ src/numericsModels/
 ├── sealedWall/
 ├── interface/
 ├── pureNeumann/
-└── diffusion/
+├── diffusion/
+└── advection/
 ```
 
 ## What this does not own

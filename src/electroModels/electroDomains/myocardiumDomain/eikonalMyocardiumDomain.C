@@ -26,6 +26,8 @@ License
 #include "eikonalVerificationModel.H"
 #include "zeroGradientFvPatchFields.H"
 #include "insulatedFaceConductivity.H"
+#include "conormalStabilisation.H"
+#include "facePeclet.H"
 #include "sealedWallPolicy.H"
 #include "regionSplit.H"
 
@@ -200,6 +202,80 @@ void collectActivationConstraints
 
     constrainedCells = cells;
     constrainedValues = values;
+}
+
+
+// First arrival: a seed holds its time unless the equation reaches the cell
+// earlier, and a released cell returns to its seed once it activates later.
+// Fills the cells and values held in the next solve.
+void updateHeldSeeds
+(
+    const fvScalarMatrix& activationEqn,
+    const volScalarField& activationTime,
+    const labelUList& seedCells,
+    const scalarField& seedTimes,
+    boolList& held,
+    labelList& heldCells,
+    scalarField& heldTimes
+)
+{
+    const scalarField arrival
+    (
+        activationEqn.H()().primitiveField()
+       /activationEqn.A()().primitiveField()
+    );
+    const scalarField& T = activationTime.primitiveField();
+
+    // Only an earlier neighbour can reach a cell first; a centred row also
+    // sees later cells downstream
+    scalarField earliestNeighbour(T.size(), GREAT);
+    const labelUList& own = activationTime.mesh().owner();
+    const labelUList& nei = activationTime.mesh().neighbour();
+
+    forAll(own, faceI)
+    {
+        earliestNeighbour[own[faceI]] = min(earliestNeighbour[own[faceI]], T[nei[faceI]]);
+        earliestNeighbour[nei[faceI]] = min(earliestNeighbour[nei[faceI]], T[own[faceI]]);
+    }
+
+    forAll(activationTime.boundaryField(), patchI)
+    {
+        const fvPatchScalarField& pT = activationTime.boundaryField()[patchI];
+
+        if (pT.coupled())
+        {
+            const scalarField neighbourT(pT.patchNeighbourField());
+            const labelUList& faceCells = pT.patch().faceCells();
+
+            forAll(faceCells, faceI)
+            {
+                earliestNeighbour[faceCells[faceI]] =
+                    min(earliestNeighbour[faceCells[faceI]], neighbourT[faceI]);
+            }
+        }
+    }
+
+    DynamicList<label> cells(seedCells.size());
+    DynamicList<scalar> times(seedCells.size());
+
+    forAll(seedCells, i)
+    {
+        const label cellI = seedCells[i];
+
+        held[i] =
+            held[i]
+          ? arrival[cellI] >= seedTimes[i] || earliestNeighbour[cellI] >= seedTimes[i]
+          : T[cellI] >= seedTimes[i];
+
+        if (held[i])
+        {
+            cells.append(cellI);
+            times.append(seedTimes[i]);
+        }
+    }
+
+    heldCells = cells;
+    heldTimes = times;
 }
 
 
@@ -463,6 +539,10 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
     (
         electroProperties.lookup("eikonalAdvectionDiffusionApproach")
     ),
+    conormalStabilisation_
+    (
+        electroProperties.lookupOrDefault<Switch>("eikonalConormalStabilisation", false)
+    ),
     useGraphPrePopulation_
     (
         electroProperties.lookupOrDefault<Switch>("useGraphPrePopulation", true)
@@ -506,6 +586,14 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
             c0_,
             eikonalAdvectionDiffusionApproach_
         );
+
+    if (conormalStabilisation_ && !eikonalAdvectionDiffusionApproach_)
+    {
+        FatalIOErrorInFunction(electroProperties)
+            << "eikonalConormalStabilisation needs "
+            << "eikonalAdvectionDiffusionApproach true."
+            << exit(FatalIOError);
+    }
 
     if (verificationModelPtr_)
     {
@@ -674,6 +762,53 @@ void eikonalMyocardiumDomain::advance
     }
     const volScalarField& Smms = tSmms();
 
+    const bool firstArrivalSeeds =
+        !(verificationModelPtr_.valid() && verificationModelPtr_->enabled())
+     || verificationModelPtr_->releasesSeeds();
+
+    boolList heldSeeds(constrainedCells.size(), true);
+    labelList heldCells(constrainedCells);
+    scalarField heldTimes(constrainedValues);
+    label outerIteration = 0;
+
+    auto updateSeeds = [&](const fvScalarMatrix& activationEqn)
+    {
+        // The first solve has every seed held: it replaces the prepopulated field
+        if (firstArrivalSeeds && outerIteration > 0)
+        {
+            updateHeldSeeds
+            (
+                activationEqn,
+                activationTime_,
+                constrainedCells,
+                constrainedValues,
+                heldSeeds,
+                heldCells,
+                heldTimes
+            );
+        }
+        ++outerIteration;
+    };
+
+    if
+    (
+        firstArrivalSeeds
+     && gMax(constrainedValues) > gMin(constrainedValues)
+     && (!pimplePtr || pimplePtr->nCorrPIMPLE() < 2)
+    )
+    {
+        WarningInFunction
+            << "A single solve holds every activation seed at its time: first "
+            << "arrival releases seeds from the second outer iteration, which "
+            << "needs PIMPLE nOuterCorrectors of at least 2." << endl;
+    }
+
+    // Constant during the step: M and the sealed patches do not change
+    const tmp<surfaceTensorField> tMf
+    (
+        insulatedFaceConductivity(M_, activationTime_, sealedHeartBoundary_)
+    );
+
     auto solveActivationEqn = [&]()
     {
         gradActivationTime_ = fvc::grad(activationTime_);
@@ -688,43 +823,38 @@ void eikonalMyocardiumDomain::advance
 
             fvScalarMatrix activationEqn
             (
-               -fvm::laplacian
-                (
-                    insulatedFaceConductivity
-                    (
-                        M_, activationTime_, sealedHeartBoundary_
-                    )(),
-                    activationTime_
-                )
+               -fvm::laplacian(tMf(), activationTime_)
               + fvm::div(phiU_, activationTime_)
               + fvm::SuSp(-divPhiU_, activationTime_)
              == one + Smms
             );
 
+            if (conormalStabilisation_)
+            {
+                activationEqn -= conormalStabilisation(tMf(), activationTime_);
+            }
+
             // c0 |grad psi|_M = u & grad psi with u lagged; a bounded div scheme keeps the transport monotone
+            updateSeeds(activationEqn);
+
             activationEqn.relax();
-            activationEqn.setValues(constrainedCells, constrainedValues);
+            activationEqn.setValues(heldCells, heldTimes);
             activationEqn.solve("asymmetric_" + activationTime_.name());
         }
         else
         {
             fvScalarMatrix activationEqn
             (
-               -fvm::laplacian
-                (
-                    insulatedFaceConductivity
-                    (
-                        M_, activationTime_, sealedHeartBoundary_
-                    )(),
-                    activationTime_
-                )
+               -fvm::laplacian(tMf(), activationTime_)
               + c0_*G_
              == one
               + Smms
             );
 
+            updateSeeds(activationEqn);
+
             activationEqn.relax();
-            activationEqn.setValues(constrainedCells, constrainedValues);
+            activationEqn.setValues(heldCells, heldTimes);
             activationEqn.solve();
         }
     };
@@ -739,6 +869,15 @@ void eikonalMyocardiumDomain::advance
     else
     {
         solveActivationEqn();
+    }
+
+    Info<< "Activation seeds: " << returnReduce(constrainedCells.size(), sumOp<label>())
+        << " cells, " << returnReduce(heldCells.size(), sumOp<label>())
+        << " held, the equation reaches the others first" << endl;
+
+    if (eikonalAdvectionDiffusionApproach_)
+    {
+        reportFacePeclet(facePeclet(phiU_, tMf())(), activationTime_.name());
     }
 }
 
