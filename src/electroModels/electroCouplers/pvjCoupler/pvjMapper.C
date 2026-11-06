@@ -357,18 +357,11 @@ void pvjMapper::depositImplicitCoupling
 
 void pvjMapper::setSeedOffsets
 (
-    const word& profile,
     const volTensorField& M,
-    const scalar c0
+    const scalar c0,
+    const bool curvedFront
 )
 {
-    if (profile != "front" && profile != "curvedFront")
-    {
-        FatalErrorInFunction
-            << "No seed offsets for profile " << profile << "." << exit(FatalError);
-    }
-
-    const bool curved = (profile == "curvedFront");
     const vectorField& centres = mesh_.C();
 
     terminalSeedOffsets_.setSize(terminalCellSets_.size());
@@ -386,10 +379,10 @@ void pvjMapper::setSeedOffsets
             const scalar rho =
                 Foam::sqrt(max(d & (inv(M[cellI]) & d), scalar(0)));
 
-            if (curved)
+            if (curvedFront)
             {
-                // The front starts at the critical metric radius 2/c0, below
-                // which the curvature of the exact solution stops it
+                // Measured from the metric radius 2/c0; the log and 1/rho
+                // terms diverge towards the terminal
                 const scalar rhoC = 2/c0;
                 offsets[localI] = 0;
                 if (rho > rhoC)

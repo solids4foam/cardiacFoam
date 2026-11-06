@@ -29,7 +29,7 @@ The closed form needs Pe (a + 1) below about 700, where exp(Pe s) still fits a d
 The C++ reference manufacturedRadialEikonalReference.H evaluates the same solution, and
 test_radial_eikonal_mms.py checks its samples.
 
-    python radial_eikonal_mms.py --PeL 46 --RoverL 0.25
+    python radial_eikonal_mms.py --PeL 46 --ballRatio 0.25
 """
 
 import argparse
@@ -68,9 +68,9 @@ def rad_arrival(Pe, a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--PeL", type=float, default=46.0)
-    ap.add_argument("--RoverL", type=float, default=0.25)
+    ap.add_argument("--ballRatio", type=float, default=0.25)
     args = ap.parse_args()
-    a = args.RoverL
+    a = args.ballRatio
     if args.PeL*(a + 1) > 700:
         ap.error("--PeL times (R/L + 1) above 700 overflows the closed form")
     print("Pe_L %g, R/L %g: scaled arrival at the wall %.6f, start slope %.4f" % (

@@ -3,6 +3,7 @@ EXE_INC = \
     -Iinterface \
     -IpureNeumann \
     -Idiffusion \
+    -Iadvection \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude
 

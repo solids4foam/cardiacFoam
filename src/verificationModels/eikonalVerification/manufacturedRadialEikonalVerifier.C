@@ -24,6 +24,8 @@ License
 #include "OSspecific.H"
 #include "PstreamReduceOps.H"
 #include "verificationUtils.H"
+#include "dictionaryKeyCheck.H"
+#include "eikonalPvjCoupler.H"
 #include "addToRunTimeSelectionTable.H"
 
 namespace Foam
@@ -50,6 +52,80 @@ tensor rotationAboutDiagonal(const scalar angle)
     const scalar k = 1/Foam::sqrt(scalar(3));
     const tensor K(0, -k, k, k, 0, -k, -k, k, 0);
     return tensor(I) + Foam::sin(angle)*K + (1 - Foam::cos(angle))*(K & K);
+}
+
+
+//- The eikonalPvjCoupler block of domainCouplings, or nullptr when there is none
+const dictionary* seedingCoupler(const dictionary& coeffs)
+{
+    const dictionary* coupler = nullptr;
+    if (const dictionary* couplings = coeffs.findDict("domainCouplings"))
+    {
+        for (const entry& e : *couplings)
+        {
+            if
+            (
+                e.isDict()
+             && e.dict().lookupOrDefault<word>("electroDomainCoupler", word::null)
+             == eikonalPvjCoupler::typeName
+            )
+            {
+                if (coupler)
+                {
+                    FatalIOErrorInFunction(*couplings)
+                        << "The radial verifier takes one eikonalPvjCoupler."
+                        << exit(FatalIOError);
+                }
+                coupler = &e.dict();
+            }
+        }
+    }
+    return coupler;
+}
+
+
+//- The seed profile of the ball: the coupler's when one seeds the ball,
+//  otherwise the verifier's own, flat or exact, with which it holds the ball
+word readSeedProfile(const dictionary& coeffs, const scalar R, const vector& axes)
+{
+    const dictionary& verifierDict = coeffs.subDict("verificationModel");
+    const dictionary* coupler = seedingCoupler(coeffs);
+    if (!coupler)
+    {
+        const word profile(verifierDict.get<word>("seedProfile"));
+        dictionaryKeyCheck::checkValue
+        (
+            verifierDict, "seedProfile", profile, wordList({"flat", "exact"})
+        );
+        return profile;
+    }
+
+    if (verifierDict.found("seedProfile"))
+    {
+        FatalIOErrorInFunction(verifierDict)
+            << "seedProfile is set by the eikonalPvjCoupler that seeds the ball."
+            << exit(FatalIOError);
+    }
+    if (mag(axes - vector::one) > SMALL)
+    {
+        FatalIOErrorInFunction(verifierDict)
+            << "A ball seeded by the eikonalPvjCoupler needs axes (1 1 1): "
+            << "the coupler seeds a sphere." << exit(FatalIOError);
+    }
+    const scalar pvjRadius = coupler->get<scalar>("pvjRadius");
+    if (mag(pvjRadius - R) > 1e-9*R)
+    {
+        FatalIOErrorInFunction(*coupler)
+            << "pvjRadius " << pvjRadius << " differs from the ball radius "
+            << "ballRatio*wallThickness = " << R << "." << exit(FatalIOError);
+    }
+    if (coupler->lookupOrDefault<scalar>("pvjDelay", 0) != 0)
+    {
+        FatalIOErrorInFunction(*coupler)
+            << "The ball is seeded at terminalTime: pvjDelay must be 0."
+            << exit(FatalIOError);
+    }
+    return eikonalPvjCoupler::seedProfile(*coupler);
 }
 
 } // End anonymous namespace
@@ -93,8 +169,8 @@ manufacturedRadialEikonalVerifier::manufacturedRadialEikonalVerifier
     sigma_(electroProperties.subDict("verificationModel").get<scalar>("sigma")),
     axes_(electroProperties.subDict("verificationModel").get<vector>("axes")),
     Q_(rotationAboutDiagonal(electroProperties.subDict("verificationModel").get<scalar>("angle"))),
-    heldBall_(electroProperties.subDict("verificationModel").get<word>("heldBall")),
-    seedProfile_(electroProperties.subDict("verificationModel").get<word>("seedProfile")),
+    seededByCoupler_(seedingCoupler(electroProperties) != nullptr),
+    seedProfile_(readSeedProfile(electroProperties, a_*L_, axes_)),
     chiCm_(chi.value()*Cm.value()),
     V_(c0.value()*Foam::sqrt(sigma_/chiCm_)),
     Pe_(c0.value()*L_/Foam::sqrt(sigma_/chiCm_)),
@@ -115,35 +191,15 @@ manufacturedRadialEikonalVerifier::manufacturedRadialEikonalVerifier
      || axes_.x() <= 0 || axes_.y() <= 0 || axes_.z() <= 0 || Pe_ <= 0
     )
     {
-        FatalIOErrorInFunction(electroProperties)
+        FatalIOErrorInFunction(electroProperties.subDict("verificationModel"))
             << "wallThickness, ballRatio, sigma, axes and c0 must be positive."
-            << exit(FatalIOError);
-    }
-    if (seedProfile_ != "flat" && seedProfile_ != "front" && seedProfile_ != "curvedFront")
-    {
-        FatalIOErrorInFunction(electroProperties)
-            << "Unknown seedProfile '" << seedProfile_
-            << "'. Valid options are: flat, front, curvedFront."
             << exit(FatalIOError);
     }
     if (seedProfile_ == "curvedFront" && 2/Pe_ > a_)
     {
-        FatalIOErrorInFunction(electroProperties)
+        FatalIOErrorInFunction(electroProperties.subDict("verificationModel"))
             << "seedProfile curvedFront needs ballRatio at least 2/Pe = " << 2/Pe_
             << ": the exact field holds outside the critical radius."
-            << exit(FatalIOError);
-    }
-    if (seedProfile_ != "flat" && heldBall_ != "none")
-    {
-        FatalIOErrorInFunction(electroProperties)
-            << "seedProfile " << seedProfile_ << " needs heldBall none."
-            << exit(FatalIOError);
-    }
-    if (heldBall_ != "none" && heldBall_ != "constant" && heldBall_ != "exact")
-    {
-        FatalIOErrorInFunction(electroProperties)
-            << "Unknown heldBall '" << heldBall_
-            << "'. Valid options are: none, constant, exact."
             << exit(FatalIOError);
     }
 }
@@ -160,13 +216,12 @@ scalar manufacturedRadialEikonalVerifier::exactTime(const scalar s) const
 {
     if (seedProfile_ == "curvedFront")
     {
-        const scalar critical = 2/Pe_;
         return
             terminalTime_
           + (L_/V_)
            *(
-                radialEikonalMMS::scaledTime(max(s, critical), Pe_, a_)
-              - radialEikonalMMS::scaledTime(critical, Pe_, a_)
+                radialEikonalMMS::scaledTime(s, Pe_, a_)
+              - radialEikonalMMS::scaledTime(2/Pe_, Pe_, a_)
             );
     }
     const scalar edge = seedProfile_ == "front" ? a_ : scalar(0);
@@ -176,10 +231,6 @@ scalar manufacturedRadialEikonalVerifier::exactTime(const scalar s) const
 
 scalar manufacturedRadialEikonalVerifier::exactSlope(const scalar s) const
 {
-    if (seedProfile_ == "curvedFront" && s < 2/Pe_)
-    {
-        return 0;
-    }
     return radialEikonalMMS::slope(s, Pe_, a_);
 }
 
@@ -233,7 +284,7 @@ void manufacturedRadialEikonalVerifier::applyConstraints
         configurationChecked_ = true;
     }
 
-    if (heldBall_ == "none")
+    if (seededByCoupler_)
     {
         return;
     }
@@ -246,7 +297,7 @@ void manufacturedRadialEikonalVerifier::applyConstraints
         if (s <= a_)
         {
             values[cellI] =
-                heldBall_ == "exact" ? exactTime(max(s, 0.5*a_)) : terminalTime_;
+                seedProfile_ == "exact" ? exactTime(max(s, 0.5*a_)) : terminalTime_;
             if (values[cellI] < 0)
             {
                 FatalErrorInFunction
@@ -391,7 +442,7 @@ void manufacturedRadialEikonalVerifier::postProcess
         os  << "# Radial eikonal errors, relative to the activation span and the RMS exact gradient\n"
             << "# Every row uses the whole-domain volume, so the parts add in quadrature\n"
             << "# PeL " << Pe_ << "\n"
-            << "# RoverL " << a_ << "\n"
+            << "# ballRatio " << a_ << "\n"
             << "# seedProfile " << seedProfile_ << "\n"
             << "# hoverL " << h/L_ << "\n"
             << "# cells " << nCells << "\n"

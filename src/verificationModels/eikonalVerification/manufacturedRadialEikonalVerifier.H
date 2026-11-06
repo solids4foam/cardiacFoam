@@ -26,10 +26,13 @@ Description
     the deposited junction seeds, so the case exercises the production path.
 
     Entries of the verificationModel dictionary: wallThickness (L), ballRatio
-    (R/L), terminalTime, sigma, axes, angle, and heldBall: none (the seeds come
-    from a coupler), constant (the ellipsoid held at terminalTime) or exact (the
-    ellipsoid held at the exact field, stopping at half its radius where the
-    field is singular towards the centre).
+    (R/L), terminalTime, sigma, axes and angle. An eikonalPvjCoupler in
+    domainCouplings seeds the ball at terminalTime with its seedProfile (flat,
+    front or curvedFront), and needs a pvjRadius equal to R, no pvjDelay and
+    axes (1 1 1). Without a coupler the verifier holds the ellipsoid with its
+    own seedProfile: flat (at terminalTime) or exact (at the exact field,
+    stopping at half its radius where the field is singular towards the
+    centre).
 
 Author
     Simao Nieto de Castro, UCD.
@@ -60,7 +63,7 @@ class manufacturedRadialEikonalVerifier
     scalar sigma_;
     vector axes_;
     tensor Q_;
-    word heldBall_;
+    bool seededByCoupler_;
     word seedProfile_;
     scalar chiCm_;
     scalar V_;
@@ -74,13 +77,13 @@ class manufacturedRadialEikonalVerifier
     //- The coordinate in which the solution is radial
     vector stretched(const point& x) const;
 
-    //- The exact activation time for a stretched radius ratio s >= a/2, for the
-    //  seed profile of the coupler: flat holds the ball surface at the terminal
-    //  time, front at the terminal time plus R/V, and curvedFront follows the
-    //  solution from the critical ratio 2/Pe
+    //- The exact activation time for a stretched radius ratio s >= a/2 (s >= a
+    //  for curvedFront, whose ball contains the ratio 2/Pe): flat and exact hold
+    //  the ball surface at the terminal time, front at the terminal time plus
+    //  R/V, and curvedFront follows the solution from the ratio 2/Pe
     scalar exactTime(const scalar s) const;
 
-    //- The exact radial slope w for the seed profile
+    //- The exact radial slope w at s >= a
     scalar exactSlope(const scalar s) const;
 
     //- The conductivity must be the tensor of the solution at every cell, and
@@ -123,10 +126,10 @@ public:
         return false;
     }
 
-    //- The exact ball holds the exact field; a constant ball follows first arrival
+    //- A ball held at the exact field stays held; the other seeds follow first arrival
     virtual bool releasesSeeds() const override
     {
-        return heldBall_ != "exact";
+        return seedProfile_ != "exact";
     }
 
     virtual void writeManufacturedFields(const fvMesh& mesh) const override;

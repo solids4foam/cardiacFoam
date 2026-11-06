@@ -790,6 +790,25 @@ void eikonalMyocardiumDomain::advance
         ++outerIteration;
     };
 
+    if
+    (
+        firstArrivalSeeds
+     && gMax(constrainedValues) > gMin(constrainedValues)
+     && (!pimplePtr || pimplePtr->nCorrPIMPLE() < 2)
+    )
+    {
+        WarningInFunction
+            << "A single solve holds every activation seed at its time: first "
+            << "arrival releases seeds from the second outer iteration, which "
+            << "needs PIMPLE nOuterCorrectors of at least 2." << endl;
+    }
+
+    // Constant during the step: M and the sealed patches do not change
+    const tmp<surfaceTensorField> tMf
+    (
+        insulatedFaceConductivity(M_, activationTime_, sealedHeartBoundary_)
+    );
+
     auto solveActivationEqn = [&]()
     {
         gradActivationTime_ = fvc::grad(activationTime_);
@@ -801,11 +820,6 @@ void eikonalMyocardiumDomain::advance
             u_ = c0_*a_;
             phiU_ = (fvc::interpolate(u_) & mesh().Sf());
             divPhiU_ = fvc::div(phiU_);
-
-            const tmp<surfaceTensorField> tMf
-            (
-                insulatedFaceConductivity(M_, activationTime_, sealedHeartBoundary_)
-            );
 
             fvScalarMatrix activationEqn
             (
@@ -831,14 +845,7 @@ void eikonalMyocardiumDomain::advance
         {
             fvScalarMatrix activationEqn
             (
-               -fvm::laplacian
-                (
-                    insulatedFaceConductivity
-                    (
-                        M_, activationTime_, sealedHeartBoundary_
-                    )(),
-                    activationTime_
-                )
+               -fvm::laplacian(tMf(), activationTime_)
               + c0_*G_
              == one
               + Smms
@@ -870,18 +877,7 @@ void eikonalMyocardiumDomain::advance
 
     if (eikonalAdvectionDiffusionApproach_)
     {
-        reportFacePeclet
-        (
-            facePeclet
-            (
-                phiU_,
-                insulatedFaceConductivity
-                (
-                    M_, activationTime_, sealedHeartBoundary_
-                )()
-            )(),
-            activationTime_.name()
-        );
+        reportFacePeclet(facePeclet(phiU_, tMf())(), activationTime_.name());
     }
 }
 

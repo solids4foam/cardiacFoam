@@ -21,7 +21,9 @@ The couplers that pass data between electrical domains, and the interfaces the d
     cells. `flat` holds them at the terminal time; `front` adds `rho/c0` and `curvedFront`
     the source-free radial solution, with `rho` the metric distance to the terminal. A
     time away from the terminal depends on `pvjRadius` linearly for `flat`, through a
-    logarithm for `front`, and not at all for `curvedFront`.
+    logarithm for `front`, and not at all for `curvedFront`. The eikonal myocardium holds
+    a seed until the equation reaches the cell earlier (first arrival), from the second
+    outer iteration on, so it needs PIMPLE `nOuterCorrectors` of at least 2.
 
 The bath has no coupler: `extracellularPotentialDomain` shares `phiE` with the myocardium directly.
 

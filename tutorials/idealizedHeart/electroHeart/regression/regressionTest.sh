@@ -52,6 +52,11 @@ for variant in "${VARIANTS[@]}"; do
         regression_fail "Allrun ${variant} ${tree} parallel did not complete"
         continue
     fi
+    # A run that reaches the outer-iteration cap still prints End
+    if [[ "${variant}" == eikonal ]] \
+        && ! regression_check_solver_logs -e 'PIMPLE: converged'; then
+        regression_fail "eikonal ${tree}: the outer iteration did not converge"
+    fi
     regression_compare "${refFile}" || true
     echo
 done

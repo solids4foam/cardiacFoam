@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "eikonalPvjCoupler.H"
+#include "dictionaryKeyCheck.H"
 
 #include "addToRunTimeSelectionTable.H"
 
@@ -33,6 +34,18 @@ addToRunTimeSelectionTable
 );
 
 
+word eikonalPvjCoupler::seedProfile(const dictionary& dict)
+{
+    return dictionaryKeyCheck::getWord
+    (
+        dict,
+        "seedProfile",
+        "front",
+        wordList({"flat", "front", "curvedFront"})
+    );
+}
+
+
 eikonalPvjCoupler::eikonalPvjCoupler
 (
     tissueCouplingEndpoint& primaryDomain,
@@ -42,23 +55,17 @@ eikonalPvjCoupler::eikonalPvjCoupler
 :
     pvjCoupler(primaryDomain, secondaryDomain, dict),
     terminalActivationBuffer_(),
-    seedProfile_(dict.lookupOrDefault<word>("seedProfile", "front")),
+    seedProfile_(seedProfile(dict)),
     seedOffsetsSet_(false)
 {
     if
     (
         seedProfile_ != "flat"
-     && seedProfile_ != "front"
-     && seedProfile_ != "curvedFront"
+     && (
+            !primaryDomain_.activationMetricPtr()
+         || !primaryDomain_.frontCoefficientPtr()
+        )
     )
-    {
-        FatalIOErrorInFunction(dict)
-            << "Unknown seedProfile '" << seedProfile_
-            << "'. Valid options are: flat, front, curvedFront."
-            << exit(FatalIOError);
-    }
-
-    if (seedProfile_ != "flat" && !primaryDomain_.activationMetricPtr())
     {
         FatalIOErrorInFunction(dict)
             << "seedProfile " << seedProfile_ << " needs an eikonal myocardium. "
@@ -108,9 +115,9 @@ void eikonalPvjCoupler::preparePrimaryCoupling(scalar t0, scalar dt)
     {
         mapper_.setSeedOffsets
         (
-            seedProfile_,
             *primaryDomain_.activationMetricPtr(),
-            primaryDomain_.frontCoefficientPtr()->value()
+            primaryDomain_.frontCoefficientPtr()->value(),
+            seedProfile_ == "curvedFront"
         );
         seedOffsetsSet_ = true;
     }

@@ -117,14 +117,15 @@ public:
     ) const;
 
     //- Seed time of each support cell relative to its terminal, from the metric
-    //  distance rho = sqrt(d & inv(M) & d) to the terminal: rho/c0 for "front";
-    //  for "curvedFront" the source-free radial solution in an unbounded medium,
-    //  with rho/c0 + 2 log(rho)/c0^2 - 2/(c0^3 rho) measured from rho = 2/c0.
+    //  distance rho = sqrt(d & inv(M) & d) to the terminal: rho/c0, or with
+    //  curvedFront the source-free radial solution in an unbounded medium,
+    //  rho/c0 + 2 log(rho)/c0^2 - 2/(c0^3 rho), measured from rho = 2/c0 and
+    //  zero inside it.
     void setSeedOffsets
     (
-        const word& profile,
         const volTensorField& M,
-        scalar c0
+        scalar c0,
+        bool curvedFront
     );
 
     void depositActivationTimes
