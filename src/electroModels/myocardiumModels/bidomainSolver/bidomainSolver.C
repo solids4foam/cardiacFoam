@@ -26,7 +26,6 @@ License
 #include "sealedWallPolicy.H"
 #include "compatibilityImbalance.H"
 #include "conormalStabilisation.H"
-#include "exposedPhiETrace.H"
 #include "fvMeshSubset.H"
 #include "torsoCoupling.H"
 #include "passiveConductor.H"
@@ -150,35 +149,8 @@ bidomainSolver::bidomainSolver
     const dictionary& electroProperties
 )
 :
-    phiE_
-    (
-        IOobject
-        (
-            "phiE",
-            mesh.time().timeName(),
-            mesh,
-            solvedWithBath(electroProperties)
-          ? IOobject::NO_READ
-          : myocardiumFieldReadOption(meshSubsetPtr),
-            IOobject::AUTO_WRITE
-        ),
-        mesh,
-        dimensionedScalar("phiE", dimVoltage, 0.0),
-        "zeroGradient"
-    ),
-    gradPhiE_
-    (
-        IOobject
-        (
-            "grad(" + phiE_.name() + ")",
-            mesh.time().timeName(),
-            mesh,
-            myocardiumFieldReadOption(meshSubsetPtr),
-            IOobject::NO_WRITE
-        ),
-        mesh,
-        dimensionedVector("0", dimVoltage/dimLength, vector::zero)
-    ),
+    ownPhiEPtr_(),
+    phiEPtr_(nullptr),
     phiI_
     (
         IOobject
@@ -236,30 +208,47 @@ bidomainSolver::bidomainSolver
         electroProperties.get<Switch>("sealedHeartBoundary")
     ),
     phiEReferencePtr_(readPhiEReference(electroProperties)),
-    externalPhiEBasePtr_(nullptr),
-    externalPhiECellMapPtr_(nullptr),
-    meshSubsetPtr_(meshSubsetPtr),
-    bathHeartPhiETrace_(readHeartPhiETrace(electroProperties)),
     verifierPtr_(nullptr)
 {
-    sealedWallPolicy::publish(phiE_, sealedHeartBoundary_);
+    // Validates bathHeartPhiETrace: required with a torso, rejected without
+    // one; the bath domain reads it for its heart phiE
+    (void)readHeartPhiETrace(electroProperties);
 
-    if (meshSubsetPtr_ && meshSubsetPtr_->hasSubMesh())
+    // With a bath the bath domain owns, solves and writes the heart phiE,
+    // and binds it here (bindExternalPhiE)
+    if (!solvedWithBath(electroProperties))
     {
-        const labelUList& cellMap = meshSubsetPtr_->cellMap();
+        ownPhiEPtr_.reset
+        (
+            new volScalarField
+            (
+                IOobject
+                (
+                    "phiE",
+                    mesh.time().timeName(),
+                    mesh,
+                    myocardiumFieldReadOption(meshSubsetPtr),
+                    IOobject::AUTO_WRITE
+                ),
+                mesh,
+                dimensionedScalar("phiE", dimVoltage, 0.0),
+                "zeroGradient"
+            )
+        );
+        phiEPtr_ = ownPhiEPtr_.get();
+        sealedWallPolicy::publish(ownPhiEPtr_(), sealedHeartBoundary_);
+    }
 
-        if (!solvedWithBath(electroProperties))
+    if (meshSubsetPtr && meshSubsetPtr->hasSubMesh())
+    {
+        const labelUList& cellMap = meshSubsetPtr->cellMap();
+
+        if (ownPhiEPtr_)
         {
-            readMappedCellField(phiE_, supportMesh, cellMap);
+            readMappedCellField(ownPhiEPtr_(), supportMesh, cellMap);
         }
         readMappedCellField(phiI_, supportMesh, cellMap);
     }
-}
-
-
-void bidomainSolver::updateGradPhiE()
-{
-    gradPhiE_ = fvc::grad(phiE_);
 }
 
 
@@ -277,110 +266,52 @@ label bidomainSolver::referenceCell() const
 
     return passiveConductor::locateReferenceCell
     (
-        phiE_.mesh(), phiEReferencePtr_->first()
+        ownPhiEPtr_().mesh(), phiEReferencePtr_->first()
     );
 }
 
 
-bool bidomainSolver::externalPhiEBound() const
+const volScalarField& bidomainSolver::phiE() const
 {
-    return externalPhiEBasePtr_ && externalPhiECellMapPtr_;
+    if (!phiEPtr_)
+    {
+        FatalErrorInFunction
+            << "The heart phiE of the bath has not been bound: the bath "
+            << "domain binds it when it is constructed."
+            << exit(FatalError);
+    }
+
+    return *phiEPtr_;
 }
 
 
-void bidomainSolver::bindExternalPhiE
-(
-    const volScalarField& phiE,
-    const labelUList& heartCellMap
-)
+void bidomainSolver::bindExternalPhiE(const volScalarField& heartPhiE)
 {
-    externalPhiEBasePtr_ = &phiE;
-    externalPhiECellMapPtr_ = &heartCellMap;
+    if (ownPhiEPtr_)
+    {
+        FatalErrorInFunction
+            << "This bidomainSolver owns and solves its phiE (no "
+            << "torsoCoupling bath); it cannot read another one."
+            << exit(FatalError);
+    }
 
-    if (bathHeartPhiETrace_ != heartPhiETrace::global)
-    {
-        return;
-    }
-    if (!meshSubsetPtr_ || !meshSubsetPtr_->hasSubMesh())
+    if (&heartPhiE.mesh() != &phiI_.mesh())
     {
         FatalErrorInFunction
-            << "bathHeartPhiETrace global requires a myocardium cellZone"
-            << exit(FatalError);
+            << "The bound phiE lives on mesh '" << heartPhiE.mesh().name()
+            << "', not on the myocardium mesh '" << phiI_.mesh().name()
+            << "'." << exit(FatalError);
     }
-    const label nExposed = useExposedPhiETrace
-    (
-        phiE_, meshSubsetPtr_->faceMap(), phiE.mesh()
-    );
-    if (nExposed == 0)
-    {
-        FatalErrorInFunction
-            << "bathHeartPhiETrace global: no exposed heart faces"
-            << exit(FatalError);
-    }
-    Info<< "bathHeartPhiETrace global: " << nExposed
-        << " exposed heart faces" << endl;
-    setExposedPhiETrace
-    (
-        phiE_, phiE, heartCellMap, meshSubsetPtr_->faceMap(), Ge_,
-        phiE.mesh().lookupObject<volTensorField>("sigmaTotal")
-    );
-    sealedWallPolicy::publish(phiE_, sealedHeartBoundary_);
+
+    phiEPtr_ = &heartPhiE;
 }
 
 
 void bidomainSolver::unbindExternalPhiE()
 {
-    externalPhiEBasePtr_ = nullptr;
-    externalPhiECellMapPtr_ = nullptr;
+    phiEPtr_ = ownPhiEPtr_.get();
 }
 
-
-void bidomainSolver::restrictExternalPhiE()
-{
-    if (!externalPhiEBound())
-    {
-        FatalErrorInFunction
-            << "restrictExternalPhiE called before external phiE was bound."
-            << exit(FatalError);
-    }
-
-    const scalarField& globalPhiE = externalPhiEBasePtr_->primitiveField();
-    const labelUList& cellMap = *externalPhiECellMapPtr_;
-    scalarField& localPhiE = phiE_.primitiveFieldRef();
-
-    if (cellMap.size() != localPhiE.size())
-    {
-        FatalErrorInFunction
-            << "External phiE cell map size " << cellMap.size()
-            << " does not match bidomain submesh cell count "
-            << localPhiE.size() << "."
-            << exit(FatalError);
-    }
-
-    if
-    (
-        bathHeartPhiETrace_ == heartPhiETrace::global
-     && meshSubsetPtr_
-     && meshSubsetPtr_->hasSubMesh()
-    )
-    {
-        setExposedPhiETrace
-        (
-            phiE_, *externalPhiEBasePtr_, cellMap, meshSubsetPtr_->faceMap(),
-            Ge_,
-            externalPhiEBasePtr_->mesh().lookupObject<volTensorField>("sigmaTotal")
-        );
-    }
-    else
-    {
-        forAll(cellMap, cellI)
-        {
-            localPhiE[cellI] = globalPhiE[cellMap[cellI]];
-        }
-        phiE_.correctBoundaryConditions();
-    }
-    updateGradPhiE();
-}
 
 
 tmp<volTensorField> bidomainSolver::initialiseConductivityTensor
@@ -427,7 +358,7 @@ void bidomainSolver::solveDiffusionExplicit
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           + fvm::Sp(*coeff, domain.VmRef())
           == fvc::laplacian(tGif(), domain.Vm())
-           + fvc::laplacian(tGif(), phiE_)
+           + fvc::laplacian(tGif(), phiE())
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
         );
@@ -438,13 +369,13 @@ void bidomainSolver::solveDiffusionExplicit
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           == fvc::laplacian(tGif(), domain.Vm())
-           + fvc::laplacian(tGif(), phiE_)
+           + fvc::laplacian(tGif(), phiE())
            - domain.chi()*domain.Cm()*domain.Iion()
            + domain.sourceField()
         );
     }
 
-    phiI_ = domain.Vm() + phiE_;
+    phiI_ = domain.Vm() + phiE();
 }
 
 
@@ -462,7 +393,7 @@ void bidomainSolver::solveDiffusionImplicit
     // staggeredElectrophysicsAdvanceScheme through solveDiffusionStepOnce.
     solvePhiEImplicitOnce(domain);
     solveVmImplicitOnce(domain);
-    phiI_ = domain.Vm() + phiE_;
+    phiI_ = domain.Vm() + phiE();
 }
 
 
@@ -471,46 +402,47 @@ void bidomainSolver::solvePhiEImplicitOnce
     electroVolumeFieldDomain& domain
 )
 {
-    if (externalPhiEBound())
+    if (!ownPhiEPtr_)
     {
-        restrictExternalPhiE();
+        // The bath domain solves the global phiE and updates the bound
+        // heart phiE; the Vm equation reads it as it is
+        (void)phiE();
+        return;
     }
-    else
-    {
-        const label refCell = referenceCell();
 
-        updateGradPhiE();
-        volScalarField rhs
+    volScalarField& phiE = ownPhiEPtr_();
+    const label refCell = referenceCell();
+
+    volScalarField rhs
+    (
+        -fvc::laplacian
         (
-            -fvc::laplacian
-            (
-                insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_),
-                domain.Vm()
-            )
-        );
-        if (verifierPtr_)
-        {
-            verifierPtr_->addManufacturedPhiESource(rhs, phiE_.time().value());
-        }
-        const tmp<surfaceTensorField> tGf
-        (
-            insulatedFaceConductivity(GiPlusGe_, phiE_, sealedHeartBoundary_)
-        );
-        fvScalarMatrix phiEqn
-        (
-            fvm::laplacian(tGf(), phiE_)
-          + conormalStabilisation(tGf(), phiE_)
-         == rhs
-        );
-        // Pure Neumann (no patch fixes the value): report the discrete
-        // imbalance the reference cell absorbs, then pin that cell
-        if (phiE_.needReference())
-        {
-            reportCompatibilityImbalance(phiEqn);
-            phiEqn.setReference(refCell, phiEReferencePtr_->second());
-        }
-        solve(phiEqn);
+            insulatedFaceConductivity(Gi_, domain.Vm(), sealedHeartBoundary_),
+            domain.Vm()
+        )
+    );
+    if (verifierPtr_)
+    {
+        verifierPtr_->addManufacturedPhiESource(rhs, phiE.time().value());
     }
+    const tmp<surfaceTensorField> tGf
+    (
+        insulatedFaceConductivity(GiPlusGe_, phiE, sealedHeartBoundary_)
+    );
+    fvScalarMatrix phiEqn
+    (
+        fvm::laplacian(tGf(), phiE)
+      + conormalStabilisation(tGf(), phiE)
+     == rhs
+    );
+    // Pure Neumann (no patch fixes the value): report the discrete
+    // imbalance the reference cell absorbs, then pin that cell
+    if (phiE.needReference())
+    {
+        reportCompatibilityImbalance(phiEqn);
+        phiEqn.setReference(refCell, phiEReferencePtr_->second());
+    }
+    solve(phiEqn);
 }
 
 
@@ -546,7 +478,7 @@ void bidomainSolver::solveVmImplicitOnce
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           + fvm::Sp(*coeff, domain.VmRef())
           == fvm::laplacian(tGif(), domain.Vm())
-           + fvc::laplacian(tGif(), phiE_)
+           + fvc::laplacian(tGif(), phiE())
            - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );
@@ -557,7 +489,7 @@ void bidomainSolver::solveVmImplicitOnce
         (
             domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
           == fvm::laplacian(tGif(), domain.Vm())
-           + fvc::laplacian(tGif(), phiE_)
+           + fvc::laplacian(tGif(), phiE())
            - domain.chi()*domain.Cm()*tIionExtrap()
            + domain.sourceField()
         );

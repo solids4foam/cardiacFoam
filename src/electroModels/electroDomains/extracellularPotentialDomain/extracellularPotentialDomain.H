@@ -45,8 +45,6 @@ Author
 namespace Foam
 {
 
-class bidomainSolver;
-
 class extracellularPotentialDomain
 :
     public electroStateDomain
@@ -56,14 +54,21 @@ class extracellularPotentialDomain
     // Heart-side data sources (non-owning).
     myocardiumDomainInterface& heartDomain_;
 
-    // Heart Vm and the heart phiE companion of the operator.
+    // Heart Vm, read from the myocardium
     const volScalarField& heartVm_;
-    volScalarField& heartPhiE_;
 
     //- Passive heart+bath operator built from the top-level torso block,
     //  with its conductivities, boundary data, reference and heart -> base
     //  map
     autoPtr<passiveConductor> conductorPtr_;
+
+    //- The heart phiE (heart mesh, named phiE): the restriction of the
+    //  global phiE to the heart cells, with the exposed-face trace when
+    //  bathHeartPhiETrace is global. Owned and written here only; the
+    //  myocardium solver reads it in its Vm equation, and the operator uses
+    //  it as its heart companion. Its patch types and wall states are set
+    //  once, at construction.
+    autoPtr<volScalarField> heartPhiEPtr_;
 
     // Global potential and the V_m field projected to the base mesh.
     autoPtr<volScalarField> phiEPtr_;
@@ -82,6 +87,10 @@ class extracellularPotentialDomain
 
     //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
     autoPtr<volVectorField> interfaceGradientPtr_;
+
+    //- Write the heart phiE from the global phiE: heart cells, and the
+    //  exposed-face trace under bathHeartPhiETrace global
+    void updateHeartPhiE();
 
     //- Assemble and solve the global phiE equation once.
     void solvePhiEOnce();

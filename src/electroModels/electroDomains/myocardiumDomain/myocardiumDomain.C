@@ -430,9 +430,14 @@ myocardiumDomain::myocardiumDomain
             << exit(FatalError);
     }
 
-    if (diffusionSolverPtr_->phiEPtr())
+    if (diffusionSolverPtr_->hasExtracellularPotential())
     {
-        bindBidomainField(*const_cast<volScalarField*>(diffusionSolverPtr_->phiEPtr()));
+        // The solver's own phiE; with a bath the bath grants its global
+        // phiE when it binds (bindExternalPhiE)
+        if (volScalarField* phiEPtr = diffusionSolverPtr_->ownedPhiEPtr())
+        {
+            bindBidomainField(*phiEPtr);
+        }
     }
     else
     {
@@ -827,19 +832,16 @@ void myocardiumDomain::finalizeDiffusionStep()
 
 void myocardiumDomain::bindExternalPhiE
 (
-    const volScalarField& phiE,
+    const volScalarField& heartPhiE,
+    volScalarField& globalPhiE,
     const labelUList& heartCellMap
 )
 {
-    diffusionSolverPtr_->bindExternalPhiE(phiE, heartCellMap);
+    diffusionSolverPtr_->bindExternalPhiE(heartPhiE);
 
     if (verificationModelPtr_)
     {
-        verificationModelPtr_->bindBidomainField
-        (
-            const_cast<volScalarField&>(phiE),
-            heartCellMap
-        );
+        verificationModelPtr_->bindBidomainField(globalPhiE, heartCellMap);
 
         verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
     }
@@ -853,12 +855,9 @@ void myocardiumDomain::unbindExternalPhiE()
 
     if (verificationModelPtr_)
     {
-        if (const volScalarField* phiEPtr = diffusionSolverPtr_->phiEPtr())
+        if (volScalarField* phiEPtr = diffusionSolverPtr_->ownedPhiEPtr())
         {
-            verificationModelPtr_->bindBidomainField
-            (
-                *const_cast<volScalarField*>(phiEPtr)
-            );
+            verificationModelPtr_->bindBidomainField(*phiEPtr);
         }
         else
         {

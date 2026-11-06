@@ -23,6 +23,7 @@ License
 #include "sealedWallPolicy.H"
 #include "compatibilityImbalance.H"
 #include "exposedPhiETrace.H"
+#include "bidomainSolver.H"
 #include "addToRunTimeSelectionTable.H"
 #include "OStringStream.H"
 #include "dimVoltage.H"
@@ -79,26 +80,6 @@ const volScalarField& requireHeartVm
 }
 
 
-volScalarField& requireHeartPhiE
-(
-    const myocardiumDomainInterface& heartDomain
-)
-{
-    const volScalarField* phiEPtr = heartDomain.phiEPtr();
-
-    if (!phiEPtr)
-    {
-        FatalErrorInFunction
-            << "Matched intracellular assembly requires the heart phiE field."
-            << exit(FatalError);
-    }
-
-    // The bidomain heart's phiE, which the bath assembles as the heart
-    // companion of the global phiE
-    return const_cast<volScalarField&>(*phiEPtr);
-}
-
-
 } // End anonymous namespace
 
 
@@ -112,8 +93,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
     baseMesh_(baseMesh),
     heartDomain_(heartDomain),
     heartVm_(requireHeartVm(heartDomain)),
-    heartPhiE_(requireHeartPhiE(heartDomain)),
     conductorPtr_(),
+    heartPhiEPtr_(),
     phiEPtr_(),
     VmGlobalPtr_(),
     nNonOrthogonalCorrectors_
@@ -158,6 +139,15 @@ extracellularPotentialDomain::extracellularPotentialDomain
     // so the heart side of heart-torso faces carries Ge
     const bool totalWallConductivity = false;
 
+    const dictionary& myocardiumCoeffs = electroProperties.subDict
+    (
+        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+    );
+    const Switch sealedHeartBoundary
+    (
+        myocardiumCoeffs.get<Switch>("sealedHeartBoundary")
+    );
+
     conductorPtr_.reset
     (
         new passiveConductor
@@ -172,10 +162,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
             (
                 baseMesh_, electroProperties.subDict("torso")
             ),
-            electroProperties.subDict
-            (
-                electroProperties.get<word>("myocardiumSolver") + "Coeffs"
-            ).get<Switch>("sealedHeartBoundary"),
+            sealedHeartBoundary,
             heartVm_,
             totalWallConductivity
         )
@@ -306,9 +293,72 @@ extracellularPotentialDomain::extracellularPotentialDomain
         }
     }
 
+    // The heart phiE, with its final patch types and wall states: the
+    // exposed heart faces carry the global trace under bathHeartPhiETrace
+    // global (sealed heart only), every heart patch is zeroGradient
+    // otherwise
+    heartPhiEPtr_.reset
+    (
+        new volScalarField
+        (
+            IOobject
+            (
+                "phiE",
+                heartMesh.time().timeName(),
+                heartMesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            heartMesh,
+            dimensionedScalar("phiE", dimVoltage, 0.0),
+            "zeroGradient"
+        )
+    );
+
+    if
+    (
+        bidomainSolver::readBathHeartPhiETrace(myocardiumCoeffs)
+     == bidomainSolver::heartPhiETrace::global
+    )
+    {
+        const label nExposed = useExposedPhiETrace
+        (
+            heartPhiEPtr_(), *heartFaceMapPtr, baseMesh_
+        );
+
+        if (nExposed == 0)
+        {
+            FatalErrorInFunction
+                << "bathHeartPhiETrace global: no exposed heart faces"
+                << exit(FatalError);
+        }
+
+        Info<< "bathHeartPhiETrace global: " << nExposed
+            << " exposed heart faces" << endl;
+    }
+
+    sealedWallPolicy::publish(heartPhiEPtr_(), sealedHeartBoundary);
+
+    // The myocardium reads the heart phiE; a verification model writes the
+    // manufactured initial global phiE, which the heart phiE then follows
     heartDomain_.bindExternalPhiE
     (
-        phiEPtr_(), conductorPtr_->heartCellToBaseCell()
+        heartPhiEPtr_(), phiEPtr_(), conductorPtr_->heartCellToBaseCell()
+    );
+    updateHeartPhiE();
+}
+
+
+void extracellularPotentialDomain::updateHeartPhiE()
+{
+    const passiveConductor& conductor = conductorPtr_();
+
+    setExposedPhiETrace
+    (
+        heartPhiEPtr_(), phiEPtr_(), conductor.heartCellToBaseCell(),
+        *heartDomain_.subsetFaceMapPtr(),
+        *heartDomain_.extracellularConductivityPtr(),
+        conductor.sigmaTotal()
     );
 }
 
@@ -402,13 +452,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     conductor.setSurfaceCurrents(phiEPtr_());
 
-    setExposedPhiETrace
-    (
-        heartPhiE_, phiEPtr_(), conductor.heartCellToBaseCell(),
-        *heartDomain_.subsetFaceMapPtr(),
-        *heartDomain_.extracellularConductivityPtr(),
-        conductor.sigmaTotal()
-    );
+    updateHeartPhiE();
 
     tmp<volScalarField> trhsGlobal(conductor.heartSource(heartVm_));
     volScalarField& rhsGlobal = trhsGlobal.ref();
@@ -431,7 +475,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
         conductor.assemble
         (
             phiEPtr_(),
-            heartPhiE_,
+            heartPhiEPtr_(),
             &rhsGlobal,
             storeFlux ? &correction : nullptr
         )
@@ -476,6 +520,9 @@ void extracellularPotentialDomain::solvePhiE()
         nNonOrthogonalCorrectors_,
         [&]() { solvePhiEOnce(); }
     );
+
+    // The myocardium's Vm equation reads the solved potential
+    updateHeartPhiE();
 }
 
 void extracellularPotentialDomain::advance(scalar t0, scalar dt)

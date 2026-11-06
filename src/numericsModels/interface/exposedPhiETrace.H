@@ -21,6 +21,13 @@ Function
 Description
     Heart phiE exposed-face trace from the global phiE.
 
+    useExposedPhiETrace gives the heart patches that hold exposed faces the
+    fixedValue type; its owner calls it once, when it constructs the heart
+    phiE and before any gradient of it is evaluated, so that the
+    wall-gradient states and stencils are built from the final patch types.
+    setExposedPhiETrace writes the heart cells from the global phiE and, on
+    those patches, the two-sided flux-continuous face value.
+
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/

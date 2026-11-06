@@ -102,11 +102,23 @@ public:
 
     virtual const volTensorField& explicitConductivityField() const = 0;
 
-    virtual void bindExternalPhiE
-    (
-        const volScalarField& phiE,
-        const labelUList& heartCellMap
-    );
+    //- True for a solver with an extracellular potential (bidomain)
+    virtual bool hasExtracellularPotential() const
+    {
+        return false;
+    }
+
+    //- The phiE this solver owns and writes, or null. Its owner grants it
+    //  to a verification model, which writes the manufactured initial
+    //  values into it.
+    virtual volScalarField* ownedPhiEPtr()
+    {
+        return nullptr;
+    }
+
+    //- Read heartPhiE, owned and written by a bath domain, in place of an
+    //  own phiE; fatal unless the solver supports it
+    virtual void bindExternalPhiE(const volScalarField& heartPhiE);
 
     virtual void unbindExternalPhiE();
 

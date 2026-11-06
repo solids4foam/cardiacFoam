@@ -65,14 +65,9 @@ autoPtr<myocardiumSolver> myocardiumSolver::New
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void myocardiumSolver::bindExternalPhiE
-(
-    const volScalarField& phiE,
-    const labelUList& heartCellMap
-)
+void myocardiumSolver::bindExternalPhiE(const volScalarField& heartPhiE)
 {
-    (void)phiE;
-    (void)heartCellMap;
+    (void)heartPhiE;
 
     FatalErrorInFunction
         << "The selected myocardiumSolver cannot bind an external phiE field."

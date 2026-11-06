@@ -348,7 +348,8 @@ public:
 
     virtual void bindExternalPhiE
     (
-        const volScalarField& phiE,
+        const volScalarField& heartPhiE,
+        volScalarField& globalPhiE,
         const labelUList& heartCellMap
     ) override;
 

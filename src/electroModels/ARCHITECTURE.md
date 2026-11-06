@@ -151,9 +151,17 @@ domain. Implements `electroStateDomain`.
   `torsoECG` (`torsoCoupling leadField`: `leadFieldConductor`,
   `buildLeadFields`).
 
-- Binds a restricted local view of `phiE` back into the bidomain myocardium
-  solver via `bindExternalPhiE`, so the bidomain solver no longer solves a
-  local phiE.
+- Owns both extracellular potentials: the global `phiE` (base mesh) and
+  the heart `phiE` (heart mesh), the restriction of the global one to the
+  heart cells with, under `bathHeartPhiETrace global`, the exposed-face
+  trace. It is their only writer: `updateHeartPhiE` writes the heart `phiE`
+  once at construction and after every global solve. The heart `phiE` gets
+  its patch types and wall-gradient states once, at construction, so its
+  gradient stencils are built from final states. The bidomain myocardium
+  solver constructs no `phiE` of its own with a bath; it reads the heart
+  `phiE` (`bindExternalPhiE`, a `const` reference) in its Vm equation. A
+  verification model receives the global `phiE` from this domain, its
+  owner, for the manufactured initial values.
 
 - Exposes `phiE` to `torsoECG`-class ECG solvers for electrode sampling.
 

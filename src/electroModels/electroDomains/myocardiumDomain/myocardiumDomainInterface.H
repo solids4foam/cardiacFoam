@@ -137,13 +137,20 @@ public:
     virtual void finalizeDiffusionStep()
     {}
 
+    //- Bind the bath domain's potentials: heartPhiE (heart mesh), read by
+    //  the myocardium solver in place of an own phiE; globalPhiE (base
+    //  mesh), which its owner, the bath, grants to a verification model
+    //  for the manufactured initial values; heartCellMap from heart to base
+    //  cells
     virtual void bindExternalPhiE
     (
-        const volScalarField& phiE,
+        const volScalarField& heartPhiE,
+        volScalarField& globalPhiE,
         const labelUList& heartCellMap
     )
     {
-        (void)phiE;
+        (void)heartPhiE;
+        (void)globalPhiE;
         (void)heartCellMap;
 
         FatalErrorInFunction
