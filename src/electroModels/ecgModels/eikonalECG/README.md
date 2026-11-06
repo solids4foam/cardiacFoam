@@ -10,4 +10,15 @@ A surrogate ECG for eikonal runs. Instead of solving for the voltage, it shifts 
 
 It writes `postProcessing/eikonalECG.dat`, with one column per electrode, sampled on its own output time grid rather than at every solver step.
 
+## Several templates
+
+With region weights `w_k` (from `ionicHeterogeneity`), the reconstructed voltage is `Vm = sum_k w_k U_k(t - tau)`. Its gradient has two parts, and both are used:
+
+- `-sum_k w_k U_k'(t - tau) grad(tau)`, from the arrival of activation;
+- `sum_k U_k(t - tau) grad(w_k)`, from the change of template between neighbouring cells. This carries the voltage difference between templates during repolarisation, for example endocardial against epicardial cells.
+
+`grad(w_k)` is computed once with zero-gradient walls. With `transitionMode hard`, it is concentrated on the region boundaries. With one template, or uniform weights, the second part is zero.
+
+`checkGradVm true;` (default `false`) also evaluates the ECG from `fvc::grad` of the reconstructed `Vm`. It writes `postProcessing/eikonalECG_checkGradVm.dat` and prints the largest difference from the main ECG. The two agree as the mesh resolves the template upstroke and the weight transitions; the check is a diagnostic, not a reference.
+
 A worked set-up is in [tutorials/manufacturedSolutions/eikonalECG](../../../../tutorials/manufacturedSolutions/eikonalECG/README.md).

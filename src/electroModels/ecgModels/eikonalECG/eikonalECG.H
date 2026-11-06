@@ -69,6 +69,19 @@ class eikonalECG
     bool weightsCalculated_;
     List<scalarField> regionWeights_;
 
+    //- Cell gradients of regionWeights_, index-aligned with it. With
+    //  Vm = sum_k w_k U_k(t - tau), grad(Vm) has a second product-rule
+    //  term, sum_k U_k(t - tau) grad(w_k), which carries the voltage
+    //  difference between templates (e.g. transmural repolarisation
+    //  heterogeneity). Computed once, after the weights. Empty on the
+    //  manufactured-template path, which uses one template.
+    List<vectorField> regionWeightGradients_;
+
+    //- Optional diagnostic: also evaluate the ECG from fvc::grad of the
+    //  reconstructed Vm and report the largest difference from the
+    //  product-rule ECG. Off by default.
+    Switch checkGradVm_;
+
     //- See the "personalizedTemplates" sub-dictionary, README.md.
     bool personalizedTemplatesEnabled_;
     bool personalizedTemplatesGenerated_;
@@ -85,9 +98,33 @@ class eikonalECG
     void calculateLeadVectors(const ecgDomain& domain);
     void calculateTransmuralWeights(const ecgDomain& domain);
 
+    //- Fill regionWeightGradients_ from regionWeights_ (zero-gradient
+    //  walls, so no spurious wall gradient).
+    void calculateRegionWeightGradients(const fvMesh& mesh);
+
+    //- Template i value [V] and slope [V/s] at local time s, for the
+    //  personalized or compiled template set.
+    void evaluateRegionTemplate
+    (
+        label regionI,
+        scalar localTime,
+        scalar& value,
+        scalar& slope
+    ) const;
+
+    //- Reconstructed Vm [V] (diagnostic only).
+    void reconstructVm
+    (
+        scalar sampleTime,
+        const volScalarField& activationTime,
+        volScalarField& Vm
+    ) const;
+
     void generatePersonalizedTemplates(const ecgDomain& domain);
 
-    //- Analytic dVm/dx = -dU/ds(t-tau) * dTau/dx, reusing tau's own gradient
+    //- Analytic grad(Vm) = -sum_k w_k dU_k/ds(t-tau) grad(tau)
+    //                      + sum_k U_k(t-tau) grad(w_k),
+    //  reusing tau's own gradient
     //  instead of numerically re-differentiating the reconstructed Vm field.
     //  Differentiating U(t-tau) via a mesh stencil applied to its sampled
     //  values loses an order of accuracy relative to this chain rule, because
