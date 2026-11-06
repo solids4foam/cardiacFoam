@@ -16,11 +16,6 @@
 #            reconstructs; post=<script> then runs post/<script> in the
 #            run directory (a post-processing utility);
 #            skip=<version>[,...] skips the check on those OpenFOAM versions
-#
-# On OpenFOAM v2312 a cellZone myocardium sub-mesh fails its fvSchemes
-# lookups (e.g. "Entry 'interpolate(conductivity)' not found"), as noted in
-# manufacturedSolutions/bathBidomain, so the cellZone and bath checks that
-# solve on a sub-mesh are skipped there.
 
 # ---- Myocardium models and options --------------------------------------
 monodomainExplicit                     slab  monodomainExplicit                     pass
@@ -29,7 +24,7 @@ monodomainSbdf2                        slab  monodomainSbdf2                    
 monodomainFieldConductivity            slab  monodomainFieldConductivity            pass
 # A field conductivity that jumps across periodic faces, read on a cyclic mesh
 monodomainPeriodicFieldConductivity    slab  monodomainPeriodicFieldConductivity    pass
-monodomainCellZone                     slab  monodomainCellZone                     pass  skip=v2312
+monodomainCellZone                     slab  monodomainCellZone                     pass
 monodomainVerificationNone             slab  monodomainVerificationNone             pass
 # A keyword starting with '_' is a case variable and is accepted
 monodomainCaseVariable                 slab  monodomainExplicit                     pass  monodomainSolverCoeffs/_caseVariable=1
@@ -54,8 +49,8 @@ eikonalECGRegionStates                 slab  eikonalECGRegionStates             
 twoEcgDomains                          slab  monodomainPseudoECG                    pass  monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;sigmaExtracellular~0.2;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
-bathBidomain                           bath  bathBidomain                           pass  skip=v2312
-bathTorsoECG                           bath  bathTorsoECG                           pass  skip=v2312
+bathBidomain                           bath  bathBidomain                           pass
+bathTorsoECG                           bath  bathTorsoECG                           pass
 
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
@@ -73,21 +68,21 @@ monodomainPurkinjeIonicExportParallel  slab  monodomainPurkinjeReactionDiffusion
 eikonalPurkinjeParallel                slab  eikonalPurkinje                        pass  np=2
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
-bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2  skip=v2312
+bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2
 # The decomposition splits the periodic faces into processorCyclic faces
 monodomainPeriodicFieldConductivityParallel slab monodomainPeriodicFieldConductivity pass np=2
 
 # ---- Post-processing utilities that link the electro libraries -----------
 monodomainPseudoECGRecomputed          slab  monodomainPseudoECG                    pass  post=recomputePseudoECG
-bathBidomainInterfaceMetrics           bath  bathBidomain                           pass  post=bathBidomainInterfaceMetrics  skip=v2312
+bathBidomainInterfaceMetrics           bath  bathBidomain                           pass  post=bathBidomainInterfaceMetrics
 
 # ---- Restart from the latest time (startFrom latestTime) -------------------
 # The run is continued to twice its end time from the fields it wrote; a
 # cellZone myocardium reads them back from base-mesh-sized files
 monodomainExplicitRestart              slab  monodomainExplicit                     pass  post=restartLatestTime
-monodomainCellZoneRestart              slab  monodomainCellZone                     pass  post=restartLatestTime  skip=v2312
-bathBidomainRestart                    bath  bathBidomain                           pass  post=restartLatestTime  skip=v2312
-bathBidomainRestartParallel            bath  bathBidomain                           pass  np=2  post=restartLatestTime  skip=v2312
+monodomainCellZoneRestart              slab  monodomainCellZone                     pass  post=restartLatestTime
+bathBidomainRestart                    bath  bathBidomain                           pass  post=restartLatestTime
+bathBidomainRestartParallel            bath  bathBidomain                           pass  np=2  post=restartLatestTime
 # A decomposed Purkinje run, whose network state the master writes into the
 # case-root time directories, then reconstructed from the restart time on
 purkinjeRestartParallel                slab  monodomainPurkinjeReactionDiffusion    pass  np=2  post=restartLatestTime
@@ -116,7 +111,7 @@ torsoECGWithMonodomain                 slab  monodomainPseudoECG         fail:to
 torsoECGWithoutBath                    slab  bidomainPseudoECG           fail:torsoECG                 bidomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
 bathWithoutCellZone                    bath  bathBidomain                fail:subset~cell~map          bidomainSolverCoeffs/cellZone!
 unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
-bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ  skip=v2312
+bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension
 
 # ---- Misspelt or unknown entries: must stop and name the valid ones ---------
