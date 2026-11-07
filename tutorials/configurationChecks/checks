@@ -51,7 +51,6 @@ bidomainPseudoECG                      slab  bidomainPseudoECG                  
 eikonalECG                             slab  eikonalECG                             pass
 eikonalECGGradientCheck                slab  eikonalECG                             pass  post=eikonalECGGradientCheck
 eikonalECGRegionStates                 slab  eikonalECGRegionStates                 pass
-twoEcgDomains                          slab  monodomainPseudoECG                    pass  monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;sigmaExtracellular~0.2;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
 bathBidomain                           bath  bathBidomain                           pass
@@ -113,6 +112,7 @@ seedProfileWithReactionDiffusion       slab  monodomainPurkinjeReactionDiffusion
 unknownSeedProfile                     slab  eikonalPurkinje                        fail:Unknown~seedProfile eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=bogus
 eikonalSeedBoxListSizeMismatch         slab  eikonal                                fail:same~size  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
 ecgDomainCoupling                      slab  monodomainPseudoECG         fail:ECG~domains~take~no~coupling monodomainSolverCoeffs/ecgDomains/ECG/coupling={electroDomainCoupler~reactionDiffusionPvjCoupler;}
+twoPseudoECGDomains                    slab  monodomainPseudoECG         fail:both~select~ecgSolver~pseudoECG monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=bogusECG
 eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=eikonalECG
 eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!

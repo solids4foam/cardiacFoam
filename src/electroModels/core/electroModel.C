@@ -242,37 +242,6 @@ const Foam::dictionary& Foam::electroModel::ionicProperties() const
 }
 
 
-bool Foam::electroModel::read()
-{
-    if (regIOobject::read())
-    {
-        electroProperties_ = subDict(type() + "Coeffs");
-
-        electrophysicsSystemBuilder::configureAdvanceScheme
-        (
-            domainSystem_,
-            electroProperties_
-        );
-
-        electrophysicsSystemBuilder::configureConductionDomains
-        (
-            domainSystem_,
-            mesh(),
-            electroProperties_,
-            runTime().deltaTValue()
-        );
-
-        configureECGDomains();
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-
 bool Foam::electroModel::evolve()
 {
     const scalar dt = runTime().deltaTValue();

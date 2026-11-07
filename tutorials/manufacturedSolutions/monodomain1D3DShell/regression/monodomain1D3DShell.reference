@@ -1,0 +1,35 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# summary <key> <expected> <tolerance>; error <field> <norm> <expected> <tolerance>
+# csv <file> <key> <column> <expected> <tolerance>
+summary  cellsPerDirection  10   0
+summary  finalTime          0.1  1e-9
+error    Vm                     L1    0.00221912483  2.2e-08
+error    Vm                     L2    0.0059597618   6e-08
+error    Vm                     Linf  0.129741351    1.3e-06
+error    u1                     L1    0.000199669457 2e-09
+error    u1                     L2    0.000480154561 4.8e-09
+error    u1                     Linf  0.00982138234  9.8e-08
+error    u2                     L1    0.000109311103 1.1e-09
+error    u2                     L2    0.000249953539 2.5e-09
+error    u2                     Linf  0.00459309105  4.6e-08
+error    Vm_bulk                L2    0.00539631166  5.4e-08
+error    Vm_boundary            L2    0.0025295417   2.5e-08
+error    gradVm_boundary        L2    0.174682975    1.7e-06
+error    gradReconVm_boundary   L2    0.162125026    1.6e-06
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=0  supportL2            0.028681727    2.9e-07
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=0  graphTerminalError   0.00301514119  3e-08
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=0  currentError         -0.017893847   1.8e-07
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=0  maxStepCurrentError  0.0160895817   1.6e-07
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=1  supportL2            0.0453489289   4.5e-07
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=1  graphTerminalError   -0.00501414827 5e-08
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=1  currentError         0.0277121839   2.8e-07
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=1  maxStepCurrentError  0.0275286747   2.8e-07
+csv      verification/coupled1D3DMonodomain_local.csv  terminal=0  maxChargeImbalance   0              1e-12
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=0  supportCells  106  0
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=0  normalisationError 0.00249438142  2.5e-08
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=0  gatherError        0.0012805426   1.3e-08
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=0  depositL2rel       0.0743090504   7.4e-07
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=1  supportCells  95  0
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=1  normalisationError 0.0075251683   7.5e-08
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=1  gatherError        0.000625464898 6.3e-09
+csv      verification/coupled1D3DMonodomain_map.csv  kernel=linear,terminal=1  depositL2rel       0.0721829477   7.2e-07
