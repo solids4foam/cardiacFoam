@@ -71,6 +71,29 @@ inline void readManufacturedTemplate
 }
 
 
+//- Value whose derivative is evaluateManufacturedTemplateDerivative
+//  (used only by the optional gradient-reconstruction diagnostic).
+inline scalar evaluateManufacturedTemplate
+(
+    const scalar s,
+    const bool sine,
+    const scalar duration,
+    const scalar rise
+)
+{
+    if (sine)
+    {
+        return Foam::sin(2.0*constant::mathematical::pi*s);
+    }
+
+    const scalar w = rise/(2.0*Foam::atanh(0.8));
+    return
+        0.25
+       *(1.0 + Foam::tanh(s/w))
+       *(1.0 - Foam::tanh((s - duration)/w));
+}
+
+
 inline scalar evaluateManufacturedTemplateDerivative
 (
     const scalar s,

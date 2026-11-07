@@ -24,9 +24,11 @@ License
 #include "ecgModelIO.H"
 #include "mathematicalConstants.H"
 #include "fvc.H"
+#include "zeroGradientFvPatchFields.H"
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "IOdictionary.H"
+#include "ionicHeterogeneity.H"
 #include "tissueTemplates.H"
 #include "manufacturedTemplate.H"
 
@@ -53,6 +55,10 @@ eikonalECG::eikonalECG(const dictionary& dict)
     leadVectorsCalculated_(false),
     leadVectors_(),
     weightsCalculated_(false),
+    regionWeights_(),
+    regionWeightGradients_(),
+    compiledCurveIndex_(),
+    checkGradVm_(dict.lookupOrDefault<Switch>("checkGradVm", false)),
     personalizedTemplatesEnabled_(false),
     personalizedTemplatesGenerated_(false)
 {
@@ -126,6 +132,100 @@ eikonalECG::eikonalECG(const dictionary& dict)
 }
 
 
+void eikonalECG::evaluateRegionTemplate
+(
+    label regionI,
+    scalar localTime,
+    scalar& value,
+    scalar& slope
+) const
+{
+    // Templates are stored in mV; fields use dimVoltage (V).
+    if (personalizedTemplatesEnabled_)
+    {
+        const ionicTemplates::DynamicTemplate& tpl =
+            personalizedTemplates_[regionI];
+        const label n = tpl.times.size();
+        value = 1e-3*ionicTemplates::evaluateTemplate
+        (
+            localTime, tpl.times.cdata(), tpl.valuesMv.cdata(), n
+        );
+        slope = 1e-3*eikonalECG_templates::evaluateTemplateDerivative
+        (
+            localTime, tpl.times.cdata(), tpl.valuesMv.cdata(), n
+        );
+        return;
+    }
+
+    // Compiled fallback: 3 fixed curves [endo, mid, epi], selected by
+    // the region's name (compiledCurveIndex_), not by its position.
+    const scalar* times = nullptr;
+    const scalar* values = nullptr;
+    int n = 0;
+
+    switch (compiledCurveIndex_[regionI])
+    {
+        case 0:
+            times = eikonalECG_templates::endoTimes;
+            values = eikonalECG_templates::endoValues;
+            n = eikonalECG_templates::numEndoSamples;
+            break;
+        case 1:
+            times = eikonalECG_templates::midTimes;
+            values = eikonalECG_templates::midValues;
+            n = eikonalECG_templates::numMidSamples;
+            break;
+        case 2:
+            times = eikonalECG_templates::epiTimes;
+            values = eikonalECG_templates::epiValues;
+            n = eikonalECG_templates::numEpiSamples;
+            break;
+        default:
+            FatalErrorInFunction
+                << "Compiled eikonalECG templates have 3 regions "
+                << "[endo, mid, epi]; region " << regionI << " requested."
+                << exit(FatalError);
+    }
+
+    value = 1e-3*ionicTemplates::evaluateTemplate
+    (
+        localTime, times, values, n
+    );
+    slope = 1e-3*eikonalECG_templates::evaluateTemplateDerivative
+    (
+        localTime, times, values, n
+    );
+}
+
+
+void eikonalECG::calculateRegionWeightGradients(const fvMesh& mesh)
+{
+    regionWeightGradients_.setSize(regionWeights_.size());
+
+    volScalarField w
+    (
+        IOobject
+        (
+            "eikonalECG_regionWeight",
+            mesh.time().timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        mesh,
+        dimensionedScalar("zero", dimless, 0.0),
+        zeroGradientFvPatchScalarField::typeName
+    );
+
+    forAll(regionWeights_, i)
+    {
+        w.primitiveFieldRef() = regionWeights_[i];
+        w.correctBoundaryConditions();
+        regionWeightGradients_[i] = fvc::grad(w)().primitiveField();
+    }
+}
+
+
 void eikonalECG::reconstructGradVm
 (
     scalar sampleTime,
@@ -141,71 +241,81 @@ void eikonalECG::reconstructGradVm
     forAll(gradVmValues, cellI)
     {
         const scalar localTime = sampleTime - activationValues[cellI];
-        scalar dUds;
 
         if (useManufacturedTemplate_)
         {
-            dUds = eikonalECG_templates::evaluateManufacturedTemplateDerivative
+            const scalar dUds =
+                eikonalECG_templates::evaluateManufacturedTemplateDerivative
+                (
+                    localTime,
+                    manufacturedSineTemplate_,
+                    manufacturedTemplateDuration_,
+                    manufacturedTemplateRise_
+                );
+
+            // Vm(x,t) = U(t - tau(x))  =>  gradVm = -dU/ds(t-tau) * gradTau
+            gradVmValues[cellI] = -dUds*gradTauValues[cellI];
+            continue;
+        }
+
+        // Vm(x,t) = sum_k w_k(x) U_k(t - tau(x))
+        //   => gradVm = -sum_k w_k dU_k/ds gradTau + sum_k U_k grad(w_k)
+        scalar weightedSlope = 0.0;
+        vector weightTerm = Zero;
+
+        forAll(regionWeights_, i)
+        {
+            scalar value = 0.0;
+            scalar slope = 0.0;
+            evaluateRegionTemplate(i, localTime, value, slope);
+
+            weightedSlope += regionWeights_[i][cellI]*slope;
+            weightTerm += value*regionWeightGradients_[i][cellI];
+        }
+
+        gradVmValues[cellI] = -weightedSlope*gradTauValues[cellI] + weightTerm;
+    }
+}
+
+
+void eikonalECG::reconstructVm
+(
+    scalar sampleTime,
+    const volScalarField& activationTime,
+    volScalarField& Vm
+) const
+{
+    const scalarField& activationValues = activationTime.primitiveField();
+    scalarField& VmValues = Vm.primitiveFieldRef();
+
+    forAll(VmValues, cellI)
+    {
+        const scalar localTime = sampleTime - activationValues[cellI];
+
+        if (useManufacturedTemplate_)
+        {
+            VmValues[cellI] = eikonalECG_templates::evaluateManufacturedTemplate
             (
                 localTime,
                 manufacturedSineTemplate_,
                 manufacturedTemplateDuration_,
                 manufacturedTemplateRise_
             );
-        }
-        else if (personalizedTemplatesEnabled_)
-        {
-            scalar rawDUds = 0.0;
-            forAll(personalizedTemplates_, i)
-            {
-                rawDUds +=
-                    regionWeights_[i][cellI]
-                   *eikonalECG_templates::evaluateTemplateDerivative
-                    (
-                        localTime,
-                        personalizedTemplates_[i].times.cdata(),
-                        personalizedTemplates_[i].valuesMv.cdata(),
-                        personalizedTemplates_[i].times.size()
-                    );
-            }
-
-            // Dynamic values are mV; convert to V/s before the chain rule.
-            dUds = rawDUds*1e-3;
-        }
-        else
-        {
-            // Compiled fallback is always exactly 3 fixed curves in
-            // [endo, mid, epi] order, matching
-            // synthesizeTransmuralBandRegions()'s own fixed ordering.
-            const scalar rawDUds =
-                regionWeights_[0][cellI] * eikonalECG_templates::evaluateTemplateDerivative
-                (
-                    localTime,
-                    eikonalECG_templates::endoTimes,
-                    eikonalECG_templates::endoValues,
-                    eikonalECG_templates::numEndoSamples
-                )
-              + regionWeights_[1][cellI] * eikonalECG_templates::evaluateTemplateDerivative
-                (
-                    localTime,
-                    eikonalECG_templates::midTimes,
-                    eikonalECG_templates::midValues,
-                    eikonalECG_templates::numMidSamples
-                )
-              + regionWeights_[2][cellI] * eikonalECG_templates::evaluateTemplateDerivative
-                (
-                    localTime,
-                    eikonalECG_templates::epiTimes,
-                    eikonalECG_templates::epiValues,
-                    eikonalECG_templates::numEpiSamples
-                );
-            // Templates are stored in mV; field uses dimVoltage (V).
-            dUds = rawDUds * 1e-3;
+            continue;
         }
 
-        // Vm(x,t) = U(t - tau(x))  =>  gradVm = -dU/ds(t-tau) * gradTau
-        gradVmValues[cellI] = -dUds * gradTauValues[cellI];
+        scalar v = 0.0;
+        forAll(regionWeights_, i)
+        {
+            scalar value = 0.0;
+            scalar slope = 0.0;
+            evaluateRegionTemplate(i, localTime, value, slope);
+            v += regionWeights_[i][cellI]*value;
+        }
+        VmValues[cellI] = v;
     }
+
+    Vm.correctBoundaryConditions();
 }
 
 
@@ -337,6 +447,46 @@ void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
     }
 
     regionWeights_ = ionicTemplates::regionWeights(mesh, hetDict);
+
+    // Compiled-template path: map each region to one of the 3 compiled
+    // curves [endo, mid, epi] by name, in the order regionWeights uses
+    // (ionicHeterogeneity::parseNamedFieldRegions), so a subset such as
+    // endocardial and epicardial only selects the right curves.
+    if (!personalizedTemplatesEnabled_)
+    {
+        const List<ionicHeterogeneity::NamedFieldRegion> regions =
+            ionicHeterogeneity::parseNamedFieldRegions
+            (
+                hetDict.subDict("regions")
+            );
+
+        compiledCurveIndex_.setSize(regions.size());
+        forAll(regions, i)
+        {
+            const word& name = regions[i].name;
+            if (name == "endocardialCells")
+            {
+                compiledCurveIndex_[i] = 0;
+            }
+            else if (name == "mCells")
+            {
+                compiledCurveIndex_[i] = 1;
+            }
+            else if (name == "epicardialCells")
+            {
+                compiledCurveIndex_[i] = 2;
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "eikonalECG compiled templates exist for regions "
+                    << "endocardialCells, mCells and epicardialCells; region '"
+                    << name << "' has no compiled template. Use "
+                    << "personalizedTemplates for other regions."
+                    << exit(FatalError);
+            }
+        }
+    }
 }
 
 
@@ -434,6 +584,15 @@ void eikonalECG::solve
         calculateTransmuralWeights(domain);
     }
 
+    if
+    (
+        !useManufacturedTemplate_
+     && regionWeightGradients_.size() != regionWeights_.size()
+    )
+    {
+        calculateRegionWeightGradients(domain.mesh());
+    }
+
     outputPtr_ =
         ecgModelIO::openTimeSeries
         (
@@ -465,6 +624,43 @@ void eikonalECG::solve
         dimensionedVector("zero", dimVoltage/dimLength, Zero)
     );
 
+    // Diagnostic only: Vm reconstructed on the mesh and differentiated by
+    // fvc::grad, as an independent check of the product-rule gradient.
+    autoPtr<volScalarField> checkVmPtr;
+    scalarField checkValues;
+    scalar checkMaxDiff = 0.0;
+    scalar checkMaxSignal = 0.0;
+    autoPtr<OFstream> checkOutputPtr;
+
+    if (checkGradVm_)
+    {
+        checkOutputPtr =
+            ecgModelIO::openTimeSeries
+            (
+                domain.mesh().time().globalPath()/"postProcessing",
+                "eikonalECG_checkGradVm.dat",
+                domain.electrodeNames()
+            );
+
+        checkVmPtr.reset
+        (
+            new volScalarField
+            (
+                IOobject
+                (
+                    "eikonalECG_checkVm",
+                    domain.mesh().time().timeName(),
+                    domain.mesh(),
+                    IOobject::NO_READ,
+                    IOobject::NO_WRITE
+                ),
+                domain.mesh(),
+                dimensionedScalar("zero", dimVoltage, 0.0),
+                zeroGradientFvPatchScalarField::typeName
+            )
+        );
+    }
+
     scalar sampleTime = startTime_;
     label sampleI = 0;
 
@@ -472,6 +668,27 @@ void eikonalECG::solve
     {
         reconstructGradVm(sampleTime, activationTime, gradActivationTime, gradVm);
         calculatePseudoECG(domain, gradVm, lastValues_);
+
+        if (checkGradVm_)
+        {
+            reconstructVm(sampleTime, activationTime, checkVmPtr.ref());
+            const volVectorField checkGradVm(fvc::grad(checkVmPtr()));
+            calculatePseudoECG(domain, checkGradVm, checkValues);
+
+            scalarField scaledCheck(checkValues);
+            if (sigmaE_ > VSMALL)
+            {
+                scaledCheck *= 1.0/(4.0*constant::mathematical::pi*sigmaE_);
+            }
+            ecgModelIO::writeRow(checkOutputPtr.ref(), sampleTime, scaledCheck);
+
+            forAll(lastValues_, eI)
+            {
+                checkMaxDiff =
+                    max(checkMaxDiff, mag(lastValues_[eI] - checkValues[eI]));
+                checkMaxSignal = max(checkMaxSignal, mag(lastValues_[eI]));
+            }
+        }
 
         if (sigmaE_ > VSMALL)
         {
@@ -491,6 +708,15 @@ void eikonalECG::solve
     }
 
     values = lastValues_;
+
+    if (checkGradVm_)
+    {
+        // Same normalisation for both, so the ratio is unit-free.
+        Info<< "eikonalECG checkGradVm: max |ECG(product rule) - "
+            << "ECG(fvc::grad Vm)| / max |ECG| = "
+            << checkMaxDiff/max(checkMaxSignal, VSMALL)
+            << " (before 1/(4 pi sigma) scaling)" << nl << endl;
+    }
 
     Info<< "eikonalECG: wrote sampled ECG from t=" << startTime_
         << " to t=" << endTime_ << " with deltaT=" << deltaT_
