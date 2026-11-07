@@ -86,8 +86,8 @@ closed forms in one variable, built by `slab_leadfield_mms.py`, which writes
 `reference/slab_leadfield.py` and `latex/leadfield_*.tex`. The
 curved-conductor potential (@sec-shell) is the transmission solution of
 `shell_mms.py`, which writes `latex/shell_transmission_*.tex` and the C++
-header `manufacturedShellTransmissionBathBidomainReference.H` of
-`src/verificationModels/bathBidomainVerification/`.
+header `manufacturedShellLeadFieldECGReference.H` of
+`src/verificationModels/ecgVerification/`.
 
 Set up the environment once and run a generator from that folder:
 
@@ -693,8 +693,8 @@ Meshes of the tutorial `leadFieldECG/sphericalShell` at $N=8$ (the tutorial defa
 ```bash
 python shell_mms.py --emit
 python shell_mms.py --self-check
-H=../../../src/verificationModels/bathBidomainVerification
-python shell_mms.py --check $H/manufacturedShellTransmissionBathBidomainReference.H
+H=../../../src/verificationModels/ecgVerification
+python shell_mms.py --check $H/manufacturedShellLeadFieldECGReference.H
 python -m pytest test_shell_mms.py
 python docs/leadField/leadfield_reference.py --run-check SHELL_RUN
 python docs/leadField/figures.py --mesh-case shell_hex=SHELL_HEX \

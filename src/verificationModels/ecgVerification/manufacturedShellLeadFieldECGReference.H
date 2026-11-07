@@ -17,16 +17,18 @@ License
 
 Description
     Exact fields, conductivities, sources and self-test samples of the
-    bath-bidomain transmission manufactured solution on the spherical shell.
+    bath-bidomain transmission manufactured solution on the spherical shell,
+    the forward problem of the shell lead-field ECG test
+    (manufacturedShellLeadFieldECGVerifier).
 
     Regenerate from generator/:
-        python shell_mms.py --write ../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H
+        python shell_mms.py --write ../../../src/verificationModels/ecgVerification/manufacturedShellLeadFieldECGReference.H
 
     sympy 1.14.0
 \*---------------------------------------------------------------------------*/
 
-#ifndef manufacturedShellTransmissionBathBidomainReference_H
-#define manufacturedShellTransmissionBathBidomainReference_H
+#ifndef manufacturedShellLeadFieldECGReference_H
+#define manufacturedShellLeadFieldECGReference_H
 
 #include "error.H"
 #include "label.H"

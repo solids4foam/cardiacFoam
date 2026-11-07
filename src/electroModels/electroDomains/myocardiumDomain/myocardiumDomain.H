@@ -97,6 +97,14 @@ protected:
     //- Recompute Iion_ at the freshly solved Vm_ without advancing the state
     void refreshIonicCurrent(scalar t);
 
+    //- The reaction step of both advance paths: the ionic ODE over
+    //  [t0, t0+dt], with the Vm-rate hint under sbdf2
+    void reactionStep(scalar t0, scalar dt);
+
+    //- The end of both advance paths, once Vm(t) is solved: under sbdf2
+    //  move Iion onto time t, then update the activation time
+    void finishStep(scalar t);
+
     void validateNoIonicStimulusInMonodomain() const;
 
     void bindBidomainField(volScalarField& phiE);
@@ -109,16 +117,24 @@ protected:
         return timeCouplingScheme_ == "sbdf2";
     }
 
+    //- Time steps taken since this run started, counting the current one.
+    //  The Iion and Vm histories of sbdf2 are not written, so a restarted
+    //  run rebuilds them exactly as a run from t = 0 does.
+    label stepsThisRun() const
+    {
+        return mesh().time().timeIndex() - mesh().time().startTimeIndex();
+    }
+
     //- Is there enough Iion history for the second-order source extrapolation?
     bool usesSbdf2Coupling() const
     {
-        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 3;
+        return usesSbdf2Scheme() && stepsThisRun() >= 3;
     }
 
     //- Is there enough Vm history to build the linear Vm extrapolant?
     bool usesSbdf2VmRate() const
     {
-        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 2;
+        return usesSbdf2Scheme() && stepsThisRun() >= 2;
     }
 
 public:
@@ -344,7 +360,7 @@ public:
         pimpleControl* pimplePtr
     ) override;
 
-    virtual void finalizeDiffusionStep() override;
+    virtual void finalizeDiffusionStep(scalar t0, scalar dt) override;
 
     virtual void bindExternalPhiE
     (

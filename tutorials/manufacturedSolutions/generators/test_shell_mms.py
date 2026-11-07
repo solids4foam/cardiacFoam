@@ -37,7 +37,7 @@ def test_ionic_closure():
 
 
 def test_header_check():
-    assert S.header_matches("../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H")
+    assert S.header_matches("../../../src/verificationModels/ecgVerification/manufacturedShellLeadFieldECGReference.H")
 
 
 def test_emitted_files_up_to_date():

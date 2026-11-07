@@ -333,7 +333,7 @@ else
     myocardium.solveDiffusionStep(t0, dt, pimplePtr);
 }
 
-myocardium.finalizeDiffusionStep();
+myocardium.finalizeDiffusionStep(t0, dt);
 
 ```
 

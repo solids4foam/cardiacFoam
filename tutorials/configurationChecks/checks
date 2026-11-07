@@ -114,6 +114,9 @@ bathBidomainRestartParallel            bath  bathBidomain                       
 # A decomposed Purkinje run, whose network state the master writes into the
 # case-root time directories, then reconstructed from the restart time on
 purkinjeRestartParallel                slab  monodomainPurkinjeReactionDiffusion    pass  np=2  post=restartLatestTime
+# sbdf2 does not write its Iion and Vm histories; a restart rebuilds them
+# with the same first-order start-up as a run from t = 0
+monodomainSbdf2Restart                 slab  monodomainSbdf2                        pass  post=restartLatestTime
 
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
@@ -123,6 +126,7 @@ bidomainReferenceValueWithoutPoint     slab  bidomain                    fail:ph
 unknownIonicModel                      slab  monodomainExplicit          fail:bogusIonicModel          monodomainSolverCoeffs/ionicModel=bogusIonicModel
 unknownConductivitySource              slab  monodomainExplicit          fail:bogusSource              monodomainSolverCoeffs/conductivitySource=bogusSource
 unknownTimeCouplingScheme              slab  monodomainImplicit          fail:bogusScheme              monodomainSolverCoeffs/timeCouplingScheme=bogusScheme
+sbdf2WithExplicitAlgorithm             slab  monodomainSbdf2             fail:requires~solutionAlgorithm~implicit   monodomainSolverCoeffs/solutionAlgorithm=explicit
 unknownVerificationModel               slab  monodomainVerificationNone  fail:bogusVerifier           monodomainSolverCoeffs/verificationModel/type=bogusVerifier
 unknownAdvanceScheme                   slab  monodomainPurkinjeReactionDiffusion fail:bogusAdvanceScheme monodomainSolverCoeffs/electrophysicsAdvanceScheme=bogusAdvanceScheme
 unknownConductionSystemDomain          slab  monodomainPurkinjeReactionDiffusion fail:bogusDomain  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/conductionSystemDomain=bogusDomain

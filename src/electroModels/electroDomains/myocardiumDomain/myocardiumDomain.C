@@ -430,6 +430,25 @@ myocardiumDomain::myocardiumDomain
             << exit(FatalError);
     }
 
+    // sbdf2 extrapolates Iion into the implicit diffusion solve; the
+    // explicit update reads the integrated Iion and would stay first order
+    if (usesSbdf2Scheme() && useExplicitAlgorithm_)
+    {
+        FatalErrorInFunction
+            << "timeCouplingScheme 'sbdf2' is an implicit-explicit scheme "
+            << "and requires solutionAlgorithm implicit. With "
+            << "solutionAlgorithm explicit use timeCouplingScheme 'godunov'."
+            << exit(FatalError);
+    }
+
+    if (usesSbdf2Scheme() && mesh().time().startTimeIndex() > 0)
+    {
+        Info<< "timeCouplingScheme sbdf2: restarted at time index "
+            << mesh().time().startTimeIndex() << "; the Iion and Vm "
+            << "histories are rebuilt, so the first two steps take the "
+            << "same first-order start-up as a run from t = 0." << endl;
+    }
+
     if (diffusionSolverPtr_->hasExtracellularPotential())
     {
         // The solver's own phiE; with a bath the bath grants its global
@@ -714,13 +733,7 @@ void myocardiumDomain::advance
     // and then augmented by the PVJ coupler (preparePrimaryCoupling).
     // Do NOT reset it here.
 
-    if (usesSbdf2VmRate() && ionicModel_.supportsVmRateCoupling())
-    {
-        ionicModel_.setVmRate(VmRate_);
-    }
-
-    solveIonicCurrent(t0, dt);
-    ionicModel_.clearVmRate();
+    reactionStep(t0, dt);
 
     updateGradVm();
 
@@ -740,10 +753,30 @@ void myocardiumDomain::advance
             << exit(FatalError);
     }
 
-    // Move Iion onto its own time level now that Vm(t0+dt) is known
+    finishStep(t0 + dt);
+}
+
+
+void myocardiumDomain::reactionStep(scalar t0, scalar dt)
+{
+    // The constructor admits sbdf2 only with an ionic model that takes the
+    // Vm rate
+    if (usesSbdf2VmRate())
+    {
+        ionicModel_.setVmRate(VmRate_);
+    }
+
+    solveIonicCurrent(t0, dt);
+    ionicModel_.clearVmRate();
+}
+
+
+void myocardiumDomain::finishStep(scalar t)
+{
+    // Move Iion onto its own time level now that Vm(t) is known
     if (usesSbdf2Scheme())
     {
-        refreshIonicCurrent(t0 + dt);
+        refreshIonicCurrent(t);
     }
 
     updateActivationTime();
@@ -752,7 +785,7 @@ void myocardiumDomain::advance
 
 void myocardiumDomain::solveReactionStep(scalar t0, scalar dt)
 {
-    solveIonicCurrent(t0, dt);
+    reactionStep(t0, dt);
 }
 
 
@@ -824,9 +857,9 @@ void myocardiumDomain::solveDiffusionStepOnce
 }
 
 
-void myocardiumDomain::finalizeDiffusionStep()
+void myocardiumDomain::finalizeDiffusionStep(scalar t0, scalar dt)
 {
-    updateActivationTime();
+    finishStep(t0 + dt);
 }
 
 

@@ -47,8 +47,7 @@ Author
 #define manufacturedShellLeadFieldECGVerifier_H
 
 #include "leadFieldECGVerifierBase.H"
-#include \
-"bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H"
+#include "ecgVerification/manufacturedShellLeadFieldECGReference.H"
 #include "PtrList.H"
 #include "overrideTypeName.H"
 

@@ -134,8 +134,12 @@ public:
             << exit(FatalError);
     }
 
-    virtual void finalizeDiffusionStep()
-    {}
+    //- Complete the split step over [t0, t0+dt] once Vm(t0+dt) is solved
+    virtual void finalizeDiffusionStep(scalar t0, scalar dt)
+    {
+        (void)t0;
+        (void)dt;
+    }
 
     //- Bind the bath domain's potentials: heartPhiE (heart mesh), read by
     //  the myocardium solver in place of an own phiE; globalPhiE (base

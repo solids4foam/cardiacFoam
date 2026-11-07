@@ -222,7 +222,7 @@ taken against this directory; `--check` exits 1 on a difference.
 | `shell_monodomain_mms.py` | `monodomainVerification/manufacturedShellMonodomainReference.H` |
 | `fda_bidomain_mms.py`, `slab_leadfield_mms.py` | none: `bidomainVerification/manufacturedFDABidomainReference.H` and `ecgVerification/manufacturedLeadFieldECGReference.H` are hand-written without generated regions; `test_slab_leadfield_mms.py` compares the slab module with `docs/leadField/leadfield_reference.py`, a branch-by-branch transcription of the latter |
 | `shell_bidomain_mms.py` | `bidomainVerification/manufacturedShellBidomainReference.H` |
-| `shell_mms.py` | `bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H` |
+| `shell_mms.py` | `ecgVerification/manufacturedShellLeadFieldECGReference.H` |
 | `shell_eikonal_mms.py` | `eikonalVerification/manufacturedShellEikonalReference.H` |
 
 A generated region lies between `// BEGIN GENERATED <name>` and

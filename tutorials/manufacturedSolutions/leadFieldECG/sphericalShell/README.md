@@ -12,7 +12,7 @@ lead-field method and its slab and layered references.
 
 The exact fields are the transmission solution of
 [`shell_mms.py`](../../generators/shell_mms.py)
-(`bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H`):
+(`ecgVerification/manufacturedShellLeadFieldECGReference.H`):
 
 ```text
 heart:   div((Gi + Ge) grad phi) = -div(Gi grad Vm) + S_H

@@ -23,8 +23,8 @@ the monodomain conductivity and f-hat the bidomain e-hat.
 
     python shell_mms.py --emit
     python shell_mms.py --self-check
-    python shell_mms.py --write ../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H
-    python shell_mms.py --check ../../../src/verificationModels/bathBidomainVerification/manufacturedShellTransmissionBathBidomainReference.H
+    python shell_mms.py --write ../../../src/verificationModels/ecgVerification/manufacturedShellLeadFieldECGReference.H
+    python shell_mms.py --check ../../../src/verificationModels/ecgVerification/manufacturedShellLeadFieldECGReference.H
 """
 
 import argparse
@@ -48,7 +48,7 @@ from shell_monodomain_mms import (_blend, _div, _dot, _fibonacci_sphere, _grad, 
                                   _radial, _wall_correction, _walls)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-HEADER_NAME = "manufacturedShellTransmissionBathBidomainReference.H"
+HEADER_NAME = "manufacturedShellLeadFieldECGReference.H"
 SAMPLE_DPS = 30
 
 # ---------------------------------------------------------------------------
@@ -739,10 +739,12 @@ License
 
 Description
     Exact fields, conductivities, sources and self-test samples of the
-    bath-bidomain transmission manufactured solution on the spherical shell.
+    bath-bidomain transmission manufactured solution on the spherical shell,
+    the forward problem of the shell lead-field ECG test
+    (manufacturedShellLeadFieldECGVerifier).
 
     Regenerate from generator/:
-        python shell_mms.py --write ../../../src/verificationModels/bathBidomainVerification/%s
+        python shell_mms.py --write ../../../src/verificationModels/ecgVerification/%s
 
     sympy %s
 \\*---------------------------------------------------------------------------*/
@@ -750,7 +752,7 @@ Description
 
 
 def generate_header():
-    guard = "manufacturedShellTransmissionBathBidomainReference_H"
+    guard = "manufacturedShellLeadFieldECGReference_H"
     L = [LICENSE % (HEADER_NAME, sp.__version__)]
     L += ["#ifndef " + guard, "#define " + guard, ""]
     L += codegen.INCLUDES
