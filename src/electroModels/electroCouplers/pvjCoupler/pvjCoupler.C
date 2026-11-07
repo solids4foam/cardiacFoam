@@ -91,7 +91,7 @@ pvjCoupler::pvjCoupler
             dict,
             "pvjKernel",
             "uniform",
-            wordList({"uniform", "gaussian", "linear"})
+            pvjMapper::kernelTypes
         )
     ),
     pvjRadius_(dict.lookupOrDefault<scalar>("pvjRadius", 0.5e-3)),
