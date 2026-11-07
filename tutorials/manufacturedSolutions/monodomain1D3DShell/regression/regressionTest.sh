@@ -17,7 +17,13 @@ fi
 # endocardium, bidirectional transfer, continuum reference, linear kernel) in
 # serial and compares the shell error summary, the graph error summary, the
 # junction rows of each terminal and the linear-kernel map against the
-# references.
+# references. The mesh comes from gmsh, so the case skips where it is missing
+# (regression/needs-tools).
+if ! command -v gmsh > /dev/null; then
+    echo "SKIP: this case needs gmsh"
+    exit "${REGRESSION_SKIP_CODE}"
+fi
+
 regression_init "1D-3D monodomain sealed-shell manufactured-solution regression test" \
     regression/monodomain1D3DShell.reference "$@"
 

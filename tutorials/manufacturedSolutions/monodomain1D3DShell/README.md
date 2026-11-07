@@ -87,6 +87,7 @@ the continuum-reference files `verification/coupled1D3DMonodomain_map.csv`,
 Regression (the defaults, serial): the shell and graph error summaries, and
 for each terminal the support, terminal-voltage and junction-current errors,
 the charge imbalance, and the linear-kernel normalisation and gather errors.
+The mesh comes from gmsh, so the regression skips where gmsh is missing.
 
 ```bash
 ./regression/regressionTest.sh
