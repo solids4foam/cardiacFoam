@@ -29,7 +29,7 @@ Time levels of the manufactured sources:
 - **The PDE source.** A verification model adds it at `t0 + dt` with either algorithm. The explicit update evaluates diffusion and `Iion` at `t0`, so its right-hand side mixes `t0` and `t0 + dt`. That is an O(Δt) term, within the first-order accuracy of the explicit update.
 - **The heart-only bidomain φe.** It is solved from the `Vm` at the start of the sweep, with its source at `t0 + dt`. This applies to the explicit update and to an implicit step with a single sweep (`nOuterCorrectors 1`, `nNonOrthogonalCorrectors 0`). In both cases φe lags `Vm` by one step, an O(Δt) error that a second sweep removes.
 
-In the implicit solve, PIMPLE `nOuterCorrectors` and `nNonOrthogonalCorrectors` repeat the same operation: they reassemble the `Vm` equation with updated explicit terms and solve it again. Neither evaluates the ionic current again, so only their product sets the number of solves. With a bath, `nOuterCorrectors` sets the number of `phiE`/`Vm` passes instead.
+In the implicit solve, PIMPLE `nOuterCorrectors` and `nNonOrthogonalCorrectors` repeat the same operation: they reassemble the `Vm` equation with updated explicit terms and solve it again. Neither evaluates the ionic current again, so only their product sets the number of solves. With a bath and `bathPredictorCorrector` on, `nOuterCorrectors` sets the number of `phiE`/`Vm` passes instead. With it off, the global `phiE` is solved once per step and the outer loop repeats only the `Vm` solve with that `phiE`.
 
 ## Folders
 
