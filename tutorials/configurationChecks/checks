@@ -127,6 +127,9 @@ unknownIonicModel                      slab  monodomainExplicit          fail:bo
 unknownConductivitySource              slab  monodomainExplicit          fail:bogusSource              monodomainSolverCoeffs/conductivitySource=bogusSource
 unknownTimeCouplingScheme              slab  monodomainImplicit          fail:bogusScheme              monodomainSolverCoeffs/timeCouplingScheme=bogusScheme
 sbdf2WithExplicitAlgorithm             slab  monodomainSbdf2             fail:requires~solutionAlgorithm~implicit   monodomainSolverCoeffs/solutionAlgorithm=explicit
+# An ionic-model stimulus next to the PDE externalStimulus stimulates twice
+monodomainIonicStimulus                slab  monodomainImplicit          fail:active~ionic-model~stimulus   monodomainSolverCoeffs/singleCellStimulus={stim_start~20;stim_duration~1;stim_amplitude~60;stim_period_S1~1000;nstim1~1;stim_period_S2~0;nstim2~0;}
+bidomainIonicStimulus                  slab  bidomain                    fail:active~ionic-model~stimulus   bidomainSolverCoeffs/singleCellStimulus={stim_start~20;stim_duration~1;stim_amplitude~60;stim_period_S1~1000;nstim1~1;stim_period_S2~0;nstim2~0;}
 unknownVerificationModel               slab  monodomainVerificationNone  fail:bogusVerifier           monodomainSolverCoeffs/verificationModel/type=bogusVerifier
 unknownAdvanceScheme                   slab  monodomainPurkinjeReactionDiffusion fail:bogusAdvanceScheme monodomainSolverCoeffs/electrophysicsAdvanceScheme=bogusAdvanceScheme
 unknownConductionSystemDomain          slab  monodomainPurkinjeReactionDiffusion fail:bogusDomain  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/conductionSystemDomain=bogusDomain
@@ -140,7 +143,8 @@ pvjDelayWithReactionDiffusion          slab  monodomainPurkinjeReactionDiffusion
 seedProfileWithReactionDiffusion       slab  monodomainPurkinjeReactionDiffusion fail:seedProfile~is~used~only monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=front
 unknownSeedProfile                     slab  eikonalPurkinje                        fail:Unknown~seedProfile eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=bogus
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 ecgDomains/ECG/ecgSolver=bogusECG
-eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               ecgDomains/ECG/ecgSolver=eikonalECG
+# A complete eikonalECG entry (sampling is required) on a monodomain heart
+eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:requires~myocardiumSolver~eikonalSolver  ecgDomains/ECG/ecgSolver=eikonalECG  ecgDomains/ECG/sampling={start~0;end~0.01;deltaT~1e-3;}
 eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!
 # The torso: torsoECG without one; the torso without torsoCoupling and
 # torsoCoupling without the torso; the bath with a monodomain heart; a key of

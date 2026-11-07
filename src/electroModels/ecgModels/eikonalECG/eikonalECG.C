@@ -21,6 +21,7 @@ License
 
 #include "dimVoltage.H"
 #include "ecgDomain.H"
+#include "myocardiumDomainInterface.H"
 #include "ecgModelIO.H"
 #include "fvc.H"
 #include "addToRunTimeSelectionTable.H"
@@ -330,6 +331,32 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
         );
 
     personalizedTemplatesGenerated_ = true;
+}
+
+
+void eikonalECG::checkMyocardium
+(
+    const myocardiumDomainInterface& myocardium,
+    const word& domainName
+) const
+{
+    if (!myocardium.activationMetricPtr())
+    {
+        FatalErrorInFunction
+            << "ECG domain '" << domainName
+            << "' selects ecgSolver eikonalECG, but the myocardium is not "
+            << "an activation-time tissue. eikonalECG requires "
+            << "myocardiumSolver eikonalSolver because it reconstructs Vm "
+            << "from the activation-time field."
+            << exit(FatalError);
+    }
+}
+
+
+void eikonalECG::checkState(const ecgDomain& domain) const
+{
+    (void)domain.activationTime();
+    (void)domain.conductivity();
 }
 
 

@@ -23,9 +23,10 @@ License
 #include "sealedWallPolicy.H"
 #include "compatibilityImbalance.H"
 #include "exposedPhiETrace.H"
-#include "bidomainSolver.H"
-#include "addToRunTimeSelectionTable.H"
+#include "heartPhiETrace.H"
+#include "electroPropertiesKeys.H"
 #include "OStringStream.H"
+#include "Switch.H"
 #include "dimVoltage.H"
 #include "surfaceFields.H"
 #include "nonOrthogonalCorrectorLoop.H"
@@ -34,12 +35,6 @@ namespace Foam
 {
 
 defineTypeNameAndDebug(extracellularPotentialDomain, 0);
-addToRunTimeSelectionTable
-(
-    electroStateDomain,
-    extracellularPotentialDomain,
-    dictionary
-);
 
 namespace
 {
@@ -139,10 +134,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
     // so the heart side of heart-torso faces carries Ge
     const bool totalWallConductivity = false;
 
-    const dictionary& myocardiumCoeffs = electroProperties.subDict
-    (
-        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
-    );
+    const dictionary& myocardiumCoeffs =
+        electroPropertiesKeys::myocardiumCoeffs(electroProperties);
     const Switch sealedHeartBoundary
     (
         myocardiumCoeffs.get<Switch>("sealedHeartBoundary")
@@ -317,8 +310,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     if
     (
-        bidomainSolver::readBathHeartPhiETrace(myocardiumCoeffs)
-     == bidomainSolver::heartPhiETrace::global
+        heartPhiETrace::readWithTorso(myocardiumCoeffs)
+     == heartPhiETrace::type::global
     )
     {
         const label nExposed = useExposedPhiETrace

@@ -49,6 +49,12 @@ namespace electroPropertiesKeys
 //  <solverType>Coeffs block.
 void check(const dictionary& electroProperties, const word& solverType);
 
+//- The <myocardiumSolver>Coeffs block of the top-level electroProperties,
+//  for readers that hold only the dictionary (the lead-field conductor and
+//  buildLeadFields, the bath domain). A running model passes its solver
+//  type explicitly (electroModel::myocardiumSolverType).
+const dictionary& myocardiumCoeffs(const dictionary& electroProperties);
+
 } // End namespace electroPropertiesKeys
 } // End namespace Foam
 

@@ -38,20 +38,6 @@ defineTypeNameAndDebug(ecgDomain, 0);
 namespace
 {
 
-word outputFileName(const word& solverType)
-{
-    if (solverType == "eikonalECG")
-    {
-        return word("eikonalECG.dat");
-    }
-
-    return
-        solverType == "torsoECG"
-      ? word("torsoECG.dat")
-      : word("pseudoECG.dat");
-}
-
-
 void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
 {
     if (verifierPtr.valid())
@@ -154,6 +140,7 @@ const volScalarField& ecgDomain::phiE() const
 ecgDomain::ecgDomain
 (
     const electroStateProvider& stateProvider,
+    autoPtr<ecgSolver>&& solver,
     const dictionary& dict,
     const word& domainName,
     const dictionary* inheritedElectrodePositionsPtr
@@ -162,9 +149,9 @@ ecgDomain::ecgDomain
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
     domainName_(domainName),
-    solverType_(ecgSolver::selectedType(dict)),
+    solverType_(solver->type()),
     outputPtr_(),
-    solverPtr_(ecgSolver::New(dict)),
+    solverPtr_(std::move(solver)),
     verificationModelPtr_(),
     numericValues_(),
     writeEveryTimeStep_(dict.lookupOrDefault<Switch>("writeEveryTimeStep", false)),
@@ -177,16 +164,7 @@ ecgDomain::ecgDomain
         << "  state source: electrophysiology provider"
         << nl << endl;
 
-    if (solverType_ == "pseudoECG")
-    {
-        (void)Vm();
-        (void)conductivity();
-    }
-    else if (solverType_ == "eikonalECG")
-    {
-        (void)activationTime();
-        (void)conductivity();
-    }
+    solverPtr_->checkState(*this);
 
     readElectrodes(dict);
 
@@ -197,7 +175,7 @@ ecgDomain::ecgDomain
             ecgModelIO::openTimeSeries
             (
                 outDir,
-                outputFileName(solverType_),
+                solverType_ + ".dat",
                 electrodeNames_
             );
     }
@@ -212,6 +190,7 @@ ecgDomain::ecgDomain
     );
     if (verificationModelPtr_.valid())
     {
+        verificationModelPtr_->bindSolver(*solverPtr_);
         verificationModelPtr_->validateProvider();
     }
 
@@ -313,6 +292,7 @@ bool ecgDomain::read(const dictionary& dict)
     );
     if (verificationModelPtr_.valid())
     {
+        verificationModelPtr_->bindSolver(*solverPtr_);
         verificationModelPtr_->validateProvider();
     }
 

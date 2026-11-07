@@ -31,7 +31,6 @@ Author
 #include "myocardiumSolver.H"
 #include "conductivityFieldIO.H"
 #include "overrideTypeName.H"
-#include "Enum.H"
 #include "Tuple2.H"
 #include "fvc.H"
 #include "fvm.H"
@@ -43,26 +42,6 @@ class bidomainSolver
 :
     public myocardiumSolver
 {
-public:
-
-    //- Heart phiE at the heart-torso wall with a bath (bathHeartPhiETrace)
-    enum class heartPhiETrace
-    {
-        //- zeroGradient heart phiE companion
-        zeroGradient,
-
-        //- The global phiE on the exposed heart faces (sealed heart only)
-        global
-    };
-
-    static const Enum<heartPhiETrace> heartPhiETraceNames;
-
-    //- bathHeartPhiETrace of the bidomainSolver Coeffs dict (required):
-    //  the single reader of the key. global requires sealedHeartBoundary
-    //  true.
-    static heartPhiETrace readBathHeartPhiETrace(const dictionary& dict);
-
-
 private:
 
     //- The heart phiE this solver owns and solves without a bath; null with
@@ -92,12 +71,6 @@ private:
         const conductivityFieldSpec& spec,
         const dictionary& dict
     ) const;
-
-    //- The heart phiE trace at the heart-torso wall: readBathHeartPhiETrace
-    //  with a torso (torsoCoupling bath or leadField). Without a torso the
-    //  key is rejected and the heart wall is the outer, zeroGradient
-    //  boundary.
-    static heartPhiETrace readHeartPhiETrace(const dictionary& dict);
 
     label referenceCell() const;
 

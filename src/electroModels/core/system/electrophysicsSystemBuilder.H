@@ -45,6 +45,7 @@ void configureMyocardiumDomain
 (
     electrophysicsSystem&    system,
     const fvMesh&            mesh,
+    const word&              solverType,
     const dictionary&        electroProperties,
     PtrList<volScalarField>& outFields,
     const wordList&          postProcessFieldNames,
@@ -82,7 +83,7 @@ void configureBathPotentialDomain
 void configureECGDomains
 (
     electrophysicsSystem&       system,
-    const electroStateProvider& myocardiumStateProvider,
+    const myocardiumDomainInterface& myocardium,
     const electroStateProvider* potentialStateProviderPtr,
     const dictionary&           electroProperties
 );

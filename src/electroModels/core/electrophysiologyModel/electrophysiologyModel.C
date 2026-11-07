@@ -32,7 +32,8 @@ defineDebugSwitch(electrophysiologyModel, 0);
 
 //  Register under the dict keys that users write in electroProperties.
 //  Both "monodomainSolver" and "bidomainSolver" map to this single class;
-//  the actual domain/kernel is selected by the builder from the Coeffs subdict.
+//  electroModel::New passes the selected name, which the builder uses to
+//  build the myocardium domain and its kernel.
 addNamedToRunTimeSelectionTable
 (
     electroModel,
@@ -62,56 +63,28 @@ addNamedToRunTimeSelectionTable
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-Foam::word Foam::electrophysiologyModel::readSolverType
-(
-    Time& runTime,
-    const word& region
-)
-{
-    // Pre-read electroProperties without registering so the base class
-    // constructor can subsequently register and own it properly.
-    IOdictionary props
-    (
-        IOobject
-        (
-            "electroProperties",
-            bool(region == dynamicFvMesh::defaultRegion)
-          ? fileName(runTime.caseConstant())
-          : fileName(runTime.caseConstant()/region),
-            runTime,
-            IOobject::MUST_READ,
-            IOobject::NO_WRITE,
-            false  // do not register
-        )
-    );
-
-    return word(props.lookup("myocardiumSolver"));
-}
-
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::electrophysiologyModel::electrophysiologyModel
 (
+    const word& solverType,
     Time& runTime,
     const word& region
 )
 :
-    // Pass the user-selected solver type (e.g. "monodomainSolver") to the
-    // base class so it reads the correct <type>Coeffs sub-dictionary.
-    electroModel(readSolverType(runTime, region), runTime, region),
+    electroModel(solverType, runTime, region),
     ionicModelPtr_(),
     verificationModelPtr_(),
     outFields_(),
     postProcessFields_()
 {
     // Assemble MyocardiumDomain (FVM kernel + ionic model + optional
-    // verification) or EikonalMyocardiumDomain. The builder reads the
-    // solver type from the active Coeffs sub-dict name.
+    // verification) or EikonalMyocardiumDomain for the solver type
     electrophysicsSystemBuilder::configureMyocardiumDomain
     (
         domainSystem_,
         mesh(),
+        myocardiumSolverType(),
         electroProperties(),
         outFields_,
         wordList(),         // postProcessFieldNames (filled by verification)

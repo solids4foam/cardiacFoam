@@ -459,4 +459,16 @@ void Foam::electroPropertiesKeys::check
 }
 
 
+const Foam::dictionary& Foam::electroPropertiesKeys::myocardiumCoeffs
+(
+    const dictionary& electroProperties
+)
+{
+    return electroProperties.subDict
+    (
+        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+    );
+}
+
+
 // ************************************************************************* //

@@ -38,10 +38,25 @@ ecgVerificationModel::ecgVerificationModel
 :
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
+    solverPtr_(nullptr),
     domainName_(domainName),
     electrodeNames_(electrodeNames),
     electrodePositions_(electrodePositions)
 {}
+
+
+const ecgSolver& ecgVerificationModel::solver() const
+{
+    if (!solverPtr_)
+    {
+        FatalErrorInFunction
+            << "ECG verification model " << type() << " of domain "
+            << domainName_ << " has no ECG solver bound"
+            << exit(FatalError);
+    }
+
+    return *solverPtr_;
+}
 
 
 word ecgVerificationModel::selectedType(const dictionary& dict)

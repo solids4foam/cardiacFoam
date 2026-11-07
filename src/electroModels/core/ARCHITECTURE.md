@@ -57,9 +57,9 @@ Specialised contract for 3D FVM-based domains. A 1D graph solver implements
 | `volScalarField& VmRef()` | Mutable transmembrane potential |
 | `const volScalarField& Vm()` | Immutable Vm |
 | `const volScalarField& Iion()` | Ionic current (read-only) |
-| `const volScalarField* IionOldPtr()` / `IionOldOldPtr()` | Previous timestep(s)' ionic current, for solvers that extrapolate it (default: `nullptr`) |
+| `tmp<volScalarField> ionicCurrentForImplicitDiffusion()` | The ionic current of the implicit solve: `Iion`, or its sbdf2 extrapolation; the domain owns the time coupling and its history |
 | `volScalarField& sourceField()` | Coupling source term (write) |
-| `volScalarField* implicitSourceCoeffPtr()` (const and non-const) | Optional implicit source coefficient (default: `nullptr`) |
+| `const volScalarField& implicitSourceCoeff()` | Cell-local implicit coefficient of the junction currents (zero without couplers), assembled as `fvm::Sp` |
 | `const dimensionedScalar& chi()` | Surface-to-volume ratio [1/m] |
 | `const dimensionedScalar& Cm()` | Membrane capacitance [F/m²] |
 
@@ -126,7 +126,10 @@ electroStateDomain
 ## Top-level selection
 
 `electroModel::New(...)` reads `myocardiumSolver <type>` from
-`constant/electroProperties` and dispatches to a registered `electroModel` subtype.
+`constant/electroProperties`, the only read of the key in a running model, and
+dispatches to a registered `electroModel` subtype, passing the type on. The
+model keeps it (`myocardiumSolverType()`) and hands it explicitly to the
+myocardium factories; nothing re-derives it from the `Coeffs` name.
 
 `electrophysiologyModel` is registered under `monodomainSolver`, `bidomainSolver`,
 and `eikonalSolver` — the same top-level wrapper is used for all
@@ -134,8 +137,9 @@ myocardium-centred spatial workflows.
 
 Inside `electrophysiologyModel`, `myocardiumDomainInterface::New(...)` performs
 the secondary myocardium-domain dispatch. `monodomainSolver` and
-`bidomainSolver` resolve through the `myocardiumSolver` table; `eikonalSolver`
-builds `eikonalMyocardiumDomain`. `singleCellSolver` is registered directly in
+`bidomainSolver` resolve through the `myocardiumSolver` table; the name
+`eikonalMyocardiumDomain::solverName` (`eikonalSolver`) builds
+`eikonalMyocardiumDomain`. `singleCellSolver` is registered directly in
 the parent `electroModel` table and does not enter this secondary dispatch.
 
 ---
@@ -208,14 +212,15 @@ earlier ones:
 | `configureAdvanceScheme(...)` | Select the runtime advance scheme |
 | `configureBathPotentialDomain(...)` | With `torsoCoupling bath`, instantiate the standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`) from the top-level `torso` block; requires the myocardium domain to already be configured |
 | `configureConductionDomains(...)` | Load the Purkinje graph, instantiate its domain, and build its PVJ couplings in the same pass |
-| `configureECGDomains(...)` | Instantiate the ECG domain(s), reading myocardium (and optionally bath) state via `electroStateProvider` |
+| `configureECGDomains(...)` | Select each domain's `ecgSolver`, which says what it reads (`source()`: myocardium, or the bath's `phiE`) and which myocardium it needs (`checkMyocardium`), then build the `ecgDomain` around it |
 
 No `configure*Couplings(...)` functions exist.
 
 `configureBathPotentialDomain(...)` instantiates an optional standalone
 domain, gated on `torsoCoupling bath` in the top level of
-`electroProperties`, from its `torso` block; a myocardium other than
-`bidomainSolver` is then fatal. It builds no couplings. It requires the myocardium
+`electroProperties`, from its `torso` block; a myocardium without an
+extracellular potential (`hasExtracellularPotential()`, i.e. not
+`bidomainSolver`) is then fatal. It builds no couplings. It requires the myocardium
 domain to already be configured (`system.hasMyocardium()`). It runs before
 `configureECGDomains(...)`: the potential domain it builds is one of the
 state providers `configureECGDomains(...)` routes a `torsoECG` domain to.

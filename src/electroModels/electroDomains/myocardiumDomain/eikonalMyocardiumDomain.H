@@ -81,6 +81,9 @@ class eikonalMyocardiumDomain
 
 public:
 
+    //- The myocardiumSolver name that selects this domain
+    static const word solverName;
+
     using myocardiumDomainInterface::advance;
 
     eikonalMyocardiumDomain

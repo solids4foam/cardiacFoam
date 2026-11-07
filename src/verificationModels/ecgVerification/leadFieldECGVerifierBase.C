@@ -20,6 +20,7 @@ License
 #include "leadFieldECGVerifierBase.H"
 
 #include "ecgModelIO.H"
+#include "ecgSolver.H"
 #include "verificationUtils.H"
 #include "fvMatrices.H"
 #include "PstreamReduceOps.H"
@@ -62,7 +63,7 @@ leadFieldECGVerifierBase::leadFieldECGVerifierBase
     (
         stateProvider, domainName, electrodeNames, electrodePositions
     ),
-    leadFieldPtr_(),
+    leadFieldPtr_(nullptr),
     electrodeCells_(),
     electrodeCentroids_(),
     referenceCentroid_(point::zero),
@@ -98,11 +99,18 @@ leadFieldECGVerifierBase::requirements() const
 
 void leadFieldECGVerifierBase::initialise()
 {
-    const IOdictionary& electroProperties =
-        mesh_.time().lookupObject<IOdictionary>("electroProperties");
-
-    leadFieldPtr_.reset(new leadFieldECG(electroProperties, domainName_));
-    leadFieldPtr_->load(stateProvider_, electrodeNames_, electrodePositions_);
+    // The ECG solver has sampled once before the first record, so its lead
+    // fields are loaded
+    leadFieldPtr_ = solver().leadField();
+    if (!leadFieldPtr_ || !leadFieldPtr_->loaded())
+    {
+        FatalErrorInFunction
+            << "ECG domain " << domainName_ << ": " << type()
+            << " verifies the lead-field ECG and needs ecgSolver torsoECG "
+            << "with torsoCoupling leadField, whose lead fields are loaded "
+            << "at its first solve"
+            << exit(FatalError);
+    }
 
     const leadFieldConductor& lfc = leadFieldPtr_->conductor();
     const fvMesh& baseMesh = stateProvider_.baseMesh();
@@ -334,7 +342,7 @@ void leadFieldECGVerifierBase::record
     const List<scalar>& numericValues
 )
 {
-    if (!leadFieldPtr_.valid())
+    if (!initialised())
     {
         initialise();
     }

@@ -45,7 +45,6 @@ bool selectedSolverRequiresIonicModel(const dictionary& dict)
     );
 
     return solverType != "eikonalSolver1D"
-        && solverType != "eikonalSolver"
         && solverType != "restitutionEikonalSolver1D";
 }
 

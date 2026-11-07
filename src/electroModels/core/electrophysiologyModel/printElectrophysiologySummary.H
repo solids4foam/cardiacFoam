@@ -24,10 +24,9 @@ Author
 \*---------------------------------------------------------------------------*/
 
 {
-    const word myoSolver(this->lookupOrDefault<word>("myocardiumSolver", "none"));
-    if (myoSolver != "none" && this->found(myoSolver + "Coeffs"))
+    const word& myoSolver = this->myocardiumSolverType();
     {
-        const dictionary& coeffs = this->subDict(myoSolver + "Coeffs");
+        const dictionary& coeffs = this->electroProperties();
 
         const word advanceScheme(coeffs.lookupOrDefault<word>("electrophysicsAdvanceScheme", "staggeredElectrophysicsAdvanceScheme"));
 

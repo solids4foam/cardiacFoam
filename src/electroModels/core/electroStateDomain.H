@@ -28,17 +28,11 @@ Author
 #ifndef electroStateDomain_H
 #define electroStateDomain_H
 
-#include "autoPtr.H"
-#include "dictionary.H"
 #include "electroDomainInterface.H"
 #include "electroStateProvider.H"
-#include "runTimeSelectionTables.H"
 
 namespace Foam
 {
-
-class fvMesh;
-class myocardiumDomainInterface;
 
 class electroStateDomain
 :
@@ -48,26 +42,6 @@ class electroStateDomain
 public:
 
     TypeName("electroStateDomain");
-
-    declareRunTimeSelectionTable
-    (
-        autoPtr,
-        electroStateDomain,
-        dictionary,
-        (
-            const fvMesh& baseMesh,
-            myocardiumDomainInterface& myocardium,
-            const dictionary& dict
-        ),
-        (baseMesh, myocardium, dict)
-    );
-
-    static autoPtr<electroStateDomain> New
-    (
-        const fvMesh& baseMesh,
-        myocardiumDomainInterface& myocardium,
-        const dictionary& dict
-    );
 
     virtual ~electroStateDomain() = default;
 };

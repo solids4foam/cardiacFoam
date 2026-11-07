@@ -36,6 +36,8 @@ Author
 namespace Foam
 {
 
+class ecgSolver;
+
 class ecgVerificationModel
 {
 public:
@@ -55,6 +57,9 @@ protected:
 
     const electroStateProvider& stateProvider_;
     const fvMesh& mesh_;
+
+    //- The ECG solver of the domain (bound by ecgDomain after New)
+    const ecgSolver* solverPtr_;
     word domainName_;
     wordList electrodeNames_;
     List<vector> electrodePositions_;
@@ -66,6 +71,9 @@ protected:
     const dimensionedScalar& requireChi() const;
     const dimensionedScalar& requireCm() const;
     const dimensionedScalar& requireC0() const;
+
+    //- The bound ECG solver; fatal before bindSolver
+    const ecgSolver& solver() const;
 
 public:
 
@@ -95,6 +103,13 @@ public:
     );
 
     virtual ~ecgVerificationModel() = default;
+
+    //- Observe the ECG solver whose output this model verifies; the solver
+    //  outlives the verification model (both are owned by ecgDomain)
+    void bindSolver(const ecgSolver& solver)
+    {
+        solverPtr_ = &solver;
+    }
 
     static autoPtr<ecgVerificationModel> New
     (

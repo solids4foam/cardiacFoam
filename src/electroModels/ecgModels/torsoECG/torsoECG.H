@@ -66,6 +66,17 @@ public:
     //  electroProperties, whose torsoCoupling selects the evaluation
     explicit torsoECG(const dictionary& dict);
 
+    virtual const leadFieldECG* leadField() const override
+    {
+        return leadFieldPtr_.get();
+    }
+
+    //- The bath's phiE with torsoCoupling bath, else the myocardium's Vm
+    virtual stateSource source() const override
+    {
+        return leadFieldPtr_ ? stateSource::myocardium : stateSource::bath;
+    }
+
     virtual void solve
     (
         ecgDomain& domain,

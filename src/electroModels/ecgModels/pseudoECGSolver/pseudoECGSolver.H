@@ -66,6 +66,9 @@ public:
         return hasOwnSampling_;
     }
 
+    //- Reads Vm and the conductivity
+    virtual void checkState(const ecgDomain& domain) const override;
+
     virtual void solve
     (
         ecgDomain& domain,

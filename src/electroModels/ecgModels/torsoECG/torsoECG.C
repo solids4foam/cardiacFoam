@@ -39,12 +39,26 @@ torsoECG::torsoECG(const dictionary& dict)
     cellsBuilt_(false)
 {
     const dictionary& electroProperties = dict.topDict();
+    const torsoCoupling::type coupling = torsoCoupling::read(electroProperties);
 
-    if
-    (
-        torsoCoupling::read(electroProperties)
-     == torsoCoupling::type::leadField
-    )
+    if (coupling == torsoCoupling::type::none)
+    {
+        FatalIOErrorInFunction(dict)
+            << "ECG domain '" << dict.dictName()
+            << "' selects ecgSolver torsoECG, but electroProperties "
+            << "has no torso. Add the region outside the heart and "
+            << "how its potential is obtained:" << nl
+            << "torso" << nl
+            << "{" << nl
+            << "    cellZones         (...);" << nl
+            << "    conductivityField <name>;" << nl
+            << "    ..." << nl
+            << "}" << nl
+            << "torsoCoupling bath | leadField;"
+            << exit(FatalIOError);
+    }
+
+    if (coupling == torsoCoupling::type::leadField)
     {
         leadFieldPtr_.reset
         (

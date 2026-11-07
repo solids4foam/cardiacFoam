@@ -203,7 +203,7 @@ Concrete reaction-diffusion implementations of `myocardiumSolver`.
 | Class | Type name | PDE / method | Notes |
 |---|---|---|---|
 | `monodomainSolver` | `monodomainSolver` | `∂Vm/∂t − ∇·(σᵢ∇Vm) = Iion` | Standard single-domain FVM |
-| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Owns a local `phiE`; with a bath domain, synchronizes it from the global `phiE` owner |
+| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Owns and solves its `phiE` without a bath; with a bath it owns none and reads the heart `phiE` that the bath domain owns and writes |
 
 `singleCellSolver` is registered in the parent `electroModel` table and bypasses the myocardium-domain factory. The canonical eikonal workflow selects `myocardiumSolver eikonalSolver` and builds `eikonalMyocardiumDomain`.
 
@@ -403,7 +403,7 @@ electroDomainInterface
 
 myocardiumSolver
     ├── monodomainSolver
-    └── bidomainSolver        (owns local phiE; may bind global phiE)
+    └── bidomainSolver        (owns phiE without a bath; reads the bath's heart phiE with one)
 
 electroStateProvider
     ← implemented by: myocardiumDomain, ecgDomain, extracellularPotentialDomain

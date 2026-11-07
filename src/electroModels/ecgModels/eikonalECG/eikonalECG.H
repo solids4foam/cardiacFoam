@@ -102,6 +102,17 @@ public:
         return true;
     }
 
+    //- Requires an activation-time myocardium (eikonalSolver), whose Vm it
+    //  reconstructs from the activation time
+    virtual void checkMyocardium
+    (
+        const myocardiumDomainInterface& myocardium,
+        const word& domainName
+    ) const override;
+
+    //- Reads the activation time and the conductivity
+    virtual void checkState(const ecgDomain& domain) const override;
+
     virtual void solve
     (
         ecgDomain& domain,

@@ -101,29 +101,16 @@ void monodomainSolver::solveDiffusionExplicit
         )
     );
 
-    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
-    {
-        // The junction coefficient is cell-local, so the matrix stays
-        // diagonal and the explicit solve keeps its cost.
-        solve
-        (
-            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          + fvm::Sp(*coeff, domain.VmRef())
-          == fvc::laplacian(tGf(), domain.Vm())
-           - domain.chi()*domain.Cm()*domain.Iion()
-           + domain.sourceField()
-        );
-    }
-    else
-    {
-        solve
-        (
-            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvc::laplacian(tGf(), domain.Vm())
-           - domain.chi()*domain.Cm()*domain.Iion()
-           + domain.sourceField()
-        );
-    }
+    // The junction coefficient is cell-local, so the matrix stays diagonal
+    // and the explicit solve keeps its cost.
+    solve
+    (
+        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+      + fvm::Sp(domain.implicitSourceCoeff(), domain.VmRef())
+     == fvc::laplacian(tGf(), domain.Vm())
+      - domain.chi()*domain.Cm()*domain.Iion()
+      + domain.sourceField()
+    );
 }
 
 
@@ -143,42 +130,14 @@ void monodomainSolver::solveDiffusionImplicit
         )
     );
 
-    tmp<volScalarField> tIionExtrap;
-    const volScalarField* IionOldPtr = domain.IionOldPtr();
-    const volScalarField* IionOldOldPtr = domain.IionOldOldPtr();
-    if (IionOldPtr && IionOldOldPtr)
-    {
-        const scalar deltaT = domain.mesh().time().deltaTValue();
-        const scalar deltaT0 = domain.mesh().time().deltaT0Value();
-        const scalar r = (deltaT0 > VSMALL) ? (deltaT / deltaT0) : 1.0;
-        tIionExtrap = *IionOldPtr + r*(*IionOldPtr - *IionOldOldPtr);
-    }
-    else
-    {
-        tIionExtrap = domain.Iion();
-    }
-
-    if (const volScalarField* coeff = domain.implicitSourceCoeffPtr())
-    {
-        solve
-        (
-            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          + fvm::Sp(*coeff, domain.VmRef())
-          == fvm::laplacian(tGf(), domain.Vm())
-           - domain.chi()*domain.Cm()*tIionExtrap()
-           + domain.sourceField()
-        );
-    }
-    else
-    {
-        solve
-        (
-            domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
-          == fvm::laplacian(tGf(), domain.Vm())
-           - domain.chi()*domain.Cm()*tIionExtrap()
-           + domain.sourceField()
-        );
-    }
+    solve
+    (
+        domain.chi()*domain.Cm()*fvm::ddt(domain.VmRef())
+      + fvm::Sp(domain.implicitSourceCoeff(), domain.VmRef())
+     == fvm::laplacian(tGf(), domain.Vm())
+      - domain.chi()*domain.Cm()*domain.ionicCurrentForImplicitDiffusion()
+      + domain.sourceField()
+    );
 }
 
 } // End namespace Foam

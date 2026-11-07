@@ -81,10 +81,6 @@ class electrophysiologyModel
     electrophysiologyModel(const electrophysiologyModel&) = delete;
     void operator=(const electrophysiologyModel&) = delete;
 
-    //- Pre-read the myocardiumSolver keyword so the correct Coeffs sub-dict
-    //  is passed to the base class constructor.
-    static word readSolverType(Time& runTime, const word& region);
-
     //- Set Vm from the loaded ionic state when the start time has no Vm file
     void setVmFromRestartState();
 
@@ -98,11 +94,11 @@ public:
 
     // Constructors
 
-        //- Construct from time and region.
-        //  Reads myocardiumSolver from electroProperties to determine which
-        //  Coeffs sub-dict to use, then builds the full domain system.
+        //- Construct for the myocardiumSolver solverType (selected by
+        //  electroModel::New), then build the full domain system
         electrophysiologyModel
         (
+            const word& solverType,
             Time& runTime,
             const word& region = dynamicFvMesh::defaultRegion
         );

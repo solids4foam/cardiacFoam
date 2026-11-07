@@ -18,41 +18,11 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "electroStateDomain.H"
-#include "error.H"
 
 namespace Foam
 {
 
 defineTypeNameAndDebug(electroStateDomain, 0);
-defineRunTimeSelectionTable(electroStateDomain, dictionary);
-
-
-autoPtr<electroStateDomain> electroStateDomain::New
-(
-    const fvMesh& baseMesh,
-    myocardiumDomainInterface& myocardium,
-    const dictionary& dict
-)
-{
-    const word domainType(dict.lookup("type"));
-
-    Info<< nl << "Selecting electroStateDomain " << domainType << endl;
-
-    auto* ctorPtr = dictionaryConstructorTable(domainType);
-
-    if (!ctorPtr)
-    {
-        FatalIOErrorInLookup
-        (
-            dict,
-            "type",
-            domainType,
-            *dictionaryConstructorTablePtr_
-        ) << exit(FatalIOError);
-    }
-
-    return autoPtr<electroStateDomain>(ctorPtr(baseMesh, myocardium, dict));
-}
 
 } // End namespace Foam
 

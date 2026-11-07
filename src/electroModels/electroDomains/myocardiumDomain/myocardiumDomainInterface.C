@@ -97,16 +97,6 @@ label myocardiumExposedFacesPatch
 namespace
 {
 
-word myocardiumSolverType(const dictionary& electroProperties)
-{
-    const word coeffDictName = electroProperties.dictName();
-
-    return coeffDictName.endsWith("Coeffs")
-        ? word(coeffDictName.substr(0, coeffDictName.size() - 6))
-        : coeffDictName;
-}
-
-
 scalarField readTransmuralDistance
 (
     const fvMesh& mesh,
@@ -276,6 +266,7 @@ scalarField readNamedScalarField
 autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
 (
     const fvMesh& mesh,
+    const word& solverType,
     const dictionary& electroProperties,
     PtrList<volScalarField>& outFields,
     const wordList& postProcessFieldNames,
@@ -285,9 +276,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
     scalar initialDeltaT
 )
 {
-    const word solverType = myocardiumSolverType(electroProperties);
-
-    if (solverType == "eikonalSolver")
+    if (solverType == eikonalMyocardiumDomain::solverName)
     {
         ionicModelPtr.clear();
         verificationModelPtr.clear();
@@ -364,6 +353,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         myocardiumDomain::New
         (
             mesh,
+            solverType,
             electroProperties,
             outFields,
             postProcessFieldNames,

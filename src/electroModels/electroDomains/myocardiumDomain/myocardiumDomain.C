@@ -126,6 +126,7 @@ void writeMappedCellField
 autoPtr<myocardiumDomain> myocardiumDomain::New
 (
     const fvMesh& supportMesh,
+    const word& solverType,
     const dictionary& electroProperties,
     PtrList<volScalarField>& outFields,
     const wordList& postProcessFieldNames,
@@ -134,10 +135,6 @@ autoPtr<myocardiumDomain> myocardiumDomain::New
     electroVerificationModel* verificationModelPtr
 )
 {
-    const word& cn = electroProperties.dictName();
-    const word solverType =
-        cn.endsWith("Coeffs") ? word(cn.substr(0, cn.size() - 6)) : cn;
-
     autoPtr<fvMeshSubset> meshSubsetPtr
     (
         createMyocardiumMeshSubset(supportMesh, electroProperties)
@@ -225,19 +222,6 @@ myocardiumDomain::myocardiumDomain
         resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
         dimensionedScalar("Vm", dimVoltage, -0.084),
         "zeroGradient"
-    ),
-    gradVm_
-    (
-        IOobject
-        (
-            "grad(" + Vm_.name() + ")",
-            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_).time().timeName(),
-            resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-            myocardiumFieldReadOption(meshSubsetPtr_.get()),
-            IOobject::NO_WRITE
-        ),
-        resolveMyocardiumMesh(supportMesh_, meshSubsetPtr_),
-        dimensionedVector("0", dimVoltage/dimLength, vector::zero)
     ),
     sourceField_
     (
@@ -449,6 +433,8 @@ myocardiumDomain::myocardiumDomain
             << "same first-order start-up as a run from t = 0." << endl;
     }
 
+    validateNoIonicStimulus();
+
     if (diffusionSolverPtr_->hasExtracellularPotential())
     {
         // The solver's own phiE; with a bath the bath grants its global
@@ -457,10 +443,6 @@ myocardiumDomain::myocardiumDomain
         {
             bindBidomainField(*phiEPtr);
         }
-    }
-    else
-    {
-        validateNoIonicStimulusInMonodomain();
     }
 
     if (verificationModelPtr_)
@@ -511,12 +493,6 @@ void myocardiumDomain::updateExternalStimulusCurrent
 }
 
 
-void myocardiumDomain::updateGradVm()
-{
-    gradVm_ = fvc::grad(Vm_);
-}
-
-
 void myocardiumDomain::updateActivationTime()
 {
     const scalarField& VmI = Vm_.primitiveField();
@@ -547,7 +523,7 @@ void myocardiumDomain::updateActivationTime()
 }
 
 
-void myocardiumDomain::validateNoIonicStimulusInMonodomain() const
+void myocardiumDomain::validateNoIonicStimulus() const
 {
     const StimulusProtocol& ionicStim = ionicModel_.stimulusProtocol();
     if
@@ -557,7 +533,8 @@ void myocardiumDomain::validateNoIonicStimulusInMonodomain() const
     {
         FatalErrorInFunction
             << "Detected active ionic-model stimulus protocol while using "
-            << "a reaction-diffusion myocardium domain." << nl
+            << "a reaction-diffusion (monodomain or bidomain) myocardium "
+            << "domain." << nl
             << "This can unintentionally combine ionic and PDE external "
             << "stimulation." << nl
             << "Disable the ionic protocol keys (stim_*, nstim*) and use "
@@ -715,6 +692,21 @@ void myocardiumDomain::solveIonicCurrent(scalar t0, scalar dt)
 }
 
 
+tmp<volScalarField> myocardiumDomain::ionicCurrentForImplicitDiffusion() const
+{
+    if (!usesSbdf2Coupling())
+    {
+        return tmp<volScalarField>(Iion_);
+    }
+
+    const scalar deltaT = mesh().time().deltaTValue();
+    const scalar deltaT0 = mesh().time().deltaT0Value();
+    const scalar r = (deltaT0 > VSMALL) ? (deltaT / deltaT0) : 1.0;
+
+    return IionOld_ + r*(IionOld_ - IionOldOld_);
+}
+
+
 void myocardiumDomain::refreshIonicCurrent(scalar t)
 {
     ionicModel_.evaluateIonicCurrent(t, Vm_, Iion_);
@@ -734,8 +726,6 @@ void myocardiumDomain::advance
     // Do NOT reset it here.
 
     reactionStep(t0, dt);
-
-    updateGradVm();
 
     if (useExplicitAlgorithm_)
     {
@@ -798,8 +788,6 @@ void myocardiumDomain::solveDiffusionStep
 {
     (void)t0;
 
-    updateGradVm();
-
     if (useExplicitAlgorithm_)
     {
         diffusionSolverPtr_->solveDiffusionExplicit(*this, dt);
@@ -842,7 +830,6 @@ void myocardiumDomain::solveDiffusionStepOnce
             *pimplePtr,
             [&]()
             {
-                updateGradVm();
                 diffusionSolverPtr_->solveDiffusionImplicit(*this, dt);
             }
         );

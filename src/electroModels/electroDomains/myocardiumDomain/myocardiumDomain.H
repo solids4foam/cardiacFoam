@@ -53,8 +53,6 @@ protected:
     const fvMesh& supportMesh_;
     autoPtr<myocardiumSolver> diffusionSolverPtr_;
     volScalarField Vm_;
-    // Registered grad(Vm), looked up by name by "corrected" boundary conditions.
-    volVectorField gradVm_;
     volScalarField sourceField_;
     volScalarField implicitSourceCoeff_;
     volScalarField Iion_;
@@ -88,9 +86,6 @@ protected:
 
     void updateActivationTime();
 
-    //- Refresh gradVm_ before a diffusion solve.
-    void updateGradVm();
-
     //- Advance the ionic ODE over [t0, t0+dt] and update Iion_.
     void solveIonicCurrent(scalar t0, scalar dt);
 
@@ -105,7 +100,9 @@ protected:
     //  move Iion onto time t, then update the activation time
     void finishStep(scalar t);
 
-    void validateNoIonicStimulusInMonodomain() const;
+    //- Fatal when the ionic model has an active stimulus protocol: the PDE
+    //  externalStimulus is the only stimulus of a reaction-diffusion heart
+    void validateNoIonicStimulus() const;
 
     void bindBidomainField(volScalarField& phiE);
 
@@ -141,12 +138,12 @@ public:
 
     using myocardiumDomainInterface::advance;
 
-    //- Factory: derives the solver type from the Coeffs subdict name and
-    //  delegates to the injecting constructor below.
-    //  ("monodomainSolverCoeffs" → selects "monodomainSolver", etc.)
+    //- Factory: builds the heart sub-mesh and the myocardiumSolver kernel
+    //  solverType, then delegates to the injecting constructor below
     static autoPtr<myocardiumDomain> New
     (
         const fvMesh& mesh,
+        const word& solverType,
         const dictionary& electroProperties,
         PtrList<volScalarField>& outFields,
         const wordList& postProcessFieldNames,
@@ -276,9 +273,14 @@ public:
         return &implicitSourceCoeff_;
     }
 
-    virtual const volScalarField* implicitSourceCoeffPtr() const override
+    virtual bool hasExtracellularPotential() const override
     {
-        return &implicitSourceCoeff_;
+        return diffusionSolverPtr_->hasExtracellularPotential();
+    }
+
+    virtual const volScalarField& implicitSourceCoeff() const override
+    {
+        return implicitSourceCoeff_;
     }
 
     virtual const volScalarField& activationTime() const override
@@ -306,15 +308,10 @@ public:
         return Iion_;
     }
 
-    virtual const volScalarField* IionOldPtr() const override
-    {
-        return usesSbdf2Coupling() ? &IionOld_ : nullptr;
-    }
-
-    virtual const volScalarField* IionOldOldPtr() const override
-    {
-        return usesSbdf2Coupling() ? &IionOldOld_ : nullptr;
-    }
+    //- Iion, or under sbdf2 (from the third step of the run) its
+    //  extrapolation I^n + r (I^n - I^(n-1)), r = dt/dt_old
+    virtual tmp<volScalarField> ionicCurrentForImplicitDiffusion()
+        const override;
 
     virtual const dimensionedScalar& chi() const override
     {

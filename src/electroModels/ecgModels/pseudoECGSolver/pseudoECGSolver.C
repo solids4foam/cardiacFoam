@@ -64,6 +64,13 @@ pseudoECGSolver::pseudoECGSolver(const dictionary& dict)
 }
 
 
+void pseudoECGSolver::checkState(const ecgDomain& domain) const
+{
+    (void)domain.Vm();
+    (void)domain.conductivity();
+}
+
+
 void pseudoECGSolver::solve
 (
     ecgDomain& domain,

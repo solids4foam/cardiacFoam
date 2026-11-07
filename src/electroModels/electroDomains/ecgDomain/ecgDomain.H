@@ -97,9 +97,12 @@ public:
 
     // Constructors
 
+        //- Construct around the ECG solver the builder selected for the
+        //  domain entry dict (takes ownership), reading stateProvider
         ecgDomain
         (
             const electroStateProvider& stateProvider,
+            autoPtr<ecgSolver>&& solver,
             const dictionary& dict,
             const word& domainName = "ECG",
             const dictionary* inheritedElectrodePositionsPtr = nullptr

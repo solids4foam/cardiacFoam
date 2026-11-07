@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "leadFieldConductor.H"
+#include "electroPropertiesKeys.H"
 #include "ecgElectrodeCells.H"
 #include "myocardiumDomain.H"
 #include "conductivityFieldIO.H"
@@ -37,16 +38,6 @@ namespace Foam
 
 namespace
 {
-
-// The <myocardiumSolver>Coeffs block of electroProperties
-const dictionary& myocardiumCoeffs(const dictionary& electroProperties)
-{
-    return electroProperties.subDict
-    (
-        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
-    );
-}
-
 
 // The entry ecgDomainName of the ecgDomains block of electroProperties
 const dictionary& ecgDomainDict
@@ -230,10 +221,10 @@ leadFieldConductor::leadFieldConductor
     baseMesh_(baseMesh),
     solverType_(electroProperties.get<word>("myocardiumSolver")),
     bidomain_(solverType_ == "bidomainSolver"),
-    bathHeartPhiETrace_(bidomainSolver::heartPhiETrace::zeroGradient),
+    bathHeartPhiETrace_(heartPhiETrace::type::zeroGradient),
     sealedHeartBoundary_
     (
-        myocardiumCoeffs(electroProperties).get<Switch>("sealedHeartBoundary")
+        electroPropertiesKeys::myocardiumCoeffs(electroProperties).get<Switch>("sealedHeartBoundary")
     ),
     myocardiumZone_(),
     electrodes_(electrodes),
@@ -250,20 +241,20 @@ leadFieldConductor::leadFieldConductor
 {
     checkMyocardium(electroProperties, ecgDomainName);
 
-    const dictionary& electroCoeffs = myocardiumCoeffs(electroProperties);
+    const dictionary& electroCoeffs = electroPropertiesKeys::myocardiumCoeffs(electroProperties);
     myocardiumZone_ = electroCoeffs.get<word>("cellZone");
     if (bidomain_)
     {
         bathHeartPhiETrace_ =
-            bidomainSolver::readBathHeartPhiETrace(electroCoeffs);
+            heartPhiETrace::readWithTorso(electroCoeffs);
 
-        if (bathHeartPhiETrace_ != bidomainSolver::heartPhiETrace::zeroGradient)
+        if (bathHeartPhiETrace_ != heartPhiETrace::type::zeroGradient)
         {
             FatalIOErrorInFunction(electroCoeffs)
                 << "ECG domain '" << ecgDomainName << "': lead fields are "
                 << "built with the zeroGradient heart phiE companion; "
                 << "bathHeartPhiETrace "
-                << bidomainSolver::heartPhiETraceNames[bathHeartPhiETrace_]
+                << heartPhiETrace::names[bathHeartPhiETrace_]
                 << " is not supported."
                 << exit(FatalIOError);
         }
@@ -294,7 +285,7 @@ leadFieldConductor::leadFieldConductor
     ownSubsetPtr_ =
         createMyocardiumMeshSubset
         (
-            baseMesh_, myocardiumCoeffs(electroProperties)
+            baseMesh_, electroPropertiesKeys::myocardiumCoeffs(electroProperties)
         );
 
     if (!ownSubsetPtr_.valid() || !ownSubsetPtr_->hasSubMesh())
@@ -397,7 +388,7 @@ void leadFieldConductor::checkMyocardium
             << exit(FatalIOError);
     }
 
-    const dictionary& electroCoeffs = myocardiumCoeffs(electroProperties);
+    const dictionary& electroCoeffs = electroPropertiesKeys::myocardiumCoeffs(electroProperties);
 
     if (!bidomain_ && solverType_ != "monodomainSolver")
     {
@@ -432,7 +423,7 @@ void leadFieldConductor::build
 
     setHeartConductivities
     (
-        myocardiumCoeffs(electroProperties), ecgDict, heart
+        electroPropertiesKeys::myocardiumCoeffs(electroProperties), ecgDict, heart
     );
     locateElectrodes(ecgDict);
 
@@ -713,7 +704,7 @@ dictionary leadFieldConductor::signature() const
         sig.add
         (
             "bathHeartPhiETrace",
-            bidomainSolver::heartPhiETraceNames[bathHeartPhiETrace_]
+            heartPhiETrace::names[bathHeartPhiETrace_]
         );
     }
     sig.add("geometryScheme", baseMesh_.geometry().type());

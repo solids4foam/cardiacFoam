@@ -89,8 +89,10 @@ class leadFieldECGVerifierBase
         }
     };
 
-    //- The channels and conductor of the ECG domain, evaluated on any Vm
-    autoPtr<leadFieldECG> leadFieldPtr_;
+    //- The lead fields of the ECG domain's torsoECG solver (the instance
+    //  that produces the verified output), evaluated on any Vm; null until
+    //  the first sample
+    const leadFieldECG* leadFieldPtr_;
 
     labelList electrodeCells_;
     List<point> electrodeCentroids_;
@@ -156,7 +158,7 @@ protected:
     //- True once the channels and the reference are built (first sample)
     bool initialised() const
     {
-        return leadFieldPtr_.valid();
+        return leadFieldPtr_ != nullptr;
     }
 
     //- The channels and conductor of the ECG domain (once initialised)

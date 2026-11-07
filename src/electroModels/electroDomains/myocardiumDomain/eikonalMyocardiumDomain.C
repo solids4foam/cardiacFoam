@@ -37,6 +37,8 @@ License
 namespace Foam
 {
 
+const word eikonalMyocardiumDomain::solverName("eikonalSolver");
+
 namespace
 {
 

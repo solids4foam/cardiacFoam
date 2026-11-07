@@ -59,7 +59,7 @@ Author
 #define leadFieldConductor_H
 
 #include "passiveConductor.H"
-#include "bidomainSolver.H"
+#include "heartPhiETrace.H"
 #include "ecgElectrodes.H"
 #include "electroStateProvider.H"
 #include "fvMeshSubset.H"
@@ -79,7 +79,7 @@ class leadFieldConductor
     const bool bidomain_;
 
     // bidomainSolver heart phiE trace at the heart-torso wall.
-    bidomainSolver::heartPhiETrace bathHeartPhiETrace_;
+    heartPhiETrace::type bathHeartPhiETrace_;
 
     Switch sealedHeartBoundary_;
 

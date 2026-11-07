@@ -53,9 +53,13 @@ public:
 
     using electroDomainInterface::advance;
 
+    //- Build the domain of the myocardiumSolver solverType:
+    //  eikonalMyocardiumDomain for its solver name, else a reaction-diffusion
+    //  myocardiumDomain with that myocardiumSolver kernel
     static autoPtr<myocardiumDomainInterface> New
     (
         const fvMesh& mesh,
+        const word& solverType,
         const dictionary& electroProperties,
         PtrList<volScalarField>& outFields,
         const wordList& postProcessFieldNames,
@@ -66,6 +70,12 @@ public:
     );
 
     virtual ~myocardiumDomainInterface() = default;
+
+    //- Does the tissue model solve an extracellular potential (bidomain)?
+    virtual bool hasExtracellularPotential() const
+    {
+        return false;
+    }
 
     virtual const ElectromechanicalSignalProvider* provider() const
     {
