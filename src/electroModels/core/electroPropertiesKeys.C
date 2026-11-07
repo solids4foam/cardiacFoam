@@ -57,7 +57,8 @@ const wordList tissueKeys
     "phiERefPoint", "phiEReferenceValue", "ecgDomains",
     "conductionNetworkDomains", "domainCouplings", "c0",
     "eikonalAdvectionDiffusionApproach", "stimulusLocationMin",
-    "stimulusLocationMax", "useGraphPrePopulation",
+    "stimulusLocationMax", "stimulusLocationMinList",
+    "stimulusLocationMaxList", "useGraphPrePopulation",
     "eikonalConormalStabilisation"
 });
 
@@ -244,7 +245,7 @@ void checkECGDomains(const dictionary& ecgDomains)
             "ecgSolver", "electrodePositions", "sampling",
             "sigmaExtracellular", "torsoSurface", "verificationModel",
             "ecgVerificationModel", "personalizedTemplates", "coupling",
-            "writeEveryTimeStep"
+            "writeEveryTimeStep", "checkGradVm"
         }),
         wordRes(),
         wordList({"electrodePositions"})

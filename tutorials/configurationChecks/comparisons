@@ -18,6 +18,9 @@ differ  monodomainImplicit                   bidomain                           
 differ  eikonal                              eikonalPurkinje                                  1/activationTime
 differ  eikonalPurkinje                      eikonalPurkinjePvjDelay                          1/activationTime
 differ  eikonalPurkinje                      eikonalPurkinjeSeedFlat                          1/activationTime
+differ  eikonal                              eikonalSeedBoxList                               1/activationTime
+# A zero-conductance edge must block the eikonal network
+differ  eikonalPurkinje                      eikonalPurkinjeCutBranch                         1/activationTime.purkinjeNetwork
 differ  eikonalECG                           eikonalECGRegionStates                           postProcessing/eikonalECG.dat
 
 # Purkinje junction couplers must feed the network activation into the slab
@@ -33,6 +36,9 @@ same    monodomainPurkinjeReactionDiffusion  monodomainPurkinjeIonicExport      
 same    monodomainExplicit                   monodomainPseudoECG                              0.005/Vm
 same    bidomain                             bidomainPseudoECG                                0.005/Vm
 same    eikonal                              eikonalECG                                       1/activationTime
+same    eikonal                              eikonalSeedBoxListSingle                         1/activationTime
+same    eikonalPurkinje                      eikonalPurkinjeCutBranchIgnored                  1/activationTime.purkinjeNetwork
+same    eikonalPurkinje                      eikonalPurkinjeCutBranchIgnored                  1/activationTime
 same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE
 
 # Parallel runs must reproduce the serial ones up to round-off: rtol covers

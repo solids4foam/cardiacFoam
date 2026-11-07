@@ -28,16 +28,20 @@ eikonalSolverCoeffs
     stimulusLocationMin (0 0 0);
     stimulusLocationMax (1e-3 10e-3 0.1e-3);
 
+    // Transmural coordinate t runs 0 -> 1 across x, so the ECG sees the
+    // template difference between endocardium and epicardium (the
+    // sum_k U_k grad(w_k) term); post/eikonalECGGradientCheck checks it.
     ionicHeterogeneity
     {
         mode              namedRegions;
         field             t;
-        transitionMode    hard;
+        transitionMode    blend;
+        transitionWidth   0.2;
+        smoothing         smoothstep;
         regions
         {
-            endocardialCells { range (0 0.3); }
-            mCells           { range (0.3 0.7); }
-            epicardialCells  { range (0.7 1); }
+            endocardialCells { range (0 0.5); }
+            epicardialCells  { range (0.5 1); }
         }
     }
 
@@ -46,11 +50,12 @@ eikonalSolverCoeffs
         ECG
         {
             ecgSolver eikonalECG;
+            checkGradVm true;
             sigmaExtracellular 0.2;
             sampling
             {
                 start  0;
-                end    0.01;
+                end    0.4;
                 deltaT 1e-3;
             }
             electrodePositions

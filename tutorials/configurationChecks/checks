@@ -36,6 +36,10 @@ monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion
 monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
 monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
 eikonalPurkinje                        slab  eikonalPurkinje                        pass
+eikonalSeedBoxList                     slab  eikonal                                pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3)~(10e-3~10e-3~0.1e-3))
+eikonalSeedBoxListSingle               slab  eikonal                                pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
+eikonalPurkinjeCutBranch               slab  eikonalPurkinjeCutBranch               pass
+eikonalPurkinjeCutBranchIgnored        slab  eikonalPurkinjeCutBranch               pass  eikonalSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/useEdgeConductance=false
 eikonalPurkinjePvjDelay                slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
 # An ionic state of the graph model exported next to the coupling outputs;
 # in parallel each processor holds only its share of the graph nodes (#48)
@@ -45,6 +49,7 @@ monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
 bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
 eikonalECG                             slab  eikonalECG                             pass
+eikonalECGGradientCheck                slab  eikonalECG                             pass  post=eikonalECGGradientCheck
 eikonalECGRegionStates                 slab  eikonalECGRegionStates                 pass
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
@@ -105,6 +110,7 @@ twoConductionNetworkDomains            slab  monodomainPurkinjeReactionDiffusion
 pvjDelayWithReactionDiffusion          slab  monodomainPurkinjeReactionDiffusion fail:pvjDelay~is~not~used monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
 seedProfileWithReactionDiffusion       slab  monodomainPurkinjeReactionDiffusion fail:seedProfile~is~used~only monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=front
 unknownSeedProfile                     slab  eikonalPurkinje                        fail:Unknown~seedProfile eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=bogus
+eikonalSeedBoxListSizeMismatch         slab  eikonal                                fail:same~size  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
 ecgDomainCoupling                      slab  monodomainPseudoECG         fail:ECG~domains~take~no~coupling monodomainSolverCoeffs/ecgDomains/ECG/coupling={electroDomainCoupler~reactionDiffusionPvjCoupler;}
 twoPseudoECGDomains                    slab  monodomainPseudoECG         fail:both~select~ecgSolver~pseudoECG monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=bogusECG
