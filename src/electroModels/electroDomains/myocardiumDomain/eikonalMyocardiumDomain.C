@@ -30,6 +30,7 @@ License
 #include "facePeclet.H"
 #include "sealedWallPolicy.H"
 #include "regionSplit.H"
+#include "stimulusIO.H"
 
 #include <cmath>
 #include <limits>
@@ -555,24 +556,33 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
 {
     sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
-    const boundBox bb
-    (
-        point(electroProperties.lookup("stimulusLocationMin")),
-        point(electroProperties.lookup("stimulusLocationMax"))
-    );
+    // One box (stimulusLocationMin/Max) or several
+    // (stimulusLocationMinList/MaxList), read as for the external stimulus
+    List<boundBox> stimulusBoxes;
+    stimulusIO::readStimulusBoxes(electroProperties, stimulusBoxes);
 
     labelHashSet stimCellSet;
-    const fvMesh& myocardiumMesh = mesh();
+    const vectorField& centres = mesh().C();
 
-    forAll(myocardiumMesh.C(), cellI)
+    forAll(stimulusBoxes, boxI)
     {
-        if (bb.contains(myocardiumMesh.C()[cellI]))
+        label nBoxCells = 0;
+
+        forAll(centres, cellI)
         {
-            stimCellSet.insert(cellI);
+            if (stimulusBoxes[boxI].contains(centres[cellI]))
+            {
+                stimCellSet.insert(cellI);
+                ++nBoxCells;
+            }
         }
+
+        Info<< "Eikonal stimulus box " << boxI << " " << stimulusBoxes[boxI]
+            << ": " << returnReduce(nBoxCells, sumOp<label>()) << " cells"
+            << endl;
     }
 
-    stimulusCellIDs_ = stimCellSet.toc();
+    stimulusCellIDs_ = stimCellSet.sortedToc();
 
 
     verificationModelPtr_ =
