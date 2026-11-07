@@ -25,6 +25,7 @@ A step over `[t0, t0+dt]` is a reaction step, the ionic ODE, followed by the dif
 `sbdf2` needs two steps of history. The first step of a run uses no rate hint and the first two use no extrapolation. These histories are not written. A restarted run therefore rebuilds them exactly as a run from `t = 0` does, and the log records the restart.
 
 Time levels of the manufactured sources:
+
 - **The PDE source.** A verification model adds it at `t0 + dt` with either algorithm. The explicit update evaluates diffusion and `Iion` at `t0`, so its right-hand side mixes `t0` and `t0 + dt`. That is an O(Δt) term, within the first-order accuracy of the explicit update.
 - **The heart-only bidomain φe.** It is solved from the `Vm` at the start of the sweep, with its source at `t0 + dt`. This applies to the explicit update and to an implicit step with a single sweep (`nOuterCorrectors 1`, `nNonOrthogonalCorrectors 0`). In both cases φe lags `Vm` by one step, an O(Δt) error that a second sweep removes.
 
