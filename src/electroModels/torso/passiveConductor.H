@@ -289,10 +289,6 @@ public:
         const bool registerObject
     );
 
-    //- Cell of mesh containing p, on the one processor whose cell contains
-    //  it (-1 elsewhere); fatal unless exactly one processor has one
-    static label locateReferenceCell(const fvMesh& mesh, const point& p);
-
 
     //- Construct from the base mesh, the heart sub-mesh with its cell and
     //  face maps to the base mesh, Gi and Ge on the heart mesh, the torso

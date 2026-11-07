@@ -20,7 +20,8 @@ License
 #include "monodomainSolver.H"
 
 #include "IOmanip.H"
-#include "myocardiumDomain.H"
+#include "electroVolumeFieldDomain.H"
+#include "dimVoltage.H"
 #include "addToRunTimeSelectionTable.H"
 #include "conductivityFieldIO.H"
 #include "insulatedFaceConductivity.H"
@@ -42,7 +43,8 @@ monodomainSolver::monodomainSolver
     const fvMesh& mesh,
     const fvMesh& supportMesh,
     const fvMeshSubset* meshSubsetPtr,
-    const dictionary& electroProperties
+    const dictionary& electroProperties,
+    const bool externalPhiE
 )
 :
     conductivity_

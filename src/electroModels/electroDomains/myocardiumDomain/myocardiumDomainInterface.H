@@ -34,6 +34,7 @@ Author
 #include "electroDomainCouplingEndpoints.H"
 #include "autoPtr.H"
 #include "pimpleControl.H"
+#include "myocardiumMeshSubset.H"
 
 namespace Foam
 {
@@ -55,21 +56,29 @@ public:
 
     //- Build the domain of the myocardiumSolver solverType:
     //  eikonalMyocardiumDomain for its solver name, else a reaction-diffusion
-    //  myocardiumDomain with that myocardiumSolver kernel
+    //  myocardiumDomain with that myocardiumSolver kernel. externalPhiE: the
+    //  bath domain solves the extracellular potential (torsoCoupling bath).
     static autoPtr<myocardiumDomainInterface> New
     (
         const fvMesh& mesh,
         const word& solverType,
         const dictionary& electroProperties,
-        PtrList<volScalarField>& outFields,
-        const wordList& postProcessFieldNames,
-        PtrList<volScalarField>& postProcessFields,
-        autoPtr<ionicModel>& ionicModelPtr,
-        autoPtr<electroVerificationModel>& verificationModelPtr,
-        scalar initialDeltaT
+        scalar initialDeltaT,
+        const bool externalPhiE
     );
 
     virtual ~myocardiumDomainInterface() = default;
+
+    //- Read the tissue's ionic restart state; false when there is none or
+    //  the tissue has no ionic model
+    virtual bool readRestartState()
+    {
+        return false;
+    }
+
+    //- Write the tissue's ionic restart state (none without an ionic model)
+    virtual void writeRestartState() const
+    {}
 
     //- Does the tissue model solve an extracellular potential (bidomain)?
     virtual bool hasExtracellularPotential() const
@@ -151,26 +160,30 @@ public:
         (void)dt;
     }
 
-    //- Bind the bath domain's potentials: heartPhiE (heart mesh), read by
-    //  the myocardium solver in place of an own phiE; globalPhiE (base
-    //  mesh), which its owner, the bath, grants to a verification model
-    //  for the manufactured initial values; heartCellMap from heart to base
-    //  cells
-    virtual void bindExternalPhiE
-    (
-        const volScalarField& heartPhiE,
-        volScalarField& globalPhiE,
-        const labelUList& heartCellMap
-    )
+    //- Read the bath domain's heart phiE (heart mesh) in the myocardium
+    //  solver in place of an own phiE
+    virtual void bindExternalPhiE(const volScalarField& heartPhiE)
     {
         (void)heartPhiE;
-        (void)globalPhiE;
-        (void)heartCellMap;
 
         FatalErrorInFunction
             << "The selected myocardium domain cannot bind an external phiE "
             << "field. Unified phiE requires a bidomain myocardium domain."
             << exit(FatalError);
+    }
+
+    //- Verification only: grant the bath's global phiE (base mesh) to this
+    //  domain's verification model, which writes the manufactured initial
+    //  values into it; heartCellMap maps heart to base cells. Nothing to do
+    //  without a verification model.
+    virtual void bindVerificationPhiE
+    (
+        volScalarField& globalPhiE,
+        const labelUList& heartCellMap
+    )
+    {
+        (void)globalPhiE;
+        (void)heartCellMap;
     }
 
     virtual void unbindExternalPhiE()
@@ -182,7 +195,7 @@ public:
     }
 
     //- Verification model of this domain, or nullptr.
-    virtual electroVerificationModel* verificationModel() const
+    virtual const electroVerificationModel* verificationModel() const
     {
         return nullptr;
     }
@@ -202,16 +215,6 @@ public:
     }
 };
 
-
-//- Support-mesh patch that receives the faces a myocardium cellZone exposes.
-//  electroProperties' exposedFacesPatch names it; otherwise the first patch
-//  that is neither empty nor coupled. OpenFOAM's own default for exposed
-//  faces is an empty patch, which gradients and Laplacian corrections skip.
-label myocardiumExposedFacesPatch
-(
-    const fvMesh& supportMesh,
-    const dictionary& electroProperties
-);
 
 } // End namespace Foam
 

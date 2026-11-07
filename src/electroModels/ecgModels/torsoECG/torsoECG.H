@@ -66,7 +66,9 @@ public:
     //  electroProperties, whose torsoCoupling selects the evaluation
     explicit torsoECG(const dictionary& dict);
 
-    virtual const leadFieldECG* leadField() const override
+    //- The lead fields it evaluates (torsoCoupling leadField; loaded at the
+    //  first solve), else null
+    const leadFieldECG* leadField() const
     {
         return leadFieldPtr_.get();
     }

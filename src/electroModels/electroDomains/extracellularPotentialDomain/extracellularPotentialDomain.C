@@ -236,34 +236,8 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     if (const electroVerificationModel* model = verifier())
     {
-        if (model->requiresInterfaceFluxDiagnostic())
+        if (model->requiresInterfaceGradient())
         {
-            if (!baseMesh_.fluxRequired(phiEPtr_().name()))
-            {
-                FatalErrorInFunction
-                    << "The interface-flux diagnostic needs phiE in the "
-                    << "fluxRequired sub-dictionary of fvSchemes."
-                    << exit(FatalError);
-            }
-
-            interfaceFluxPtr_.reset
-            (
-                new surfaceScalarField
-                (
-                    IOobject
-                    (
-                        "phiEInterfaceFlux",
-                        baseMesh_.time().timeName(),
-                        baseMesh_,
-                        IOobject::NO_READ,
-                        IOobject::NO_WRITE
-                    ),
-                    baseMesh_,
-                    dimensionedScalar(dimCurrent, Zero)
-                )
-            );
-            interfaceFluxPtr_().setOriented();
-
             interfaceGradientPtr_.reset
             (
                 new volVectorField
@@ -334,9 +308,10 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     // The myocardium reads the heart phiE; a verification model writes the
     // manufactured initial global phiE, which the heart phiE then follows
-    heartDomain_.bindExternalPhiE
+    heartDomain_.bindExternalPhiE(heartPhiEPtr_());
+    heartDomain_.bindVerificationPhiE
     (
-        heartPhiEPtr_(), phiEPtr_(), conductorPtr_->heartCellToBaseCell()
+        phiEPtr_(), conductorPtr_->heartCellToBaseCell()
     );
     updateHeartPhiE();
 }
@@ -378,60 +353,6 @@ const electroVerificationModel* extracellularPotentialDomain::verifier() const
 }
 
 
-void extracellularPotentialDomain::storeInterfaceFlux
-(
-    const surfaceScalarField& F
-)
-{
-    surfaceScalarField& flux = interfaceFluxPtr_();
-    flux = dimensionedScalar(flux.dimensions(), Zero);
-
-    const volTensorField& sigmaI = conductorPtr_->sigmaIntracellular();
-    const labelUList& owner = baseMesh_.owner();
-    const labelUList& neighbour = baseMesh_.neighbour();
-    auto isHeart = [](const tensor& g) { return magSqr(g) > SMALL; };
-
-    forAll(owner, faceI)
-    {
-        if
-        (
-            isHeart(sigmaI[owner[faceI]])
-         != isHeart(sigmaI[neighbour[faceI]])
-        )
-        {
-            flux[faceI] = F[faceI];
-        }
-    }
-
-    forAll(flux.boundaryField(), patchI)
-    {
-        if (!baseMesh_.boundary()[patchI].coupled())
-        {
-            continue;
-        }
-
-        const tensorField sigmaIP
-        (
-            sigmaI.boundaryField()[patchI].patchInternalField()
-        );
-        const tensorField sigmaIN
-        (
-            sigmaI.boundaryField()[patchI].patchNeighbourField()
-        );
-        const scalarField& Fp = F.boundaryField()[patchI];
-        scalarField& pFlux = flux.boundaryFieldRef()[patchI];
-
-        forAll(pFlux, faceI)
-        {
-            if (isHeart(sigmaIP[faceI]) != isHeart(sigmaIN[faceI]))
-            {
-                pFlux[faceI] = Fp[faceI];
-            }
-        }
-    }
-}
-
-
 void extracellularPotentialDomain::prepareTimeStep(scalar t0, scalar dt)
 {
     manufacturedEvaluationTime_ = t0 + dt;
@@ -459,8 +380,8 @@ void extracellularPotentialDomain::solvePhiEOnce()
         );
     }
 
-    const bool storeFlux =
-        verifier() && verifier()->requiresInterfaceFluxDiagnostic();
+    const bool storeGradient =
+        verifier() && verifier()->requiresInterfaceGradient();
     passiveConductor::faceCorrection correction;
 
     tmp<fvScalarMatrix> tphiEqn
@@ -470,12 +391,12 @@ void extracellularPotentialDomain::solvePhiEOnce()
             phiEPtr_(),
             heartPhiEPtr_(),
             &rhsGlobal,
-            storeFlux ? &correction : nullptr
+            storeGradient ? &correction : nullptr
         )
     );
     fvScalarMatrix& phiEqn = tphiEqn.ref();
 
-    if (storeFlux)
+    if (storeGradient)
     {
         interfaceGradientPtr_() = correction.gradient();
     }
@@ -491,15 +412,6 @@ void extracellularPotentialDomain::solvePhiEOnce()
 
     solve(phiEqn);
 
-    if (storeFlux)
-    {
-        tmp<surfaceScalarField> tF(phiEqn.flux());
-        if (correction.crossFlux)
-        {
-            tF.ref() += correction.crossFlux();
-        }
-        storeInterfaceFlux(tF());
-    }
 }
 
 

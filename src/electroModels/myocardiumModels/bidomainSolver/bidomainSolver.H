@@ -93,7 +93,8 @@ public:
         const fvMesh& mesh,
         const fvMesh& supportMesh,
         const fvMeshSubset* meshSubsetPtr,
-        const dictionary& electroProperties
+        const dictionary& electroProperties,
+        const bool externalPhiE
     );
 
     //- The heart phiE: owned, or bound from the bath; null with a bath

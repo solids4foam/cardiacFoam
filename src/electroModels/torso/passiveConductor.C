@@ -18,6 +18,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "passiveConductor.H"
+#include "referenceCell.H"
 #include "extracellularFaceConductivity.H"
 #include "insulatedFaceConductivity.H"
 #include "interfaceGradient.H"
@@ -207,29 +208,6 @@ void passiveConductor::torsoSettings::setGroundValues
 
         psi.boundaryFieldRef()[patchI] == groundValues[i];
     }
-}
-
-
-label passiveConductor::locateReferenceCell
-(
-    const fvMesh& mesh,
-    const point& p
-)
-{
-    const label refCell = mesh.findCell(p);
-    const label ownerCount =
-        returnReduce(label(refCell >= 0 ? 1 : 0), sumOp<label>());
-
-    if (ownerCount != 1)
-    {
-        FatalErrorInFunction
-            << "phiERefPoint " << p << " must lie in exactly one cell of "
-            << "one processor of mesh '" << mesh.name() << "', but "
-            << ownerCount << " processors reported a containing cell."
-            << exit(FatalError);
-    }
-
-    return refCell;
 }
 
 

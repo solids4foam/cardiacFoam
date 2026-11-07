@@ -4,7 +4,7 @@ The couplers that pass data between electrical domains, and the interfaces the d
 
 ## What's available
 
-- Coupling endpoints (`electroDomainCouplingEndpoints.H`): `tissueCouplingEndpoint`, implemented by the myocardium; `networkCouplingEndpoint`, implemented by the Purkinje network; and `bathCouplingEndpoint`.
+- Coupling endpoints (`electroDomainCouplingEndpoints.H`): `tissueCouplingEndpoint`, implemented by the myocardium; and `networkCouplingEndpoint`, implemented by the Purkinje network.
 - `electroDomainCoupler`: the base class for couplers.
 - The Purkinje–muscle junction (PVJ) family, which links the Purkinje network to the myocardium:
   - `pvjCoupler`, the family's base class, and `pvjMapper`, which finds the tissue cells at each junction and moves sources between the network and the tissue mesh;

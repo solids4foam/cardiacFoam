@@ -42,48 +42,6 @@ const word eikonalMyocardiumDomain::solverName("eikonalSolver");
 namespace
 {
 
-autoPtr<fvMeshSubset> createMyocardiumMeshSubset
-(
-    const fvMesh& supportMesh,
-    const dictionary& electroProperties
-)
-{
-    if (!electroProperties.found("cellZone"))
-    {
-        return autoPtr<fvMeshSubset>(nullptr);
-    }
-
-    const word cellZoneName(electroProperties.lookup("cellZone"));
-    const label zoneId = supportMesh.cellZones().findZoneID(cellZoneName);
-
-    if (zoneId < 0)
-    {
-        FatalErrorInFunction
-            << "Cannot find myocardium cellZone '" << cellZoneName
-            << "' on mesh '" << supportMesh.name() << "'."
-            << exit(FatalError);
-    }
-
-    autoPtr<fvMeshSubset> subsetPtr(new fvMeshSubset(supportMesh));
-    subsetPtr->setCellSubset
-    (
-        supportMesh.cellZones()[zoneId],
-        myocardiumExposedFacesPatch(supportMesh, electroProperties)
-    );
-#if OPENFOAM < 2406
-    // OpenFOAM before 2406 copies the base fvSchemes and fvSolution onto the
-    // sub-mesh without parsing them, so read them for the scheme and solver
-    // lookups to resolve.
-    fvMesh& subMesh = subsetPtr->subMesh();
-    subMesh.fvSchemes::readOpt(IOobject::MUST_READ);
-    subMesh.fvSchemes::read();
-    subMesh.fvSolution::readOpt(IOobject::MUST_READ);
-    subMesh.fvSolution::read();
-#endif
-    return subsetPtr;
-}
-
-
 const fvMesh& resolveMyocardiumMesh
 (
     const fvMesh& supportMesh,

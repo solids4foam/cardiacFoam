@@ -56,21 +56,24 @@ public:
             const fvMesh& mesh,
             const fvMesh& supportMesh,
             const fvMeshSubset* meshSubsetPtr,
-            const dictionary& electroProperties
+            const dictionary& electroProperties,
+            const bool externalPhiE
         ),
-        (mesh, supportMesh, meshSubsetPtr, electroProperties)
+        (mesh, supportMesh, meshSubsetPtr, electroProperties, externalPhiE)
     );
 
-    //- Construct from explicit solver type name and its Coeffs subdictionary.
-    //  The solverType is resolved by the caller (electroModel::New / builder);
-    //  no dict key lookup is performed here.
+    //- Construct the kernel solverType from its Coeffs subdictionary.
+    //  The caller decides solverType and externalPhiE: true when the bath
+    //  domain solves the extracellular potential (torsoCoupling bath), so a
+    //  kernel with phiE owns none and reads the bath's.
     static autoPtr<myocardiumSolver> New
     (
         const fvMesh& mesh,
         const fvMesh& supportMesh,
         const fvMeshSubset* meshSubsetPtr,
         const word& solverType,
-        const dictionary& coeffs
+        const dictionary& coeffs,
+        const bool externalPhiE
     );
 
     virtual ~myocardiumSolver() = default;

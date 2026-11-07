@@ -20,7 +20,7 @@ License
 #include "leadFieldECGVerifierBase.H"
 
 #include "ecgModelIO.H"
-#include "ecgSolver.H"
+#include "torsoECG.H"
 #include "verificationUtils.H"
 #include "fvMatrices.H"
 #include "PstreamReduceOps.H"
@@ -101,7 +101,8 @@ void leadFieldECGVerifierBase::initialise()
 {
     // The ECG solver has sampled once before the first record, so its lead
     // fields are loaded
-    leadFieldPtr_ = solver().leadField();
+    const torsoECG* torsoSolverPtr = dynamic_cast<const torsoECG*>(&solver());
+    leadFieldPtr_ = torsoSolverPtr ? torsoSolverPtr->leadField() : nullptr;
     if (!leadFieldPtr_ || !leadFieldPtr_->loaded())
     {
         FatalErrorInFunction

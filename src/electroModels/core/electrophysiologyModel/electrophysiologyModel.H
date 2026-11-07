@@ -65,24 +65,10 @@ class electrophysiologyModel
 :
     public electroModel
 {
-    //- Run-time selectable ionic model
-    autoPtr<ionicModel> ionicModelPtr_;
-
-    //- Optional verification / post-processing model
-    autoPtr<electroVerificationModel> verificationModelPtr_;
-
-    //- Ionic state export fields (written to disk)
-    PtrList<volScalarField> outFields_;
-
-    //- Scratch fields for verification post-processing
-    PtrList<volScalarField> postProcessFields_;
-
     //- Disallow copy
     electrophysiologyModel(const electrophysiologyModel&) = delete;
     void operator=(const electrophysiologyModel&) = delete;
 
-    //- Set Vm from the loaded ionic state when the start time has no Vm file
-    void setVmFromRestartState();
 
 public:
 

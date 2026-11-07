@@ -23,6 +23,7 @@ License
 #include "electroDomainCoupler.H"
 #include "extracellularPotentialDomain.H"
 #include "torsoCoupling.H"
+#include "heartPhiETrace.H"
 #include "electrophysicsAdvanceScheme.H"
 #include "error.H"
 
@@ -112,12 +113,8 @@ void configureMyocardiumDomain
     const fvMesh&            mesh,
     const word&              solverType,
     const dictionary&        electroProperties,
-    PtrList<volScalarField>& outFields,
-    const wordList&          postProcessFieldNames,
-    PtrList<volScalarField>& postProcessFields,
-    autoPtr<ionicModel>&     ionicModelPtr,
-    autoPtr<electroVerificationModel>& verificationModelPtr,
-    scalar                   initialDeltaT
+    scalar                   initialDeltaT,
+    const torsoCoupling::type coupling
 )
 {
     system.setMyocardium
@@ -127,14 +124,17 @@ void configureMyocardiumDomain
             mesh,
             solverType,
             electroProperties,
-            outFields,
-            postProcessFieldNames,
-            postProcessFields,
-            ionicModelPtr,
-            verificationModelPtr,
-            initialDeltaT
+            initialDeltaT,
+            coupling == torsoCoupling::type::bath
         ).ptr()
     );
+
+    // The heart phiE of a bidomain at the heart-torso wall:
+    // bathHeartPhiETrace is required with a torso and rejected without one
+    if (system.myocardium().hasExtracellularPotential())
+    {
+        (void)heartPhiETrace::read(electroProperties);
+    }
 }
 
 
@@ -155,12 +155,13 @@ void configureBathPotentialDomain
 (
     electrophysicsSystem& system,
     const fvMesh&         mesh,
-    const dictionary&     electroProperties
+    const dictionary&     electroProperties,
+    const torsoCoupling::type coupling
 )
 {
     system.clearPotentialDomain();
 
-    if (torsoCoupling::read(electroProperties) != torsoCoupling::type::bath)
+    if (coupling != torsoCoupling::type::bath)
     {
         return;
     }

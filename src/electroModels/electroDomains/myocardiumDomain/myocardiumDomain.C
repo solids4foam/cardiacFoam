@@ -26,48 +26,6 @@ License
 namespace Foam
 {
 
-autoPtr<fvMeshSubset> createMyocardiumMeshSubset
-(
-    const fvMesh& supportMesh,
-    const dictionary& electroProperties
-)
-{
-    if (!electroProperties.found("cellZone"))
-    {
-        return autoPtr<fvMeshSubset>(nullptr);
-    }
-
-    const word cellZoneName(electroProperties.lookup("cellZone"));
-    const label zoneId = supportMesh.cellZones().findZoneID(cellZoneName);
-
-    if (zoneId < 0)
-    {
-        FatalErrorInFunction
-            << "Cannot find myocardium cellZone '" << cellZoneName
-            << "' on mesh '" << supportMesh.name() << "'."
-            << exit(FatalError);
-    }
-
-    autoPtr<fvMeshSubset> subsetPtr(new fvMeshSubset(supportMesh));
-    subsetPtr->setCellSubset
-    (
-        supportMesh.cellZones()[zoneId],
-        myocardiumExposedFacesPatch(supportMesh, electroProperties)
-    );
-#if OPENFOAM < 2406
-    // OpenFOAM before 2406 copies the base fvSchemes and fvSolution onto the
-    // sub-mesh without parsing them, so read them for the scheme and solver
-    // lookups to resolve.
-    fvMesh& subMesh = subsetPtr->subMesh();
-    subMesh.fvSchemes::readOpt(IOobject::MUST_READ);
-    subMesh.fvSchemes::read();
-    subMesh.fvSolution::readOpt(IOobject::MUST_READ);
-    subMesh.fvSolution::read();
-#endif
-    return subsetPtr;
-}
-
-
 namespace
 {
 
@@ -128,11 +86,9 @@ autoPtr<myocardiumDomain> myocardiumDomain::New
     const fvMesh& supportMesh,
     const word& solverType,
     const dictionary& electroProperties,
-    PtrList<volScalarField>& outFields,
-    const wordList& postProcessFieldNames,
-    PtrList<volScalarField>& postProcessFields,
-    ionicModel& ionicModel,
-    electroVerificationModel* verificationModelPtr
+    autoPtr<ionicModel> ionic,
+    autoPtr<electroVerificationModel> verifier,
+    const bool externalPhiE
 )
 {
     autoPtr<fvMeshSubset> meshSubsetPtr
@@ -148,18 +104,16 @@ autoPtr<myocardiumDomain> myocardiumDomain::New
         (
             supportMesh,
             electroProperties,
-            outFields,
-            postProcessFieldNames,
-            postProcessFields,
-            ionicModel,
-            verificationModelPtr,
+            std::move(ionic),
+            std::move(verifier),
             myocardiumSolver::New
             (
                 myocardiumMesh,
                 supportMesh,
                 meshSubsetPtr.valid() ? &meshSubsetPtr() : nullptr,
                 solverType,
-                electroProperties
+                electroProperties,
+                externalPhiE
             ),
             meshSubsetPtr
         )
@@ -197,15 +151,14 @@ myocardiumDomain::myocardiumDomain
 (
     const fvMesh& supportMesh,
     const dictionary& electroProperties,
-    PtrList<volScalarField>& outFields,
-    const wordList& postProcessFieldNames,
-    PtrList<volScalarField>& postProcessFields,
-    ionicModel& ionicModel,
-    electroVerificationModel* verificationModelPtr,
+    autoPtr<ionicModel> ionic,
+    autoPtr<electroVerificationModel> verifier,
     autoPtr<myocardiumSolver> diffusionSolverPtr,
     autoPtr<fvMeshSubset> meshSubsetPtr
 )
 :
+    ionicModelPtr_(std::move(ionic)),
+    verificationModelPtr_(std::move(verifier)),
     meshSubsetPtr_(meshSubsetPtr),
     supportMesh_(supportMesh),
     diffusionSolverPtr_(diffusionSolverPtr),
@@ -338,13 +291,12 @@ myocardiumDomain::myocardiumDomain
         dimensionedScalar("unactivated", dimTime, -1.0),
         "zeroGradient"
     ),
-    outFields_(outFields),
+    outFields_(),
     preProcessFieldNames_(),
     preProcessFields_(),
-    postProcessFieldNames_(postProcessFieldNames),
-    postProcessFields_(postProcessFields),
-    ionicModel_(ionicModel),
-    verificationModelPtr_(verificationModelPtr),
+    postProcessFieldNames_(),
+    postProcessFields_(),
+    ionicModel_(*ionicModelPtr_),
     electroProperties_(electroProperties),
     chi_("chi", dimArea/dimVolume, electroProperties_),
     Cm_("cm", dimCurrent*dimTime/(dimVoltage*dimArea), electroProperties_),
@@ -449,7 +401,7 @@ myocardiumDomain::myocardiumDomain
     {
         verificationModelPtr_->bindSourceField(sourceField_);
     }
-    diffusionSolverPtr_->bindVerifier(verificationModelPtr_);
+    diffusionSolverPtr_->bindVerifier(verificationModelPtr_.get());
 
     initialiseProcessing();
 }
@@ -850,22 +802,24 @@ void myocardiumDomain::finalizeDiffusionStep(scalar t0, scalar dt)
 }
 
 
-void myocardiumDomain::bindExternalPhiE
+void myocardiumDomain::bindExternalPhiE(const volScalarField& heartPhiE)
+{
+    diffusionSolverPtr_->bindExternalPhiE(heartPhiE);
+}
+
+
+void myocardiumDomain::bindVerificationPhiE
 (
-    const volScalarField& heartPhiE,
     volScalarField& globalPhiE,
     const labelUList& heartCellMap
 )
 {
-    diffusionSolverPtr_->bindExternalPhiE(heartPhiE);
-
     if (verificationModelPtr_)
     {
         verificationModelPtr_->bindBidomainField(globalPhiE, heartCellMap);
 
         verificationModelPtr_->preProcess(ionicModel_, Vm_, preProcessFields_);
     }
-
 }
 
 
@@ -982,6 +936,76 @@ void myocardiumDomain::exportPostProcessFields()
     {
         ionicModel_.exportFields(postProcessFieldNames_, postProcessFields_);
     }
+}
+
+
+bool myocardiumDomain::readRestartState()
+{
+    const bool loaded = ionicModel_.readRestartState(supportMesh_);
+
+    if (loaded)
+    {
+        setVmFromRestartState();
+        ionicModel_.refreshRestartState(Vm_.mesh());
+    }
+
+    return loaded;
+}
+
+
+void myocardiumDomain::setVmFromRestartState()
+{
+    // A Vm file at the start time holds the more recent potential
+    IOobject VmHeader
+    (
+        Vm_.name(),
+        Vm_.mesh().time().timeName(),
+        Vm_.mesh(),
+        IOobject::MUST_READ
+    );
+
+    if (VmHeader.typeHeaderOk<volScalarField>(true))
+    {
+        return;
+    }
+
+    const PtrList<scalarField>* statesPtr = ionicModel_.ioStatesPtr();
+
+    if (!statesPtr)
+    {
+        WarningInFunction
+            << "Vm not set from the restart state: " << ionicModel_.type()
+            << " does not expose per-cell states." << endl;
+        return;
+    }
+
+    if (statesPtr->size() != Vm_.size())
+    {
+        FatalErrorInFunction
+            << "Restart state holds " << statesPtr->size() << " cells, but Vm"
+            << " has " << Vm_.size() << "."
+            << exit(FatalError);
+    }
+
+    const ionicModelIO::VmTransform transform = ionicModel_.ioVmTransform();
+
+    // Model voltage in mV, field in V
+    forAll(Vm_, cellI)
+    {
+        const scalarField& state = (*statesPtr)[cellI];
+        Vm_[cellI] = 1e-3*(transform ? transform(state) : state[0]);
+    }
+    Vm_.correctBoundaryConditions();
+
+    Info<< "Vm set from the " << ionicModel_.type() << " restart state: "
+        << gMin(Vm_.primitiveField()) << " .. " << gMax(Vm_.primitiveField())
+        << " V" << endl;
+}
+
+
+void myocardiumDomain::writeRestartState() const
+{
+    ionicModel_.writeRestartState(supportMesh_);
 }
 
 

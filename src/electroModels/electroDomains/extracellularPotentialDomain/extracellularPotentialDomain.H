@@ -80,9 +80,6 @@ class extracellularPotentialDomain
     //- Time at which manufactured data are evaluated
     scalar manufacturedEvaluationTime_;
 
-    //- Face flux of the phiE equation on heart-bath faces (A, along Sf, extracellular part)
-    autoPtr<surfaceScalarField> interfaceFluxPtr_;
-
     //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
     autoPtr<volVectorField> interfaceGradientPtr_;
 
@@ -95,9 +92,6 @@ class extracellularPotentialDomain
 
     //- Verification model bound to the heart domain, or nullptr.
     const electroVerificationModel* verifier() const;
-
-    //- Copy the heart-bath face values of F into phiEInterfaceFlux.
-    void storeInterfaceFlux(const surfaceScalarField& F);
 
 public:
 

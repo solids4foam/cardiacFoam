@@ -20,7 +20,7 @@ License
 #include "leadFieldConductor.H"
 #include "electroPropertiesKeys.H"
 #include "ecgElectrodeCells.H"
-#include "myocardiumDomain.H"
+#include "myocardiumMeshSubset.H"
 #include "conductivityFieldIO.H"
 #include "sealedWallPolicy.H"
 #include "torsoCoupling.H"

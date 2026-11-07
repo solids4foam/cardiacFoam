@@ -19,15 +19,16 @@ conductionSystemModels/restitutionEikonalSolver1D/restitutionModel.C
 /* Domains */
 electroDomains/conductionSystemDomain/conductionSystemDomain.C
 electroDomains/conductionSystemDomain/conductionSystemSolver.C
-electroDomains/extracellularPotentialDomain/torsoCoupling.C
-electroDomains/extracellularPotentialDomain/heartPhiETrace.C
-electroDomains/extracellularPotentialDomain/passiveConductor.C
+torso/torsoCoupling.C
+torso/heartPhiETrace.C
+torso/passiveConductor.C
 electroDomains/extracellularPotentialDomain/extracellularPotentialDomain.C
 electroDomains/ecgDomain/ecgDomain.C
 electroDomains/ecgDomain/ecgSolver.C
 electroDomains/ecgDomain/ecgElectrodes.C
 electroDomains/ecgDomain/ecgElectrodeCells.C
 electroDomains/myocardiumDomain/myocardiumDomainInterface.C
+electroDomains/myocardiumDomain/myocardiumMeshSubset.C
 electroDomains/myocardiumDomain/myocardiumPrePacing.C
 electroDomains/myocardiumDomain/myocardiumDomain.C
 electroDomains/myocardiumDomain/eikonalMyocardiumDomain.C

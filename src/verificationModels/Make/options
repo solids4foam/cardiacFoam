@@ -13,6 +13,7 @@ EXE_INC = \
 LIB_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     -lelectroModels \
+    -lnumericsModels \
     -lgenericWriter \
     -lionicModels \
     -lfiniteVolume \

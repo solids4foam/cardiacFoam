@@ -39,10 +39,13 @@ electroModels/
 │   ├── system/                 Domain container + dictionary-driven builder
 │   ├── advanceSchemes/         Time-step orchestration strategies
 │   └── electrophysiologyModel/ Concrete myocardium-centred entry point
+├── torso/                      Heart+torso conductor shared by the bath and the lead fields:
+│                               passiveConductor, torsoCoupling, heartPhiETrace
 ├── electroDomains/             Physical domain implementations
-│   ├── myocardiumDomain/                3D myocardium: Vm PDE + ionic ODE
+│   ├── myocardiumDomain/                3D myocardium: Vm PDE + ionic ODE; owns its
+│   │                                    ionic model, verification model and restart state
 │   ├── ecgDomain/                       ECG body region: elliptic Vm-driven PDE
-│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath) and its passiveConductor
+│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath), bath only
 │   └── conductionSystemDomain/          Purkinje/conduction network: 1D graph ODE
 ├── myocardiumModels/           Run-time-selectable myocardium diffusion solvers
 ├── ecgModels/                  Run-time-selectable ECG field solvers
@@ -143,7 +146,7 @@ domain. Implements `electroStateDomain`.
 - Solves an elliptic Poisson equation for `phiE` driven by the scattered heart
   `Vm`, with Dirichlet `groundPatches` and Neumann `surfaceCurrentPatches`.
 
-- Owns a `passiveConductor` (same folder), built from the top-level `torso`
+- Owns a `passiveConductor` (`torso/`), built from the top-level `torso`
   block: the heart+torso cell and face conductivities, the operator, the
   boundary data of the potential (patch types, ground values, surface
   currents), the reference pin and the heart source. `passiveConductor` has
@@ -158,10 +161,12 @@ domain. Implements `electroStateDomain`.
   once at construction and after every global solve. The heart `phiE` gets
   its patch types and wall-gradient states once, at construction, so its
   gradient stencils are built from final states. The bidomain myocardium
-  solver constructs no `phiE` of its own with a bath; it reads the heart
-  `phiE` (`bindExternalPhiE`, a `const` reference) in its Vm equation. A
-  verification model receives the global `phiE` from this domain, its
-  owner, for the manufactured initial values.
+  solver constructs no `phiE` of its own with a bath: the model reads
+  `torsoCoupling` once and tells the kernel (`externalPhiE`). The kernel
+  reads the heart `phiE` (`bindExternalPhiE`, a `const` reference) in its Vm
+  equation. A verification model receives the global `phiE` from this
+  domain, its owner, through the separate verification hook
+  `bindVerificationPhiE`, for the manufactured initial values.
 
 - Exposes `phiE` to `torsoECG`-class ECG solvers for electrode sampling.
 
@@ -173,9 +178,9 @@ domain. Implements `electroStateDomain`.
   imbalance of the equation, which the reference cell absorbs, at every
   solve; it projects nothing.
 
-- Stores the heart-bath interface flux as `phiEInterfaceFlux`, and the cell
-  gradient used by the face corrections of the `phiE` operator as
-  `phiEInterfaceGradient`, for a verification model that requests them.
+- Publishes the cell gradient used by the face corrections of the `phiE`
+  operator as `phiEInterfaceGradient`, for a verification model that
+  requests it (`requiresInterfaceGradient`).
 
 - Writes `phiE`, `sigmaTotal`, and `VmGlobal` through the normal electro-model
   output path at OpenFOAM output times.

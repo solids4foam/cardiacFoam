@@ -72,12 +72,11 @@ Foam::electrophysiologyModel::electrophysiologyModel
     const word& region
 )
 :
-    electroModel(solverType, runTime, region),
-    ionicModelPtr_(),
-    verificationModelPtr_(),
-    outFields_(),
-    postProcessFields_()
+    electroModel(solverType, runTime, region)
 {
+    // The torso coupling, read once: with a bath the bath domain owns phiE
+    const torsoCoupling::type coupling = torsoCoupling::read(*this);
+
     // Assemble MyocardiumDomain (FVM kernel + ionic model + optional
     // verification) or EikonalMyocardiumDomain for the solver type
     electrophysicsSystemBuilder::configureMyocardiumDomain
@@ -86,12 +85,8 @@ Foam::electrophysiologyModel::electrophysiologyModel
         mesh(),
         myocardiumSolverType(),
         electroProperties(),
-        outFields_,
-        wordList(),         // postProcessFieldNames (filled by verification)
-        postProcessFields_,
-        ionicModelPtr_,
-        verificationModelPtr_,
-        runTime.deltaTValue()
+        runTime.deltaTValue(),
+        coupling
     );
 
     readRestartState();
@@ -106,7 +101,8 @@ Foam::electrophysiologyModel::electrophysiologyModel
     (
         domainSystem_,
         mesh(),
-        *this
+        *this,
+        coupling
     );
 
     electrophysicsSystemBuilder::configureConductionDomains
@@ -125,103 +121,17 @@ Foam::electrophysiologyModel::electrophysiologyModel
 
 bool Foam::electrophysiologyModel::readRestartState()
 {
-    if (ionicModelPtr_.valid())
-    {
-        const bool loaded = ionicModelPtr_->readRestartState(mesh());
-        if (loaded)
-        {
-            setVmFromRestartState();
-
-            const electroVolumeFieldDomain* volumeDomainPtr =
-                domainSystem_.hasMyocardium()
-              ? dynamic_cast<const electroVolumeFieldDomain*>
-                (
-                    &domainSystem_.myocardium()
-                )
-              : nullptr;
-
-            ionicModelPtr_->refreshRestartState
-            (
-                volumeDomainPtr ? volumeDomainPtr->Vm().mesh() : mesh()
-            );
-        }
-        return loaded;
-    }
-    return false;
-}
-
-
-void Foam::electrophysiologyModel::setVmFromRestartState()
-{
-    if (!domainSystem_.hasMyocardium())
-    {
-        return;
-    }
-
-    electroVolumeFieldDomain* volumeDomainPtr =
-        dynamic_cast<electroVolumeFieldDomain*>(&domainSystem_.myocardium());
-
-    if (!volumeDomainPtr)
-    {
-        return;
-    }
-
-    volScalarField& Vm = volumeDomainPtr->VmRef();
-
-    // A Vm file at the start time holds the more recent potential
-    IOobject VmHeader
-    (
-        Vm.name(),
-        Vm.mesh().time().timeName(),
-        Vm.mesh(),
-        IOobject::MUST_READ
-    );
-
-    if (VmHeader.typeHeaderOk<volScalarField>(true))
-    {
-        return;
-    }
-
-    const PtrList<scalarField>* statesPtr = ionicModelPtr_->ioStatesPtr();
-
-    if (!statesPtr)
-    {
-        WarningInFunction
-            << "Vm not set from the restart state: " << ionicModelPtr_->type()
-            << " does not expose per-cell states." << endl;
-        return;
-    }
-
-    if (statesPtr->size() != Vm.size())
-    {
-        FatalErrorInFunction
-            << "Restart state holds " << statesPtr->size() << " cells, but Vm"
-            << " has " << Vm.size() << "."
-            << exit(FatalError);
-    }
-
-    const ionicModelIO::VmTransform transform =
-        ionicModelPtr_->ioVmTransform();
-
-    // Model voltage in mV, field in V
-    forAll(Vm, cellI)
-    {
-        const scalarField& state = (*statesPtr)[cellI];
-        Vm[cellI] = 1e-3*(transform ? transform(state) : state[0]);
-    }
-    Vm.correctBoundaryConditions();
-
-    Info<< "Vm set from the " << ionicModelPtr_->type() << " restart state: "
-        << gMin(Vm.primitiveField()) << " .. " << gMax(Vm.primitiveField())
-        << " V" << endl;
+    return
+        domainSystem_.hasMyocardium()
+     && domainSystem_.myocardium().readRestartState();
 }
 
 
 void Foam::electrophysiologyModel::writeRestartState() const
 {
-    if (ionicModelPtr_.valid())
+    if (domainSystem_.hasMyocardium())
     {
-        ionicModelPtr_->writeRestartState(mesh());
+        domainSystem_.myocardium().writeRestartState();
     }
 }
 

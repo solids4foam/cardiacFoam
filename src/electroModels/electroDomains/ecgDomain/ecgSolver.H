@@ -38,7 +38,6 @@ namespace Foam
 
 class dictionary;
 class ecgDomain;
-class leadFieldECG;
 class myocardiumDomainInterface;
 
 class ecgSolver
@@ -105,13 +104,6 @@ public:
     virtual void checkState(const ecgDomain& domain) const
     {
         (void)domain;
-    }
-
-    //- The lead fields this solver evaluates (torsoECG with torsoCoupling
-    //  leadField; loaded at the first solve), else null
-    virtual const leadFieldECG* leadField() const
-    {
-        return nullptr;
     }
 
     virtual void solve

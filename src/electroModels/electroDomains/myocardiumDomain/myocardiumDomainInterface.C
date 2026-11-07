@@ -33,67 +33,6 @@ License
 namespace Foam
 {
 
-label myocardiumExposedFacesPatch
-(
-    const fvMesh& supportMesh,
-    const dictionary& electroProperties
-)
-{
-    const polyBoundaryMesh& patches = supportMesh.boundaryMesh();
-    label patchI = -1;
-
-    if (electroProperties.found("exposedFacesPatch"))
-    {
-        const word patchName(electroProperties.get<word>("exposedFacesPatch"));
-        patchI = patches.findPatchID(patchName);
-
-        if (patchI < 0)
-        {
-            FatalIOErrorInFunction(electroProperties)
-                << "exposedFacesPatch '" << patchName << "' is not a patch of "
-                << "mesh '" << supportMesh.name() << "'."
-                << exit(FatalIOError);
-        }
-    }
-    else
-    {
-        forAll(patches, candidateI)
-        {
-            const polyPatch& pp = patches[candidateI];
-            if (!isA<emptyPolyPatch>(pp) && !pp.coupled())
-            {
-                patchI = candidateI;
-                break;
-            }
-        }
-
-        if (patchI < 0)
-        {
-            FatalIOErrorInFunction(electroProperties)
-                << "Mesh '" << supportMesh.name() << "' has no patch that is "
-                << "neither empty nor coupled to receive the faces exposed by "
-                << "the myocardium cellZone. Name one with exposedFacesPatch."
-                << exit(FatalIOError);
-        }
-    }
-
-    const polyPatch& pp = patches[patchI];
-    if (isA<emptyPolyPatch>(pp) || pp.coupled())
-    {
-        FatalIOErrorInFunction(electroProperties)
-            << "exposedFacesPatch '" << pp.name() << "' is " << pp.type()
-            << "; the exposed myocardium faces need a patch that is neither "
-            << "empty nor coupled."
-            << exit(FatalIOError);
-    }
-
-    Info<< "Myocardium cellZone: exposed faces go into patch '" << pp.name()
-        << "' (" << pp.type() << ")." << endl;
-
-    return patchI;
-}
-
-
 namespace
 {
 
@@ -268,26 +207,19 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
     const fvMesh& mesh,
     const word& solverType,
     const dictionary& electroProperties,
-    PtrList<volScalarField>& outFields,
-    const wordList& postProcessFieldNames,
-    PtrList<volScalarField>& postProcessFields,
-    autoPtr<ionicModel>& ionicModelPtr,
-    autoPtr<electroVerificationModel>& verificationModelPtr,
-    scalar initialDeltaT
+    scalar initialDeltaT,
+    const bool externalPhiE
 )
 {
     if (solverType == eikonalMyocardiumDomain::solverName)
     {
-        ionicModelPtr.clear();
-        verificationModelPtr.clear();
-
         return autoPtr<myocardiumDomainInterface>
         (
             new eikonalMyocardiumDomain(mesh, electroProperties)
         );
     }
 
-    ionicModelPtr =
+    autoPtr<ionicModel> ionicModelPtr =
         ionicModel::New
         (
             electroProperties,
@@ -345,7 +277,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         }
     }
 
-    verificationModelPtr =
+    autoPtr<electroVerificationModel> verificationModelPtr =
         electroVerificationModel::New(electroProperties);
 
     autoPtr<myocardiumDomain> tissuePtr
@@ -355,11 +287,9 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
             mesh,
             solverType,
             electroProperties,
-            outFields,
-            postProcessFieldNames,
-            postProcessFields,
-            ionicModelPtr(),
-            verificationModelPtr.get()
+            std::move(ionicModelPtr),
+            std::move(verificationModelPtr),
+            externalPhiE
         )
     );
 
@@ -396,7 +326,7 @@ autoPtr<myocardiumDomainInterface> myocardiumDomainInterface::New
         prePacingPtr->store();
 
         prePacingPtr->paceIonic();
-        prePacingPtr->seedIonic(ionicModelPtr(), Vm);
+        prePacingPtr->seedIonic(*tissuePtr->ionicModelPtr(), Vm);
     }
 
     return autoPtr<myocardiumDomainInterface>(tissuePtr.ptr());

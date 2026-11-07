@@ -20,16 +20,15 @@ License
 #include "bidomainSolver.H"
 
 #include "IOmanip.H"
+#include "electroVolumeFieldDomain.H"
+#include "dimVoltage.H"
 #include "PstreamReduceOps.H"
-#include "myocardiumDomain.H"
 #include "insulatedFaceConductivity.H"
 #include "sealedWallPolicy.H"
 #include "compatibilityImbalance.H"
 #include "conormalStabilisation.H"
 #include "fvMeshSubset.H"
-#include "torsoCoupling.H"
-#include "heartPhiETrace.H"
-#include "passiveConductor.H"
+#include "referenceCell.H"
 #include "addToRunTimeSelectionTable.H"
 #include "polyMesh.H"
 
@@ -43,21 +42,12 @@ addToRunTimeSelectionTable(myocardiumSolver, bidomainSolver, dictionary);
 namespace
 {
 
-// With torsoCoupling bath the bath domain owns phiE and binds it to the
-// heart; the heart reads no phiE of its own
-bool solvedWithBath(const dictionary& electroProperties)
-{
-    return
-        torsoCoupling::readFromCoeffs(electroProperties)
-     == torsoCoupling::type::bath;
-}
-
-
 // The reference of the heart's own phiE solve: phiERefPoint and the value
 // pinned at its cell, both required unless the bath owns phiE
 autoPtr<Tuple2<point, scalar>> readPhiEReference
 (
-    const dictionary& electroProperties
+    const dictionary& electroProperties,
+    const bool externalPhiE
 )
 {
     if
@@ -72,7 +62,7 @@ autoPtr<Tuple2<point, scalar>> readPhiEReference
             << exit(FatalIOError);
     }
 
-    if (solvedWithBath(electroProperties))
+    if (externalPhiE)
     {
         return nullptr;
     }
@@ -92,7 +82,8 @@ bidomainSolver::bidomainSolver
     const fvMesh& mesh,
     const fvMesh& supportMesh,
     const fvMeshSubset* meshSubsetPtr,
-    const dictionary& electroProperties
+    const dictionary& electroProperties,
+    const bool externalPhiE
 )
 :
     ownPhiEPtr_(),
@@ -153,16 +144,12 @@ bidomainSolver::bidomainSolver
     (
         electroProperties.get<Switch>("sealedHeartBoundary")
     ),
-    phiEReferencePtr_(readPhiEReference(electroProperties)),
+    phiEReferencePtr_(readPhiEReference(electroProperties, externalPhiE)),
     verifierPtr_(nullptr)
 {
-    // Validates bathHeartPhiETrace: required with a torso, rejected without
-    // one; the bath domain reads it for its heart phiE
-    (void)heartPhiETrace::read(electroProperties);
-
     // With a bath the bath domain owns, solves and writes the heart phiE,
     // and binds it here (bindExternalPhiE)
-    if (!solvedWithBath(electroProperties))
+    if (!externalPhiE)
     {
         ownPhiEPtr_.reset
         (
@@ -210,7 +197,7 @@ label bidomainSolver::referenceCell() const
             << exit(FatalError);
     }
 
-    return passiveConductor::locateReferenceCell
+    return locateReferenceCell
     (
         ownPhiEPtr_().mesh(), phiEReferencePtr_->first()
     );

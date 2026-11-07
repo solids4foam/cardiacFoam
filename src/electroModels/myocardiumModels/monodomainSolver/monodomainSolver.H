@@ -60,7 +60,8 @@ public:
         const fvMesh& mesh,
         const fvMesh& supportMesh,
         const fvMeshSubset* meshSubsetPtr,
-        const dictionary& electroProperties
+        const dictionary& electroProperties,
+        const bool externalPhiE
     );
 
     virtual bool sealedHeartBoundary() const override
