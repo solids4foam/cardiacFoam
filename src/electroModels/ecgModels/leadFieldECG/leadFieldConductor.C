@@ -796,6 +796,85 @@ bool leadFieldConductor::matches(const dictionary& built, Ostream& os) const
 }
 
 
+namespace
+{
+
+// The sums of z V f and of |z V f| over the cells, f = 1, x, y, z, |x|^2.
+void fingerprintSums
+(
+    const volScalarField& z,
+    FixedList<scalar, 5>& sums,
+    FixedList<scalar, 5>& magnitudes
+)
+{
+    const scalarField& zI = z.primitiveField();
+    const scalarField& V = z.mesh().V().field();
+    const vectorField& C = z.mesh().C().primitiveField();
+
+    sums = Zero;
+    magnitudes = Zero;
+    forAll(zI, cellI)
+    {
+        const scalar w = zI[cellI]*V[cellI];
+        const vector& x = C[cellI];
+        const FixedList<scalar, 5> f
+        ({
+            w, w*x.x(), w*x.y(), w*x.z(), w*magSqr(x)
+        });
+        forAll(f, k)
+        {
+            sums[k] += f[k];
+            magnitudes[k] += mag(f[k]);
+        }
+    }
+    forAll(sums, k)
+    {
+        reduce(sums[k], sumOp<scalar>());
+        reduce(magnitudes[k], sumOp<scalar>());
+    }
+}
+
+} // End anonymous namespace
+
+
+FixedList<scalar, 5> leadFieldConductor::fingerprint(const volScalarField& z)
+{
+    FixedList<scalar, 5> sums;
+    FixedList<scalar, 5> magnitudes;
+    fingerprintSums(z, sums, magnitudes);
+    return sums;
+}
+
+
+bool leadFieldConductor::fingerprintMatches
+(
+    const FixedList<scalar, 5>& recorded,
+    const volScalarField& z,
+    Ostream& os
+)
+{
+    FixedList<scalar, 5> sums;
+    FixedList<scalar, 5> magnitudes;
+    fingerprintSums(z, sums, magnitudes);
+
+    bool same = true;
+    forAll(sums, k)
+    {
+        const scalar scale = max(magnitudes[k], VSMALL);
+        if (!(mag(sums[k] - recorded[k]) <= signatureTolerance*scale))
+        {
+            same = false;
+        }
+    }
+    if (!same)
+    {
+        os  << "    fingerprint at build: " << recorded << nl
+            << "    fingerprint now:      " << sums << nl;
+    }
+    return same;
+}
+
+
 tmp<volScalarField> leadFieldConductor::newPotential
 (
     const fvMesh& mesh,

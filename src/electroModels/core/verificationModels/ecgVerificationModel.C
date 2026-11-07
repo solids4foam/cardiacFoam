@@ -282,17 +282,6 @@ void ecgVerificationModel::record
     record(numericValues);
 }
 
-
-void ecgVerificationModel::updateElectrodes
-(
-    const wordList& electrodeNames,
-    const List<vector>& electrodePositions
-)
-{
-    electrodeNames_ = electrodeNames;
-    electrodePositions_ = electrodePositions;
-}
-
 } // End namespace Foam
 
 // ************************************************************************* //

@@ -31,7 +31,9 @@ Description
     the reference value.
 
     The conductor (leadFieldConductor) is built on the myocardium's sub-mesh
-    at load. Its signature must match constant/[region/]leadFieldSignature.
+    at load. Its signature must match constant/[region/]leadFieldSignature,
+    and each lead field's fingerprint the one recorded in
+    constant/[region/]leadFieldBuildRecord.
 
 SourceFiles
     leadFieldECG.C

@@ -531,13 +531,6 @@ void manufacturedPseudoECGVerifier::writeSummary()
 
 bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
 {
-    const Switch wasEnabled = enabled_;
-    const label previousDimension = dimension_;
-    const Switch previousAnisotropic = anisotropic_;
-    const word previousDomain = domain_;
-    const label previousReferenceQuadratureOrder = referenceQuadratureOrder_;
-    const List<label> previousCheckQuadratureOrders = checkQuadratureOrders_;
-
     enabled_ = false;
     dimension_ = max(label(1), min(mesh_.nGeometricD(), label(3)));
     anisotropic_ = false;
@@ -680,23 +673,6 @@ bool manufacturedPseudoECGVerifier::read(const dictionary& dict)
     }
 
     resizeCheckStorage();
-
-    const bool configurationChanged =
-        enabled_ != wasEnabled
-     || dimension_ != previousDimension
-     || anisotropic_ != previousAnisotropic
-     || domain_ != previousDomain
-     || referenceQuadratureOrder_ != previousReferenceQuadratureOrder
-     || checkQuadratureOrders_ != previousCheckQuadratureOrders;
-
-    if (outputPtr_.valid() && configurationChanged && enabled_)
-    {
-        FatalErrorInFunction
-            << "Changing manufactured pseudo-ECG dimension or quadrature "
-               "orders during read() is not supported because the output "
-               "layout and semantics are fixed at startup."
-            << exit(FatalError);
-    }
 
     if (!enabled_)
     {

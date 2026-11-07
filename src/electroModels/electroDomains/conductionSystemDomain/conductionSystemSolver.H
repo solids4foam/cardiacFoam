@@ -80,6 +80,10 @@ public:
         scalar dt
     ) = 0;
 
+    //- True if the solver integrates an ionic model on the graph nodes;
+    //  the domain builds one only then
+    virtual bool requiresIonicModel() const = 0;
+
     virtual void diagnosticFields
     (
         wordList& names,

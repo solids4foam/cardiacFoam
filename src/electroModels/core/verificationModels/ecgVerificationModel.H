@@ -128,14 +128,6 @@ public:
     //  (called by the ECG domain that binds the model to its provider)
     void validateProvider() const;
 
-    void updateElectrodes
-    (
-        const wordList& electrodeNames,
-        const List<vector>& electrodePositions
-    );
-
-    virtual bool read(const dictionary& dict) = 0;
-
     virtual void record(const List<scalar>& numericValues) = 0;
 
     virtual void record

@@ -58,18 +58,19 @@ eikonalPvjCoupler::eikonalPvjCoupler
     seedProfile_(seedProfile(dict)),
     seedOffsetsSet_(false)
 {
+    // The coupler only seeds activation times; a reaction-diffusion
+    // myocardium writes its own and is not driven by them
     if
     (
-        seedProfile_ != "flat"
-     && (
-            !primaryDomain_.activationMetricPtr()
-         || !primaryDomain_.frontCoefficientPtr()
-        )
+        !primaryDomain_.activationMetricPtr()
+     || !primaryDomain_.frontCoefficientPtr()
     )
     {
         FatalIOErrorInFunction(dict)
-            << "seedProfile " << seedProfile_ << " needs an eikonal myocardium. "
-            << "Set seedProfile flat for another tissue model."
+            << "eikonalPvjCoupler seeds activation times and needs "
+            << "myocardiumSolver eikonalSolver. For a monodomain or bidomain "
+            << "myocardium use eikonalMonodomainPvjCoupler or "
+            << "reactionDiffusionPvjCoupler."
             << exit(FatalIOError);
     }
 }

@@ -74,8 +74,6 @@ class ecgDomain
     //  only at the case's write times
     bool writeEveryTimeStep_;
 
-    const dictionary* inheritedElectrodePositionsPtr_;
-
     //- Disallow copy construct
     ecgDomain(const ecgDomain&) = delete;
 
@@ -89,7 +87,11 @@ class ecgDomain
     List<vector> electrodePositions_;
 
     //- Read the electrodes of the domain entry (readEcgElectrodes)
-    void readElectrodes(const dictionary& dict);
+    void readElectrodes
+    (
+        const dictionary& dict,
+        const dictionary* inheritedElectrodePositionsPtr
+    );
 
 public:
 
@@ -221,9 +223,6 @@ public:
         {
             evolve(t0, dt);
         }
-
-        //- Refresh model coefficients from the ECG sub-dictionary.
-        virtual bool read(const dictionary& dict);
 
         void recordVerification
         (

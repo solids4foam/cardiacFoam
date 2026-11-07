@@ -127,7 +127,8 @@ public:
 
     virtual ~manufacturedLeadFieldECGVerifier() = default;
 
-    virtual bool read(const dictionary& dict) override;
+    //- Read the verifier entry (called by the constructor)
+    bool read(const dictionary& dict);
 };
 
 } // End namespace Foam

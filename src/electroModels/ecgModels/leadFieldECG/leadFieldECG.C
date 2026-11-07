@@ -70,17 +70,17 @@ void leadFieldECG::load
         );
     };
 
-    wordList files(1, word("leadFieldSignature"));
+    wordList files({word("leadFieldSignature"), word("leadFieldBuildRecord")});
     for (const word& name : names)
     {
         files.append("leadField_" + name);
     }
     // The lead fields are volScalarFields, looked up in this processor's
-    // constant; the signature is a global dictionary
+    // constant; the signature and the build record are global dictionaries
     const auto hasFile = [&io](const word& file)
     {
         return
-            file == "leadFieldSignature"
+            file == "leadFieldSignature" || file == "leadFieldBuildRecord"
           ? io(file).typeHeaderOk<IOdictionary>(false)
           : io(file).typeHeaderOk<volScalarField>(false);
     };
@@ -120,9 +120,40 @@ void leadFieldECG::load
     heartWeights_.setSize(names.size());
     constants_.setSize(names.size(), 0.0);
 
+    const IOdictionary buildRecord(io("leadFieldBuildRecord"));
+    const dictionary& electrodeRecords = buildRecord.subDict("electrodes");
+
     forAll(names, e)
     {
         const volScalarField z(io("leadField_" + names[e]), mesh);
+
+        // The values must belong to the cells they were built on
+        const dictionary& record = electrodeRecords.subDict(names[e]);
+        OStringStream fingerprintDiffs;
+        fingerprintDiffs.precision(std::numeric_limits<scalar>::digits10);
+        if
+        (
+            !leadFieldConductor::fingerprintMatches
+            (
+                record.get<FixedList<scalar, 5>>("fingerprint"),
+                z,
+                fingerprintDiffs
+            )
+        )
+        {
+            FatalErrorInFunction
+                << "The lead field of electrode " << names[e] << " of ECG "
+                << "domain '" << ecgDomainName_ << "' does not belong to the "
+                << "cells of this mesh: the mesh was renumbered or "
+                << "redistributed after buildLeadFields." << nl
+                << fingerprintDiffs.str().c_str()
+                << "run buildLeadFields"
+                << exit(FatalError);
+        }
+        Info<< "  lead field " << names[e] << ": "
+            << record.get<label>("passes") << " passes, relative change "
+            << record.get<scalar>("relativeChange") << " (tolerance "
+            << buildRecord.get<scalar>("convergenceTolerance") << ")" << nl;
 
         heartWeights_[e].setSize(heartToBase.size());
         forAll(heartToBase, c)

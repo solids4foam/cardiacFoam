@@ -33,30 +33,17 @@ namespace Foam
 defineTypeNameAndDebug(ecgDomain, 0);
 
 
-// * * * * * * * * * * * * Private Helpers * * * * * * * * * * * * * * * * * //
-
-namespace
-{
-
-void finalizeVerificationModel(autoPtr<ecgVerificationModel>& verifierPtr)
-{
-    if (verifierPtr.valid())
-    {
-        verifierPtr->end();
-        verifierPtr.clear();
-    }
-}
-
-}
-
-
 // * * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * //
 
-void ecgDomain::readElectrodes(const dictionary& dict)
+void ecgDomain::readElectrodes
+(
+    const dictionary& dict,
+    const dictionary* inheritedElectrodePositionsPtr
+)
 {
     const ecgElectrodes electrodes
     (
-        readEcgElectrodes(dict, inheritedElectrodePositionsPtr_)
+        readEcgElectrodes(dict, inheritedElectrodePositionsPtr)
     );
     electrodeNames_ = electrodes.names;
     electrodePositions_ = electrodes.positions;
@@ -155,7 +142,6 @@ ecgDomain::ecgDomain
     verificationModelPtr_(),
     numericValues_(),
     writeEveryTimeStep_(dict.lookupOrDefault<Switch>("writeEveryTimeStep", false)),
-    inheritedElectrodePositionsPtr_(inheritedElectrodePositionsPtr),
     electrodeNames_(),
     electrodePositions_()
 {
@@ -166,7 +152,7 @@ ecgDomain::ecgDomain
 
     solverPtr_->checkState(*this);
 
-    readElectrodes(dict);
+    readElectrodes(dict, inheritedElectrodePositionsPtr);
 
     const fileName outDir(mesh_.time().globalPath() / "postProcessing");
     if (!solverPtr_->writesOwnTimeSeries())
@@ -227,76 +213,6 @@ void ecgDomain::evolve
             outputPtr_.ref(), mesh_.time().value(), numericValues_
         );
     }
-}
-
-
-bool ecgDomain::read(const dictionary& dict)
-{
-    const wordList previousElectrodeNames(electrodeNames_);
-
-    readElectrodes(dict);
-
-    numericValues_.setSize(electrodeNames_.size(), 0.0);
-
-    if (electrodeNames_.size() != previousElectrodeNames.size())
-    {
-        FatalErrorInFunction
-            << "Changing the number of ECG electrodes during read() is not "
-               "supported because the output column layout is fixed at startup."
-            << exit(FatalError);
-    }
-
-    forAll(previousElectrodeNames, electrodeI)
-    {
-        if (electrodeNames_[electrodeI] != previousElectrodeNames[electrodeI])
-        {
-            FatalErrorInFunction
-                << "Changing ECG electrode names during read() is not "
-                   "supported because the output column layout is fixed at "
-                   "startup."
-                << exit(FatalError);
-        }
-    }
-
-    const word requestedType(ecgVerificationModel::selectedType(dict));
-
-    if (requestedType.empty())
-    {
-        finalizeVerificationModel(verificationModelPtr_);
-        return true;
-    }
-
-    if
-    (
-        verificationModelPtr_.valid()
-     && verificationModelPtr_->type() == requestedType
-    )
-    {
-        verificationModelPtr_->updateElectrodes
-        (
-            electrodeNames_,
-            electrodePositions_
-        );
-
-        return verificationModelPtr_->read(dict);
-    }
-
-    finalizeVerificationModel(verificationModelPtr_);
-    verificationModelPtr_ = ecgVerificationModel::New
-    (
-        *this,
-        domainName_,
-        dict,
-        electrodeNames_,
-        electrodePositions_
-    );
-    if (verificationModelPtr_.valid())
-    {
-        verificationModelPtr_->bindSolver(*solverPtr_);
-        verificationModelPtr_->validateProvider();
-    }
-
-    return true;
 }
 
 

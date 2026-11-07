@@ -88,12 +88,6 @@ bool manufacturedLeadFieldECGVerifier::read(const dictionary& dict)
     const referenceType selected =
         referenceTypeNames.get("reference", verifierDict);
 
-    if (initialised() && selected != reference_)
-    {
-        FatalErrorInFunction
-            << "The reference of " << type() << " is fixed at the first "
-            << "sample." << exit(FatalError);
-    }
     reference_ = selected;
 
     if (reference_ == referenceType::layered)

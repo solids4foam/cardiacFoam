@@ -13,7 +13,11 @@ electrodes.
   signature that ties the lead fields to the case.
 - `leadFieldAdjoint` transposes the explicit part of the conductor's
   operator for `buildLeadFields`.
-- `leadFieldECG` loads and evaluates the lead fields.
+- `leadFieldECG` loads and evaluates the lead fields. At load the signature
+  must match the case, and each lead field's fingerprint (sums of `z V f`
+  over the cells) must match the one `buildLeadFields` recorded in
+  `leadFieldBuildRecord`. A renumbered or redistributed mesh keeps the
+  signature's totals but fails the fingerprint.
 
 The lead field of electrode `e` is the discrete adjoint `z_e = A^-T e_e` of
 the finite-volume operator `A` of the conductor, with its explicit

@@ -1,0 +1,12 @@
+#!/bin/bash
+# Prepare as base/leadFieldBox, then renumber the mesh after the lead fields
+# are built: the lead-field files keep the old cell order, and the
+# signature's totals do not change
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication blockMesh || exit 1
+runApplication topoSet || exit 1
+runApplication setTorsoOrganConductivityField || exit 1
+runApplication buildLeadFields || exit 1
+runApplication renumberMesh -overwrite || exit 1

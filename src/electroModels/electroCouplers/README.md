@@ -17,6 +17,9 @@ The couplers that pass data between electrical domains, and the interfaces the d
     before seeding the tissue; `eikonalMonodomainPvjCoupler` starts the Purkinje action-potential
     template that much later. `reactionDiffusionPvjCoupler` refuses a non-zero value: its delay comes from `rPvj` and
     the junction load. Measured delays are about 3–13 ms (rabbit, dog).
+  - `eikonalPvjCoupler` seeds the activation times of an eikonal myocardium and needs `myocardiumSolver eikonalSolver`.
+    It drives no current, so a monodomain or bidomain myocardium uses `eikonalMonodomainPvjCoupler` or
+    `reactionDiffusionPvjCoupler`.
   - `seedProfile` (`eikonalPvjCoupler`, default `front`): the seed time of the support
     cells. `flat` holds them at the terminal time; `front` adds `rho/c0` and `curvedFront`
     the source-free radial solution, with `rho` the metric distance to the terminal. A

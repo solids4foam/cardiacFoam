@@ -129,7 +129,8 @@ public:
 
     virtual ~manufacturedShellLeadFieldECGVerifier() = default;
 
-    virtual bool read(const dictionary& dict) override;
+    //- Read the verifier entry (called by the constructor)
+    bool read(const dictionary& dict);
 
     //- Write Gi, Ge and the torso conductivity of the solution on the
     //  undecomposed mesh

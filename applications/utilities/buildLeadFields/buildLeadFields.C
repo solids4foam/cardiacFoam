@@ -51,7 +51,10 @@ Description
     Every electrode lies in a torso cell; an electrode outside the mesh or
     in a myocardium cell is fatal (leadFieldConductor).
 
-    Writes constant/[region/]leadField_<electrode> and leadFieldSignature.
+    Writes constant/[region/]leadField_<electrode>, leadFieldSignature and
+    leadFieldBuildRecord (the fixed-point controls, the leadField and
+    leadFieldFinal solver entries, and per electrode the passes, the last
+    relative change and the fingerprint of the lead field).
     With -parallel each processor writes its own processorN/constant, so a
     parallel ECG run needs lead fields built on its decomposition (run after
     decomposePar), or a serial build decomposed with decomposePar -constant.
@@ -193,6 +196,9 @@ int main(int argc, char *argv[])
     const labelList& cells = lfc.electrodeCells();
     scalarField e(mesh.nCells());
 
+    // How each lead field was built, and its fingerprint on this mesh
+    dictionary electrodeRecords;
+
     forAll(names, electrodeI)
     {
         Info<< "Lead field " << names[electrodeI] << nl;
@@ -259,6 +265,38 @@ int main(int argc, char *argv[])
         (
             fieldIO(fieldName, runTime.constant(), mesh, false), z
         ).write();
+
+        dictionary record;
+        record.add("passes", pass);
+        record.add("finalPasses", finalPasses);
+        record.add("relativeChange", change);
+        record.add("fingerprint", leadFieldConductor::fingerprint(z));
+        electrodeRecords.add(names[electrodeI], record);
+    }
+
+    {
+        dictionary record;
+        record.add("convergenceTolerance", convergenceTol);
+        record.add("maxPasses", maxPasses);
+        record.add
+        (
+            "minPasses", leadFieldConductor::fixedPointControls::minPasses
+        );
+        record.add("leadField", solverDict);
+        record.add("leadFieldFinal", finalSolverDict);
+        record.add("electrodes", electrodeRecords);
+
+        // ASCII whatever the case's writeFormat: a binary FixedList cannot
+        // be read back from a dictionary entry, and the record is for people
+        IOdictionary
+        (
+            fieldIO("leadFieldBuildRecord", runTime.constant(), mesh, false),
+            record
+        ).regIOobject::writeObject
+        (
+            IOstreamOption(IOstreamOption::ASCII),
+            true
+        );
     }
 
     IOdictionary

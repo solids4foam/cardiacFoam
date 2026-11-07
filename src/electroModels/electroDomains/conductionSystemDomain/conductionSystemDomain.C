@@ -33,22 +33,6 @@ defineTypeNameAndDebug(conductionSystemDomain, 0);
 namespace
 {
 
-bool selectedSolverRequiresIonicModel(const dictionary& dict)
-{
-    const word solverType
-    (
-        dict.lookupOrDefault<word>
-        (
-            "conductionSystemSolver",
-            "monodomain1DSolver"
-        )
-    );
-
-    return solverType != "eikonalSolver1D"
-        && solverType != "restitutionEikonalSolver1D";
-}
-
-
 void initialiseGraphStateField
 (
     scalarGlobalIOField& field,
@@ -226,7 +210,7 @@ void conductionSystemDomain::initialiseState(const scalar initialDeltaT)
     label endNode = (Pstream::myProcNo() == Pstream::nProcs() - 1) ? N : localStartNode_ + nodesPerProc;
     nLocalNodes_ = endNode - localStartNode_;
 
-    if (selectedSolverRequiresIonicModel(coeffsDict_))
+    if (solverPtr_->requiresIonicModel())
     {
         ionicModelPtr_ = ionicModel::New
         (

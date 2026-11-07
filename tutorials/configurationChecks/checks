@@ -142,6 +142,7 @@ twoConductionNetworkDomains            slab  monodomainPurkinjeReactionDiffusion
 pvjDelayWithReactionDiffusion          slab  monodomainPurkinjeReactionDiffusion fail:pvjDelay~is~not~used monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
 seedProfileWithReactionDiffusion       slab  monodomainPurkinjeReactionDiffusion fail:seedProfile~is~used~only monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=front
 unknownSeedProfile                     slab  eikonalPurkinje                        fail:Unknown~seedProfile eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=bogus
+eikonalPvjCouplerOnMonodomain          slab  monodomainPurkinjeRestitutionEikonal fail:needs~myocardiumSolver~eikonalSolver monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/electroDomainCoupler=eikonalPvjCoupler monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/rPvj! monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=flat monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/couplingMode=unidirectional
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 ecgDomains/ECG/ecgSolver=bogusECG
 # A complete eikonalECG entry (sampling is required) on a monodomain heart
 eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:requires~myocardiumSolver~eikonalSolver  ecgDomains/ECG/ecgSolver=eikonalECG  ecgDomains/ECG/sampling={start~0;end~0.01;deltaT~1e-3;}
@@ -180,6 +181,7 @@ leadFieldHeartTraceGlobal              bath  bidomainLeadFieldECG        fail:ba
 leadFieldNonlinearScheme               leadFieldBox  leadFieldBoxLimited        fail:is~not~linear  skip=v2312
 leadFieldGradientCache                 leadFieldBox  leadFieldBoxGradientCache  fail:remove~it~from~the~cache  skip=v2312
 leadFieldSchemesStale                  leadFieldBox  leadFieldBoxStaleSchemes   fail:Gauss~linear~uncorrected  skip=v2312
+leadFieldMeshRenumbered                leadFieldBox  leadFieldBoxRenumbered     fail:does~not~belong~to~the~cells  skip=v2312
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension
 
 # ---- Misspelt or unknown entries: must stop and name the valid ones ---------

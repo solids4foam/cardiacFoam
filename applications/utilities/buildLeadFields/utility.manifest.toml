@@ -23,7 +23,8 @@ leadFieldFinal (relTol 0, tight tolerance) until it falls below it again.
 The build checks the linearity of C, the probed C, the transpose, the
 symmetry of M, and each lead field's residual and reference pin, each fatal
 above its tolerance. Writes one lead field per electrode and the conductor
-signature that torsoECG checks at load.
+signature and a build record (controls, solver entries, passes, last
+change and a per-electrode fingerprint) that torsoECG checks at load.
 """
 
 inputs = [
@@ -37,6 +38,7 @@ inputs = [
 outputs = [
   "constant/leadField_<electrode>",
   "constant/leadFieldSignature",
+  "constant/leadFieldBuildRecord",
 ]
 
 requires_mesh = true
@@ -67,5 +69,13 @@ artifact_id = "lead_field_signature"
 path_pattern = "constant/leadFieldSignature"
 format = "openfoam_log"
 description = "Decomposition-independent conductor signature the lead fields were built for."
+produced_by = "buildLeadFields"
+time_indexed = false
+
+[[produces]]
+artifact_id = "lead_field_build_record"
+path_pattern = "constant/leadFieldBuildRecord"
+format = "openfoam_log"
+description = "Fixed-point controls, solver entries, and per electrode the passes, last relative change and the fingerprint torsoECG checks at load."
 produced_by = "buildLeadFields"
 time_indexed = false

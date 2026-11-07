@@ -59,6 +59,11 @@ public:
         scalar t0,
         scalar dt
     ) override;
+
+    virtual bool requiresIonicModel() const override
+    {
+        return false;
+    }
 };
 
 } // End namespace Foam

@@ -99,6 +99,14 @@ cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
   fvSchemes entries that resolve the schemes of `phiE` on the base and heart
   meshes, electrodes, ground and surface-current patches, reference).
   `torsoECG` compares it with the case at load.
+- `constant/[region/]leadFieldBuildRecord`: how the lead fields were built:
+  the `leadFieldFixedPoint` tolerance and pass limits, the `leadField` and
+  `leadFieldFinal` solver entries, and for each electrode the number of
+  passes, the last relative change and a fingerprint, the sums of
+  `z V f` over the cells for `f = 1, x, y, z, |x|²`. The signature holds
+  totals, which a renumbered or redistributed mesh keeps; the fingerprint
+  pairs each value with its cell. `torsoECG` checks each lead field's
+  fingerprint at load and logs its passes and last change.
 
 In parallel (`-parallel`), each processor writes its own
 `processorN/constant/[region/]leadField_<electrode>`. A parallel ECG run

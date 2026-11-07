@@ -271,6 +271,23 @@ public:
     //  written to os.
     bool matches(const dictionary& built, Ostream& os) const;
 
+    //- Fingerprint of a lead field: the global sums of z V f over the
+    //  cells, for f = 1, x, y, z and |x|^2 at the cell centre. It ties the
+    //  values of a lead-field file to the cells they were computed on, which
+    //  the signature's totals do not: a renumbered or redistributed mesh
+    //  keeps the totals but moves the values to other cells.
+    static FixedList<scalar, 5> fingerprint(const volScalarField& z);
+
+    //- True if the fingerprint of z equals recorded, each sum to a relative
+    //  1e-10 of the sum of the magnitudes of its terms. Writes both
+    //  fingerprints to os otherwise.
+    static bool fingerprintMatches
+    (
+        const FixedList<scalar, 5>& recorded,
+        const volScalarField& z,
+        Ostream& os
+    );
+
     //- Zero potential phiE on the base mesh (unregistered) with the
     //  forward's patch types, ground values and surface-current gradients
     tmp<volScalarField> forwardPotential() const;
