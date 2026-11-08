@@ -29,8 +29,6 @@ eikonalSolverCoeffs
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
     // No stimulus box: the ball sets the origin of the wave
-    stimulusLocationMin (1e6 1e6 1e6);
-    stimulusLocationMax (1e6 1e6 1e6);
 
     #includeIfPresent "<case>/local/c0"
     #includeIfPresent "<case>/local/stabilisation"

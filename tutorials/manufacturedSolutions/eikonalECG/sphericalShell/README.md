@@ -47,10 +47,9 @@ critical points of `psi` on the walls.
 - gradient: `sealedWallLeastSquares` for `grad(activationTime)` and
   `grad(activationTime.component(0))` (`system/fvSchemes`): wall cells take no
   value from the sealed walls; `leastSquares` elsewhere
-- stimulus box: `stimulusLocationMin/Max` lie outside the shell. With the
-  verifier active `applyConstraints` rewrites the activation time of every
-  cell before the constraints are collected, so a box inside the shell has no
-  effect
+- stimulus box: none. With the verifier active `applyConstraints` rewrites
+  the activation time of every cell before the constraints are collected, so
+  the manufactured field supplies the seeds
 - solver controls (`system/fvSolution`): those of
   [eikonalECG](../README.md) (`nOuterCorrectors 8000`, outer residual
   tolerance `1e-8`, equation relaxation `0.9` on every outer iteration, `PBiCGStab`/`DILU` for the

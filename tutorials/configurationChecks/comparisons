@@ -18,6 +18,7 @@ differ  monodomainImplicit                   bidomain                           
 differ  eikonal                              eikonalPurkinje                                  1/activationTime
 differ  eikonalPurkinje                      eikonalPurkinjePvjDelay                          1/activationTime
 differ  eikonalPurkinje                      eikonalPurkinjeSeedFlat                          1/activationTime
+differ  eikonalPurkinje                      eikonalPurkinjeNoSeedBox                         1/activationTime
 differ  eikonal                              eikonalSeedBoxList                               1/activationTime
 # A zero-conductance edge must block the eikonal network
 differ  eikonalPurkinje                      eikonalPurkinjeCutBranch                         1/activationTime.purkinjeNetwork

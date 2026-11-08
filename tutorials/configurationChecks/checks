@@ -41,6 +41,10 @@ eikonalSeedBoxListSingle               slab  eikonal                            
 eikonalPurkinjeCutBranch               slab  eikonalPurkinjeCutBranch               pass
 eikonalPurkinjeCutBranchIgnored        slab  eikonalPurkinjeCutBranch               pass  eikonalSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/useEdgeConductance=false
 eikonalPurkinjePvjDelay                slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
+# The seed box is optional: the junctions alone seed the myocardium;
+# with neither a box nor a network the solve must stop
+eikonalPurkinjeNoSeedBox               slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!
+eikonalNoSeed                          slab  eikonal                                fail:no~activation~seed  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!
 # An ionic state of the graph model exported next to the coupling outputs;
 # in parallel each processor holds only its share of the graph nodes (#48)
 monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion    pass  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(IcouplingSource~Vm~v);}
