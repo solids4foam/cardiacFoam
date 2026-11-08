@@ -130,10 +130,6 @@ extracellularPotentialDomain::extracellularPotentialDomain
             << exit(FatalError);
     }
 
-    // The bidomain intracellular potential is insulated at the heart wall,
-    // so the heart side of heart-torso faces carries Ge
-    const bool totalWallConductivity = false;
-
     const dictionary& myocardiumCoeffs =
         electroPropertiesKeys::myocardiumCoeffs(electroProperties);
     const Switch sealedHeartBoundary
@@ -157,7 +153,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
             ),
             sealedHeartBoundary,
             heartVm_,
-            totalWallConductivity
+            torsoCoupling::type::bath
         )
     );
     const passiveConductor::torsoSettings& torso = conductorPtr_->torso();

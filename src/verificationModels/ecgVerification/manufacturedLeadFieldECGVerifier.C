@@ -235,19 +235,6 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
         alpha_ = 0.5*(alphaMin + alphaMax);
     }
 
-    // With a current the exact heart slope alpha/(Gi + Ge)_xx at the walls
-    // carries the intracellular flux alpha Gi_xx/(Gi + Ge)_xx, which a
-    // sealed Vm admits and an insulated bidomain intracellular potential
-    // does not
-    if (alpha_ != 0 && !lfc.conductor().totalWallConductivity())
-    {
-        FatalErrorInFunction
-            << "The layered reference with a surface current (alpha "
-            << alpha_ << ") is a monodomain solution; the bidomain conductor "
-            << "insulates the intracellular potential at the heart wall."
-            << exit(FatalError);
-    }
-
     // (Gi + Ge)_xx; slabK_ has checked Gi and Ge
     layers_.sigmaHeart =
         verificationUtils::uniformTensor

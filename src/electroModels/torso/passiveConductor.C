@@ -211,6 +211,29 @@ void passiveConductor::torsoSettings::setGroundValues
 }
 
 
+bool passiveConductor::totalWallConductivity
+(
+    const torsoCoupling::type coupling
+)
+{
+    switch (coupling)
+    {
+        case torsoCoupling::type::bath:
+            return false;
+        case torsoCoupling::type::leadField:
+            return true;
+        case torsoCoupling::type::none:
+            break;
+    }
+
+    FatalErrorInFunction
+        << "A passive conductor serves the bath or the lead fields, not "
+        << torsoCoupling::name(coupling) << '.' << exit(FatalError);
+
+    return false;
+}
+
+
 passiveConductor::passiveConductor
 (
     const fvMesh& baseMesh,
@@ -222,7 +245,7 @@ passiveConductor::passiveConductor
     const torsoSettings& torso,
     const Switch sealedHeartBoundary,
     const volScalarField& sealingField,
-    const bool totalWallConductivity,
+    const torsoCoupling::type coupling,
     const bool registerFields
 )
 :
@@ -233,7 +256,8 @@ passiveConductor::passiveConductor
     torso_(torso),
     sealedHeartBoundary_(sealedHeartBoundary),
     nInterfaceGradientCorrectors_(0),
-    totalWallConductivity_(totalWallConductivity),
+    coupling_(coupling),
+    totalWallConductivity_(totalWallConductivity(coupling)),
     registerFields_(registerFields),
     heartCellToBaseCell_(),
     heartFaceToBaseFace_(),

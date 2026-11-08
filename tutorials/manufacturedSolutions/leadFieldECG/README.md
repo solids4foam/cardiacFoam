@@ -164,11 +164,12 @@ The verifier (`reference layered`, `layerInterfaces (-0.5 1.5)`) takes
 `alpha` from the surface currents and the layer conductivities from the
 torso cells. It stops with a fatal error when a torso cell crosses a layer
 interface, when a layer has more than one conductivity, when the surface
-currents are not along `x` or carry a net current, or when a current is
-combined with the bidomain myocardium. With a current the heart slope
-`alpha/(Gi + Ge)_xx` at the walls carries the intracellular flux
-`alpha Gi_xx/(Gi + Ge)_xx`, which the sealed monodomain `Vm` admits and
-the insulated bidomain intracellular potential does not. The pin and the
+currents are not along `x` or carry a net current. With a current the
+heart slope is `alpha/(Gi + Ge)_xx`: the lead-field conductor is the
+passive bulk conductor of reciprocity for either myocardium, with
+`Gi + Ge` on the heart side of the walls and the source `Vm` sealed there,
+so the current part of the solution is exact on the hex mesh for the
+monodomain and the bidomain myocardium alike. The pin and the
 electrodes are those of the slab: `surface1`, `surface2`, `surface6` and
 `torsoLeftFar` lie in the pinned outer layer, `surface5`, `torsoLeft` and
 `nearLeft` in the inner left layer, `surface7` and `nearRight` in the inner
@@ -256,7 +257,7 @@ removes `local/`, `0/`, the mesh and the lead fields.
 |---|---|---|
 | `parallel` | `decomposePar` (2 subdomains, scotch); `buildLeadFields` and `cardiacFoam` in parallel | serial |
 | `-problem slab\|layered` | exact passive solution | slab |
-| `-alpha x` | surface current of `layered` (`-alpha` on `xMin`, `alpha` on `xMax`; 0: insulated); a current needs the monodomain myocardium | 0.01 |
+| `-alpha x` | surface current of `layered` (`-alpha` on `xMin`, `alpha` on `xMax`; 0: insulated) | 0.01 |
 | `-mesh hex\|tet` | blockMesh boxes or gmsh tetrahedra | hex |
 | `-N n` | cells per unit length; tet: element size `1/n` | 10 |
 | `-seed n` | gmsh random seed (`-mesh tet`) | 1 |

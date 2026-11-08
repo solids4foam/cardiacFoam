@@ -29,8 +29,7 @@ Options (parameters are written to local/ and included by the dictionaries):
                                        x = $layerRight) and the surface currents
                                        -alpha on xMin and alpha on xMax
   -alpha x                  current of -problem layered (default 0.01); 0 leaves
-                            the outer boundary insulated; a current needs
-                            -myocardium monodomain
+                            the outer boundary insulated
   -mesh hex|tet             blockMesh box (default) or gmsh tetrahedra
                             (three_domain_box.geo.template, layered_box.geo.template)
   -N n                      cells per unit length (default 10; for -problem
@@ -181,14 +180,6 @@ done
 if [ -n "$alpha" ] && [ "$problem" != layered ]
 then
     echo "${0##*/}: -alpha applies to -problem layered only" 1>&2
-    usage
-fi
-
-if [ "$problem" = layered ] && [ "$myocardium" = bidomain ] \
-    && awk -v a="${alpha:-0.01}" 'BEGIN { exit !(a + 0 != 0) }'
-then
-    echo "${0##*/}: -problem layered with a current is monodomain only;" \
-        "use -alpha 0 with -myocardium bidomain" 1>&2
     usage
 fi
 

@@ -84,6 +84,7 @@ Author
 #include "wordList.H"
 #include "scalarList.H"
 #include "probedOperator.H"
+#include "torsoCoupling.H"
 
 namespace Foam
 {
@@ -197,8 +198,15 @@ private:
     // 0 otherwise
     label nInterfaceGradientCorrectors_;
 
-    // Heart-side wall conductivity is Gi + Ge (sealed source), else Ge.
+    // The coupling this conductor serves (bath or leadField)
+    const torsoCoupling::type coupling_;
+
+    // Heart side of heart-torso faces: Gi + Ge (leadField), Ge (bath)
     const bool totalWallConductivity_;
+
+    // Gi + Ge on the heart side of heart-torso faces for coupling, fatal for
+    // none
+    static bool totalWallConductivity(const torsoCoupling::type coupling);
 
     // Register the base-mesh fields with the base mesh.
     const bool registerFields_;
@@ -297,10 +305,16 @@ public:
     //  conormalHarmonic, nInterfaceGradientCorrectors (required, at least
     //  1) is read from the phiE entry of the solvers of fvSolution of the
     //  base mesh.
-    //  totalWallConductivity selects Gi + Ge (true) or Ge (false) on the
-    //  heart side of heart-torso faces. registerFields false keeps the
-    //  base-mesh fields out of the base-mesh registry (their names stay the
-    //  same).
+    //  coupling is the one the conductor serves and sets the heart side of
+    //  heart-torso faces:
+    //  - bath: Ge. The two-way phiE is the heart's own, whose Vm equation
+    //    insulates the intracellular potential at the wall, so only
+    //    extracellular current crosses it.
+    //  - leadField: Gi + Ge. The one-way conductor of reciprocity is the
+    //    passive bulk conductor, with phi and the total current continuous
+    //    at the wall and the source Vm sealed there.
+    //  registerFields false keeps the base-mesh fields out of the base-mesh
+    //  registry (their names stay the same).
     passiveConductor
     (
         const fvMesh& baseMesh,
@@ -312,7 +326,7 @@ public:
         const torsoSettings& torso,
         const Switch sealedHeartBoundary,
         const volScalarField& sealingField,
-        const bool totalWallConductivity,
+        const torsoCoupling::type coupling,
         const bool registerFields = true
     );
 
@@ -397,11 +411,10 @@ public:
         return nInterfaceGradientCorrectors_;
     }
 
-    //- True when heart-torso faces carry Gi + Ge on the heart side (a sealed
-    //  source), false when they carry Ge (bidomain)
-    bool totalWallConductivity() const
+    //- The coupling this conductor serves (bath or leadField)
+    torsoCoupling::type coupling() const
     {
-        return totalWallConductivity_;
+        return coupling_;
     }
 };
 

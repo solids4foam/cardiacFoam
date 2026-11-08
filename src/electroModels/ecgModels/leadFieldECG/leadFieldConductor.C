@@ -427,10 +427,6 @@ void leadFieldConductor::build
     );
     locateElectrodes(ecgDict);
 
-    // A monodomain source is sealed at the heart wall, so the heart side of
-    // heart-torso faces carries Gi + Ge; a bidomain heart carries Ge
-    const bool totalWallConductivity = !bidomain_;
-
     // The conductor's base-mesh fields stay out of the base-mesh registry
     const bool registerFields = false;
 
@@ -450,7 +446,7 @@ void leadFieldConductor::build
             ),
             sealedHeartBoundary_,
             *sealingFieldPtr_,
-            totalWallConductivity,
+            torsoCoupling::type::leadField,
             registerFields
         )
     );
