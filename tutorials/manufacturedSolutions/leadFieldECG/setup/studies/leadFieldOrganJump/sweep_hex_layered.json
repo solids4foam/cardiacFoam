@@ -4,7 +4,8 @@
     "cases_root": "tutorials",
     "system/controlDict:endTime": 0.02,
     "system/controlDict:writeInterval": 0.02,
-    "problem": "layered"
+    "problem": "layered",
+    "myocardium": "bidomain"
   },
   "sweep": {
     "mode": "zip",

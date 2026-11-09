@@ -48,14 +48,16 @@ Its error, the **alpha part**, is reported for two groups of probes:
 | tet (gmsh 4.15.2, seed 1), `slab` | 10, 14, 20, 28 | 14792, 39131, 111482, 299957 |
 
 The tetrahedral `N = 40` runs use two ranks (the `parallel` argument of
-`Allrun`); every other run is serial. All runs are monodomain with `corrected` snGrad, and use
+`Allrun`); every other run is serial. All runs use the bidomain myocardium
+(`-myocardium bidomain`) with `corrected` snGrad, and use
 `-endTime 0.02` (two samples, `dt = 0.01`). Each run builds 13 lead fields,
-one per electrode. The fixed points stop at the `leadFieldFixedPoint`
-tolerance of `system/fvSolution`. On hexahedra the lead fields need 5 or 6
-passes and each direct solve 2. On tetrahedra the lead fields need 38 to 64
-passes and each direct solve 39 to 77, within the `maxPasses 100` of
-`system/fvSolution`. The largest `phiE` iteration count is 888
-(`layered_tet_N40`), below the `maxIter 5000` of `system/fvSolution`.
+one per electrode. The lead fields and the direct solves use the assembled
+matrix through PETSc (GMRES preconditioned by GAMG) and stop on the true
+residual of the assembled system at the `residualTolerance 1e-10` of
+`system/fvSolution`. On hexahedra the lead fields need 23 to 32 iterations
+and each direct solve 24 to 34; on tetrahedra 29 to 36 and 31 to 39. The true
+residuals are at most `1.6e-15` (lead fields) and `1.1e-14` (direct
+solves).
 
 ## Execution
 
@@ -71,7 +73,7 @@ run()
     name=$1; shift
     rsync -a --exclude setup --exclude regression --exclude sphericalShell \
         ../../../ results/$name/
-    bash results/$name/Allrun "$@" -endTime 0.02
+    bash results/$name/Allrun "$@" -myocardium bidomain -endTime 0.02
 }
 for n in 10 20 40
 do
@@ -93,7 +95,8 @@ python3 ../summarize.py results
 The omnidriver specs for this study are `sweep_hex_layered.json`,
 `sweep_hex_slab.json`, `sweep_tet_layered.json` and `sweep_tet_slab.json`, for
 the record `manufacturedLeadFieldECG`, which omnidriver does not have. They
-name the `Allrun` options as axes (`problem`, `alpha`, `mesh`, `parallel`;
+name the `Allrun` options as axes (`problem`, `alpha`, `mesh`, `parallel`,
+with `myocardium bidomain` in the base;
 `-N` is `numberCells` on hexahedra and `tetNumberCells` on tetrahedra) and `-endTime` as the keys
 `system/controlDict:endTime` and `writeInterval`.
 
@@ -103,14 +106,14 @@ Errors against the exact potential, as the largest Linf over the samples
 among the electrodes of the group, and the error of the direct static field
 over the surface cells; the order is between consecutive levels, with
 `h = (cells/3)^(-1/3)`, which is `1/N` on hexahedra. Gaps are relative to
-the largest exact potential (about 1.77 with `alpha = 0.01`). The lead field
+the largest exact potential (about 2.05 with `alpha = 0.01`). The lead field
 and the direct solve give the same electrode errors to every printed digit,
 so the probe and point tables give the lead field only.
 
 ### Hexahedra
 
 Reciprocity gap `leadField-direct` (on `Vm_h`) and static, every group, for
-`layered` and `layeredAlpha0`: at most 4.9e-12 (N = 10 to 40).
+`layered` and `layeredAlpha0`: at most 1.2e-12 (N = 10 to 40).
 
 Body surface, static errors at the cell centroid, with the `-alpha 0`
 lead field:
@@ -128,9 +131,9 @@ Alpha part:
 
 | N | LF left | LF right | direct left | direct right |
 |---|---|---|---|---|
-| 10 | 7.7383e-14 | 5.1292e-14 | 7.0360e-13 | 7.0588e-13 |
-| 20 | 6.3405e-13 | 3.2152e-13 | 4.7679e-13 | 4.7740e-13 |
-| 40 | 2.7947e-12 | 3.5263e-12 | 7.1154e-12 | 7.1378e-12 |
+| 10 | 5.6510e-14 | 2.6623e-13 | 1.1852e-14 | 3.3751e-14 |
+| 20 | 1.0786e-13 | 2.8644e-13 | 1.2768e-13 | 1.8563e-13 |
+| 40 | 1.6647e-12 | 1.8150e-12 | 2.8670e-12 | 2.9532e-12 |
 
 Static errors at the electrode point:
 
@@ -151,7 +154,7 @@ localisation `phi(x_e) - phi(x_c)` of the electrode in its cell, which is
   values, so the layers and the current add no discretisation error on
   these meshes.
 - **The interfaces are exact on the hexahedra.** The alpha part is round-off
-  (`<= 7.2e-12`) at both probe groups, in the lead field and the direct
+  (`<= 3.0e-12`) at both probe groups, in the lead field and the direct
   solve:
   - `left`: the harmonic face conductivity of the torso layer interface
     `x = -0.5` gives the exact flux of a piecewise linear potential across a
@@ -172,60 +175,60 @@ the surface group on `Vm_h` (`gap dyn`) and on the exact `Vm`
 
 | N | h | gap dyn | gap static | LF surface | order | direct surface | order | `phiStatic_surface` RMS | order | `phiStatic_surface` max | order |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 10 | 0.05792 | 1.871e-10 | 1.862e-10 | 6.4057e-03 |  | 6.4057e-03 |  | 4.0486e-03 |  | 1.0375e-02 |  |
-| 14 | 0.04238 | 1.574e-10 | 1.652e-10 | 3.2807e-03 | 2.14 | 3.2807e-03 | 2.14 | 2.1773e-03 | 1.99 | 6.4399e-03 | 1.53 |
-| 20 | 0.02983 | 2.578e-11 | 2.632e-11 | 1.7302e-03 | 1.82 | 1.7302e-03 | 1.82 | 1.1382e-03 | 1.85 | 4.5193e-03 | 1.01 |
-| 28 | 0.02148 | 4.978e-11 | 4.917e-11 | 9.5604e-04 | 1.80 | 9.5604e-04 | 1.80 | 6.2835e-04 | 1.81 | 2.5761e-03 | 1.71 |
-| 40 | 0.01508 | 2.385e-11 | 2.388e-11 | 4.7978e-04 | 1.95 | 4.7978e-04 | 1.95 | 3.1108e-04 | 1.99 | 1.8483e-03 | 0.94 |
+| 10 | 0.05792 | 3.939e-13 | 3.100e-13 | 6.1177e-03 |  | 6.1177e-03 |  | 3.8674e-03 |  | 1.0075e-02 |  |
+| 14 | 0.04238 | 9.916e-13 | 8.005e-13 | 3.0531e-03 | 2.23 | 3.0531e-03 | 2.23 | 2.0339e-03 | 2.06 | 6.2089e-03 | 1.55 |
+| 20 | 0.02983 | 1.031e-12 | 9.117e-13 | 1.5876e-03 | 1.86 | 1.5876e-03 | 1.86 | 1.0479e-03 | 1.89 | 4.3815e-03 | 0.99 |
+| 28 | 0.02148 | 1.131e-12 | 7.010e-13 | 8.5583e-04 | 1.88 | 8.5583e-04 | 1.88 | 5.6353e-04 | 1.89 | 2.4772e-03 | 1.74 |
+| 40 | 0.01508 | 5.425e-12 | 6.159e-12 | 4.1331e-04 | 2.06 | 4.1331e-04 | 2.06 | 2.6832e-04 | 2.10 | 1.7813e-03 | 0.93 |
 
 Body surface with `-alpha 0`:
 
 | N | LF surface | order | `phiStatic_surface` RMS | order | `phiStatic_surface` max | order |
 |---|---|---|---|---|---|---|
-| 10 | 5.8769e-03 |  | 3.7962e-03 |  | 5.8809e-03 |  |
-| 14 | 3.1477e-03 | 2.00 | 2.0408e-03 | 1.99 | 3.2037e-03 | 1.94 |
-| 20 | 1.5821e-03 | 1.96 | 1.0324e-03 | 1.94 | 1.5850e-03 | 2.01 |
-| 28 | 8.3668e-04 | 1.94 | 5.4473e-04 | 1.95 | 8.4103e-04 | 1.93 |
-| 40 | 4.0991e-04 | 2.02 | 2.6720e-04 | 2.01 | 4.2167e-04 | 1.95 |
+| 10 | 5.8859e-03 |  | 3.8159e-03 |  | 5.8908e-03 |  |
+| 14 | 3.1541e-03 | 2.00 | 2.0512e-03 | 1.99 | 3.2005e-03 | 1.95 |
+| 20 | 1.5840e-03 | 1.96 | 1.0354e-03 | 1.95 | 1.5857e-03 | 2.00 |
+| 28 | 8.3815e-04 | 1.94 | 5.4643e-04 | 1.94 | 8.4232e-04 | 1.92 |
+| 40 | 4.1059e-04 | 2.02 | 2.6798e-04 | 2.01 | 4.1947e-04 | 1.97 |
 
 Probes, `torso` reciprocity gap and lead-field errors:
 
 | N | gap dyn | gap static | LF torso | order | LF near | order |
 |---|---|---|---|---|---|---|
-| 10 | 1.799e-10 | 1.801e-10 | 6.3479e-03 |  | 6.7079e-03 |  |
-| 14 | 1.294e-10 | 1.361e-10 | 3.4584e-03 | 1.94 | 3.4239e-03 | 2.15 |
-| 20 | 2.640e-11 | 2.796e-11 | 1.6333e-03 | 2.14 | 1.6639e-03 | 2.06 |
-| 28 | 3.978e-11 | 3.929e-11 | 9.0280e-04 | 1.80 | 9.2805e-04 | 1.78 |
-| 40 | 1.148e-11 | 2.468e-11 | 4.6697e-04 | 1.86 | 4.0645e-04 | 2.33 |
+| 10 | 1.757e-13 | 1.461e-13 | 6.0582e-03 |  | 6.2693e-03 |  |
+| 14 | 8.164e-13 | 6.437e-13 | 3.2297e-03 | 2.01 | 3.1637e-03 | 2.19 |
+| 20 | 9.255e-13 | 8.183e-13 | 1.4915e-03 | 2.20 | 1.5657e-03 | 2.00 |
+| 28 | 1.174e-12 | 7.487e-13 | 8.0324e-04 | 1.88 | 8.3107e-04 | 1.93 |
+| 40 | 5.492e-12 | 4.004e-12 | 4.0038e-04 | 1.97 | 4.0377e-04 | 2.04 |
 
 Static errors at the electrode point (with `-alpha 0` they equal the
 centroid errors):
 
 | N | LF surface | order | LF torso | order | LF near | order |
 |---|---|---|---|---|---|---|
-| 10 | 2.3554e-02 |  | 2.1574e-02 |  | 6.0150e-03 |  |
-| 14 | 1.1292e-02 | 2.35 | 1.5392e-02 | 1.08 | 1.9968e-03 | 3.53 |
-| 20 | 7.7774e-03 | 1.06 | 2.7442e-03 | 4.91 | 6.6563e-04 | 3.13 |
-| 28 | 8.1147e-03 | -0.13 | 4.7860e-03 | -1.69 | 5.3771e-04 | 0.65 |
-| 40 | 5.9738e-03 | 0.87 | 2.2523e-03 | 2.13 | 1.5214e-03 | -2.94 |
+| 10 | 2.3271e-02 |  | 2.1863e-02 |  | 5.5763e-03 |  |
+| 14 | 1.1286e-02 | 2.32 | 1.5397e-02 | 1.12 | 2.0192e-03 | 3.25 |
+| 20 | 7.6365e-03 | 1.11 | 2.6488e-03 | 5.01 | 5.6745e-04 | 3.62 |
+| 28 | 8.2141e-03 | -0.22 | 4.7857e-03 | -1.80 | 6.3471e-04 | -0.34 |
+| 40 | 5.9730e-03 | 0.90 | 2.1857e-03 | 2.22 | 1.5187e-03 | -2.47 |
 
 Alpha part (the lead field and the direct solve give the same values):
 
 | N | left | order | right | order |
 |---|---|---|---|---|
-| 10 | 4.4046e-04 |  | 4.4610e-04 |  |
-| 14 | 2.2056e-04 | 2.21 | 3.1302e-04 | 1.13 |
-| 20 | 4.2193e-05 | 4.71 | 9.9369e-05 | 3.27 |
-| 28 | 2.9254e-05 | 1.11 | 9.7180e-05 | 0.07 |
-| 40 | 2.0407e-05 | 1.02 | 5.6939e-05 | 1.51 |
+| 10 | 4.3298e-04 |  | 1.5523e-04 |  |
+| 14 | 2.2088e-04 | 2.15 | 7.7113e-05 | 2.24 |
+| 20 | 9.1908e-05 | 2.50 | 9.2567e-05 | -0.52 |
+| 28 | 2.9296e-05 | 3.48 | 3.3346e-05 | 3.11 |
+| 40 | 2.0728e-05 | 0.98 | 1.0321e-05 | 3.32 |
 
 - **Lead field and direct solve.** The reciprocity gap is at the level of the
-  fixed-point tolerances (at most 2.7e-10 over every group, `layered` and
-  `layeredAlpha0`), and the lead field equals the direct solve in every
-  row, alpha part included.
+  linear-solve tolerances (at most 1.4e-11 relative over every group,
+  `layered` and `layeredAlpha0`), and the lead field equals the direct
+  solve in every row, alpha part included.
 - **Total error.** The body-surface ECG converges below second order at the
-  intermediate levels (1.82, 1.80) and at second order between `N = 28` and
-  `40` (1.95), and the RMS over the surface cells follows it (1.99 at
+  intermediate levels (1.86, 1.88) and at second order between `N = 28` and
+  `40` (2.06), and the RMS over the surface cells follows it (2.10 at
   `N = 40`). With `-alpha 0` the surface group and both surface field rows
   converge at second order.
 - **Local first-order maximum.** With the current, the largest error of the
@@ -233,7 +236,7 @@ Alpha part (the lead field and the direct solve give the same values):
   over the surface cells coincide), where the layer interface `x = 1.5`
   meets a side face of the box, at `(1.49557 0.2875 0.00541266)` at
   `N = 40`. It converges at about first order, with erratic pairwise orders
-  between 0.94 and 1.71. With `-alpha 0` the surface maximum is second
+  between 0.93 and 1.74. With `-alpha 0` the surface maximum is second
   order, so this local error comes with the current, at the layer interface
   next to the outer boundary. Its cause is not established. A possible
   cause is the explicit non-orthogonal correction across the layer
@@ -246,10 +249,11 @@ Alpha part (the lead field and the direct solve give the same values):
 - **Point errors.** The point-evaluated electrode errors converge with
   erratic level-to-level orders in every group, through the `O(h)`
   localisation of each electrode in its cell.
-- **Alpha part.** It keeps decreasing to `N = 40`, by a factor of about 20
-  over the ladder at `left` and about 8 at `right`, with erratic
-  level-to-level orders at both. At `N = 40` it is 4% (`left`) and 12%
-  (`right`) of the surface error. No order is measured, and the cause of the
+- **Alpha part.** It decreases over the ladder, by a factor of about 20 at
+  `left` and about 15 at `right` between `N = 10` and `40`, with erratic
+  level-to-level orders at both (at `right` it rises between `N = 14` and
+  `20`). At `N = 40` it is 5% (`left`) and 2.5% (`right`) of the surface
+  error. No order is measured, and the cause of the
   scatter is not established.
 
 ### Invariance: `-alpha 0` against the slab
@@ -261,13 +265,13 @@ from the static channel, and each channel's error against the exact
 
 | mesh | N | difference (Vm_h) | difference (static) | error layered | error slab |
 |---|---|---|---|---|---|
-| hex | 10 | 1.503e-13 | 1.510e-13 | 1.7645e-02 | 1.7645e-02 |
-| hex | 20 | 2.022e-12 | 2.005e-12 | 4.4945e-03 | 4.4945e-03 |
-| hex | 40 | 2.053e-12 | 2.044e-12 | 1.2006e-03 | 1.2006e-03 |
-| tet | 10 | 9.078e-05 | 6.849e-05 | 6.7147e-03 | 6.6239e-03 |
-| tet | 14 | 1.002e-04 | 7.394e-05 | 3.6883e-03 | 3.5881e-03 |
-| tet | 20 | 1.754e-05 | 2.175e-05 | 1.9254e-03 | 1.9396e-03 |
-| tet | 28 | 2.723e-05 | 2.050e-05 | 1.0550e-03 | 1.0278e-03 |
+| hex | 10 | 9.519e-13 | 9.583e-13 | 1.7674e-02 | 1.7674e-02 |
+| hex | 20 | 2.369e-13 | 2.389e-13 | 4.5020e-03 | 4.5020e-03 |
+| hex | 40 | 4.345e-13 | 4.159e-13 | 1.2024e-03 | 1.2024e-03 |
+| tet | 10 | 7.277e-05 | 6.080e-05 | 6.2702e-03 | 6.1974e-03 |
+| tet | 14 | 8.359e-05 | 7.300e-05 | 3.4256e-03 | 3.3420e-03 |
+| tet | 20 | 1.711e-05 | 1.996e-05 | 1.7859e-03 | 1.8009e-03 |
+| tet | 28 | 2.579e-05 | 2.163e-05 | 9.9361e-04 | 9.6782e-04 |
 
 - **Hexahedra.** The two cases have the same cells (five blocks against
   three, the same `h`), and the ECG does not move with the layer
@@ -275,7 +279,7 @@ from the static channel, and each channel's error against the exact
 - **Tetrahedra.** The layered mesh has two more internal planes, so the two
   cases are different meshes. The comparison ends at `N = 28`, the last slab
   level. Both ECGs converge to `2 k S`, and their
-  difference, 1e-4 to 2e-5, is 1 to 3% of either error.
+  difference, 8e-5 to 2e-5, is 1 to 3% of either error.
 
 ### Linear interpolation of the layer conductivity
 

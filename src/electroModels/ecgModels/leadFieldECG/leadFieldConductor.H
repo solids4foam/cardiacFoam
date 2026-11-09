@@ -164,29 +164,6 @@ class leadFieldConductor
 
 public:
 
-    //- The fixed point of the lead fields (buildLeadFields) and of the
-    //  verifier's direct forward solve: the fvSolution dictionary
-    //  leadFieldFixedPoint
-    struct fixedPointControls
-    {
-        //- Relative change of the unknown between passes below which the
-        //  fixed point stops (tolerance, required)
-        scalar tolerance;
-
-        //- Passes after which the fixed point is fatal (maxPasses,
-        //  required)
-        label maxPasses;
-
-        //- Passes before the change can stop the fixed point: the change
-        //  then compares two solves of the fixed point, not a solve with
-        //  its start value
-        static constexpr label minPasses = 2;
-
-        //- Read leadFieldFixedPoint from the fvSolution of mesh
-        static fixedPointControls read(const fvMesh& mesh);
-    };
-
-
     //- Construct from the base mesh, the top-level electroProperties and
     //  the name of the ECG domain entry in its ecgDomains, whose electrodes
     //  are read (readEcgElectrodes)

@@ -85,7 +85,6 @@ leadFieldBox                           leadFieldBox  leadFieldBox               
 leadFieldBoxGroundSealed               leadFieldBox  leadFieldBoxGroundSealed   pass  skip=v2312
 leadFieldBoxConormal                   leadFieldBox  leadFieldBoxConormal       pass  skip=v2312
 leadFieldBoxPointGradient              leadFieldBox  leadFieldBoxPointGradient  pass  skip=v2312
-leadFieldBoxCyclic                     leadFieldBox  leadFieldBoxCyclic         pass  skip=v2312
 
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass

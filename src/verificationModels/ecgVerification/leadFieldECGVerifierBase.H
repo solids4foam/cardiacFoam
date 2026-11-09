@@ -25,11 +25,13 @@ Description
     sample and electrode it compares:
     - leadField: the lead-field channel of the torsoECG domain with
       torsoCoupling leadField (z_e^T b(Vm_h) + c_e);
-    - direct: a direct forward solve of the same conductor on Vm_h, with the
-      same boundary values and reference, assembly and solve repeated until
-      the relative change between passes is below the tolerance of the
-      fvSolution dictionary leadFieldFixedPoint (as buildLeadFields), sampled
-      in the electrode cell;
+    - direct: a direct forward solve A phi = b of the same conductor on
+      Vm_h, with the same boundary values and reference, with the assembled
+      matrix through PETSc (conductorLinearSolve, fvSolution entry
+      leadFieldDirect), sampled in the electrode cell; b is the residual of
+      the system assembled at phi = 0 (heart source, surface currents, ground
+      values, pin) and the true residual of the system assembled at the
+      result is fatal above the residualTolerance of leadFieldDirect;
     - exactPoint, exactCentroid: the exact potential of the reference at the
       electrode and at its cell centroid, for the exact Vm;
     - leadFieldStatic, directStatic: the lead field and the direct solve
@@ -50,7 +52,8 @@ Description
     over samples, per electrode and as the per-sample maximum over the
     electrodes).
 
-    The direct solve uses the fvSolution entry phiE.
+    The direct solve uses the fvSolution entry leadFieldDirect (solver
+    petsc, residualTolerance, options), set up once for the run.
 
 SourceFiles
     leadFieldECGVerifierBase.C
@@ -64,6 +67,8 @@ Author
 
 #include "ecgVerificationModel.H"
 #include "leadFieldECG.H"
+#include "leadFieldAdjoint.H"
+#include "conductorLinearSolve.H"
 #include "OFstream.H"
 #include "FixedList.H"
 
@@ -100,11 +105,20 @@ class leadFieldECGVerifierBase
     //- Centroid of the pinned cell (gauge of the exact potential)
     point referenceCentroid_;
 
-    //- Direct forward potentials for Vm_h and for the exact Vm, kept as
-    //  the start of the next sample's solve
+    //- Direct forward potentials for Vm_h and for the exact Vm
     autoPtr<volScalarField> directPhi_;
     autoPtr<volScalarField> directStaticPhi_;
     autoPtr<volScalarField> heartPhi_;
+
+    //- The direct solve: the explicit part C, the unknown and heart
+    //  companion of its implicit matrix M (with the pin), and the solver of
+    //  M + C; the true-residual tolerance of leadFieldDirect
+    autoPtr<leadFieldAdjoint> adjointPtr_;
+    autoPtr<volScalarField> solvePhi_;
+    autoPtr<volScalarField> solveHeartPhi_;
+    tmp<fvScalarMatrix> directM_;
+    autoPtr<conductorLinearSolve> directSolverPtr_;
+    scalar directResidualTolerance_;
 
     autoPtr<OFstream> outputPtr_;
 
@@ -137,8 +151,8 @@ class leadFieldECGVerifierBase
         const label zone = -1
     ) const;
 
-    //- Converged direct forward solve on heart Vm into phi, sampled in the
-    //  electrode cells
+    //- Direct forward solve on heart Vm into phi, sampled in the electrode
+    //  cells
     void solveDirect
     (
         const volScalarField& Vm,

@@ -40,18 +40,14 @@ between consecutive levels.
 | tet (gmsh 4.15.2, seeds 2 and 3) | 8, 12, 16 | see [Tetrahedra: seeds](#tetrahedra-seeds) |
 
 Every run is one time step of the case defaults; the static rows do not
-depend on it. Each run builds 12 lead fields, one per electrode. They need
-29 to 50 passes of their adjoint fixed point on the hexahedra and 61 to 200
-on the tetrahedra, each to the `leadFieldFixedPoint` tolerance `1e-10` of
-the case. The largest `phiE` iteration count is 1032 (`tet_N32`), below the
-`maxIter 5000` of `system/fvSolution`.
-
-The seed 2 tetrahedra at `N = 12` stop in `buildLeadFields`: the fixed point
-of the first electrode, `surface1`, diverges. Its `phiE` initial residual
-falls to `2e-5` by pass 100, then grows by a factor of about 2.7 per 100
-passes and levels near `5e-3`, and the run stops at `maxPasses 1000` with a
-relative change of `1e-2`. More passes do not converge it: on this mesh the
-fixed point is not a contraction.
+depend on it. Each run builds 12 lead fields, one per electrode. The lead
+fields and the verifier's direct solves use the assembled matrix through
+PETSc (GMRES preconditioned by GAMG) and stop on the true residual of the
+assembled system at the `residualTolerance 1e-10` of `system/fvSolution`.
+The lead fields need 36 to 54 iterations on the hexahedra and 61 to 91 on
+the tetrahedra (all seeds), the direct solves 34 to 58 and 54 to 102; the
+true residuals are at most `6.3e-15` (lead fields) and `2.5e-12` (direct
+solves).
 
 All levels and seeds run in parallel on 6 ranks (`parallel`, the case's
 `decomposeParDict`).
@@ -204,8 +200,7 @@ The same levels meshed with three gmsh seeds. Body surface and field: the
 maximum and RMS over the eight surface electrodes, the RMS and maximum error
 of the direct static potential over the surface cells and over all cells,
 and the RMS over the interface band. The `max/min` rows are the largest over
-the smallest value of the seeds that ran. The lead fields of seed 2 at
-`N = 12` do not converge (see [Ladder](#ladder)).
+the smallest value of the three seeds.
 
 | N | seed | cells | surface max | surface RMS | phiStatic_surface RMS | phiStatic_surface max | all RMS | all max | band RMS |
 |---|---|---|---|---|---|---|---|---|---|
@@ -214,9 +209,9 @@ the smallest value of the seeds that ran. The lead fields of seed 2 at
 | 8 | 3 | 36853 | 1.229e-01 | 6.834e-02 | 6.362e-02 | 1.332e-01 | 6.513e-02 | 1.587e-01 | 6.809e-02 |
 | 8 | max/min |  | 1.15 | 1.12 | 1.09 | 1.13 | 1.09 | 1.11 | 1.09 |
 | 12 | 1 | 118535 | 4.341e-02 | 2.561e-02 | 2.376e-02 | 5.655e-02 | 2.444e-02 | 6.738e-02 | 2.551e-02 |
-| 12 | 2 | | not converged | | | | | | |
+| 12 | 2 | 118663 | 4.359e-02 | 2.562e-02 | 2.465e-02 | 5.519e-02 | 2.546e-02 | 6.641e-02 | 2.659e-02 |
 | 12 | 3 | 119209 | 4.555e-02 | 2.511e-02 | 2.328e-02 | 5.191e-02 | 2.392e-02 | 6.585e-02 | 2.493e-02 |
-| 12 | max/min |  | 1.05 | 1.02 | 1.02 | 1.09 | 1.02 | 1.02 | 1.02 |
+| 12 | max/min |  | 1.05 | 1.02 | 1.06 | 1.09 | 1.06 | 1.02 | 1.07 |
 | 16 | 1 | 278906 | 2.297e-02 | 1.268e-02 | 1.200e-02 | 3.208e-02 | 1.244e-02 | 3.471e-02 | 1.297e-02 |
 | 16 | 2 | 278490 | 2.158e-02 | 1.246e-02 | 1.152e-02 | 2.991e-02 | 1.191e-02 | 3.374e-02 | 1.250e-02 |
 | 16 | 3 | 278405 | 2.281e-02 | 1.323e-02 | 1.204e-02 | 3.022e-02 | 1.243e-02 | 3.465e-02 | 1.302e-02 |
@@ -231,9 +226,9 @@ Interior probes, static lead-field error:
 | 8 | 3 | 1.069e-01 | 8.335e-02 | 9.249e-03 | 4.252e-02 |
 | 8 | max/min | 1.14 | 1.13 | 14.00 | 1.10 |
 | 12 | 1 | 4.152e-02 | 3.018e-02 | 6.336e-04 | 1.404e-02 |
-| 12 | 2 | not converged | | | |
+| 12 | 2 | 4.295e-02 | 3.127e-02 | 3.088e-04 | 1.526e-02 |
 | 12 | 3 | 3.786e-02 | 3.045e-02 | 2.779e-03 | 1.457e-02 |
-| 12 | max/min | 1.10 | 1.01 | 4.39 | 1.04 |
+| 12 | max/min | 1.13 | 1.04 | 9.00 | 1.09 |
 | 16 | 1 | 2.167e-02 | 1.486e-02 | 3.569e-05 | 7.654e-03 |
 | 16 | 2 | 1.990e-02 | 1.475e-02 | 1.365e-03 | 6.891e-03 |
 | 16 | 3 | 2.216e-02 | 1.474e-02 | 5.048e-04 | 7.026e-03 |
@@ -278,9 +273,8 @@ Interior probes, static lead-field error:
   group, the surface field row, the field RMS, the band RMS and the errors
   at `outerNear`, `outerSide` and `pool` differ by less than a fifth between
   seeds at each level, and fall at about second order or above for every
-  seed (for seed 2 from `N = 8` to `N = 16`). Only `outerFar` depends on the
+  seed. Only `outerFar` depends on the
   seed, by up to more than an order of magnitude, as expected for an
   electrode at a zero of the discretisation error.
-- The lead field and the direct solve agree to `6e-10` at every level and
-  every electrode, at the level of the fixed-point and linear-solver
-  tolerances.
+- The lead field and the direct solve agree to `7.9e-12` at every level,
+  seed and electrode, at the level of the linear-solve tolerance.

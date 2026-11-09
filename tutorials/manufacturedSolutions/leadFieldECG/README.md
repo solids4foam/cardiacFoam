@@ -6,7 +6,8 @@ Verification of the lead-field ECG (`ecgSolver torsoECG` with
 - that the lead-field channel equals the converged forward
   passive-conductor solve of the same conductor; the lead field is the
   discrete adjoint `A^-T e` of the finite-volume operator `A`, so the two
-  agree to the fixed-point tolerance on hexahedra and tetrahedra; and
+  agree to the tolerance of the linear solves on hexahedra and tetrahedra;
+  and
 - that both converge to an exact torso potential.
 
 The myocardium is a monodomain or a bidomain solver on the cellZone
@@ -18,9 +19,10 @@ ways:
 
 - **leadField**: the channel `z_e^T b(Vm_h) + c_e`.
 - **direct**: a direct forward solve of the same conductor on the same
-  `Vm_h`. It uses the same reference and boundary values, and repeats the
-  assembly and solve until the relative change between passes is below
-  `1e-10`.
+  `Vm_h`, with the same reference and boundary values. It solves
+  `A phi = b` with the assembled matrix through PETSc and stops on the true
+  residual of the assembled system (`residualTolerance 1e-10` of
+  `leadFieldDirect`).
 - **leadFieldStatic** and **directStatic**: the same two, applied to the
   exact `Vm` at the heart cell centres.
 
@@ -197,14 +199,19 @@ centroid values differ.
   - gradient `leastSquares`;
   - laplacian and snGrad `corrected` or `orthogonal` (`-snGrad`); the
     lead-field build refuses nonlinear schemes such as `limited`.
-- linear solvers, absolute tolerance `1e-15`:
-  - `phiE|phiEFinal`: `PCG`/`DIC`, `relTol 0`, for the direct solves and the
-    bidomain heart potential;
-  - `leadField`: `PCG` with a `GAMG` (`DICGaussSeidel`) preconditioner,
-    `relTol 0.01`, and `leadFieldFinal`: the same with `relTol 0`, for the
-    lead fields.
-- `nNonOrthogonalCorrectors 0`. The lead fields and the direct solves iterate
-  their explicit corrections to convergence themselves.
+- linear solvers:
+  - `phiE|phiEFinal`: `PCG`/`DIC`, `relTol 0`, absolute tolerance `1e-15`,
+    for the bidomain heart potential;
+  - `leadField` (the lead fields, `(M + C^T) z = e`) and `leadFieldDirect`
+    (the verifier's direct solve, `(M + C) phi = b`): `solver petsc` with the
+    assembled matrix `A = M + C` (implicit part plus the probed explicit
+    corrections), GMRES (restart 200, right preconditioning, unpreconditioned
+    residual norm, `ksp_rtol 1e-12`, `ksp_max_it 5000`) preconditioned by
+    `gamg`, and a stop on the true residual of the real operator at
+    `residualTolerance 1e-10`; a solve that does not converge is fatal.
+    They need cardiacFoam built with PETSc and the full solids4foam.
+- `nNonOrthogonalCorrectors 0`. The explicit corrections are part of the
+  assembled matrix of the lead-field and direct solves.
 
 ## Mesh
 
@@ -266,7 +273,7 @@ removes `local/`, `0/`, the mesh and the lead fields.
 | `-snGrad corrected\|orthogonal` | laplacian and snGrad correction | corrected |
 | `-dt x` | time step | 0.01 |
 | `-endTime x` | end time | 0.05 |
-| `-fixedPointTolerance x` | tolerance of the lead-field and direct fixed points (`leadFieldFixedPoint` in `system/fvSolution`) | 1e-10 |
+| `-solveTolerance x` | `ksp_rtol` of the lead-field and direct PETSc solves (`leadField`, `leadFieldDirect` in `system/fvSolution`) | 1e-12 |
 
 Outputs in `postProcessing/`:
 
@@ -311,11 +318,11 @@ generated in the heart crosses both curved heart-torso interfaces.
 ## Studies
 
 `setup/studies/` holds one study per question. Each study is run in copies of
-the case, with the commands in its README. `setup/studies/summarize.py` prints
-the tables.
+the case, with the commands in its README, and uses the bidomain myocardium
+(`-myocardium bidomain`). `setup/studies/summarize.py` prints the tables.
 
 | study | question |
 |---|---|
 | [leadFieldConvergence](setup/studies/leadFieldConvergence/README.md) | order of the lead field and of the direct solve against the exact slab potential at the torso electrodes, on hexahedra and tetrahedra, with Ge proportional to Gi and with unequal anisotropy ratios |
-| [leadFieldReciprocity](setup/studies/leadFieldReciprocity/README.md) | gap between the lead field and the direct forward solve, on hexahedra and tetrahedra, monodomain and bidomain, serial and parallel |
+| [leadFieldReciprocity](setup/studies/leadFieldReciprocity/README.md) | gap between the lead field and the direct forward solve, on hexahedra and tetrahedra, serial and parallel |
 | [leadFieldOrganJump](setup/studies/leadFieldOrganJump/README.md) | order of the lead field and of the direct solve with torso layers of different conductivity and a current across them, and the independence of the insulated ECG from the layer conductivities |

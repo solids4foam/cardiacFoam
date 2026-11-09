@@ -40,11 +40,6 @@ const scalar transposeTolerance = 1e-12;
 // the products
 const scalar symmetryTolerance = 1e-12;
 
-// The relative residual of A^T z = e and the pin defect of a fixed point
-// stopped at a relative change t between passes are of order t; the factor
-// leaves room for the linear solver tolerance and round-off
-const scalar fixedPointResidualFactor = 100;
-
 
 // The resolved gradient schemes of the base and heart meshes, as text
 std::string gradSchemesText(const fvMesh& base, const fvMesh& heart)
@@ -78,11 +73,11 @@ void report(const word& check, const scalar value, const scalar tolerance)
 leadFieldAdjoint::leadFieldAdjoint
 (
     const leadFieldConductor& lfc,
-    const leadFieldConductor::fixedPointControls& fixedPoint
+    const scalar residualTolerance
 )
 :
     lfc_(lfc),
-    residualTolerance_(fixedPointResidualFactor*fixedPoint.tolerance),
+    residualTolerance_(residualTolerance),
     probePtr_(lfc.leadFieldPotential().ptr()),
     heartProbePtr_(lfc.heartPotential().ptr()),
     CPtr_()
@@ -292,6 +287,31 @@ tmp<scalarField> leadFieldAdjoint::matrixProduct
         0
     );
     return tAx;
+}
+
+
+tmp<scalarField> leadFieldAdjoint::systemResidual
+(
+    const fvScalarMatrix& eqn,
+    const volScalarField& psi
+)
+{
+    tmp<scalarField> tr(new scalarField(eqn.source()));
+    scalarField& r = tr.ref();
+    forAll(psi.boundaryField(), patchI)
+    {
+        if (!psi.boundaryField()[patchI].coupled())
+        {
+            const labelUList& cells = eqn.lduAddr().patchAddr(patchI);
+            const scalarField& coeffs = eqn.boundaryCoeffs()[patchI];
+            forAll(cells, faceI)
+            {
+                r[cells[faceI]] += coeffs[faceI];
+            }
+        }
+    }
+    r -= matrixProduct(eqn, psi, psi.primitiveField());
+    return tr;
 }
 
 

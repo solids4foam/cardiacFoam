@@ -25,8 +25,8 @@ solvers
         relTol          0.0;
     }
 
-    // phiE: the bidomain heart potential and the verifier's direct
-    // forward solve
+    // phiE: the bidomain heart potential (the verifier's direct solve is
+    // leadFieldDirect)
     "phiE|phiEFinal"
     {
         solver          PCG;
@@ -37,35 +37,51 @@ solvers
         maxIter         5000;
     }
 
-    // buildLeadFields: leadField for the passes of the fixed point,
-    // leadFieldFinal for the passes after it has converged
+    // buildLeadFields: the lead fields solve (M + C^T) z = e with the assembled
+    // matrix through PETSc (conductorLinearSolve)
     leadField
     {
-        solver          PCG;
-        preconditioner
+        solver              petsc;
+        // True relative residual of the real operator, fatal above
+        residualTolerance   1e-10;
+        options
         {
-            preconditioner  GAMG;
-            smoother        DICGaussSeidel;
+            snes_type           ksponly;
+            ksp_type            gmres;
+            ksp_gmres_restart   "200";
+            ksp_pc_side         right;
+            ksp_norm_type       unpreconditioned;
+            ksp_rtol            "1e-12";
+            ksp_atol            "0";
+            ksp_max_it          "5000";
+            pc_type             gamg;
+            #includeIfPresent "<case>/local/solve"
         }
-        tolerance       1e-15;
-        relTol          0.01;
     }
 
-    leadFieldFinal
+    // The lead-field verifier's direct forward solve (M + C) phi = b, as
+    // leadField
+    leadFieldDirect
     {
-        $leadField;
-        relTol          0;
+        solver              petsc;
+        // True relative residual of the real operator, fatal above
+        residualTolerance   1e-10;
+        options
+        {
+            snes_type           ksponly;
+            ksp_type            gmres;
+            ksp_gmres_restart   "200";
+            ksp_pc_side         right;
+            ksp_norm_type       unpreconditioned;
+            ksp_rtol            "1e-12";
+            ksp_atol            "0";
+            ksp_max_it          "5000";
+            pc_type             gamg;
+            #includeIfPresent "<case>/local/solve"
+        }
     }
 }
 
-// Lead-field fixed point (buildLeadFields) and the verifier's direct
-// forward solve: relative change between passes, and the pass limit
-leadFieldFixedPoint
-{
-    tolerance       1e-10;
-    // Fatal when reached; the study README gives the passes needed
-    maxPasses       1000;
-}
 
 PIMPLE
 {
