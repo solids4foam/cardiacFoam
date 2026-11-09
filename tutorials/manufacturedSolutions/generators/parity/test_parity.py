@@ -43,6 +43,7 @@ leadFieldLayered  1        R phi (x only); keys k=, alpha= and the seven
 bathBidomain      1,2,3    V u1 u2 u3 phiE phiI VmAt phiEAt phiIAt gradVm_x
                            gradPhiEHeart_x gradPhiIHeart_x gradPhiEBath_x;
                            keys k=, alpha=, se= required
+radial            1        slope scaledTime (s = x; keys Pe=, a= required)
 """
 
 import os
@@ -64,6 +65,7 @@ SOURCES = [
     _VERIFICATION / "monodomainVerification"
     / "manufacturedAnisotropicMonodomainReference.H",
     _VERIFICATION / "eikonalVerification" / "manufacturedEikonalReference.H",
+    _VERIFICATION / "eikonalVerification" / "manufacturedRadialEikonalReference.H",
     _VERIFICATION / "bidomainVerification" / "manufacturedFDABidomainReference.H",
     _VERIFICATION / "ecgVerification" / "manufacturedLeadFieldECGReference.H",
     _VERIFICATION / "bathBidomainVerification" / "manufacturedFDABathBidomainReference.H",
@@ -86,6 +88,7 @@ CASES = {
     "leadFieldSlab": ((1,), 2),
     "leadFieldLayered": ((1,), 2),
     "bathBidomain": ((1, 2, 3), 13),
+    "radial": ((1,), 2),
 }
 
 # keys a case requires (the smoke tests pass these; the case tests pass their own)
@@ -98,6 +101,7 @@ REQUIRED_KEYS = {
         "sigmaInnerRight": "0.1", "sigmaOuterRight": "0.02",
     },
     "bathBidomain": {"k": "0.7071067811865476", "alpha": "0.01", "se": "0.046165469"},
+    "radial": {"Pe": "46", "a": "0.25"},
 }
 
 
