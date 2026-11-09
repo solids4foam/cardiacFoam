@@ -109,7 +109,7 @@ and one of the two tensors of the tutorial,
 
 {{< include ../../latex/eikonal_sigma_axis.tex >}}
 
-In cardiacFoam this is the tutorial `eikonalECG` (`-conductivity rotated`, the
+In cardiacFoam this is the tutorial `eikonal/cube` (`-conductivity rotated`, the
 default, or `axis`; `-dim 1|2|3`) with the verifier
 `manufacturedEikonalVerifier`.
 
@@ -164,7 +164,7 @@ rejected.
 
 ![tet: `-mesh tet -N 5`](figures/mesh_cartesian_cube_tet.png){#fig-cartesian-mesh-tet}
 
-Meshes of the unit cube from the tutorial `eikonalECG` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with $N=8$ cells per unit length; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell.
+Meshes of the unit cube from the tutorial `eikonal/cube` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with $N=8$ cells per unit length; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell.
 :::
 
 ## Regeneration
@@ -219,7 +219,7 @@ $U'(t-\psi)$ keeps one sign across the cube. The sine template is
 
 In cardiacFoam:
 
-- the ECG of the tutorial `eikonalECG`;
+- the ECG of the tutorial `eikonal/cube`;
 - verifier `manufacturedEikonalECGVerifier`;
 - `template singleEvent` (the default) or `template sine`.
 
@@ -330,7 +330,7 @@ The verifier
 pins the cells whose centre lies within $r_{\mathrm{pin}}$ of $\mathbf x_s$ to
 the exact $\psi$ (the nearest cell when the mesh has no centre in that ball)
 and imposes no value on a wall. In cardiacFoam this is
-`eikonalECG/sphericalShell` with the verifier
+`eikonal/sphericalShell` with the verifier
 `manufacturedShellEikonalVerifier`; its `Allrun` takes `-c0 <value>`
 (default 1). The verifier reads $c_0$ from the case, so the source follows the
 value given.
@@ -436,7 +436,7 @@ default parameters; `c0` is one of those parameters.
 
 ![tet: `-mesh tet -N 5`](figures/mesh_shell_eikonal_tet.png){#fig-eikonal-shell-mesh-tet}
 
-Meshes of the shell from the tutorial `eikonalECG/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
+Meshes of the shell from the tutorial `eikonal/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
 :::
 
 ## Regeneration

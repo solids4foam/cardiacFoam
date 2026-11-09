@@ -9,9 +9,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 indexed="$(awk -F'|' '
-    /^\| `/ {
-        path = $2; gsub(/[` ]/, "", path)
-        if ($6 ~ /Alltest-regression/) print path
+    /^\| \[`/ {
+        path = $2; sub(/^ *\[`/, "", path); sub(/`\].*$/, "", path)
+        if ($5 ~ /Alltest-regression/) print path
     }' "${ROOT_DIR}/README.md" | sort)"
 
 discovered="$("${ROOT_DIR}/Alltest-regression" --list | sed -E 's/  \((needs-solids4foam|needs-tools|skips on:[^)]*)\)//g' | sort)"

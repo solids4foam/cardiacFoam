@@ -12,7 +12,15 @@
 #
 #     #!/usr/bin/env bash
 #     set -euo pipefail
-#     . "$(dirname "${BASH_SOURCE[0]}")/../../../regression/lib.sh"
+#     regressionLib="${CARDIAC_REGRESSION_LIB:-}"
+#     if [[ -z "${regressionLib}" ]]; then
+#         dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+#         while [[ "${dir}" != / && ! -f "${dir}/regression/lib.sh" ]]; do
+#             dir="$(dirname "${dir}")"
+#         done
+#         regressionLib="${dir}/regression/lib.sh"
+#     fi
+#     . "${regressionLib}"
 #     regression_init "Case title" regression/case.reference "$@"
 #     regression_set system/controlDict endTime 0.05    # regression-only
 #     regression_run parallel

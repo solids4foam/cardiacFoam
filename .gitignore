@@ -142,7 +142,7 @@ tutorials/**/0.[0-9]*/
 tutorials/**/[1-9]*/
 
 # Generated 0 directories and specific untracked cases
-tutorials/manufacturedSolutions/*/0/*
+tutorials/manufacturedSolutions/*/*/0/*
 tutorials/**/0/electro/
 
 # Anatomical and derived initial fields under any tutorial 0/ directory.
@@ -178,7 +178,7 @@ tutorials/idealizedHeart/electroMechHeart/0/solid/tm
 # ...and the electromechanics manufactured solution's 0/solid fields: uniform
 # fibres f0/f0f (MUST_READ by electroMechanicalLaw) and D carrying the
 # manufactured displacement condition. Small, hand-authored, not anatomy data.
-!tutorials/manufacturedSolutions/monodomainTotalLagrangianEM/0/solid/
+!tutorials/manufacturedSolutions/electromechanics/totalLagrangianEM/0/solid/
 # ...and the spring-supported electromechanics slab's 0/solid fields (D, f0,
 # f0f): the same kind of small hand-authored case data. They were committed
 # before the rule above applied; the exception keeps a re-created file visible.
@@ -229,10 +229,10 @@ paperI_data_bundle/
 # MMS generated study/working data (allowlist audit 2026-07-19: keep scripts,
 # configs, OpenFOAM dicts, *.geo.template, per-study .gitignore, notes, and the
 # committed reference/*.csv which lives at case root outside setup/).
-tutorials/manufacturedSolutions/*/setup/**/*.csv
-tutorials/manufacturedSolutions/*/setup/**/*.dat
-tutorials/manufacturedSolutions/*/setup/**/*.vtk
-tutorials/manufacturedSolutions/*/setup/**/*.sha256
+tutorials/manufacturedSolutions/*/*/setup/**/*.csv
+tutorials/manufacturedSolutions/*/*/setup/**/*.dat
+tutorials/manufacturedSolutions/*/*/setup/**/*.vtk
+tutorials/manufacturedSolutions/*/*/setup/**/*.sha256
 tutorials/manufacturedSolutions/**/__pycache__/
 
 # Generated tet-mesh .geo files, rendered from a tracked *.geo.template. Only the
@@ -265,7 +265,7 @@ tutorials/**/*.npz
 tutorials/**/*.html
 
 # Whole-heart Purkinje trees (3-10 MB each). The small verification-scale
-# graphs under manufacturedSolutions/ and NiedererEtAl2011verification/ (<=30 kB) stay
+# graphs under manufacturedSolutions/ and benchmarks/ (<=30 kB) stay
 # tracked, since the 1D-3D convergence cases depend on them.
 untracked_development/PATHOS/**/constant/purkinjeGraph*
 
@@ -317,7 +317,7 @@ tutorials/**/reference/*.csv
 
 # Presentations
 presentation/
-tutorials/manufacturedSolutions/eikonalECG/gradient_full_sweep.csv
+tutorials/manufacturedSolutions/eikonal/cube/gradient_full_sweep.csv
 
 # Local-only open-issue working notes (kept on disk, never tracked)
 docs/issues/
@@ -331,4 +331,4 @@ docs/issues/
 
 # configuration checks: one run directory per check
 tutorials/configurationChecks/runs
-tutorials/manufacturedSolutions/eikonal1D3D/constant/purkinjeGraph
+tutorials/manufacturedSolutions/eikonal/coupled1D3DSphere/constant/purkinjeGraph

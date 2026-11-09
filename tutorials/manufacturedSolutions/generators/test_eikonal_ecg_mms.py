@@ -12,7 +12,7 @@ import eikonal_ecg_mms as ecg
 DIMS = (1, 2, 3)
 SIGMAS = {"rotated": eik.SIGMA_ROTATED, "axis": eik.SIGMA_AXIS}
 ELECTRODE_FILE = os.path.join(
-    ecg.HERE, "..", "eikonalECG", "constant", "electroProperties")
+    ecg.HERE, "..", "eikonal", "cube", "constant", "electroProperties")
 BUILTIN_ELECTRODES = [(-0.5, 0.5, 0.5), (1.5, 0.5, 0.5), (1.2, 0.23, 0.61),
                       (1.35, 0.74, 0.28), (1.55, 0.41, 0.83)]
 
