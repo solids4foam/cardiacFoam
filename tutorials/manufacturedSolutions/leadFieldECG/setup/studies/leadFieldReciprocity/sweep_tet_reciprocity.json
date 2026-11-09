@@ -13,8 +13,9 @@
       "conductivity": ["isotropic", "isotropic", "isotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic", "anisotropic"],
       "myocardium": ["monodomain", "monodomain", "monodomain", "bidomain", "bidomain", "bidomain", "bidomain", "monodomain", "monodomain"],
       "parallel": [false, false, false, false, false, false, false, true, false],
-      "system/fvSolution:leadFieldFixedPoint.tolerance": [1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-12],
-      "caseId": ["isotropic_tet_N10", "isotropic_tet_N14", "isotropic_tet_N20", "bidomain_tet_N10", "bidomain_tet_N14", "bidomain_tet_N20", "bidomain_tet_N28", "parallel_tet_N20", "fixedPointTight_tet_N20"]
+      "system/fvSolution:solvers.leadField.options.ksp_rtol": ["1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-14"],
+      "system/fvSolution:solvers.leadFieldDirect.options.ksp_rtol": ["1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-12", "1e-14"],
+      "caseId": ["isotropic_tet_N10", "isotropic_tet_N14", "isotropic_tet_N20", "bidomain_tet_N10", "bidomain_tet_N14", "bidomain_tet_N20", "bidomain_tet_N28", "parallel_tet_N20", "solveTight_tet_N20"]
     }
   }
 }

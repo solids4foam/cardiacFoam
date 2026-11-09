@@ -50,8 +50,8 @@ Options (parameters are written to local/ and included by the dictionaries):
                             schemes (default corrected)
   -dt x                     time step (default 0.01)
   -endTime x                end time (default 0.05)
-  -fixedPointTolerance x    tolerance of the lead-field and direct fixed
-                            points (default 1e-10, system/fvSolution)
+  -solveTolerance x         ksp_rtol of the lead-field and direct PETSc
+                            solves (default 1e-12, system/fvSolution)
 
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
 USAGE
@@ -68,7 +68,7 @@ myocardium=monodomain
 conductivity=anisotropic
 snGrad=corrected
 dt=0.01
-fixedPointTolerance=
+solveTolerance=
 endTime=0.05
 
 needValue()
@@ -162,9 +162,9 @@ do
             needValue "$@"; endTime="$2"; shift
             positiveNumber -endTime "$endTime"
             ;;
-        -fixedPointTolerance)
-            needValue "$@"; fixedPointTolerance="$2"; shift
-            positiveNumber -fixedPointTolerance "$fixedPointTolerance"
+        -solveTolerance)
+            needValue "$@"; solveTolerance="$2"; shift
+            positiveNumber -solveTolerance "$solveTolerance"
             ;;
         -h|-help|--help)
             usage
@@ -328,10 +328,10 @@ fi
 
 echo "default         Gauss linear $snGrad;" > local/laplacian
 echo "default         $snGrad;" > local/snGrad
-rm -f local/fixedPoint
-if [ -n "$fixedPointTolerance" ]
+rm -f local/solve
+if [ -n "$solveTolerance" ]
 then
-    echo "tolerance       $fixedPointTolerance;" > local/fixedPoint
+    echo "ksp_rtol        \"$solveTolerance\";" > local/solve
 fi
 
 cat > local/time <<EOF

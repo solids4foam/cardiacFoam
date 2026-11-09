@@ -151,9 +151,8 @@ void leadFieldECG::load
                 << exit(FatalError);
         }
         Info<< "  lead field " << names[e] << ": "
-            << record.get<label>("passes") << " passes, relative change "
-            << record.get<scalar>("relativeChange") << " (tolerance "
-            << buildRecord.get<scalar>("convergenceTolerance") << ")" << nl;
+            << record.get<label>("iterations") << " iterations, "
+            << record.get<word>("reason") << nl;
 
         heartWeights_[e].setSize(heartToBase.size());
         forAll(heartToBase, c)

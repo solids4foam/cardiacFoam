@@ -137,6 +137,24 @@ public:
     //- Global number of stored entries
     label nNonZeros() const;
 
+    //- Global numbering of the cells (the column ids)
+    const globalIndex& globalCells() const
+    {
+        return globalCells_;
+    }
+
+    //- Row i (local cell i): global column ids
+    const labelListList& columns() const
+    {
+        return columns_;
+    }
+
+    //- Row i (local cell i): values, in the order of columns()
+    const List<scalarList>& values() const
+    {
+        return values_;
+    }
+
     //- C x
     tmp<scalarField> apply(const scalarField& x) const;
 

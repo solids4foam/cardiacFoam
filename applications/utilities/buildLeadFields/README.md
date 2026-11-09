@@ -22,7 +22,10 @@ the explicit part (cross-diffusion, non-orthogonal and interface
 corrections). `C` is stored as a sparse matrix by probing the same assembly
 with one field per colour of a distance-2 colouring of its stencil
 (`probedOperator`), so `C^T` is exact for any linear scheme. Each lead field
-is the fixed point `M z = e_e - C^T z`.
+solves `(M + C^T) z = e_e` with the assembled matrix through PETSc
+(`conductorLinearSolve`, solids4foam's `foamPetscSnesHelper`); the matrix
+and its preconditioner are set up once for all electrodes. A PETSc solve that
+does not converge is fatal.
 
 The build checks, and stops with a fatal error above each tolerance:
 
@@ -32,12 +35,12 @@ The build checks, and stops with a fatal error above each tolerance:
 | reproduction | probed `C` equals assembled `C` on another field | 1e-11 |
 | transpose | `<z, C psi> = <C^T z, psi>` | 1e-12 |
 | symmetry | `x^T M y = y^T M x`, coupled interfaces included | 1e-12 |
-| residual | `e_e - M z - C^T z`, for each lead field | 100 `t` |
-| pin | `z_r d_r = 1` at a pinned reference cell | 100 `t` |
+| residual | `e_e - M z - C^T z`, for each lead field | `residualTolerance` |
+| pin | `z_r d_r = 1` at a pinned reference cell | `residualTolerance` |
 
 The first four are round-off checks of exactly linear operators. The residual
-and the pin measure the convergence of the fixed point, so their tolerance
-follows the `leadFieldFixedPoint` tolerance `t` (below). Each value is
+and the pin are the true residual of the solve, checked against the
+`residualTolerance` of the `leadField` entry (below). Each value is
 written to the log (`leadFieldAdjoint: <check> <value>`). The checks refuse
 nonlinear schemes (for example a `limited` snGrad or a limited gradient). A
 cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
@@ -55,35 +58,31 @@ cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
 - `system/fvSchemes`: the forward's own entries. The unknown is named
   `phiE` on the base mesh and on the heart sub-mesh, so the same
   `laplacian(...,phiE)` and `grad(phiE)` entries apply.
-- `system/fvSolution`: `solvers { leadField { ... } leadFieldFinal { ... } }`
-  and `leadFieldFixedPoint { tolerance <t>; maxPasses <n>; }`, all required.
-  The fixed point is solved until the relative change of `z` between passes
-  is below `t` (at least 3 passes, the last with `leadFieldFinal`; fatal
-  after `n`). The passes solve with `leadField` until the change first falls
-  below `t`, then with `leadFieldFinal` until it falls below `t` again. The
+- `system/fvSolution`: the solver entry `leadField` with `solver petsc`,
+  `residualTolerance` (required) and the PETSc `options`. The build needs
+  cardiacFoam built with PETSc and the full solids4foam; PETSc runs with
+  floating-point traps masked. Cyclic patches are not supported. The
   lead-field ECG verifiers (`manufacturedLeadFieldECGVerifier`,
-  `manufacturedShellLeadFieldECGVerifier`) repeat their direct forward
-  solve with the same `t` and `n`.
-  - `leadField` may use a loose `relTol` (e.g. 0.01).
-  - `leadFieldFinal` must use `relTol 0` and a `tolerance` well below `t`.
+  `manufacturedShellLeadFieldECGVerifier`) solve their direct forward
+  problem the same way with the entry `leadFieldDirect`.
 
   ```
   leadField
   {
-      solver          PCG;
-      preconditioner
+      solver              petsc;
+      residualTolerance   1e-10;
+      options
       {
-          preconditioner  GAMG;
-          smoother        DICGaussSeidel;
+          snes_type           ksponly;
+          ksp_type            gmres;
+          ksp_gmres_restart   "200";
+          ksp_pc_side         right;
+          ksp_norm_type       unpreconditioned;
+          ksp_rtol            "1e-12";
+          ksp_atol            "0";
+          ksp_max_it          "5000";
+          pc_type             gamg;
       }
-      tolerance       1e-15;
-      relTol          0.01;
-  }
-
-  leadFieldFinal
-  {
-      $leadField;
-      relTol          0;
   }
   ```
 
@@ -100,13 +99,12 @@ cached `grad(phiE)` or `grad(phiE.component(0))` is fatal.
   meshes, electrodes, ground and surface-current patches, reference).
   `torsoECG` compares it with the case at load.
 - `constant/[region/]leadFieldBuildRecord`: how the lead fields were built:
-  the `leadFieldFixedPoint` tolerance and pass limits, the `leadField` and
-  `leadFieldFinal` solver entries, and for each electrode the number of
-  passes, the last relative change and a fingerprint, the sums of
+  the `leadField` solver entry, and for each electrode the PETSc
+  iterations, the converged reason and a fingerprint, the sums of
   `z V f` over the cells for `f = 1, x, y, z, |x|²`. The signature holds
   totals, which a renumbered or redistributed mesh keeps; the fingerprint
   pairs each value with its cell. `torsoECG` checks each lead field's
-  fingerprint at load and logs its passes and last change.
+  fingerprint at load and logs its iterations and converged reason.
 
 In parallel (`-parallel`), each processor writes its own
 `processorN/constant/[region/]leadField_<electrode>`. A parallel ECG run

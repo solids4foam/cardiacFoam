@@ -70,6 +70,12 @@ leadFieldECGVerifierBase::leadFieldECGVerifierBase
     directPhi_(),
     directStaticPhi_(),
     heartPhi_(),
+    adjointPtr_(),
+    solvePhi_(),
+    solveHeartPhi_(),
+    directM_(),
+    directSolverPtr_(),
+    directResidualTolerance_(0),
     outputPtr_(),
     sampleCount_(0),
     exactScale_(0),
@@ -155,6 +161,35 @@ void leadFieldECGVerifierBase::initialise()
     directStaticPhi_.reset(lfc.forwardPotential().ptr());
     heartPhi_.reset(lfc.heartPotential().ptr());
 
+    // The direct solve, set up once: C probed, M assembled on the forward
+    // unknown at zero with the pin (its implicit part does not depend on the
+    // values), the PETSc solver of M + C
+    {
+        const passiveConductor& conductor = lfc.conductor();
+        directResidualTolerance_ =
+            baseMesh.solverDict("leadFieldDirect")
+           .get<scalar>("residualTolerance");
+        adjointPtr_.reset(new leadFieldAdjoint(lfc, directResidualTolerance_));
+        solvePhi_.reset(lfc.forwardPotential().ptr());
+        solveHeartPhi_.reset(lfc.heartPotential().ptr());
+        solvePhi_.ref().primitiveFieldRef() = 0;
+        solvePhi_.ref().correctBoundaryConditions();
+        conductor.fillHeart(solvePhi_(), solveHeartPhi_.ref());
+        directM_ = conductor.assemble(solvePhi_.ref(), solveHeartPhi_.ref());
+        conductor.applyReference
+        (
+            directM_.ref(), conductor.torso().phiEReferenceValue
+        );
+        directSolverPtr_.reset
+        (
+            new conductorLinearSolve
+            (
+                "leadFieldDirect", directM_.ref(), solvePhi_(),
+                adjointPtr_->C(), conductorLinearSolve::direction::forward
+            )
+        );
+    }
+
     if (Pstream::master())
     {
         wordList columns;
@@ -218,14 +253,7 @@ void leadFieldECGVerifierBase::solveDirect
 )
 {
     const passiveConductor& conductor = leadFieldPtr_->conductor().conductor();
-    const dictionary& solverDict =
-        phi.mesh().solverDict(passiveConductor::potentialName);
-    const leadFieldConductor::fixedPointControls fixedPoint
-    (
-        leadFieldConductor::fixedPointControls::read(phi.mesh())
-    );
-    const scalar directTolerance = fixedPoint.tolerance;
-    const label directMaxPasses = fixedPoint.maxPasses;
+    const scalar refValue = conductor.torso().phiEReferenceValue;
     tmp<volScalarField> tb(conductor.heartSource(Vm));
     if (extraSource)
     {
@@ -233,43 +261,50 @@ void leadFieldECGVerifierBase::solveDirect
     }
     volScalarField& heartPhi = heartPhi_.ref();
 
-    const scalarField& phiI = phi.primitiveField();
-    scalarField phiPrev(phiI.size());
-    scalar change = GREAT;
-    label pass = 0;
-
-    while
-    (
-        pass < leadFieldConductor::fixedPointControls::minPasses
-     || change >= directTolerance
-    )
+    // b: the residual of the system assembled at phi = 0 (heart source,
+    // surface currents, ground values, pin)
+    phi.primitiveFieldRef() = 0;
+    phi.correctBoundaryConditions();
+    conductor.fillHeart(phi, heartPhi);
+    scalarField b;
     {
-        if (pass == directMaxPasses)
+        tmp<fvScalarMatrix> tEqn(conductor.assemble(phi, heartPhi, &tb()));
+        conductor.applyReference(tEqn.ref(), refValue);
+        b = leadFieldAdjoint::systemResidual(tEqn(), phi);
+    }
+
+    scalarField x;
+    const conductorLinearSolve::record solved =
+        directSolverPtr_->solve(b, x);
+    phi.primitiveFieldRef() = x;
+    phi.correctBoundaryConditions();
+
+    // True residual of the system assembled at the result
+    conductor.fillHeart(phi, heartPhi);
+    {
+        tmp<fvScalarMatrix> tEqn(conductor.assemble(phi, heartPhi, &tb()));
+        conductor.applyReference(tEqn.ref(), refValue);
+        const scalarField r(leadFieldAdjoint::systemResidual(tEqn(), phi));
+        const scalar scale = gMax
+        (
+            leadFieldAdjoint::matrixProduct(directM_(), solvePhi_(), x, true)
+          + adjointPtr_->C().applyAbs(x)
+        );
+        const scalar value = gMax(mag(r))/max(scale, VSMALL);
+        Info<< type() << ": direct solve " << solved.iterations
+            << " iterations, " << solved.reason << ", residual " << value
+            << " (tolerance " << directResidualTolerance_ << ')' << endl;
+        if (!(value <= directResidualTolerance_))
         {
             FatalErrorInFunction
-                << "Direct forward solve not converged after " << pass
-                << " passes; last relative change " << change
-                << " (tolerance " << directTolerance << ")."
-                << exit(FatalError);
+                << "The direct forward solve does not solve A phi = b: "
+                << "relative residual " << value << " (tolerance "
+                << directResidualTolerance_ << ")." << exit(FatalError);
         }
-
-        phiPrev = phiI;
-
-        // The heart companion takes the base values before each assembly
-        conductor.fillHeart(phi, heartPhi);
-
-        tmp<fvScalarMatrix> tEqn(conductor.assemble(phi, heartPhi, &tb()));
-        conductor.applyReference
-        (
-            tEqn.ref(), conductor.torso().phiEReferenceValue
-        );
-        solve(tEqn.ref(), solverDict);
-
-        ++pass;
-        change = gMax(mag(phiI - phiPrev))/max(gMax(mag(phiI)), VSMALL);
     }
 
     values.setSize(electrodeCells_.size());
+    const scalarField& phiI = phi.primitiveField();
     forAll(electrodeCells_, e)
     {
         values[e] = electrodeCells_[e] >= 0 ? phiI[electrodeCells_[e]] : 0;

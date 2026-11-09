@@ -29,19 +29,22 @@ Description
     A = M + C. M is the implicit matrix, assembled once on a zero field with
     the reference pin; it is symmetric. C is the explicit part (cross-
     diffusion, non-orthogonal and interface corrections), stored by coloured
-    probing of the same assembly (leadFieldAdjoint). Each lead field is the
-    fixed point M z = e - C^T z, solved from z = 0 until the relative change
-    of z between passes is below the tolerance of the fvSolution dictionary
-    leadFieldFixedPoint (tolerance, maxPasses; both required): with the
-    fvSolution entry leadField until the change first falls below it, then
-    with leadFieldFinal (relTol 0, tight tolerance) until it falls below it
-    again. Reaching maxPasses is fatal.
+    probing of the same assembly (leadFieldAdjoint). Each lead field solves
+    (M + C^T) z = e with the assembled matrix through PETSc
+    (conductorLinearSolve), with the fvSolution solver entry leadField:
+        leadField
+        {
+            solver              petsc;
+            residualTolerance   1e-10;
+            options { snes_type ksponly; ksp_type gmres; pc_type gamg; ... }
+        }
+    The matrix and its preconditioner are set up once for all electrodes.
 
     The build checks the linearity of C, the probed C against the assembled
     one, the transpose, the symmetry of M and, for each lead field, the
-    residual of A^T z = e and the reference pin (at 100 times the
-    leadFieldFixedPoint tolerance); each is fatal above its tolerance and is
-    reported in the log.
+    true residual of A^T z = e and the reference pin against
+    residualTolerance (required); each is fatal above its tolerance and is
+    reported in the log. A PETSc solve that does not converge is fatal.
 
     The unknown is named phiE on the base and heart meshes, so the forward's
     fvSchemes entries and wall-gradient states apply. Ground patches are
@@ -52,9 +55,9 @@ Description
     in a myocardium cell is fatal (leadFieldConductor).
 
     Writes constant/[region/]leadField_<electrode>, leadFieldSignature and
-    leadFieldBuildRecord (the fixed-point controls, the leadField and
-    leadFieldFinal solver entries, and per electrode the passes, the last
-    relative change and the fingerprint of the lead field).
+    leadFieldBuildRecord (the leadField solver entry, and per electrode the
+    PETSc iterations, the converged reason and the fingerprint of the lead
+    field).
     With -parallel each processor writes its own processorN/constant, so a
     parallel ECG run needs lead fields built on its decomposition (run after
     decomposePar), or a serial build decomposed with decomposePar -constant.
@@ -70,6 +73,7 @@ Author
 #include "electroPropertiesKeys.H"
 #include "leadFieldConductor.H"
 #include "leadFieldAdjoint.H"
+#include "conductorLinearSolve.H"
 #include "ecgSolver.H"
 #include <limits>
 
@@ -163,14 +167,8 @@ int main(int argc, char *argv[])
 
     const leadFieldConductor lfc(mesh, electroProperties, ecgDomainName);
     const passiveConductor& conductor = lfc.conductor();
-    const dictionary& solverDict = mesh.solverDict("leadField");
-    const dictionary& finalSolverDict = mesh.solverDict("leadFieldFinal");
-    const leadFieldConductor::fixedPointControls fixedPoint
-    (
-        leadFieldConductor::fixedPointControls::read(mesh)
-    );
-    const scalar convergenceTol = fixedPoint.tolerance;
-    const label maxPasses = fixedPoint.maxPasses;
+    const scalar residualTolerance =
+        mesh.solverDict("leadField").get<scalar>("residualTolerance");
 
     // z is in 1/(conductivity length), so that A z = e in units of the
     // matrix source
@@ -187,14 +185,21 @@ int main(int argc, char *argv[])
     const scalar refDiag = refCell >= 0 ? M.diag()[refCell] : 0;
     conductor.applyReference(M, 0.0);
 
-    const leadFieldAdjoint adjoint(lfc, fixedPoint);
+    const leadFieldAdjoint adjoint(lfc, residualTolerance);
     adjoint.checkSymmetry(M, z);
+
+    conductorLinearSolve solver
+    (
+        "leadField", M, z, adjoint.C(),
+        conductorLinearSolve::direction::transpose
+    );
     Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
         << "  ClockTime = " << runTime.elapsedClockTime() << " s" << nl;
 
     const wordList& names = lfc.electrodeNames();
     const labelList& cells = lfc.electrodeCells();
     scalarField e(mesh.nCells());
+    scalarField zI(mesh.nCells());
 
     // How each lead field was built, and its fingerprint on this mesh
     dictionary electrodeRecords;
@@ -203,55 +208,18 @@ int main(int argc, char *argv[])
     {
         Info<< "Lead field " << names[electrodeI] << nl;
 
-        z == dimensionedScalar(z.dimensions(), Zero);
         e = 0.0;
         if (cells[electrodeI] >= 0)
         {
             e[cells[electrodeI]] = 1.0;
         }
 
-        const scalarField& zI = z.primitiveField();
-        scalarField zPrev(zI.size());
-        scalar change = GREAT;
-        label pass = 0;
-        label finalPasses = 0;
+        const conductorLinearSolve::record solved = solver.solve(e, zI);
+        z.primitiveFieldRef() = zI;
+        z.correctBoundaryConditions();
 
-        // Fixed point M z = e - C^T z from z = 0. Once the change is below
-        // the tolerance, the passes solve with leadFieldFinal until it is
-        // below the tolerance again.
-        while (finalPasses == 0 || change >= convergenceTol)
-        {
-            if (pass == maxPasses)
-            {
-                FatalErrorInFunction
-                    << "Lead field of electrode " << names[electrodeI]
-                    << " not converged after " << pass
-                    << " passes; last relative change " << change
-                    << " (tolerance " << convergenceTol << ")."
-                    << exit(FatalError);
-            }
-
-            zPrev = zI;
-            M.source() = e - adjoint.applyTranspose(zI);
-
-            const bool finalPass =
-                finalPasses > 0
-             || (
-                    pass >= leadFieldConductor::fixedPointControls::minPasses
-                 && change < convergenceTol
-                );
-            if (finalPass)
-            {
-                ++finalPasses;
-            }
-            M.solve(finalPass ? finalSolverDict : solverDict);
-
-            ++pass;
-            change = gMax(mag(zI - zPrev))/max(gMax(mag(zI)), VSMALL);
-        }
-
-        Info<< "  " << pass << " passes (" << finalPasses
-            << " with leadFieldFinal), relative change " << change << nl
+        Info<< "  " << solved.iterations << " iterations, "
+            << solved.reason << nl
             << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s" << nl;
 
@@ -267,23 +235,15 @@ int main(int argc, char *argv[])
         ).write();
 
         dictionary record;
-        record.add("passes", pass);
-        record.add("finalPasses", finalPasses);
-        record.add("relativeChange", change);
+        record.add("iterations", solved.iterations);
+        record.add("reason", solved.reason);
         record.add("fingerprint", leadFieldConductor::fingerprint(z));
         electrodeRecords.add(names[electrodeI], record);
     }
 
     {
         dictionary record;
-        record.add("convergenceTolerance", convergenceTol);
-        record.add("maxPasses", maxPasses);
-        record.add
-        (
-            "minPasses", leadFieldConductor::fixedPointControls::minPasses
-        );
-        record.add("leadField", solverDict);
-        record.add("leadFieldFinal", finalSolverDict);
+        record.add("leadField", solver.entry());
         record.add("electrodes", electrodeRecords);
 
         // ASCII whatever the case's writeFormat: a binary FixedList cannot

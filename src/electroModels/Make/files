@@ -46,6 +46,7 @@ ecgModels/eikonalECG/eikonalECG.C
 ecgModels/torsoECG/torsoECG.C
 ecgModels/leadFieldECG/leadFieldConductor.C
 ecgModels/leadFieldECG/leadFieldAdjoint.C
+ecgModels/leadFieldECG/conductorLinearSolve.C
 ecgModels/leadFieldECG/leadFieldECG.C
 
 /* Conduction system models */

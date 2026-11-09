@@ -42,12 +42,12 @@ Description
     - transpose:    <z, C psi> = <C^T z, psi> (1e-12);
     - symmetry:     x^T M y = y^T M x, with the boundary diagonal and the
                     coupled-interface coefficients of M (1e-12);
-    - residual:     e - M z - C^T z after each lead field (100 times the
-                    leadFieldFixedPoint tolerance);
+    - residual:     e - M z - C^T z after each lead field (the
+                    residualTolerance of the solver entry);
     - pin:          z_r d_r = 1 at a pinned reference cell, d_r its diagonal
                     before the pin (as the residual).
     The first four are round-off checks of exactly linear operators; the
-    last two measure the convergence of the fixed point. The fields of the
+    last two measure the convergence of the lead-field solve. The fields of the
     cell centres are the same in serial and in parallel.
 
     Gradient caching of the gradientNames() fields is fatal: a cached
@@ -97,13 +97,19 @@ class leadFieldAdjoint
 
 public:
 
-    //- Probe C of lfc's conductor and check it; the residual and pin
-    //  tolerances follow the fixed-point tolerance
+    //- Probe C of lfc's conductor and check it; residualTolerance is the
+    //  tolerance of the residual and pin checks
     leadFieldAdjoint
     (
         const leadFieldConductor& lfc,
-        const leadFieldConductor::fixedPointControls& fixedPoint
+        const scalar residualTolerance
     );
+
+    //- The probed explicit part C
+    const probedOperator& C() const
+    {
+        return CPtr_();
+    }
 
     leadFieldAdjoint(const leadFieldAdjoint&) = delete;
     void operator=(const leadFieldAdjoint&) = delete;
@@ -123,6 +129,17 @@ public:
         const volScalarField& psi,
         const scalarField& x,
         const bool abs = false
+    );
+
+    //- b - A psi of the assembled system at its unknown psi, as the linear
+    //  solvers see it: the source, the boundary source of the non-coupled
+    //  patches, and the coupled interfaces in the product.
+    //  (fvMatrix::residual() also adds the coupled neighbour terms to the
+    //  source, which counts processor interfaces twice in parallel.)
+    static tmp<scalarField> systemResidual
+    (
+        const fvScalarMatrix& eqn,
+        const volScalarField& psi
     );
 
     //- Fatal unless M is symmetric
