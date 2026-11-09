@@ -17,10 +17,14 @@ The exact fields are the transmission solution of
 ```text
 heart:   div((Gi + Ge) grad phi) = -div(Gi grad Vm) + S_H
 torso:   div(sigmaB grad phi)    = S_B
-spheres: phi and n.Ge grad phi = n.sigmaB grad phi continuous,
-         n.Gi grad(Vm + phi) = 0
+spheres: phi and n.(Gi grad Vm + (Gi + Ge) grad phi) = n.sigmaB grad phi
+         continuous, n.Gi grad Vm = 0
 outer:   n.sigmaB grad phi = g, the exact current on |x| = 1.5
 ```
+
+This is the lead-field conductor: the passive bulk conductor `Gi + Ge` in the
+heart, the same for a monodomain and a bidomain myocardium, with the source
+`Vm` sealed at the walls.
 
 `S_H`, `S_B` and `g` are the solution's own sources. The lead field `z_e` of
 electrode `e` solves the transpose of the discrete forward operator, so the

@@ -9,15 +9,15 @@ error    leadFieldStatic-directStatic             Linf  0               1e-8
 # Lead field on the exact Vm against the exact potential at the electrode
 # cell centroids: the largest over the electrodes, three body-surface
 # electrodes and the bath-ball probe
-error    leadFieldStatic-exactCentroid            Linf  1.06138701e-01  1e-7
-error    leadFieldStatic-exactCentroid_surface2   Linf  9.76375628e-02  1e-7
-error    leadFieldStatic-exactCentroid_surface4   Linf  5.47686887e-02  1e-7
-error    leadFieldStatic-exactCentroid_surface5   Linf  2.91863015e-02  1e-7
-error    leadFieldStatic-exactCentroid_pool       Linf  3.54560297e-02  1e-7
+error    leadFieldStatic-exactCentroid            Linf  1.01270235e-01  1e-7
+error    leadFieldStatic-exactCentroid_surface2   Linf  9.39201489e-02  1e-7
+error    leadFieldStatic-exactCentroid_surface4   Linf  5.26265468e-02  1e-7
+error    leadFieldStatic-exactCentroid_surface5   Linf  2.75861866e-02  1e-7
+error    leadFieldStatic-exactCentroid_pool       Linf  3.26219367e-02  1e-7
 # Direct static potential against the exact one over all cells, the band of
 # cells next to the spheres and the cells of the outer surface
-error    phiStatic                                L2    5.72780712e-02  1e-7
-error    phiStatic                                Linf  1.28695392e-01  1e-7
-error    phiStatic_interfaceBand                  L2    5.87510756e-02  1e-7
-error    phiStatic_surface                        L2    5.74214066e-02  1e-7
-error    phiStatic_surface                        Linf  1.09668996e-01  1e-7
+error    phiStatic                                L2    5.47824283e-02  1e-7
+error    phiStatic                                Linf  1.24378577e-01  1e-7
+error    phiStatic_interfaceBand                  L2    5.62488756e-02  1e-7
+error    phiStatic_surface                        L2    5.49498069e-02  1e-7
+error    phiStatic_surface                        Linf  1.05738047e-01  1e-7

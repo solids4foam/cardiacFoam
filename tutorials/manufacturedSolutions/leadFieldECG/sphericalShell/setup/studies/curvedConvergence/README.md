@@ -41,12 +41,19 @@ between consecutive levels.
 
 Every run is one time step of the case defaults; the static rows do not
 depend on it. Each run builds 12 lead fields, one per electrode. They need
-29 to 49 passes of their adjoint fixed point on the hexahedra and 61 to 210
+29 to 49 passes of their adjoint fixed point on the hexahedra and 61 to 200
 on the tetrahedra, each to the `leadFieldFixedPoint` tolerance `1e-10` of
-the case. The exception is the seed 2 tetrahedra at `N = 12`, which need
-496 to 620 passes, within the `maxPasses 1000` of `system/fvSolution`.
-The largest `phiE` iteration count is 644 (`tet_N20`), below the
+the case. The largest `phiE` iteration count is 646 (`tet_N20`), below the
 `maxIter 5000` of `system/fvSolution`.
+
+The seed 2 tetrahedra at `N = 12` stop in `buildLeadFields`: the fixed point
+of the first electrode, `surface1`, diverges. Its `phiE` initial residual
+falls to `2e-5` by pass 100, then grows by a factor of about 2.7 per 100
+passes and levels near `5e-3`, and the run stops at `maxPasses 1000` with a
+relative change of `1e-2`. More passes do not converge it. The same mesh
+needed 496 to 620 passes with the bidomain wall conductivity `Ge`; with the
+lead-field wall `Gi + Ge` the fixed point on this mesh is no longer a
+contraction. The levels and seeds that ran converge as before.
 
 All levels and seeds run in parallel on 6 ranks (`parallel`, the case's
 `decomposeParDict`).
@@ -109,77 +116,77 @@ electrodes.
 
 | N | h | max | RMS | `phiStatic_surface` RMS | `phiStatic_surface` max | lead field - direct |
 |---|---|---|---|---|---|---|
-| 8 | 0.1714 | 2.473e-01 | 1.253e-01 | 1.259e-01 | 2.477e-01 | 3.0e-10 |
-| 12 | 0.1143 | 1.061e-01 (2.09) | 5.660e-02 (1.96) | 5.742e-02 (1.94) | 1.097e-01 (2.01) | 3.7e-10 |
-| 16 | 0.0857 | 5.675e-02 (2.18) | 3.059e-02 (2.14) | 3.115e-02 (2.13) | 6.121e-02 (2.03) | 4.6e-10 |
-| 24 | 0.0571 | 2.441e-02 (2.08) | 1.366e-02 (1.99) | 1.377e-02 (2.01) | 2.737e-02 (1.98) | 4.8e-10 |
-| 32 | 0.0428 | 1.343e-02 (2.08) | 7.611e-03 (2.03) | 7.661e-03 (2.04) | 1.527e-02 (2.03) | 5.5e-10 |
+| 8 | 0.1714 | 2.392e-01 | 1.213e-01 | 1.219e-01 | 2.396e-01 | 2.6e-10 |
+| 12 | 0.1143 | 1.013e-01 (2.12) | 5.410e-02 (1.99) | 5.495e-02 (1.97) | 1.057e-01 (2.02) | 3.3e-10 |
+| 16 | 0.0857 | 5.390e-02 (2.19) | 2.922e-02 (2.14) | 2.984e-02 (2.12) | 5.924e-02 (2.01) | 4.2e-10 |
+| 24 | 0.0571 | 2.301e-02 (2.10) | 1.296e-02 (2.00) | 1.309e-02 (2.03) | 2.639e-02 (1.99) | 4.2e-10 |
+| 32 | 0.0428 | 1.278e-02 (2.04) | 7.241e-03 (2.02) | 7.302e-03 (2.03) | 1.475e-02 (2.02) | 5.0e-10 |
 
 Single body-surface electrodes:
 
 | N | surface1 | surface2 | surface3 | surface4 | surface5 | surface6 | surface7 | surface8 |
 |---|---|---|---|---|---|---|---|---|
-| 8 | 1.530e-03 | 1.994e-01 | 7.401e-03 | 1.158e-01 | 5.857e-02 | 4.695e-02 | 2.473e-01 | 7.442e-02 |
-| 12 | 7.286e-03 (-3.85) | 9.764e-02 (1.76) | 3.558e-04 (7.48) | 5.477e-02 (1.85) | 2.919e-02 (1.72) | 1.790e-02 (2.38) | 1.061e-01 (2.09) | 2.451e-02 (2.74) |
-| 16 | 2.524e-03 (3.69) | 5.298e-02 (2.12) | 1.747e-03 (-5.53) | 3.015e-02 (2.08) | 1.815e-02 (1.65) | 3.686e-03 (5.49) | 5.675e-02 (2.18) | 1.406e-02 (1.93) |
-| 24 | 1.780e-03 (0.86) | 2.402e-02 (1.95) | 5.859e-04 (2.69) | 1.483e-02 (1.75) | 7.791e-03 (2.09) | 1.909e-03 (1.62) | 2.441e-02 (2.08) | 5.617e-03 (2.26) |
-| 32 | 1.127e-03 (1.59) | 1.332e-02 (2.05) | 4.414e-04 (0.98) | 8.355e-03 (2.00) | 4.631e-03 (1.81) | 6.100e-04 (3.97) | 1.343e-02 (2.08) | 3.517e-03 (1.63) |
+| 8 | 8.191e-04 | 1.940e-01 | 3.972e-03 | 1.110e-01 | 5.856e-02 | 4.502e-02 | 2.392e-01 | 7.145e-02 |
+| 12 | 8.712e-03 (-5.83) | 9.392e-02 (1.79) | 6.800e-05 (10.03) | 5.263e-02 (1.84) | 2.759e-02 (1.86) | 1.592e-02 (2.56) | 1.013e-01 (2.12) | 2.190e-02 (2.92) |
+| 16 | 3.466e-03 (3.20) | 5.098e-02 (2.12) | 1.653e-03 (-11.09) | 2.903e-02 (2.07) | 1.733e-02 (1.62) | 2.706e-03 (6.16) | 5.390e-02 (2.19) | 1.274e-02 (1.88) |
+| 24 | 2.253e-03 (1.06) | 2.301e-02 (1.96) | 7.299e-04 (2.02) | 1.417e-02 (1.77) | 7.437e-03 (2.09) | 1.379e-03 (1.66) | 2.295e-02 (2.11) | 4.985e-03 (2.31) |
+| 32 | 1.413e-03 (1.62) | 1.278e-02 (2.04) | 5.011e-04 (1.31) | 7.991e-03 (1.99) | 4.466e-03 (1.77) | 3.232e-04 (5.04) | 1.264e-02 (2.07) | 3.205e-03 (1.54) |
 
 ### Hexahedra: field
 
 | N | all RMS | all max | heart RMS | heart max | torso RMS | torso max | band RMS | band max |
 |---|---|---|---|---|---|---|---|---|
-| 8 | 1.257e-01 | 2.958e-01 | 1.248e-01 | 2.958e-01 | 1.260e-01 | 2.781e-01 | 1.295e-01 | 2.958e-01 |
-| 12 | 5.728e-02 (1.94) | 1.287e-01 (2.05) | 5.679e-02 (1.94) | 1.287e-01 (2.05) | 5.745e-02 (1.94) | 1.200e-01 (2.07) | 5.875e-02 (1.95) | 1.287e-01 (2.05) |
-| 16 | 3.107e-02 (2.13) | 7.161e-02 (2.04) | 3.078e-02 (2.13) | 7.161e-02 (2.04) | 3.117e-02 (2.12) | 6.710e-02 (2.02) | 3.189e-02 (2.12) | 7.161e-02 (2.04) |
-| 24 | 1.372e-02 (2.02) | 3.206e-02 (1.98) | 1.357e-02 (2.02) | 3.206e-02 (1.98) | 1.377e-02 (2.02) | 3.047e-02 (1.95) | 1.406e-02 (2.02) | 3.206e-02 (1.98) |
-| 32 | 7.627e-03 (2.04) | 1.796e-02 (2.01) | 7.532e-03 (2.05) | 1.796e-02 (2.01) | 7.660e-03 (2.04) | 1.717e-02 (1.99) | 7.828e-03 (2.04) | 1.790e-02 (2.03) |
+| 8 | 1.214e-01 | 2.902e-01 | 1.202e-01 | 2.902e-01 | 1.218e-01 | 2.681e-01 | 1.250e-01 | 2.902e-01 |
+| 12 | 5.478e-02 (1.96) | 1.244e-01 (2.09) | 5.439e-02 (1.96) | 1.244e-01 (2.09) | 5.492e-02 (1.96) | 1.144e-01 (2.10) | 5.625e-02 (1.97) | 1.244e-01 (2.09) |
+| 16 | 2.976e-02 (2.12) | 6.942e-02 (2.03) | 2.956e-02 (2.12) | 6.942e-02 (2.03) | 2.983e-02 (2.12) | 6.500e-02 (1.96) | 3.058e-02 (2.12) | 6.942e-02 (2.03) |
+| 24 | 1.306e-02 (2.03) | 3.093e-02 (1.99) | 1.298e-02 (2.03) | 3.093e-02 (1.99) | 1.309e-02 (2.03) | 2.941e-02 (1.96) | 1.342e-02 (2.03) | 3.093e-02 (1.99) |
+| 32 | 7.280e-03 (2.03) | 1.738e-02 (2.00) | 7.234e-03 (2.03) | 1.738e-02 (2.00) | 7.297e-03 (2.03) | 1.662e-02 (1.98) | 7.496e-03 (2.02) | 1.732e-02 (2.02) |
 
 ### Hexahedra: interior probes
 
 | N | h | outerNear | outerSide | outerFar | pool |
 |---|---|---|---|---|---|
-| 8 | 0.1714 | 2.137e-01 | 1.679e-01 | 6.959e-03 | 8.319e-02 |
-| 12 | 0.1143 | 9.645e-02 (1.96) | 7.550e-02 (1.97) | 9.105e-04 (5.02) | 3.546e-02 (2.10) |
-| 16 | 0.0857 | 5.531e-02 (1.93) | 4.148e-02 (2.08) | 1.116e-03 (-0.71) | 1.853e-02 (2.26) |
-| 24 | 0.0571 | 2.480e-02 (1.98) | 1.833e-02 (2.01) | 2.293e-04 (3.90) | 7.647e-03 (2.18) |
-| 32 | 0.0428 | 1.409e-02 (1.97) | 1.015e-02 (2.05) | 4.979e-05 (5.31) | 4.077e-03 (2.19) |
+| 8 | 0.1714 | 2.048e-01 | 1.623e-01 | 8.302e-03 | 7.854e-02 |
+| 12 | 0.1143 | 9.352e-02 (1.93) | 7.147e-02 (2.02) | 2.120e-03 (3.37) | 3.262e-02 (2.17) |
+| 16 | 0.0857 | 5.379e-02 (1.92) | 3.916e-02 (2.09) | 1.643e-03 (0.89) | 1.689e-02 (2.29) |
+| 24 | 0.0571 | 2.402e-02 (1.99) | 1.719e-02 (2.03) | 5.846e-04 (2.55) | 6.791e-03 (2.25) |
+| 32 | 0.0428 | 1.366e-02 (1.96) | 9.557e-03 (2.04) | 1.640e-04 (4.42) | 3.585e-03 (2.22) |
 
 ### Tetrahedra: body surface
 
 | N | h | max | RMS | `phiStatic_surface` RMS | `phiStatic_surface` max | lead field - direct |
 |---|---|---|---|---|---|---|
-| 8 | 0.0727 | 1.122e-01 | 6.439e-02 | 6.126e-02 | 1.237e-01 | 6.8e-11 |
-| 12 | 0.0492 | 4.667e-02 (2.25) | 2.730e-02 (2.20) | 2.549e-02 (2.25) | 5.924e-02 (1.89) | 2.0e-11 |
-| 16 | 0.0370 | 2.477e-02 (2.22) | 1.395e-02 (2.35) | 1.326e-02 (2.29) | 3.421e-02 (1.93) | 3.2e-11 |
-| 20 | 0.0299 | 1.502e-02 (2.36) | 8.763e-03 (2.19) | 8.082e-03 (2.34) | 2.203e-02 (2.08) | 4.6e-11 |
+| 8 | 0.0727 | 1.066e-01 | 6.122e-02 | 5.813e-02 | 1.188e-01 | 7.0e-11 |
+| 12 | 0.0492 | 4.341e-02 (2.30) | 2.561e-02 (2.23) | 2.376e-02 (2.29) | 5.655e-02 (1.90) | 2.4e-11 |
+| 16 | 0.0370 | 2.297e-02 (2.23) | 1.268e-02 (2.47) | 1.200e-02 (2.39) | 3.208e-02 (1.99) | 2.2e-11 |
+| 20 | 0.0299 | 1.386e-02 (2.38) | 7.969e-03 (2.19) | 7.311e-03 (2.34) | 2.084e-02 (2.04) | 4.6e-11 |
 
 Single body-surface electrodes:
 
 | N | surface1 | surface2 | surface3 | surface4 | surface5 | surface6 | surface7 | surface8 |
 |---|---|---|---|---|---|---|---|---|
-| 8 | 1.966e-02 | 1.122e-01 | 1.852e-03 | 7.271e-02 | 4.889e-02 | 2.930e-03 | 1.077e-01 | 2.994e-02 |
-| 12 | 8.099e-03 (2.27) | 4.623e-02 (2.27) | 1.594e-03 (0.38) | 3.285e-02 (2.04) | 1.843e-02 (2.50) | 4.382e-03 (-1.03) | 4.667e-02 (2.14) | 1.193e-02 (2.36) |
-| 16 | 5.231e-03 (1.53) | 2.477e-02 (2.19) | 2.678e-03 (-1.82) | 1.599e-02 (2.52) | 1.135e-02 (1.70) | 2.066e-03 (2.64) | 2.229e-02 (2.59) | 4.797e-03 (3.19) |
-| 20 | 1.442e-03 (6.08) | 1.502e-02 (2.36) | 5.836e-04 (7.19) | 1.056e-02 (1.96) | 7.136e-03 (2.19) | 1.872e-03 (0.47) | 1.426e-02 (2.11) | 4.136e-03 (0.70) |
+| 8 | 1.770e-02 | 1.066e-01 | 2.665e-03 | 7.133e-02 | 4.668e-02 | 3.656e-03 | 1.017e-01 | 2.643e-02 |
+| 12 | 9.244e-03 (1.66) | 4.341e-02 (2.30) | 1.558e-03 (1.37) | 3.141e-02 (2.10) | 1.770e-02 (2.48) | 5.891e-03 (-1.22) | 4.292e-02 (2.21) | 9.858e-03 (2.53) |
+| 16 | 4.301e-03 (2.68) | 2.297e-02 (2.23) | 2.416e-03 (-1.54) | 1.464e-02 (2.67) | 1.061e-02 (1.79) | 3.415e-03 (1.91) | 1.961e-02 (2.75) | 3.262e-03 (3.88) |
+| 20 | 9.187e-04 (7.28) | 1.386e-02 (2.38) | 3.355e-04 (9.32) | 9.787e-03 (1.90) | 6.647e-03 (2.21) | 2.626e-03 (1.24) | 1.256e-02 (2.10) | 3.225e-03 (0.05) |
 
 ### Tetrahedra: field
 
 | N | all RMS | all max | heart RMS | heart max | torso RMS | torso max | band RMS | band max |
 |---|---|---|---|---|---|---|---|---|
-| 8 | 6.334e-02 | 1.525e-01 | 6.476e-02 | 1.525e-01 | 6.283e-02 | 1.389e-01 | 6.622e-02 | 1.525e-01 |
-| 12 | 2.628e-02 (2.25) | 6.934e-02 (2.02) | 2.653e-02 (2.29) | 6.934e-02 (2.02) | 2.620e-02 (2.24) | 6.315e-02 (2.02) | 2.735e-02 (2.27) | 6.863e-02 (2.05) |
-| 16 | 1.372e-02 (2.28) | 3.643e-02 (2.26) | 1.389e-02 (2.27) | 3.643e-02 (2.26) | 1.366e-02 (2.28) | 3.421e-02 (2.15) | 1.420e-02 (2.30) | 3.404e-02 (2.46) |
-| 20 | 8.357e-03 (2.34) | 2.337e-02 (2.09) | 8.440e-03 (2.35) | 2.309e-02 (2.15) | 8.327e-03 (2.34) | 2.337e-02 (1.80) | 8.688e-03 (2.32) | 2.337e-02 (1.77) |
+| 8 | 5.991e-02 | 1.458e-01 | 6.095e-02 | 1.458e-01 | 5.954e-02 | 1.324e-01 | 6.266e-02 | 1.450e-01 |
+| 12 | 2.444e-02 (2.30) | 6.738e-02 (1.98) | 2.458e-02 (2.33) | 6.738e-02 (1.98) | 2.439e-02 (2.29) | 6.000e-02 (2.03) | 2.551e-02 (2.30) | 6.570e-02 (2.03) |
+| 16 | 1.244e-02 (2.37) | 3.471e-02 (2.33) | 1.262e-02 (2.34) | 3.471e-02 (2.33) | 1.237e-02 (2.38) | 3.208e-02 (2.19) | 1.297e-02 (2.37) | 3.222e-02 (2.50) |
+| 20 | 7.577e-03 (2.34) | 2.221e-02 (2.11) | 7.692e-03 (2.34) | 2.221e-02 (2.11) | 7.536e-03 (2.34) | 2.084e-02 (2.04) | 7.949e-03 (2.31) | 2.020e-02 (2.20) |
 
 ### Tetrahedra: interior probes
 
 | N | h | outerNear | outerSide | outerFar | pool |
 |---|---|---|---|---|---|
-| 8 | 0.0727 | 1.178e-01 | 8.144e-02 | 1.497e-03 | 4.435e-02 |
-| 12 | 0.0492 | 4.399e-02 (2.52) | 3.317e-02 (2.30) | 2.272e-04 (4.83) | 1.674e-02 (2.50) |
-| 16 | 0.0370 | 2.326e-02 (2.23) | 1.693e-02 (2.36) | 7.157e-04 (-4.02) | 9.308e-03 (2.06) |
-| 20 | 0.0299 | 1.469e-02 (2.17) | 1.040e-02 (2.30) | 5.239e-04 (1.47) | 5.302e-03 (2.66) |
+| 8 | 0.0727 | 1.143e-01 | 7.587e-02 | 6.608e-04 | 3.934e-02 |
+| 12 | 0.0492 | 4.152e-02 (2.59) | 3.018e-02 (2.36) | 6.336e-04 (0.11) | 1.404e-02 (2.64) |
+| 16 | 0.0370 | 2.167e-02 (2.28) | 1.486e-02 (2.48) | 3.569e-05 (10.09) | 7.654e-03 (2.13) |
+| 20 | 0.0299 | 1.374e-02 (2.15) | 9.037e-03 (2.35) | 1.557e-04 (-6.95) | 4.218e-03 (2.81) |
 
 ### Tetrahedra: seeds
 
@@ -187,39 +194,40 @@ The same levels meshed with three gmsh seeds. Body surface and field: the
 maximum and RMS over the eight surface electrodes, the RMS and maximum error
 of the direct static potential over the surface cells and over all cells,
 and the RMS over the interface band. The `max/min` rows are the largest over
-the smallest value of the three seeds.
+the smallest value of the seeds that ran. The lead fields of seed 2 at
+`N = 12` do not converge (see [Ladder](#ladder)).
 
 | N | seed | cells | surface max | surface RMS | phiStatic_surface RMS | phiStatic_surface max | all RMS | all max | band RMS |
 |---|---|---|---|---|---|---|---|---|---|
-| 8 | 1 | 36754 | 1.122e-01 | 6.439e-02 | 6.126e-02 | 1.237e-01 | 6.334e-02 | 1.525e-01 | 6.622e-02 |
-| 8 | 2 | 36660 | 1.191e-01 | 6.763e-02 | 6.510e-02 | 1.380e-01 | 6.677e-02 | 1.665e-01 | 6.984e-02 |
-| 8 | 3 | 36853 | 1.274e-01 | 7.044e-02 | 6.572e-02 | 1.367e-01 | 6.728e-02 | 1.619e-01 | 7.028e-02 |
-| 8 | max/min |  | 1.14 | 1.09 | 1.07 | 1.12 | 1.06 | 1.09 | 1.06 |
-| 12 | 1 | 118535 | 4.667e-02 | 2.730e-02 | 2.549e-02 | 5.924e-02 | 2.628e-02 | 6.934e-02 | 2.735e-02 |
-| 12 | 2 | 118663 | 4.644e-02 | 2.743e-02 | 2.646e-02 | 5.823e-02 | 2.734e-02 | 6.986e-02 | 2.845e-02 |
-| 12 | 3 | 119209 | 4.818e-02 | 2.703e-02 | 2.520e-02 | 5.470e-02 | 2.593e-02 | 6.902e-02 | 2.692e-02 |
-| 12 | max/min |  | 1.04 | 1.01 | 1.05 | 1.08 | 1.05 | 1.01 | 1.06 |
-| 16 | 1 | 278906 | 2.477e-02 | 1.395e-02 | 1.326e-02 | 3.421e-02 | 1.372e-02 | 3.643e-02 | 1.420e-02 |
-| 16 | 2 | 278490 | 2.322e-02 | 1.356e-02 | 1.257e-02 | 3.154e-02 | 1.298e-02 | 3.530e-02 | 1.353e-02 |
-| 16 | 3 | 278405 | 2.455e-02 | 1.429e-02 | 1.314e-02 | 3.160e-02 | 1.357e-02 | 4.202e-02 | 1.412e-02 |
-| 16 | max/min |  | 1.07 | 1.05 | 1.05 | 1.08 | 1.06 | 1.19 | 1.05 |
+| 8 | 1 | 36754 | 1.066e-01 | 6.122e-02 | 5.813e-02 | 1.188e-01 | 5.991e-02 | 1.458e-01 | 6.266e-02 |
+| 8 | 2 | 36660 | 1.145e-01 | 6.546e-02 | 6.294e-02 | 1.346e-01 | 6.445e-02 | 1.621e-01 | 6.741e-02 |
+| 8 | 3 | 36853 | 1.229e-01 | 6.834e-02 | 6.362e-02 | 1.332e-01 | 6.513e-02 | 1.587e-01 | 6.809e-02 |
+| 8 | max/min |  | 1.15 | 1.12 | 1.09 | 1.13 | 1.09 | 1.11 | 1.09 |
+| 12 | 1 | 118535 | 4.341e-02 | 2.561e-02 | 2.376e-02 | 5.655e-02 | 2.444e-02 | 6.738e-02 | 2.551e-02 |
+| 12 | 2 | | not converged | | | | | | |
+| 12 | 3 | 119209 | 4.555e-02 | 2.511e-02 | 2.328e-02 | 5.191e-02 | 2.392e-02 | 6.585e-02 | 2.493e-02 |
+| 12 | max/min |  | 1.05 | 1.02 | 1.02 | 1.09 | 1.02 | 1.02 | 1.02 |
+| 16 | 1 | 278906 | 2.297e-02 | 1.268e-02 | 1.200e-02 | 3.208e-02 | 1.244e-02 | 3.471e-02 | 1.297e-02 |
+| 16 | 2 | 278490 | 2.158e-02 | 1.246e-02 | 1.152e-02 | 2.991e-02 | 1.191e-02 | 3.374e-02 | 1.250e-02 |
+| 16 | 3 | 278405 | 2.281e-02 | 1.323e-02 | 1.204e-02 | 3.022e-02 | 1.243e-02 | 3.465e-02 | 1.302e-02 |
+| 16 | max/min |  | 1.06 | 1.06 | 1.05 | 1.07 | 1.04 | 1.03 | 1.04 |
 
 Interior probes, static lead-field error:
 
 | N | seed | outerNear | outerSide | outerFar | pool |
 |---|---|---|---|---|---|
-| 8 | 1 | 1.178e-01 | 8.144e-02 | 1.497e-03 | 4.435e-02 |
-| 8 | 2 | 1.028e-01 | 8.999e-02 | 1.350e-03 | 4.717e-02 |
-| 8 | 3 | 1.090e-01 | 8.744e-02 | 1.002e-02 | 4.542e-02 |
-| 8 | max/min | 1.15 | 1.11 | 7.42 | 1.06 |
-| 12 | 1 | 4.399e-02 | 3.317e-02 | 2.272e-04 | 1.674e-02 |
-| 12 | 2 | 4.507e-02 | 3.443e-02 | 6.011e-04 | 1.797e-02 |
-| 12 | 3 | 4.088e-02 | 3.365e-02 | 1.716e-03 | 1.728e-02 |
-| 12 | max/min | 1.10 | 1.04 | 7.55 | 1.07 |
-| 16 | 1 | 2.326e-02 | 1.693e-02 | 7.157e-04 | 9.308e-03 |
-| 16 | 2 | 2.115e-02 | 1.670e-02 | 8.796e-04 | 8.502e-03 |
-| 16 | 3 | 2.343e-02 | 1.673e-02 | 2.316e-05 | 8.810e-03 |
-| 16 | max/min | 1.11 | 1.01 | 37.99 | 1.09 |
+| 8 | 1 | 1.143e-01 | 7.587e-02 | 6.608e-04 | 3.934e-02 |
+| 8 | 2 | 1.006e-01 | 8.582e-02 | 2.268e-03 | 4.315e-02 |
+| 8 | 3 | 1.069e-01 | 8.335e-02 | 9.249e-03 | 4.252e-02 |
+| 8 | max/min | 1.14 | 1.13 | 14.00 | 1.10 |
+| 12 | 1 | 4.152e-02 | 3.018e-02 | 6.336e-04 | 1.404e-02 |
+| 12 | 2 | not converged | | | |
+| 12 | 3 | 3.786e-02 | 3.045e-02 | 2.779e-03 | 1.457e-02 |
+| 12 | max/min | 1.10 | 1.01 | 4.39 | 1.04 |
+| 16 | 1 | 2.167e-02 | 1.486e-02 | 3.569e-05 | 7.654e-03 |
+| 16 | 2 | 1.990e-02 | 1.475e-02 | 1.365e-03 | 6.891e-03 |
+| 16 | 3 | 2.216e-02 | 1.474e-02 | 5.048e-04 | 7.026e-03 |
+| 16 | max/min | 1.11 | 1.01 | 38.26 | 1.11 |
 
 ### Reading
 
@@ -228,9 +236,10 @@ Interior probes, static lead-field error:
   surface cells converges at second order in the RMS and the maximum. On the
   tetrahedra the surface group converges slightly above second order.
 - Single surface electrodes give erratic orders between levels. On the
-  hexahedra the signed errors of `surface1` and `surface3` change sign
-  between levels, and that of `surface6` falls to more than an order of
-  magnitude below the group maximum; on the tetrahedra the signed error of
+  hexahedra the signed error of `surface3` changes sign between levels, that
+  of `surface1` grows from `N = 8` to `N = 12` before it falls, and that of
+  `surface6` falls to more than an order of magnitude below the group
+  maximum; on the tetrahedra the signed error of
   `surface1` changes sign between levels, `surface3` and `surface6` stay well
   below the group maximum, and `surface8` scatters between levels. The group
   maximum and RMS do not follow these points.
@@ -240,17 +249,17 @@ Interior probes, static lead-field error:
   heart-torso face conductivity adds no error of lower order.
 - The probes `outerNear`, `outerSide` and `pool` converge at second order on
   both meshes. At `outerFar` the signed error changes sign between the
-  levels on the hexahedra: the electrode lies near a zero of the
-  discretisation error, so its order is not defined. Its error stays below
-  the field maximum of the same level.
+  levels on the tetrahedra, and on the hexahedra it stays one to two orders
+  of magnitude below the other probes with erratic orders: the electrode
+  lies near a zero of the discretisation error, so its order is not defined.
+  Its error stays below the field maximum of the same level.
 - The convergence trend is seed-independent. On the tetrahedra the surface
   group, the surface field row, the field RMS, the band RMS and the errors
   at `outerNear`, `outerSide` and `pool` differ by less than a fifth between
   seeds at each level, and fall at about second order or above for every
-  seed. The field maximum over all cells, a single-cell value, spreads more
-  at the finest level. Only `outerFar` depends on the seed, by up to more
-  than an order of magnitude, as expected for an electrode at a zero of the
-  discretisation error.
-- The lead field and the direct solve agree to `6e-10` at every level and
+  seed (for seed 2 from `N = 8` to `N = 16`). Only `outerFar` depends on the
+  seed, by up to more than an order of magnitude, as expected for an
+  electrode at a zero of the discretisation error.
+- The lead field and the direct solve agree to `5e-10` at every level and
   every electrode, at the level of the fixed-point and linear-solver
   tolerances.

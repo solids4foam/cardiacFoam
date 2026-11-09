@@ -41,14 +41,14 @@ $$
 
 where $S_H$, $S_B$ and $g_{\mathrm{out}}$ are manufactured data (zero in
 ordinary runs).
-The heart source is assembled with no wall flux of $\boldsymbol\sigma_i\nabla V_m$.
-The heart-side wall conductivity $\boldsymbol\sigma_w$ is the conductor's choice: with
-a monodomain myocardium, whose $V_m$ is sealed
-($\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m=0$), the wall carries the total
-conductivity, $\boldsymbol\sigma_w=\boldsymbol\sigma_i+\boldsymbol\sigma_e$; with a bidomain
-myocardium the intracellular potential is sealed,
-$\mathbf n\cdot\boldsymbol\sigma_i\nabla(\phi+V_m)=0$, and
-$\boldsymbol\sigma_w=\boldsymbol\sigma_e$. The problem is of pure Neumann
+The heart source is assembled with no wall flux of $\boldsymbol\sigma_i\nabla V_m$:
+the source $V_m$ is sealed ($\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m=0$). The
+conductor is the passive bulk conductor of reciprocity for either myocardium,
+so the heart side of the wall carries the total conductivity,
+$\boldsymbol\sigma_w=\boldsymbol\sigma_i+\boldsymbol\sigma_e$, and the total current is
+continuous across $\Gamma_{HB}$. (The two-way bath, whose $\phi$ is the heart's
+own extracellular potential, seals $\phi+V_m$ instead and carries
+$\boldsymbol\sigma_e$; that is not this problem.) The problem is of pure Neumann
 type; the constant of $\phi$ is fixed by a reference point
 $\mathbf r_{\mathrm{ref}}$ in the torso (`phiERefPoint` of the torso
 dictionary), whose cell is pinned to the reference value
@@ -156,10 +156,9 @@ interface, a varying torso conductivity, an off-diagonal conductivity or
 an electrode where the exact potential varies across the slab's $y$ and $z$.
 In the slab problem the exact torso potential is constant, so the point and
 the centroid values of an electrode are equal and the torso conductivity does
-not enter. The layered problem with a current needs the monodomain
-myocardium: at the walls the exact heart slope $\alpha/(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}$
-carries the intracellular flux $\alpha \sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})$, which the
-sealed intracellular potential of the bidomain conductor does not admit.
+not enter. With a current the exact heart slope at the walls is
+$\alpha/(\boldsymbol\sigma_i+\boldsymbol\sigma_e)_{xx}$, carried by the bulk conductor for
+the monodomain and the bidomain myocardium alike.
 
 ## Problem instance
 
@@ -295,8 +294,8 @@ layered problem
 The verifier takes $\alpha$ from the surface currents and the four layer
 conductivities from the torso cells, and stops with a fatal error when a torso
 cell crosses a layer interface, when a layer has more than one or an
-anisotropic conductivity, when the surface currents are not along $x$ or carry
-a net current, or when a current is combined with the bidomain conductor.
+anisotropic conductivity, or when the surface currents are not along $x$ or
+carry a net current.
 With $\alpha=0$ the layered potential equals the slab's for any $\sigma_{b,1}$,
 $\sigma_{b,2}$.
 
@@ -413,22 +412,26 @@ A heart shell $r_1<|\mathbf x|<r_2$ between a bath ball $|\mathbf x|<r_1$
 generated in the heart crosses both curved interfaces into the torso. The
 heart conductivities are full tensors whose fibre and sheet rotate through
 the wall, and the bath conductivity varies in space. The exact potential has
-non-zero normal and tangential gradients on both spheres; it is continuous
-across them, the extracellular flux is continuous and the intracellular
-potential is sealed, all exactly.
+non-zero normal and tangential gradients on both spheres; it solves the
+lead-field conductor of @sec-lf-problem: in the heart the passive bulk
+conductor $\boldsymbol\sigma_i+\boldsymbol\sigma_e$, across the spheres $\phi$ and the
+total current continuous, and the source $V_m$ sealed
+($\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m=0$), all exactly.
 
 The problem exercises the heart source with a full, varying $\boldsymbol\sigma_i$, the
 anisotropic heart operator, two curved heart--torso interfaces crossed by
-polyhedral faces, a varying torso conductivity, and the bidomain wall
-condition. It also needs data that an ordinary run does not have: a source
+polyhedral faces, a varying torso conductivity, and the bulk-conductor wall
+condition ($\boldsymbol\sigma_i+\boldsymbol\sigma_e$ on the heart side of the
+heart--torso faces), which is the same for a monodomain and a bidomain
+myocardium. It also needs data that an ordinary run does not have: a source
 in every zone and a current through the outer boundary. These enter both
 channels as one extra cell source (@sec-identity), so the problem verifies
 the conductor and the lead fields with the manufactured data included. The
 verifier uses the exact $V_m$ at the heart cell centres only; the myocardium
 of the case runs one step of `BuenoOrovio`, whose $V_m$ is uniform, and the
 channel on the computed $V_m$ is a check of reciprocity, not of accuracy.
-The solution needs the bidomain conductor and the reference point; ground and
-surface-current patches are refused.
+The solution needs the reference point; ground and surface-current patches
+are refused.
 
 ## Problem instance
 
@@ -518,7 +521,7 @@ on it.
 
 {{< include ../../latex/shell_transmission_S.tex >}}
 
-the smooth extracellular and intracellular fields are
+the smooth fields are
 
 {{< include ../../latex/shell_transmission_fhat.tex >}}
 
@@ -528,8 +531,10 @@ the smooth extracellular and intracellular fields are
 
 {{< include ../../latex/shell_transmission_h.tex >}}
 
+{{< include ../../latex/shell_transmission_v.tex >}}
+
 $\hat f$ is the field $\hat h_e$ and $\hat h$ the field $\hat h_i$ of the
-bidomain shell.
+bidomain shell; $f$ builds the potential and $v$ the transmembrane potential.
 
 *Interface corrections.* On sphere $j$ ($j=1$: $|\mathbf x|=r_1$, $j=2$:
 $|\mathbf x|=r_2$) the unit normal out of the heart is $\mathbf n_j$ and
@@ -555,50 +560,36 @@ $\boldsymbol\sigma_e$ the heart tensors at $\mathbf x$,
 
 {{< include ../../latex/shell_transmission_m.tex >}}
 
-In the heart $\phi=f+\omega g$ and $\phi_i=h+\omega m$, and in the bath
+In the heart $\phi=f+\omega g$ and $V_m=v+\omega m$, and in the bath
 $\phi=f$. On sphere $j$, $\omega=0$ and $\nabla(\omega g)=g_jd_j\mathbf n_j$,
 so
 
 - $\phi$ is continuous ($f$ on both sides);
-- $\mathbf n_j\cdot\boldsymbol\sigma_e\nabla\phi=\mathbf n_j\cdot\boldsymbol\sigma_e\nabla f+\mathbf n_j\cdot(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_e)\nabla f=\mathbf n_j\cdot\sigma_b\nabla\phi$;
-- $\mathbf n_j\cdot\boldsymbol\sigma_i\nabla\phi_i=\mathbf n_j\cdot\boldsymbol\sigma_i\nabla h-\mathbf n_j\cdot\boldsymbol\sigma_i\nabla h=0$.
+- the source is sealed: $\mathbf n_j\cdot\boldsymbol\sigma_i\nabla V_m=\mathbf n_j\cdot\boldsymbol\sigma_i\nabla v-\mathbf n_j\cdot\boldsymbol\sigma_i\nabla v=0$;
+- the total current is continuous: $\mathbf n_j\cdot(\boldsymbol\sigma_i\nabla V_m+(\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi)=\mathbf n_j\cdot(\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla f+\mathbf n_j\cdot(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_i-\boldsymbol\sigma_e)\nabla f=\mathbf n_j\cdot\sigma_b\nabla\phi$.
 
 The denominators are positive because the tensors are positive definite, so
 every zone formula extends smoothly beyond its sphere, where polyhedral faces
 put cell centres.
 
-*Common mode.* The generator adds to $\phi$ and $\phi_i$ the same term,
-$T$ times a field built on
+*Common mode.* The generator adds to $\phi$ a term $T$ times a field built on
 
 {{< include ../../latex/shell_transmission_T.tex >}}
 
 {{< include ../../latex/shell_transmission_f2.tex >}}
 
-so that $V_m$ is unchanged. In the heart the term is $T(f_2+\omega q)$, with
-$q$ sealing it with respect to $\boldsymbol\sigma_i$:
-
-{{< include ../../latex/shell_transmission_qj.tex >}}
-
-{{< include ../../latex/shell_transmission_q.tex >}}
-
-In the bath zone of sphere $j$ it is $T(f_2+\beta_jr_j)$, with $\beta_j$ zero
-on the sphere and $r_j$ the correction that keeps the extracellular flux
-continuous, built with the heart tensors $\boldsymbol\sigma_i^{(j)}$,
-$\boldsymbol\sigma_e^{(j)}$ of the sphere ($\theta=\theta_0$ for $j=1$,
-$\theta=\theta_0+\theta_1$ for $j=2$) and the denominator $D_j$, positive in
-the whole zone, the origin included:
+which leaves $V_m$ unchanged. In the heart the term is $Tf_2$. In the bath
+zone of sphere $j$ it is $T(f_2+\beta_jr_j)$, with $\beta_j$ zero on the
+sphere, $\mathbf n_j\cdot\nabla\beta_j=1$ there, and $r_j$ the correction that
+keeps the total current continuous, built with the heart tensors
+$\boldsymbol\sigma_i^{(j)}$, $\boldsymbol\sigma_e^{(j)}$ of the sphere ($\theta=\theta_0$ for
+$j=1$, $\theta=\theta_0+\theta_1$ for $j=2$):
 
 {{< include ../../latex/shell_transmission_beta1.tex >}}
 
 {{< include ../../latex/shell_transmission_beta2.tex >}}
 
 {{< include ../../latex/shell_transmission_rj.tex >}}
-
-{{< include ../../latex/shell_transmission_kappa.tex >}}
-
-{{< include ../../latex/shell_transmission_D1.tex >}}
-
-{{< include ../../latex/shell_transmission_D2.tex >}}
 
 The case uses $A_T=0$, so $T=0$ and the term vanishes; the
 alternate parameters of the generator switch it on for the header self-test.
@@ -607,8 +598,8 @@ alternate parameters of the generator switch it on for the header self-test.
 
 {{< include ../../latex/shell_transmission_sources.tex >}}
 
-which is the heart equation of @sec-lf-problem with $V_m=\phi_i-\phi$, and
-the outer boundary carries the exact outward current
+which is the heart equation of @sec-lf-problem, and the outer boundary
+carries the exact outward current
 
 {{< include ../../latex/shell_transmission_gout.tex >}}
 
@@ -618,17 +609,16 @@ evaluated at each outer face centre with the outer-bath formula.
 
 {{< include ../../latex/shell_transmission_phi.tex >}}
 
-{{< include ../../latex/shell_transmission_phiI.tex >}}
-
 {{< include ../../latex/shell_transmission_Vm.tex >}}
 
 in the heart, with $g$ and $m$ linear in $S$. The verifier evaluates $\phi$
 with the formula of the zone that contains the point (`zoneOf`), gauged as in
 @sec-slab at the centroid $\mathbf x_{\mathrm{ref}}$ of the pinned cell. The
 sources are not printed: they are `phiESource` of the zone in
-`expressions("levelSet")` of `shell_mms.py`. In code: `Vm`, `phiE`, `phiI`,
-`gradPhiE`, `Gi`, `Ge`, `sigmaB`, `divGiGradPhiI` and `phiESource` (the source
-$S_H$ or $S_B$ of the zone) of the namespace `shellTransmissionMMS`; in Python
+`expressions("levelSet")` of `shell_mms.py`. In code: `Vm`, `phiE`,
+`gradPhiE`, `Gi`, `Ge`, `sigmaB` and `phiESource` (the source $S_H$ or $S_B$
+of the zone) of the namespace `shellTransmissionMMS`, whose `phiI` is
+$V_m+\phi$ (not sealed) and serves only the identities of the source; in Python
 `Model.eval_xyz(zone, name, points, t)` of `shell_mms.py`, and `shell_eval`,
 `shell_phi` of `leadfield_reference.py`.
 
@@ -641,20 +631,23 @@ write, and `test_shell_mms.py` repeats:
   $d_j$, $\boldsymbol\sigma_i$, $\boldsymbol\sigma_e$, $\hat h$ and $\hat f$ equal those of
   `shell_monodomain_mms.py` and `shell_bidomain_mms.py`, whose fragments are
   printed above (symbolic);
-- interface conditions: continuity of $\phi$, of the extracellular flux and
-  the sealing of $\phi_i$ below $10^{-12}$ at 24 points of each sphere and
+- interface conditions: continuity of $\phi$ and of the total current and
+  the sealing of $V_m$ below $10^{-12}$ at 24 points of each sphere and
   three times, in 30-digit arithmetic, for the default and the alternate
   parameters;
 - sources and gradients: against fourth-order central differences
   ($h=10^{-3}$) to $10^{-6}$ relative at 40 random points, a point next to
   the origin and the origin, at two times, and with each zone formula
   evaluated $0.025$ beyond its sphere;
-- boundedness and positive denominators over the zones widened by $0.05$;
+- boundedness, and positive denominators $\mathbf n_j\cdot\boldsymbol\sigma_i\mathbf n_j$
+  and $\mathbf n_j\cdot(\boldsymbol\sigma_i+\boldsymbol\sigma_e)\mathbf n_j$ over the heart
+  widened by $0.05$;
 - richness: on each sphere and for each tensor, the tangential part of
   $\boldsymbol\sigma\mathbf n$ applied to the gradient ($\nabla\phi$ for
-  $\boldsymbol\sigma_e$, $\nabla\phi_i$ for $\boldsymbol\sigma_i$) has an RMS of at least 0.2
-  times that of the reference flux ($\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi$,
-  $\lvert\boldsymbol\sigma_i\nabla\phi_i\rvert$), and reaches 0.2 of it over at least
+  $\boldsymbol\sigma_i+\boldsymbol\sigma_e$, $\nabla V_m$ for $\boldsymbol\sigma_i$) has an RMS of
+  at least 0.2 times that of the reference flux
+  ($\mathbf n\cdot(\boldsymbol\sigma_i+\boldsymbol\sigma_e)\nabla\phi$,
+  $\lvert\boldsymbol\sigma_i\nabla V_m\rvert$), and reaches 0.2 of it over at least
   70% of the area;
 - the common mode leaves $V_m$, $\nabla V_m$ unchanged ($10^{-14}$), and the
   manufactured ionic closure of the heart holds ($10^{-13}$).

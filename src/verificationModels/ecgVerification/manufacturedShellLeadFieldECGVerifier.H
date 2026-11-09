@@ -24,8 +24,8 @@ Description
     and bath), with the channels of leadFieldECGVerifierBase. Its
     verificationModel takes no keys beyond type.
 
-    The conductor must be the bidomain one, pinned, with no ground or
-    surface-current patches, and its zones, Gi, Ge and torso conductivity
+    The conductor must be pinned, with no ground or surface-current
+    patches, and its zones, Gi, Ge and torso conductivity
     must be those of the solution at the cell centres.
     writeManufacturedFields (setManufacturedFields) writes them:
     0/ConductivityIntracellular, 0/ConductivityExtracellular and

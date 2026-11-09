@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Bath-bidomain transmission manufactured solution on the spherical shell.
+"""Lead-field conductor transmission manufactured solution on the spherical shell.
 
 A heart shell r1 < |x| < r2 lies between the bath ball bloodPool (|x| < r1)
 and the outer bath (|x| > r2).  Every field is a polynomial, trigonometric or
 exponential function of x, y, z, or a ratio whose denominator stays positive in
 its zone and in a band beyond it, so each zone formula is analytic and extends
-smoothly across the polyhedral interfaces of a mesh.  The exact fields satisfy
-phiE continuity, extracellular flux continuity and intracellular sealing on
-both spheres.  The module builds the fields and sources with sympy, runs the
+smoothly across the polyhedral interfaces of a mesh.  The exact potential phi
+solves the one-way lead-field conductor (P2 eq-conductor-source): the passive
+bulk conductor Gi + Ge in the heart and sigma_B in the bath, with the source
+div(Gi grad Vm).  On both spheres phi and the total current
+n.(Gi grad Vm + (Gi + Ge) grad phi) = n.sigma_B grad phi are continuous and the
+source Vm is sealed, n.Gi grad Vm = 0.  phi_i = Vm + phi is exported for the
+identities of the source only; it is not sealed.  The module builds the fields and sources with sympy, runs the
 self-checks used by test_shell_mms.py, and writes the C++ reference header
 (namespace Foam::shellTransmissionMMS) with the function names and signatures
 of the oblique-slab header.
@@ -151,15 +155,15 @@ def _f2():
     return sp.Rational(1, 5)*sp.cos(k*x) + sp.Rational(1, 10)*y + sp.Rational(1, 10)*z**2
 
 
-def _flux_correction(n_jump_grad_f, n_Ge_n, d):
-    """g_j = n_j.(sigma_B,j I - Ge) grad f/((n_j.Ge n_j) d_j): the jump of the
-    extracellular flux that omega g_j removes on sphere j."""
-    return n_jump_grad_f/(n_Ge_n*d)
+def _flux_correction(n_jump_grad_f, n_Sig_n, d):
+    """g_j = n_j.(sigma_B,j I - Sigma) grad f/((n_j.Sigma n_j) d_j), Sigma = Gi + Ge:
+    the jump of the bulk conductor's flux that omega g_j removes on sphere j."""
+    return n_jump_grad_f/(n_Sig_n*d)
 
 
-def _closure(n_Ge_grad_f2, n_Gi_grad_f2, n_Ge_n, D, n_grad_f2, sigma):
+def _closure(n_Sig_grad_f2, n_grad_f2, sigma):
     """r_j of the common mode in the bath zone of sphere j."""
-    return (n_Ge_grad_f2 - n_Gi_grad_f2*n_Ge_n/D - sigma*n_grad_f2)/sigma
+    return (n_Sig_grad_f2 - sigma*n_grad_f2)/sigma
 
 
 def _heart_exports(phiE, phiI, Gi, Ge):
@@ -214,39 +218,37 @@ def expressions(solution):
     # unit normals on their own sphere, pointing from the heart into the bath zone
     n, d = _walls(XYZ, r1, r2)
     sigj = {1: sig[0], 2: sig[2]}
-    gj, mj, qj = {}, {}, {}
+    SigH = GiH + GeH
+    v = h - f
+    gj, mj = {}, {}
     for j in (1, 2):
         nj = n[j]
-        gj[j] = _flux_correction(_dot(nj, (sigj[j]*sp.eye(3) - GeH)*_grad(f)),
-                                 _dot(nj, GeH*nj), d[j])
-        mj[j] = _wall_correction(_dot(nj, GiH*_grad(h)), _dot(nj, GiH*nj), d[j])
-        qj[j] = _wall_correction(_dot(nj, GiH*_grad(f2)), _dot(nj, GiH*nj), d[j])
+        # the bulk conductor's flux n.(Gi + Ge) grad phi matches sigma_B on sphere j
+        gj[j] = _flux_correction(_dot(nj, (sigj[j]*sp.eye(3) - SigH)*_grad(f)),
+                                 _dot(nj, SigH*nj), d[j])
+        # the source Vm is sealed on sphere j: n.Gi grad Vm = 0
+        mj[j] = _wall_correction(_dot(nj, GiH*_grad(v)), _dot(nj, GiH*nj), d[j])
     g = _blend(lam, gj[1], gj[2])
     m = _blend(lam, mj[1], mj[2])
-    q = _blend(lam, qj[1], qj[2])
-    pcm = f2 + om*q
-    phiEH = f + om*g + Tt_*pcm
-    phiI = h + om*m + Tt_*pcm
-    E[1].update(_heart_exports(phiEH, phiI, GiH, GeH))
-    E[1].update({"g": g, "m": m, "q": q})
+    Vm = v + om*m
+    phiH = f + om*g + Tt_*f2
+    # phi_i = Vm + phi is exported for the identities of the source; it is not
+    # sealed (the lead-field conductor seals Vm, not Vm + phi)
+    E[1].update(_heart_exports(phiH, Vm + phiH, GiH, GeH))
+    E[1].update({"g": g, "m": m, "SigZ": _components(SigH)})
 
-    # n.Gi n on its sphere; on bloodPool kappa (r1^2 - rho), kappa below every eigenvalue of
-    # Gi, keeps it >= kappa everywhere, the origin included
-    kappa = 1/(1/p["gil"] + 1/p["git"] + 1/p["gin"])
-    D = {1: (_dot(XYZ, GiL*XYZ) + kappa*(r1**2 - rho))/r1**2,
-         2: _dot(XYZ, GiR*XYZ)/r2**2}
-
-    def r_closed(nt, Gi, Ge, Dj, sigma):
+    # common mode: the bulk conductor's flux of f2 on sphere j, Gi + Ge at its
+    # wall angle, closed in the bath zone by beta_j r_j (beta_j = 0 and
+    # n_j.grad beta_j = 1 on sphere j)
+    def r_closed(nt, Sig, sigma):
         gf2 = _grad(f2)
-        return _closure(_dot(nt, Ge*gf2), _dot(nt, Gi*gf2), _dot(nt, Ge*nt), Dj,
-                        _dot(nt, gf2), sigma)
+        return _closure(_dot(nt, Sig*gf2), _dot(nt, gf2), sigma)
 
     beta = {0: (r1**2 - rho)/(2*r1), 2: (rho - r2**2)/(2*r2)}
     for zn, j, Gi, Ge in ((0, 1, GiL, GeL), (2, 2, GiR, GeR)):
-        r = r_closed(n[j], Gi, Ge, D[j], sig[zn])
+        r = r_closed(n[j], Gi + Ge, sig[zn])
         E[zn].update(_bath_exports(f + Tt_*(f2 + beta[zn]*r), sig[zn]))
         E[zn]["betaR"] = beta[zn]*r
-        E[zn]["D"] = D[j]
     E[1]["GiZ"], E[1]["GeZ"] = _components(GiH), _components(GeH)
     E[0]["GiZ"], E[0]["GeZ"] = _components(GiL), _components(GeL)
     E[2]["GiZ"], E[2]["GeZ"] = _components(GiR), _components(GeR)
@@ -343,12 +345,13 @@ class Model:
             return sum(a[i]*b[i] for i in range(3))
 
         ev = lambda zone, name: self.eval_mp(zone, name, pt, tt)  # noqa: E731
-        Ge, Gi = ev(1, "GeZ"), ev(1, "GiZ")
+        Sig, Gi = ev(1, "SigZ"), ev(1, "GiZ")
         cont = ev(1, "phiE") - ev(zb, "phiE")
-        flux = vdot(n, tdot(Ge, ev(1, "gradPhiE"))) - ev(zb, "sigmaB")*vdot(n, ev(zb, "gradPhiE"))
-        seal = vdot(n, tdot(Gi, ev(1, "gradPhiI")))
-        return {"continuity": float(cont), "extracellularFlux": float(flux),
-                "sealing": float(seal)}
+        seal = vdot(n, tdot(Gi, ev(1, "gradVm")))
+        flux = (seal + vdot(n, tdot(Sig, ev(1, "gradPhiE")))
+                - ev(zb, "sigmaB")*vdot(n, ev(zb, "gradPhiE")))
+        return {"continuity": float(cont), "totalFlux": float(flux),
+                "sourceSealing": float(seal)}
 
     # -- sources versus finite differences ------------------------------------
     def sample_points(self, seed, n, min_distance_to_interface):
@@ -412,8 +415,8 @@ class Model:
         if zone == 1:
             return ["phiE", "phiI", "Vm", "gradPhiE", "gradPhiI", "gradVm",
                     "divGiGradPhiI", "phiESource", "J", "G", "u1", "u2", "GiZ", "GeZ",
-                    "g", "m", "q"]
-        return ["phiE", "gradPhiE", "phiESource", "sigmaB", "GiZ", "GeZ", "betaR", "D"]
+                    "SigZ", "g", "m"]
+        return ["phiE", "gradPhiE", "phiESource", "sigmaB", "GiZ", "GeZ", "betaR"]
 
     def zone_grid(self, zone, n=41, band=0.0):
         """Grid points of the box in `zone`, widened by `band` across its spheres."""
@@ -433,32 +436,31 @@ class Model:
         return np.concatenate(vals)
 
     def min_denominators(self, band):
-        """Smallest D (bath zones) and n_j.G n_j (heart) over each zone widened by band."""
+        """Smallest n_j.G n_j of the wall corrections (Gi for m, Gi + Ge for g) over
+        the heart zone widened by band."""
         out = {}
-        for zone in (0, 2):
-            out[ZONE_NAMES[zone]] = float(np.min(self.eval_xyz(zone, "D", self.zone_grid(zone, band=band), 0.0)))
         G = self.zone_grid(1, band=band)
         for j in (1, 2):
             nj = (-G/self.pv["r1"]) if j == 1 else (G/self.pv["r2"])
-            for name in ("GiZ", "GeZ"):
+            for name in ("GiZ", "SigZ"):
                 T = _full(self.eval_xyz(1, name, G, 0.0))
                 out["heart %s n%d" % (name, j)] = float(np.min(np.einsum("ni,nij,nj->n", nj, T, nj)))
         return out
 
     def richness(self, nq=800, tt=0.0):
-        """Per sphere (Gamma1, Gamma2) and per tensor (Ge, Gi), over an equal-area
-        sphere quadrature: RMS of |(G n)_t . grad phi| over RMS of |n.Ge grad phiE|
-        (Ge) or |Gi grad phiI| (Gi), and the area fraction where the pointwise
-        ratio is >= 0.2."""
+        """Per sphere (Gamma1, Gamma2) and per tensor (Gi + Ge on phi, Gi on Vm),
+        over an equal-area sphere quadrature: RMS of |(G n)_t . grad u| over RMS of
+        |n.(Gi + Ge) grad phi| (bulk conductor) or |Gi grad Vm| (source), and the
+        area fraction where the pointwise ratio is >= 0.2."""
         rms, frac = [], []
         for j in (1, 2):
             pts = _fibonacci_sphere(nq, self.radius(j))
             n = (-1 if j == 1 else 1)*pts/self.radius(j)
-            Ge = _full(self.eval_xyz(1, "GeZ", pts, tt))
+            Sig = _full(self.eval_xyz(1, "SigZ", pts, tt))
             Gi = _full(self.eval_xyz(1, "GiZ", pts, tt))
-            ge = self.eval_xyz(1, "gradPhiE", pts, tt)
-            gi = self.eval_xyz(1, "gradPhiI", pts, tt)
-            for G, gr, kind in ((Ge, ge, "e"), (Gi, gi, "i")):
+            gp = self.eval_xyz(1, "gradPhiE", pts, tt)
+            gv = self.eval_xyz(1, "gradVm", pts, tt)
+            for G, gr, kind in ((Sig, gp, "e"), (Gi, gv, "i")):
                 Gn = np.einsum("nij,nj->ni", G, n)
                 Gn_t = Gn - np.einsum("ni,ni->n", Gn, n)[:, None]*n
                 num = np.abs(np.einsum("ni,ni->n", Gn_t, gr))
@@ -739,8 +741,9 @@ License
 
 Description
     Exact fields, conductivities, sources and self-test samples of the
-    bath-bidomain transmission manufactured solution on the spherical shell,
-    the forward problem of the shell lead-field ECG test
+    lead-field conductor transmission manufactured solution on the spherical
+    shell (bulk conductor Gi + Ge in the heart, source Vm sealed at the
+    spheres), the forward problem of the shell lead-field ECG test
     (manufacturedShellLeadFieldECGVerifier).
 
     Regenerate from generator/:
@@ -830,53 +833,41 @@ def latex_fragments():
 
     a, b, dj, a1, a2 = sp.symbols("a b dj a1 a2", real=True)
     corr = [(dj, "d_j")]
+    sigH = r"\left(\boldsymbol\sigma_i+\boldsymbol\sigma_e\right)"
     nf = _names(base + corr + [
-        (a, r"\mathbf n_j\cdot\left(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_e\right)\nabla f"),
-        (b, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_e\mathbf n_j\right)")])
+        (a, r"\mathbf n_j\cdot\left(\sigma_{b,j}\mathbf I-\boldsymbol\sigma_i-\boldsymbol\sigma_e\right)\nabla f"),
+        (b, r"\left(\mathbf n_j\cdot%s\mathbf n_j\right)" % sigH)])
     out["gj"] = emit_latex_fragment("g_j", _flux_correction(a, b, dj), nf)
-    for tag, field in (("mj", "h"), ("qj", "f_2")):
-        ns = _names(base + corr + [
-            (a, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\nabla %s\right)" % field),
-            (b, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\mathbf n_j\right)")])
-        out[tag] = emit_latex_fragment(tag[0] + "_j", _wall_correction(a, b, dj), ns)
-    for tag in ("g", "m", "q"):
+    ns = _names(base + corr + [
+        (a, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\nabla v\right)"),
+        (b, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i\mathbf n_j\right)")])
+    out["mj"] = emit_latex_fragment("m_j", _wall_correction(a, b, dj), ns)
+    for tag in ("g", "m"):
         nb = _names(base + [(a1, tag + "_1"), (a2, tag + "_2")])
         out[tag] = emit_latex_fragment(tag, _blend(lam, a1, a2), nb)
 
-    f, h, f2, g, m, q, beta_j, r_j = sp.symbols("f h f2 g m q beta_j r_j", real=True)
-    nz = _names(base + [(f, "f"), (h, "h"), (f2, "f_2"), (g, "g"), (m, "m"), (q, "q"),
+    f, h, f2, g, m, v, beta_j, r_j = sp.symbols("f h f2 g m v beta_j r_j", real=True)
+    nz = _names(base + [(f, "f"), (h, "h"), (f2, "f_2"), (g, "g"), (m, "m"), (v, "v"),
                         (beta_j, r"\beta_j"), (r_j, "r_j")])
     out["phi"] = emit_cases_fragment(r"\phi", [
         (f + T*(f2 + beta_j*r_j), r"\lvert\mathbf x\rvert<r_1\ (j=1),\ "
                                   r"\lvert\mathbf x\rvert>r_2\ (j=2)"),
-        (f + om*g + T*(f2 + om*q), r"r_1\le\lvert\mathbf x\rvert\le r_2")], nz)
-    out["phiI"] = emit_latex_fragment(r"\phi_i", h + om*m + T*(f2 + om*q), nz)
-    phi, phii = sp.symbols("phi phii", real=True)
-    nv = _names(base + [(phi, r"\phi"), (phii, r"\phi_i")])
-    out["Vm"] = emit_latex_fragment("V_m", phii - phi, nv)
+        (f + om*g + T*f2, r"r_1\le\lvert\mathbf x\rvert\le r_2")], nz)
+    out["v"] = emit_latex_fragment("v", h - f, nz)
+    out["Vm"] = emit_latex_fragment("V_m", v + om*m, nz)
 
     r1, r2 = P["r1"], P["r2"]
-    out["kappa"] = emit_latex_fragment(
-        r"\kappa", 1/(1/P["gil"] + 1/P["git"] + 1/P["gin"]), names)
-    xG1, xG2, kap = sp.symbols("xG1 xG2 kappa", real=True)
-    nd = _names(base + [(xG1, r"\mathbf x\cdot\boldsymbol\sigma_i^{(1)}\mathbf x"),
-                        (xG2, r"\mathbf x\cdot\boldsymbol\sigma_i^{(2)}\mathbf x"),
-                        (kap, r"\kappa")])
-    out["D1"] = emit_latex_fragment("D_1", (xG1 + kap*(r1**2 - rho))/r1**2, nd)
-    out["D2"] = emit_latex_fragment("D_2", xG2/r2**2, nd)
     out["beta1"] = emit_latex_fragment(r"\beta_1", (r1**2 - rho)/(2*r1), names)
     out["beta2"] = emit_latex_fragment(r"\beta_2", (rho - r2**2)/(2*r2), names)
-    c1, c2, c3, c4, Dj, sj = sp.symbols("c1 c2 c3 c4 Dj sj", real=True)
-    nr = _names(base + [(c1, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_e^{(j)}\nabla f_2\right)"),
-                        (c2, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_i^{(j)}\nabla f_2\right)"),
-                        (c3, r"\left(\mathbf n_j\cdot\boldsymbol\sigma_e^{(j)}\mathbf n_j\right)"),
-                        (Dj, "D_j"), (c4, r"\left(\mathbf n_j\cdot\nabla f_2\right)"),
+    c1, c4, sj = sp.symbols("c1 c4 sj", real=True)
+    nr = _names(base + [(c1, r"\left(\mathbf n_j\cdot%s^{(j)}\nabla f_2\right)" % sigH),
+                        (c4, r"\left(\mathbf n_j\cdot\nabla f_2\right)"),
                         (sj, r"\sigma_b")])
-    out["rj"] = emit_latex_fragment("r_j", _closure(c1, c2, c3, Dj, c4, sj), nr)
+    out["rj"] = emit_latex_fragment("r_j", _closure(c1, c4, sj), nr)
 
     dGi, dGe, dsB, gout = sp.symbols("dGi dGe dsB gout", real=True)
-    ns = _names([(dGi, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_i\nabla\phi_i\right)"),
-                 (dGe, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_e\nabla\phi\right)"),
+    ns = _names([(dGi, r"\nabla\!\cdot\!\left(\boldsymbol\sigma_i\nabla V_m\right)"),
+                 (dGe, r"\nabla\!\cdot\!\left(%s\nabla\phi\right)" % sigH),
                  (dsB, r"\nabla\!\cdot\!\left(\sigma_b\nabla\phi\right)"),
                  (gout, r"\sigma_b\,\mathbf n\cdot\nabla\phi")])
     out["sources"] = emit_cases_fragment("S", [

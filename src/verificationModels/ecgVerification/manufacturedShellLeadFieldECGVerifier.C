@@ -269,20 +269,6 @@ void manufacturedShellLeadFieldECGVerifier::initialiseReference
             << " and " << torso.surfaceCurrentPatches << "."
             << exit(FatalError);
     }
-    // The reference is the bath's transmission solution: its intracellular
-    // potential Vm + phi is sealed at the spheres, so its Vm carries a
-    // non-zero intracellular wall flux n.Gi grad Vm. The lead-field
-    // conductor's source Vm is sealed at the wall (n.Gi grad Vm = 0), so
-    // the reference does not solve it.
-    if (conductor.coupling() == torsoCoupling::type::leadField)
-    {
-        FatalErrorInFunction
-            << "The sphericalShell reference seals Vm + phi at the heart "
-            << "wall (the bath's wall model); the lead-field conductor seals "
-            << "the source Vm and needs a reference with n.Gi grad Vm = 0 "
-            << "there." << exit(FatalError);
-    }
-
     // Zones from the cellZones against the conductor's heart cells, and the
     // torso conductivity against sigmaB
     shellZones_ = shellZones(baseMesh);
