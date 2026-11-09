@@ -41,6 +41,8 @@ Usage
     eikonalECG        1,2,3    reference(t)
     graph             1,2,3    V u1 u2 u3
     coupled           3        V1D_0 Vm3D_0 I_0 V1D_1 Vm3D_1 I_1
+    bidomain          1,2,3    phiE phiI shift phiEAt phiIAt VmAt
+                               gradVm(3) gradPhiE(3) gradPhiI(3)
 
     keys
         beta=<v>                    Beta of the FDA ionic closure
@@ -49,6 +51,7 @@ Usage
         c0=<v>                      eikonal speed constant
         template=singleEvent|sine   eikonalECG template
         duration=<v> rise=<v>       singleEvent template parameters
+        k=<v>                       bidomain: k of phi_e = -k V_m + c (required)
 
     Case parameters are those of the tutorials under
     tutorials/manufacturedSolutions; each constant cites its source.
@@ -62,6 +65,7 @@ Usage
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
+#include "bidomainVerification/manufacturedFDABidomainReference.H"
 
 #include <cstdio>
 #include <cstdlib>
@@ -164,6 +168,18 @@ struct Options
     {
         const auto it = kv.find(key);
         return it == kv.end() ? fallback : std::atof(it->second.c_str());
+    }
+
+    scalar required(const std::string& key) const
+    {
+        const auto it = kv.find(key);
+        if (it == kv.end())
+        {
+            std::cerr << "mmsParity: key " << key << "=<v> is required"
+                << std::endl;
+            std::exit(1);
+        }
+        return std::atof(it->second.c_str());
     }
 
     std::string word(const std::string& key, const std::string& fallback) const
@@ -341,6 +357,41 @@ void coupledRow(const scalar t)
     });
 }
 
+
+// Gauge of the bidomain case: tutorials/manufacturedSolutions/bidomain/
+// constant/electroProperties (phiERefPoint, phiEReferenceValue)
+const vector bidomainReferencePoint(0.125, 0.05, 0.05);
+const scalar bidomainReferenceValue = 0.0;
+
+
+void bidomainRow
+(
+    const scalar x, const scalar y, const scalar z, const scalar t,
+    const label d, const Options& opt
+)
+{
+    const scalar k = opt.required("k");
+    const point p(x, y, z);
+    scalarField X(1, x), Y(1, y), Z(1, z), phiE, phiI;
+    const scalar shift = manufacturedFDABidomainShift
+    (
+        t, d, k, bidomainReferencePoint, bidomainReferenceValue
+    );
+    computeManufacturedBidomainPhiE(phiE, X, Y, Z, t, d, k, shift);
+    computeManufacturedBidomainPhiI(phiI, X, Y, Z, t, d, k, shift);
+    const vector gV = manufacturedFDABidomainGradVm(p, t, d);
+    const vector gE = manufacturedFDABidomainGradPhiE(p, t, d, k);
+    const vector gI = manufacturedFDABidomainGradPhiI(p, t, d, k);
+    emit
+    ({
+        phiE[0], phiI[0], shift,
+        manufacturedFDABidomainPhiEAt(p, t, d, k, shift),
+        manufacturedFDABidomainPhiIAt(p, t, d, k, shift),
+        manufacturedFDABidomainVmAt(p, t, d),
+        gV.x(), gV.y(), gV.z(), gE.x(), gE.y(), gE.z(), gI.x(), gI.y(), gI.z()
+    });
+}
+
 } // End anonymous namespace
 
 
@@ -409,6 +460,7 @@ int main(int argc, char* argv[])
         }
         else if (name == "graph") graphRow(x, y, z, t, d);
         else if (name == "coupled") coupledRow(t);
+        else if (name == "bidomain") bidomainRow(x, y, z, t, d, opt);
         else fail("unknown case '" + name + "'");
     }
 

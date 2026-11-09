@@ -29,12 +29,16 @@ the cube; phi_e(x_ref, t) = phi_e,ref; the ratios Gi_mm/(Gi_mm + Ge_mm)
 agree with kappa to KAPPA_RTOL, the tolerance of the ionic model; the
 printed constants round-trip.
 
-The cardiacFoam functions of this solution, manufacturedFDABidomainReference.H
-and the constants of the ionic model bidomainFDAManufactured, carry no
-generated regions, so this generator has no --write or --check.
+--write PATH rewrites, and --check PATH compares, the generated regions of
+manufacturedFDABidomainReference.H: the shift c, phi_e and phi_i over a field,
+and V_m, phi_e, phi_i and their gradients at a point, written from the same
+functions as the fields above with F_d, k and c as C++ arguments.  The ionic
+model bidomainFDAManufactured is hand-written.
 
     python fda_bidomain_mms.py --emit
     python fda_bidomain_mms.py --self-check
+    python fda_bidomain_mms.py --write ../../../src/verificationModels/bidomainVerification/manufacturedFDABidomainReference.H
+    python fda_bidomain_mms.py --check ../../../src/verificationModels/bidomainVerification/manufacturedFDABidomainReference.H
 """
 
 import functools
@@ -93,19 +97,34 @@ def _at_reference(expr):
     return expr.subs(dict(zip(AXES, PHIE_REF_POINT)), simultaneous=True)
 
 
+def shift_of(k, V_ref, phi_ref):
+    """c = phi_e,ref + k V_m(x_ref, t)."""
+    return phi_ref + k*V_ref
+
+
+def phie_of(V, k, c):
+    """phi_e = -k V_m + c."""
+    return -k*V + c
+
+
+def phii_of(V, phiE):
+    """phi_i = V_m + phi_e."""
+    return V + phiE
+
+
 def shift(d):
     """c(t) = phi_e,ref + kappa V_m(x_ref, t)."""
-    return PHIE_REF_VALUE + kappa()*_at_reference(fmm.vm_of(fmm._F(d)))
+    return shift_of(kappa(), _at_reference(fmm.vm_of(fmm._F(d))), PHIE_REF_VALUE)
 
 
 @functools.lru_cache(maxsize=None)
 def _fields(d):
     F, G = fmm._F(d), fmm._G(d)
     V = fmm.vm_of(F)
-    phiE = -kappa()*V + shift(d)
+    phiE = phie_of(V, kappa(), shift(d))
     u1, u2, u3 = fmm.u_of(F, G)
     Iion = fmm.ionic_current(V, u1, u2, u3, sp.Integer(CM), beta(d), sp.Integer(CHI))
-    return {"Vm": V, "phiE": phiE, "phiI": V + phiE, "shift": shift(d),
+    return {"Vm": V, "phiE": phiE, "phiI": phii_of(V, phiE), "shift": shift(d),
             "u1": u1, "u2": u2, "u3": u3, "Iion": Iion, "F": F, "G": G}
 
 
@@ -272,8 +291,61 @@ def outputs_match(root=HERE):
     return True
 
 
+# -------------------------------------------------------------------- C++ ----
+
+def _sym(name):
+    return sp.Symbol(name, real=True)
+
+
+def point_expressions():
+    """{name: expression} of the point functions of the header, in the C++
+    arguments k, shift, phiEReferenceValue, t and the local F (F_d at the
+    point) or Fref (F_d at x_ref).  Grad* are the coefficients of grad F_d."""
+    F, Fref, k, c = _sym("F"), _sym("Fref"), _sym("k"), _sym("shift")
+    V = fmm.vm_of(F)
+    phiE = phie_of(V, k, c)
+    phiI = phii_of(V, phiE)
+    return {"VmAt": V, "PhiEAt": phiE, "PhiIAt": phiI,
+            "GradVm": sp.diff(V, F), "GradPhiE": sp.diff(phiE, F),
+            "GradPhiI": sp.diff(phiI, F),
+            "Shift": shift_of(k, fmm.vm_of(Fref), _sym("phiEReferenceValue"))}
+
+
+def bidomain_header_regions(text):
+    """{region name: C++ lines} of manufacturedFDABidomainReference.H."""
+    ind = functools.partial(codegen.region_indent, text)
+    e = point_expressions()
+    gradF = _sym("gradF")
+    out = {"manufacturedFDABidomainShift": codegen.statement(
+        "return", e["Shift"], ind("manufacturedFDABidomainShift"))}
+    Fi, Vi, phiEi = _sym("F[i]"), _sym("V[i]"), _sym("phiE[i]")
+    out["computeManufacturedBidomainPhiE"] = codegen.assignment(
+        "phiE[i]", phie_of(fmm.vm_of(Fi), _sym("k"), _sym("shift")),
+        ind("computeManufacturedBidomainPhiE"))
+    out["computeManufacturedBidomainPhiI"] = codegen.assignment(
+        "phiI[i]", phii_of(Vi, phiEi), ind("computeManufacturedBidomainPhiI"))
+    for name in ("VmAt", "PhiEAt", "PhiIAt"):
+        region = "manufacturedFDABidomain" + name
+        out[region] = codegen.statement("return", e[name], ind(region))
+    for name in ("GradVm", "GradPhiE", "GradPhiI"):
+        region = "manufacturedFDABidomain" + name
+        out[region] = codegen.statement("return", e[name]*gradF, ind(region))
+    return out
+
+
+HEADER_PATH = ("../../../src/verificationModels/bidomainVerification/"
+               "manufacturedFDABidomainReference.H")
+HEADER_PATHS = {"manufacturedFDABidomainReference.H": HEADER_PATH}
+HEADERS = {"manufacturedFDABidomainReference.H": bidomain_header_regions}
+
+
+def header_matches(path):
+    return codegen.regions_match(__file__, path, HEADERS[os.path.basename(path)])
+
+
 def main(argv=None):
-    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs, {})
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

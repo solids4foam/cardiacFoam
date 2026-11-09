@@ -35,6 +35,8 @@ eikonalECG        1,2,3    reference(t)
 graph             1,2,3    V u1 u2 u3 (graph node at x y z)
 coupled           3        V1D_0 Vm3D_0 I_0 V1D_1 Vm3D_1 I_1 (terminals of
                            the case, R_pvj = 1; x y z ignored, t used)
+bidomain          1,2,3    phiE phiI shift phiEAt phiIAt VmAt gradVm(3)
+                           gradPhiE(3) gradPhiI(3); key k= required
 """
 
 import os
@@ -56,6 +58,7 @@ SOURCES = [
     _VERIFICATION / "monodomainVerification"
     / "manufacturedAnisotropicMonodomainReference.H",
     _VERIFICATION / "eikonalVerification" / "manufacturedEikonalReference.H",
+    _VERIFICATION / "bidomainVerification" / "manufacturedFDABidomainReference.H",
     HERE.parents[3] / "src" / "electroModels" / "ecgModels" / "eikonalECG"
     / "manufacturedTemplate.H",
 ]
@@ -71,6 +74,12 @@ CASES = {
     "eikonalECG": ((1, 2, 3), 1),
     "graph": ((1, 2, 3), 4),
     "coupled": ((3,), 6),
+    "bidomain": ((1, 2, 3), 15),
+}
+
+# keys a case requires (the smoke tests pass these; the case tests pass their own)
+REQUIRED_KEYS = {
+    "bidomain": {"k": "0.7071067811865476"},
 }
 
 
@@ -166,7 +175,7 @@ CASE_D = [(c, d) for c, (ds, _) in CASES.items() for d in ds]
 
 @pytest.mark.parametrize("case,d", CASE_D)
 def test_smoke_finite_expected_count(app, case, d):
-    out = run_app(case, d, sample_points())
+    out = run_app(case, d, sample_points(), **REQUIRED_KEYS.get(case, {}))
     assert out.shape == (20, CASES[case][1])
     assert np.isfinite(out).all()
 

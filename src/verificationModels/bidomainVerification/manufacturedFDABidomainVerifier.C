@@ -276,16 +276,18 @@ void manufacturedFDABidomainVerifier::postProcess
     const auto u2Norms = computeNorms(mesh, u2Values, u2Exact);
 
     // Bulk and boundary-adjacent parts of the Vm, phiE and phiI errors and of their cell gradients
-    const scalar S = Foam::sqrt(1.0 + t);
     vectorField gradVmExact(centres.size());
+    vectorField gradPhiEExact(centres.size());
+    vectorField gradPhiIExact(centres.size());
     forAll(centres, cellI)
     {
         const point& c = centres[cellI];
-        gradVmExact[cellI] =
-            S*pseudoECGManufacturedGradF(c.x(), c.y(), c.z(), dimension);
+        gradVmExact[cellI] = manufacturedFDABidomainGradVm(c, t, dimension);
+        gradPhiEExact[cellI] =
+            manufacturedFDABidomainGradPhiE(c, t, dimension, k_);
+        gradPhiIExact[cellI] =
+            manufacturedFDABidomainGradPhiI(c, t, dimension, k_);
     }
-    const vectorField gradPhiEExact(-k_*gradVmExact);
-    const vectorField gradPhiIExact(gradVmExact + gradPhiEExact);
 
     const tmp<volVectorField> tgradVm(fvc::grad(Vm));
     const tmp<volVectorField> tgradPhiE(fvc::grad(*phiEPtr_));
@@ -296,7 +298,7 @@ void manufacturedFDABidomainVerifier::postProcess
 
     const auto VmAt = [&](const point& c)
     {
-        return S*manufacturedFDAFAt(c, dimension);
+        return manufacturedFDABidomainVmAt(c, t, dimension);
     };
     const tmp<volVectorField> tgradReconVm
     (
@@ -308,7 +310,10 @@ void manufacturedFDABidomainVerifier::postProcess
         (
             mesh,
             phiEPtr_->name(),
-            [&](const point& c) { return -k_*VmAt(c) + shift; }
+            [&](const point& c)
+            {
+                return manufacturedFDABidomainPhiEAt(c, t, dimension, k_, shift);
+            }
         )
     );
     const tmp<volVectorField> tgradReconPhiI
@@ -317,7 +322,10 @@ void manufacturedFDABidomainVerifier::postProcess
         (
             mesh,
             "phiI",
-            [&](const point& c) { return (1 - k_)*VmAt(c) + shift; }
+            [&](const point& c)
+            {
+                return manufacturedFDABidomainPhiIAt(c, t, dimension, k_, shift);
+            }
         )
     );
 

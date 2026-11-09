@@ -62,9 +62,88 @@ def test_self_checks_and_cli():
     assert fbm.main(["--self-check"]) == 0
 
 
-def test_no_header_options():
-    with pytest.raises(SystemExit):
-        fbm.main(["--check", "manufacturedFDABidomainReference.H"])
+# ---------------------------------------------------- C++ header regions ----
+
+F_S, FREF_S, K_S, C_S, REF_S = (sp.Symbol(n, real=True)
+                                for n in ("F", "Fref", "k", "shift", "phiEReferenceValue"))
+
+
+def _point_subs(d):
+    F = fmm._F(d)
+    Fref = F.subs(dict(zip(fbm.AXES, fbm.PHIE_REF_POINT)), simultaneous=True)
+    return {F_S: F, FREF_S: Fref, K_S: fbm.kappa(), C_S: fbm.shift(d), REF_S: fbm.PHIE_REF_VALUE}
+
+
+@pytest.mark.parametrize("d", DIMS)
+def test_point_expressions_are_the_fields(d):
+    """The expressions written into the header (F, k and shift as C++ symbols)
+    equal the generator's fields once F = F_d, k = kappa and shift = c."""
+    e, f, sub = fbm.point_expressions(), fbm.fields(d), _point_subs(d)
+    for name, field in (("VmAt", "Vm"), ("PhiEAt", "phiE"), ("PhiIAt", "phiI"), ("Shift", "shift")):
+        assert sp.simplify(e[name].subs(sub) - f[field]) == 0, name
+    F = fmm._F(d)
+    for name, field in (("GradVm", "Vm"), ("GradPhiE", "phiE"), ("GradPhiI", "phiI")):
+        for a in fbm.AXES:
+            assert sp.simplify(e[name].subs(sub)*sp.diff(F, a) - sp.diff(f[field], a)) == 0, name
+
+
+@pytest.mark.parametrize("name", sorted(fbm.HEADER_PATHS))
+def test_header_up_to_date(name):
+    assert fbm.header_matches(fbm.HEADER_PATHS[name])
+
+
+@pytest.mark.parametrize("name", sorted(fbm.HEADER_PATHS))
+def test_header_check_cli(name):
+    assert fbm.main(["--check", fbm.HEADER_PATHS[name]]) == 0
+
+
+def test_header_write_touches_only_regions(tmp_path):
+    import mms_codegen as codegen
+    for name, rel in fbm.HEADER_PATHS.items():
+        text = open(codegen.resolve(fbm.__file__, rel)).read()
+        stale = codegen.splice_regions(text, {n: ["// stale"] for n in fbm.HEADERS[name](text)})
+        assert stale != text
+        dst = tmp_path/name
+        dst.write_text(stale)
+        assert fbm.main(["--check", str(dst)]) == 1
+        assert fbm.main(["--write", str(dst)]) == 0
+        assert dst.read_text() == text
+
+
+def test_header_without_regions_is_refused(tmp_path):
+    for name in fbm.HEADER_PATHS:
+        dst = tmp_path/name
+        dst.write_text("namespace Foam {}\n")
+        assert fbm.main(["--check", str(dst)]) == 1
+        assert fbm.main(["--write", str(dst)]) == 1
+        assert dst.read_text() == "namespace Foam {}\n"
+
+
+@pytest.mark.parametrize("d", DIMS)
+def test_parity_bidomain(d):
+    """The compiled header against reference/fda_bidomain.py and the sympy
+    gradients, at k = kappa and the tutorial's gauge."""
+    try:
+        from parity.test_parity import compare, parity_available, sample_points
+    except ImportError:
+        pytest.skip("parity harness absent (cardiacFoam-only)")
+    ok, why = parity_available()
+    if not ok:
+        pytest.skip(why)
+    ref = _reference()
+    f = fbm.fields(d)
+    grads = [sp.lambdify((x, y, z, t), sp.diff(f[n], a), "numpy")
+             for n in ("Vm", "phiE", "phiI") for a in fbm.AXES]
+
+    def numpy_fn(p):
+        a = [p[:, i] for i in range(4)]
+        n = p.shape[0]
+        cols = [getattr(ref, "%s_d%d" % (m, d))(*a) for m in ("phiE", "phiI", "shift")]
+        cols += [getattr(ref, "%s_d%d" % (m, d))(*a) for m in ("phiE", "phiI", "Vm")]
+        cols += [np.broadcast_to(g(*a), (n,)) for g in grads]
+        return np.column_stack(cols)
+
+    compare("bidomain", d, numpy_fn, sample_points(), rtol=1e-12, k="%.17g" % float(fbm.kappa()))
 
 
 def test_emitted_files_up_to_date():
