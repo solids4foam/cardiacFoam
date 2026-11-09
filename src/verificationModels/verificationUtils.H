@@ -45,6 +45,59 @@ namespace verificationUtils
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+//- The value of the manufactured ionic constant 'name', or a fatal error that
+//  names the verifier and lists what the ionic model exposes. A template on
+//  the model, so this header does not include ionicModel.H.
+template<class IonicModel>
+inline scalar requireIonicConstant
+(
+    const word& verifierType,
+    const IonicModel& model,
+    const word& name
+)
+{
+    const wordList names = model.constantVariableNames();
+    const scalarField values = model.constantVariableValues();
+    const label i = names.find(name);
+
+    if (i < 0 || names.size() != values.size())
+    {
+        FatalErrorInFunction
+            << verifierType << " requires the manufactured ionic constant '"
+            << name << "'; ionic model " << model.type() << " exposes "
+            << names << "." << exit(FatalError);
+    }
+
+    return values[i];
+}
+
+
+//- A fatal error unless the ionic model is of the given manufactured family
+//  and geometric dimension
+template<class IonicModel>
+inline void requireIonicFamily
+(
+    const word& verifierType,
+    const IonicModel& model,
+    const word& family,
+    const label dimension
+)
+{
+    if
+    (
+        model.verificationFamily() != family
+     || model.geometricDimension() != dimension
+    )
+    {
+        FatalErrorInFunction
+            << verifierType << " requires the " << dimension << "D " << family
+            << " ionic model. Received " << model.type() << " (family '"
+            << model.verificationFamily() << "', dimension "
+            << model.geometricDimension() << ")." << exit(FatalError);
+    }
+}
+
+
 //- The directory the verifiers write their summaries to. The caller creates
 //  it where it did before (some verifiers create it on every rank, some on
 //  the master only, some do not need to).

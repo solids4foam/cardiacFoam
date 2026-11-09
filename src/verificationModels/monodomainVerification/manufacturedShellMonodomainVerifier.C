@@ -120,19 +120,7 @@ manufacturedShellMonodomainVerifier::manufacturedShellMonodomainVerifier
 
 void manufacturedShellMonodomainVerifier::initialiseBeta(const ionicModel& model)
 {
-    const wordList names = model.constantVariableNames();
-    const scalarField values = model.constantVariableValues();
-    const label i = names.find("Beta");
-
-    if (i < 0 || names.size() != values.size())
-    {
-        FatalErrorInFunction
-            << typeName << " requires the manufactured ionic constant 'Beta'; "
-            << "ionic model " << model.type() << " exposes " << names << "."
-            << exit(FatalError);
-    }
-
-    beta_ = values[i];
+    beta_ = requireIonicConstant(typeName, model, "Beta");
     betaInitialised_ = true;
 }
 
@@ -143,18 +131,7 @@ void manufacturedShellMonodomainVerifier::validateConfiguration
     const fvMesh& mesh
 ) const
 {
-    if
-    (
-        model.verificationFamily() != "monodomainFDAManufactured"
-     || model.geometricDimension() != 3
-    )
-    {
-        FatalErrorInFunction
-            << typeName << " requires the 3D monodomainFDAManufactured ionic "
-            << "model. Received " << model.type() << " (family '"
-            << model.verificationFamily() << "', dimension "
-            << model.geometricDimension() << ")." << exit(FatalError);
-    }
+    requireIonicFamily(typeName, model, "monodomainFDAManufactured", 3);
 
     // Mesh points lie in the closed shell, so the walls are the two spheres
     const scalar tol = 1e-8;
