@@ -152,8 +152,8 @@ public:
         const label end = start + n;
 
         // Rows of C hold the cell and its face neighbours, so they bound
-        // M's pattern; the transpose's rows can differ where the probing
-        // pattern is not symmetric, which allocation on insertion absorbs
+        // M's pattern: M + C is preallocated exactly (the transpose is taken
+        // after assembly)
         List<PetscInt> dNnz(n, 1), oNnz(n, 0);
         const labelListList& columns = C_.columns();
         forAll(columns, cellI)
@@ -194,6 +194,8 @@ public:
 
     label formJacobian(Mat jac, const Vec) override
     {
+        // M + C row by row in its preallocated pattern; for the transpose,
+        // M + C^T by an in-place transpose (M is symmetric)
         AssertPETSc(MatZeroEntries(jac));
         AssertPETSc(InsertFvMatrixIntoPETScMatrix(M_, jac, 0, 0, 1));
 
@@ -203,23 +205,32 @@ public:
         forAll(columns, cellI)
         {
             const PetscInt row = start + cellI;
-            forAll(columns[cellI], k)
-            {
-                const PetscInt col = columns[cellI][k];
-                const PetscScalar v = values[cellI][k];
-                if (transpose_)
-                {
-                    AssertPETSc(MatSetValue(jac, col, row, v, ADD_VALUES));
-                }
-                else
-                {
-                    AssertPETSc(MatSetValue(jac, row, col, v, ADD_VALUES));
-                }
-            }
+            const List<PetscInt> cols(columns[cellI]);
+            const List<PetscScalar> vals(values[cellI]);
+            AssertPETSc
+            (
+                MatSetValues
+                (
+                    jac, 1, &row, cols.size(), cols.cdata(), vals.cdata(),
+                    ADD_VALUES
+                )
+            );
         }
 
         AssertPETSc(MatAssemblyBegin(jac, MAT_FINAL_ASSEMBLY));
         AssertPETSc(MatAssemblyEnd(jac, MAT_FINAL_ASSEMBLY));
+
+        MatInfo info;
+        AssertPETSc(MatGetInfo(jac, MAT_GLOBAL_SUM, &info));
+        Info<< "conductorLinearSolve: matrix " << label(info.nz_used)
+            << " entries, " << label(info.mallocs)
+            << " allocations during assembly" << endl;
+
+        if (transpose_)
+        {
+            Mat A = jac;
+            AssertPETSc(MatTranspose(A, MAT_INPLACE_MATRIX, &A));
+        }
         return 0;
     }
 
