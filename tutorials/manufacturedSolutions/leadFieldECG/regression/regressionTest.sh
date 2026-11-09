@@ -25,6 +25,7 @@ fi
 
 regression_init "Lead-field ECG manufactured-solution regression test" \
     regression/leadFieldECG.reference "$@"
+regression_require_solids4foam
 regression_require_run_mode
 
 for problem in slab layered; do

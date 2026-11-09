@@ -89,14 +89,14 @@ isSelected()
 # Apply "path=value" (set) and "path!" (remove) edits to electroProperties,
 # after the case preparation, so that a preparation step such as
 # buildLeadFields sees the variant's own dictionary. The run options "np=N",
-# "post=<script>" and "skip=<version>" are handled by runCheck and skipped
-# here.
+# "post=<script>", "skip=<version>" and "needs=solids4foam" are handled by
+# runCheck and skipped here.
 applyEdits()
 {
     local edit
     for edit in "$@"; do
         if [[ "${edit}" == np=* || "${edit}" == post=* \
-            || "${edit}" == skip=* ]]; then
+            || "${edit}" == skip=* || "${edit}" == needs=* ]]; then
             continue
         elif [[ "${edit}" == *'!' ]]; then
             foamDictionary -precision 17 constant/electroProperties \
@@ -126,6 +126,23 @@ runCheck()
     done
 
     rm -rf "${runDir}"
+
+    # needs=solids4foam: the check needs cardiacFoam built with solids4foam
+    # (the lead-field conductor solve goes through its PETSc layer); skipped
+    # in lightweight mode
+    for edit in "$@"; do
+        if [[ "${edit}" == needs=* && "${edit}" != needs=solids4foam ]]; then
+            echo "FAIL: ${name}: unknown requirement ${edit}"
+            failures=$((failures + 1))
+            return 0
+        fi
+        if [[ "${edit}" == needs=solids4foam \
+            && "${CARDIAC_REGRESSION_BUILD_MODE:-}" == lightweight ]]; then
+            echo "SKIP: ${name} (needs cardiacFoam built with solids4foam)"
+            skips=$((skips + 1))
+            return 0
+        fi
+    done
 
     # skip=<version>[,<version>...]: known OpenFOAM version limitation
     for edit in "$@"; do
