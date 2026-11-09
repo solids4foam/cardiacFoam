@@ -40,6 +40,7 @@ Description
 #include "passiveConductor.H"
 #include "sealedWallPolicy.H"
 #include "conductivityFieldIO.H"
+#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 
 using namespace Foam;
 
@@ -65,35 +66,6 @@ struct WeightedNorms
     scalar l1() const { return sumAbs/max(weight, VSMALL); }
     scalar l2() const { return Foam::sqrt(sumSq/max(weight, VSMALL)); }
 };
-
-
-scalar phiEExact
-(
-    const scalar x,
-    const scalar t,
-    const scalar k,
-    const scalar alpha,
-    const scalar sigmaE
-)
-{
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
-    const scalar sigmaB = 0.5*sigmaE;
-    const scalar C = k*sqrt1t + alpha/sigmaB;
-
-    if (x <= 0.0)
-    {
-        return -k*sqrt1t + alpha*x/sigmaB + C;
-    }
-    if (x <= 1.0)
-    {
-        return
-            -k*sqrt1t*Foam::cos(constant::mathematical::pi*x)
-          + alpha*x/sigmaE + C;
-    }
-
-    return
-        k*sqrt1t + alpha/sigmaE + alpha*(x - 1.0)/sigmaB + C;
-}
 
 
 void writeNorms(OFstream& output, const WeightedNorms& norms)
@@ -287,7 +259,7 @@ int main(int argc, char* argv[])
     const scalar k = verification.get<scalar>("k");
     const scalar alpha = verification.get<scalar>("alpha");
     // electrodePair has no Dirichlet ground patch, so phiE floats: the
-    // manufactured phiEExact() below carries a fixed additive constant that
+    // manufactured manufacturedFDABathPhiEAt() below carries a fixed additive constant that
     // pins the groundElectrode variant's phiE(x=-1)=0, and the numerical
     // field is instead pinned by an unrelated reference cell
     // (torso.phiERefPoint). Comparing the two directly would
@@ -378,7 +350,7 @@ int main(int argc, char* argv[])
         forAll(phiEcells, cellI)
         {
             phiEcells[cellI] =
-                phiEExact(C[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+                manufacturedFDABathPhiEAt(C[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
         }
 
         volScalarField::Boundary& phiEbf = phiE.boundaryFieldRef();
@@ -393,7 +365,7 @@ int main(int argc, char* argv[])
             forAll(pf, faceI)
             {
                 pf[faceI] =
-                    phiEExact(Cf[faceI].x(), runTime.value(), k, alpha, sigmaE.xx());
+                    manufacturedFDABathPhiEAt(Cf[faceI].x(), runTime.value(), k, alpha, sigmaE.xx());
             }
         }
         // Deliberately NOT calling correctBoundaryConditions() here. evaluate()
@@ -518,7 +490,7 @@ int main(int argc, char* argv[])
 
     // Zero for groundElectrode (Dirichlet patch fixes the constant, no gauge
     // freedom to remove); non-zero for electrodePair, applied everywhere
-    // phiE is compared to phiEExact below (region norms, interface trace,
+    // phiE is compared to manufacturedFDABathPhiEAt below (region norms, interface trace,
     // -- see comment at the fdaBathVariant read above).
     scalar phiEComputedMean = 0.0;
     scalar phiEExactMean = 0.0;
@@ -528,7 +500,7 @@ int main(int argc, char* argv[])
         forAll(phiEExactCells, cellI)
         {
             phiEExactCells[cellI] =
-                phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+                manufacturedFDABathPhiEAt(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
         }
         phiEComputedMean = volumeWeightedMean(phiE.primitiveField(), volumes);
         phiEExactMean = volumeWeightedMean(phiEExactCells, volumes);
@@ -538,7 +510,7 @@ int main(int argc, char* argv[])
     {
         const scalar error =
             (phiE[cellI] - phiEComputedMean)
-          - (phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx()) - phiEExactMean);
+          - (manufacturedFDABathPhiEAt(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx()) - phiEExactMean);
         (isHeart[cellI] ? heartPotential : bathPotential).add
         (
             error,
@@ -669,7 +641,7 @@ int main(int argc, char* argv[])
         const scalar facePotential =
             weights[faceI]*phiE[ownCell]
           + (1.0 - weights[faceI])*phiE[neiCell];
-        const scalar exactPotential = phiEExact
+        const scalar exactPotential = manufacturedFDABathPhiEAt
         (
             faceCentres[faceI].x(),
             runTime.value(),
