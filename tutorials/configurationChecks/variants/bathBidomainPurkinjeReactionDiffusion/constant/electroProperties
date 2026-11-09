@@ -21,6 +21,7 @@ myocardiumSolver bidomainSolver;
 bidomainSolverCoeffs
 {
     sealedHeartBoundary false;
+    bathHeartPhiETrace zeroGradient;
     conductivitySource uniform;
     cellZone        myocardium;
     bathPredictorCorrector yes;
@@ -36,35 +37,6 @@ bidomainSolverCoeffs
     solutionAlgorithm implicit;
     solver          RKF45;
     maxSteps        1000000000;
-    bathPotentialDomain
-    {
-        bathCellZones   ( bath );
-        bathConductivityField bodyAndOrgansConductivity;
-        interfaceConductivityInterpolation distanceWeightedHarmonic;
-        groundPatches
-        {
-        }
-        surfaceCurrentPatches
-        {
-            xMax            0;
-            xMin            0;
-        }
-        phiERefPoint    ( -0.009 0.0005 0.0005 );
-        phiEReferenceValue 0;
-    }
-
-    ecgDomains
-    {
-        ECG
-        {
-            ecgSolver torsoECG;
-            electrodePositions
-            {
-                left  (-0.005 0.0005 0.0005);
-                right (0.015 0.0005 0.0005);
-            }
-        }
-    }
 
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
@@ -108,6 +80,38 @@ bidomainSolverCoeffs
             rPvj                 1000;
             pvjRadius            1e-3;
             couplingMode         unidirectional;
+        }
+    }
+}
+
+torso
+{
+    cellZones       ( bath );
+    conductivityField bodyAndOrgansConductivity;
+    interfaceConductivityInterpolation distanceWeightedHarmonic;
+    groundPatches
+    {
+    }
+    surfaceCurrentPatches
+    {
+        xMax            0;
+        xMin            0;
+    }
+    phiERefPoint    ( -0.009 0.0005 0.0005 );
+    phiEReferenceValue 0;
+}
+
+torsoCoupling bath;
+
+ecgDomains
+{
+    ECG
+    {
+        ecgSolver torsoECG;
+        electrodePositions
+        {
+            left  (-0.005 0.0005 0.0005);
+            right (0.015 0.0005 0.0005);
         }
     }
 }
