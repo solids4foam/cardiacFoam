@@ -45,6 +45,30 @@ namespace verificationUtils
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+//- The directory the verifiers write their summaries to. The caller creates
+//  it where it did before (some verifiers create it on every rank, some on
+//  the master only, some do not need to).
+inline fileName postProcessingDir(const Time& time)
+{
+    return time.globalPath()/"postProcessing";
+}
+
+
+//- File name of the summary of a study over N cells or nodes:
+//  "<tag>_<N>_<unit>.dat", for example "3D_32_cells.dat". The names are read
+//  by the study summarisers, so tag and unit must stay as the verifiers wrote
+//  them.
+inline string studyFileName
+(
+    const string& tag,
+    const label n,
+    const char* const unit = "cells"
+)
+{
+    return tag + "_" + Foam::name(n) + "_" + unit + ".dat";
+}
+
+
 //- Return the index of 'name' in 'names', or FatalError.
 inline label requireFieldIndex
 (

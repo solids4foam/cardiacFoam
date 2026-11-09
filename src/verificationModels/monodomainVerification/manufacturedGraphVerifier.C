@@ -261,17 +261,18 @@ void manufacturedGraphVerifier::postProcess
     auto u1Norms = computeNorms(u1, u1LocalExact);
     auto u2Norms = computeNorms(u2, u2LocalExact);
 
-    const fileName outputDir(runTime.globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(runTime));
     mkDir(outputDir);
     const fileName outputFile
     (
         outputDir
       / (
-            "graph_"
-          + dimensionName(dimension)
-          + "_"
-          + Foam::name(nodeLocations.size())
-          + "_nodes.dat"
+            studyFileName
+            (
+                "graph_" + dimensionName(dimension),
+                nodeLocations.size(),
+                "nodes"
+            )
         )
     );
 

@@ -395,13 +395,13 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
         tgradVm().primitiveField(), tgradRecon().primitiveField(), gradVmExact
     );
 
-    const fileName outputDir(mesh.time().globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(mesh.time()));
     mkDir(outputDir);
     const fileName outputFile
     (
         outputDir
       / (
-            word("3D_") + Foam::name(nPerDirection) + "_cells.dat"
+            studyFileName("3D", nPerDirection)
         )
     );
 

@@ -202,13 +202,13 @@ void manufacturedFDAMonodomainVerifier::postProcess
         tgradVm().primitiveField(), tgradRecon().primitiveField(), gradVmExact
     );
 
-    const fileName outputDir(mesh.time().globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(mesh.time()));
     mkDir(outputDir);
     const fileName outputFile
     (
         outputDir
       / (
-            dimensionName(dimension) + "_" + Foam::name(nPerDirection) + "_cells.dat"
+            studyFileName(dimensionName(dimension), nPerDirection)
         )
     );
 

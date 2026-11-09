@@ -432,7 +432,7 @@ void manufacturedRadialEikonalVerifier::postProcess
 
     const label nCells = returnReduce(mesh_.nCells(), sumOp<label>());
     const scalar h = Foam::cbrt(total/max(nCells, label(1)));
-    const fileName outputDir(mesh_.time().globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(mesh_.time()));
 
     if (Pstream::master())
     {

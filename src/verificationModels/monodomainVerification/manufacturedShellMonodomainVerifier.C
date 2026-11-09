@@ -408,10 +408,10 @@ void manufacturedShellMonodomainVerifier::postProcess
     const label nCells = returnReduce(mesh.nCells(), sumOp<label>());
     const scalar h = Foam::cbrt(gSum(mesh.V())/max(nCells, label(1)));
     const word cellKind(meshCellKind(mesh));
-    const fileName outputDir(time.globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(time));
     const fileName outputFile
     (
-        outputDir/("3D_" + cellKind + "_" + Foam::name(nPerDirection_) + "_cells.dat")
+        outputDir/studyFileName("3D_" + cellKind, nPerDirection_)
     );
 
     if (Pstream::master())

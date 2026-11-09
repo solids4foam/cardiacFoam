@@ -532,12 +532,12 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const scalar dt = time.deltaTValue();
     const label nSteps = max(label(0), time.timeIndex());
 
-    const fileName outputDir(time.globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(time));
     mkDir(outputDir);
     const fileName outputFile =
         outputDir
       / (
-            dimensionName(dimension) + "_" + Foam::name(nPerDirection) + "_cells.dat"
+            studyFileName(dimensionName(dimension), nPerDirection)
         );
 
     if (Pstream::master())

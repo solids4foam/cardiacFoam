@@ -23,6 +23,7 @@ License
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ecgModelIO.H"
+#include "verificationUtils.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
 #include "eikonalVerification/manufacturedShellEikonalReference.H"
 
@@ -224,7 +225,7 @@ void manufacturedEikonalECGVerifier::resizeStorage()
 
 void manufacturedEikonalECGVerifier::initialiseOutput()
 {
-    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
+    const fileName outDir(verificationUtils::postProcessingDir(mesh_.time()));
     wordList columns;
 
     forAll(electrodeNames_, electrodeI)
@@ -823,8 +824,7 @@ void manufacturedEikonalECGVerifier::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().globalPath()
-      / "postProcessing"
+        verificationUtils::postProcessingDir(mesh_.time())
       / ("manufacturedEikonalECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);

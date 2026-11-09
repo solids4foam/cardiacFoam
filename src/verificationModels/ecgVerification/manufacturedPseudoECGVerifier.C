@@ -24,6 +24,7 @@ License
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ecgModelIO.H"
+#include "verificationUtils.H"
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
 #include "monodomainVerification/manufacturedShellMonodomainReference.H"
@@ -180,7 +181,7 @@ void manufacturedPseudoECGVerifier::resizeCheckStorage()
 
 void manufacturedPseudoECGVerifier::initialiseOutput()
 {
-    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
+    const fileName outDir(verificationUtils::postProcessingDir(mesh_.time()));
     wordList columns;
 
     forAll(electrodeNames_, electrodeI)
@@ -470,7 +471,7 @@ void manufacturedPseudoECGVerifier::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().globalPath() / "postProcessing"
+        verificationUtils::postProcessingDir(mesh_.time())
       / ("manufacturedPseudoECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);
