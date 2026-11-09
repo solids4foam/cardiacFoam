@@ -35,15 +35,15 @@ between consecutive levels.
 
 | mesh | N | cells |
 |---|---|---|
-| hex (cubed sphere) | 8, 12, 16, 24, 32 | 2808, 9477, 22464, 75816, 179712 |
-| tet (gmsh 4.15.2, seed 1) | 8, 12, 16, 20 | 36754, 118535, 278906, 526677 |
+| hex (cubed sphere) | 8, 12, 16, 24, 32, 40 | 2808, 9477, 22464, 75816, 179712, 351000 |
+| tet (gmsh 4.15.2, seed 1) | 8, 12, 16, 20, 24, 32 | 36754, 118535, 278906, 526677, 908200, 2133385 |
 | tet (gmsh 4.15.2, seeds 2 and 3) | 8, 12, 16 | see [Tetrahedra: seeds](#tetrahedra-seeds) |
 
 Every run is one time step of the case defaults; the static rows do not
 depend on it. Each run builds 12 lead fields, one per electrode. They need
-29 to 49 passes of their adjoint fixed point on the hexahedra and 61 to 200
+29 to 50 passes of their adjoint fixed point on the hexahedra and 61 to 200
 on the tetrahedra, each to the `leadFieldFixedPoint` tolerance `1e-10` of
-the case. The largest `phiE` iteration count is 646 (`tet_N20`), below the
+the case. The largest `phiE` iteration count is 1032 (`tet_N32`), below the
 `maxIter 5000` of `system/fvSolution`.
 
 The seed 2 tetrahedra at `N = 12` stop in `buildLeadFields`: the fixed point
@@ -71,11 +71,11 @@ run()
     rsync -a --exclude setup --exclude regression ../../../ results/$name/
     bash results/$name/Allrun parallel "$@"
 }
-for n in 8 12 16 24 32
+for n in 8 12 16 24 32 40
 do
     run hex_N$n -mesh hex -N $n
 done
-for n in 8 12 16 20
+for n in 8 12 16 20 24 32
 do
     run tet_N$n -mesh tet -N $n
 done
@@ -121,6 +121,7 @@ electrodes.
 | 16 | 0.0857 | 5.390e-02 (2.19) | 2.922e-02 (2.14) | 2.984e-02 (2.12) | 5.924e-02 (2.01) | 4.2e-10 |
 | 24 | 0.0571 | 2.301e-02 (2.10) | 1.296e-02 (2.00) | 1.309e-02 (2.03) | 2.639e-02 (1.99) | 4.2e-10 |
 | 32 | 0.0428 | 1.278e-02 (2.04) | 7.241e-03 (2.02) | 7.302e-03 (2.03) | 1.475e-02 (2.02) | 5.0e-10 |
+| 40 | 0.0343 | 8.041e-03 (2.08) | 4.599e-03 (2.03) | 4.687e-03 (1.99) | 9.389e-03 (2.02) | 5.7e-10 |
 
 Single body-surface electrodes:
 
@@ -131,6 +132,7 @@ Single body-surface electrodes:
 | 16 | 3.466e-03 (3.20) | 5.098e-02 (2.12) | 1.653e-03 (-11.09) | 2.903e-02 (2.07) | 1.733e-02 (1.62) | 2.706e-03 (6.16) | 5.390e-02 (2.19) | 1.274e-02 (1.88) |
 | 24 | 2.253e-03 (1.06) | 2.301e-02 (1.96) | 7.299e-04 (2.02) | 1.417e-02 (1.77) | 7.437e-03 (2.09) | 1.379e-03 (1.66) | 2.295e-02 (2.11) | 4.985e-03 (2.31) |
 | 32 | 1.413e-03 (1.62) | 1.278e-02 (2.04) | 5.011e-04 (1.31) | 7.991e-03 (1.99) | 4.466e-03 (1.77) | 3.232e-04 (5.04) | 1.264e-02 (2.07) | 3.205e-03 (1.54) |
+| 40 | 9.615e-04 (1.73) | 8.041e-03 (2.08) | 3.278e-04 (1.90) | 5.262e-03 (1.87) | 2.906e-03 (1.93) | 7.571e-05 (6.50) | 7.976e-03 (2.06) | 1.944e-03 (2.24) |
 
 ### Hexahedra: field
 
@@ -141,6 +143,7 @@ Single body-surface electrodes:
 | 16 | 2.976e-02 (2.12) | 6.942e-02 (2.03) | 2.956e-02 (2.12) | 6.942e-02 (2.03) | 2.983e-02 (2.12) | 6.500e-02 (1.96) | 3.058e-02 (2.12) | 6.942e-02 (2.03) |
 | 24 | 1.306e-02 (2.03) | 3.093e-02 (1.99) | 1.298e-02 (2.03) | 3.093e-02 (1.99) | 1.309e-02 (2.03) | 2.941e-02 (1.96) | 1.342e-02 (2.03) | 3.093e-02 (1.99) |
 | 32 | 7.280e-03 (2.03) | 1.738e-02 (2.00) | 7.234e-03 (2.03) | 1.738e-02 (2.00) | 7.297e-03 (2.03) | 1.662e-02 (1.98) | 7.496e-03 (2.02) | 1.732e-02 (2.02) |
+| 40 | 4.671e-03 (1.99) | 1.112e-02 (2.00) | 4.638e-03 (1.99) | 1.112e-02 (2.00) | 4.683e-03 (1.99) | 1.069e-02 (1.98) | 4.819e-03 (1.98) | 1.107e-02 (2.01) |
 
 ### Hexahedra: interior probes
 
@@ -151,6 +154,7 @@ Single body-surface electrodes:
 | 16 | 0.0857 | 5.379e-02 (1.92) | 3.916e-02 (2.09) | 1.643e-03 (0.89) | 1.689e-02 (2.29) |
 | 24 | 0.0571 | 2.402e-02 (1.99) | 1.719e-02 (2.03) | 5.846e-04 (2.55) | 6.791e-03 (2.25) |
 | 32 | 0.0428 | 1.366e-02 (1.96) | 9.557e-03 (2.04) | 1.640e-04 (4.42) | 3.585e-03 (2.22) |
+| 40 | 0.0343 | 8.631e-03 (2.06) | 5.796e-03 (2.24) | 2.315e-04 (-1.55) | 2.156e-03 (2.28) |
 
 ### Tetrahedra: body surface
 
@@ -160,6 +164,8 @@ Single body-surface electrodes:
 | 12 | 0.0492 | 4.341e-02 (2.30) | 2.561e-02 (2.23) | 2.376e-02 (2.29) | 5.655e-02 (1.90) | 2.4e-11 |
 | 16 | 0.0370 | 2.297e-02 (2.23) | 1.268e-02 (2.47) | 1.200e-02 (2.39) | 3.208e-02 (1.99) | 2.2e-11 |
 | 20 | 0.0299 | 1.386e-02 (2.38) | 7.969e-03 (2.19) | 7.311e-03 (2.34) | 2.084e-02 (2.04) | 4.6e-11 |
+| 24 | 0.0250 | 9.428e-03 (2.12) | 5.534e-03 (2.01) | 4.843e-03 (2.27) | 1.419e-02 (2.12) | 5.7e-12 |
+| 32 | 0.0188 | 4.945e-03 (2.27) | 2.781e-03 (2.42) | 2.683e-03 (2.07) | 1.022e-02 (1.15) | 1.5e-11 |
 
 Single body-surface electrodes:
 
@@ -169,6 +175,8 @@ Single body-surface electrodes:
 | 12 | 9.244e-03 (1.66) | 4.341e-02 (2.30) | 1.558e-03 (1.37) | 3.141e-02 (2.10) | 1.770e-02 (2.48) | 5.891e-03 (-1.22) | 4.292e-02 (2.21) | 9.858e-03 (2.53) |
 | 16 | 4.301e-03 (2.68) | 2.297e-02 (2.23) | 2.416e-03 (-1.54) | 1.464e-02 (2.67) | 1.061e-02 (1.79) | 3.415e-03 (1.91) | 1.961e-02 (2.75) | 3.262e-03 (3.88) |
 | 20 | 9.187e-04 (7.28) | 1.386e-02 (2.38) | 3.355e-04 (9.32) | 9.787e-03 (1.90) | 6.647e-03 (2.21) | 2.626e-03 (1.24) | 1.256e-02 (2.10) | 3.225e-03 (0.05) |
+| 24 | 3.904e-04 (4.71) | 9.428e-03 (2.12) | 7.418e-04 (-4.37) | 6.876e-03 (1.94) | 6.581e-03 (0.06) | 1.072e-03 (4.93) | 7.776e-03 (2.64) | 1.782e-03 (3.26) |
+| 32 | 2.776e-04 (1.20) | 4.945e-03 (2.27) | 1.818e-04 (4.94) | 3.820e-03 (2.07) | 2.069e-03 (4.06) | 6.317e-04 (1.86) | 4.120e-03 (2.23) | 1.028e-03 (1.93) |
 
 ### Tetrahedra: field
 
@@ -178,6 +186,8 @@ Single body-surface electrodes:
 | 12 | 2.444e-02 (2.30) | 6.738e-02 (1.98) | 2.458e-02 (2.33) | 6.738e-02 (1.98) | 2.439e-02 (2.29) | 6.000e-02 (2.03) | 2.551e-02 (2.30) | 6.570e-02 (2.03) |
 | 16 | 1.244e-02 (2.37) | 3.471e-02 (2.33) | 1.262e-02 (2.34) | 3.471e-02 (2.33) | 1.237e-02 (2.38) | 3.208e-02 (2.19) | 1.297e-02 (2.37) | 3.222e-02 (2.50) |
 | 20 | 7.577e-03 (2.34) | 2.221e-02 (2.11) | 7.692e-03 (2.34) | 2.221e-02 (2.11) | 7.536e-03 (2.34) | 2.084e-02 (2.04) | 7.949e-03 (2.31) | 2.020e-02 (2.20) |
+| 24 | 5.004e-03 (2.28) | 1.452e-02 (2.34) | 5.106e-03 (2.26) | 1.452e-02 (2.34) | 4.968e-03 (2.29) | 1.419e-02 (2.12) | 5.298e-03 (2.23) | 1.373e-02 (2.13) |
+| 32 | 2.746e-03 (2.11) | 1.182e-02 (0.72) | 2.808e-03 (2.10) | 8.982e-03 (1.69) | 2.724e-03 (2.11) | 1.182e-02 (0.64) | 2.951e-03 (2.06) | 1.182e-02 (0.53) |
 
 ### Tetrahedra: interior probes
 
@@ -187,6 +197,8 @@ Single body-surface electrodes:
 | 12 | 0.0492 | 4.152e-02 (2.59) | 3.018e-02 (2.36) | 6.336e-04 (0.11) | 1.404e-02 (2.64) |
 | 16 | 0.0370 | 2.167e-02 (2.28) | 1.486e-02 (2.48) | 3.569e-05 (10.09) | 7.654e-03 (2.13) |
 | 20 | 0.0299 | 1.374e-02 (2.15) | 9.037e-03 (2.35) | 1.557e-04 (-6.95) | 4.218e-03 (2.81) |
+| 24 | 0.0250 | 8.411e-03 (2.70) | 5.795e-03 (2.45) | 1.501e-04 (0.20) | 2.507e-03 (2.86) |
+| 32 | 0.0188 | 4.697e-03 (2.05) | 3.017e-03 (2.29) | 3.788e-04 (-3.25) | 1.274e-03 (2.38) |
 
 ### Tetrahedra: seeds
 
@@ -233,8 +245,10 @@ Interior probes, static lead-field error:
 
 - The body-surface ECG converges at second order on both meshes, in the
   maximum and in the RMS over the eight electrodes, and the error over the
-  surface cells converges at second order in the RMS and the maximum. On the
-  tetrahedra the surface group converges slightly above second order.
+  surface cells converges at second order in the RMS. Its maximum is second
+  order on the hexahedra and on the tetrahedra up to `N = 24`; see the next
+  point for `N = 32`. On the tetrahedra the surface group converges slightly
+  above second order.
 - Single surface electrodes give erratic orders between levels. On the
   hexahedra the signed error of `surface3` changes sign between levels, that
   of `surface1` grows from `N = 8` to `N = 12` before it falls, and that of
@@ -247,6 +261,15 @@ Interior probes, static lead-field error:
   maximum, in the heart, in the torso and in the band of cells next to the
   spheres. The band carries the same error as the rest of the field, so the
   heart-torso face conductivity adds no error of lower order.
+- The exception is the maximum on the tetrahedra at `N = 32`: over all
+  cells, the torso and the band it falls only from `1.45e-2` to `1.18e-2`
+  (order 0.5 to 0.7), and over the surface cells at order 1.2, while every
+  RMS stays second order. This gmsh mesh has a worse cell than the coarser
+  levels: `checkMesh` gives a minimum cell volume of `4.4e-7`, a seventh of
+  the `3.2e-6` at `N = 24` where the size scaling gives about `1.3e-6`, a
+  maximum skewness of 1.00 against 0.88, and a maximum non-orthogonality of
+  75.5 degrees against 69.8. The maximum is a single-cell value; the cell
+  holding it is not located.
 - The probes `outerNear`, `outerSide` and `pool` converge at second order on
   both meshes. At `outerFar` the signed error changes sign between the
   levels on the tetrahedra, and on the hexahedra it stays one to two orders
@@ -260,6 +283,6 @@ Interior probes, static lead-field error:
   seed (for seed 2 from `N = 8` to `N = 16`). Only `outerFar` depends on the
   seed, by up to more than an order of magnitude, as expected for an
   electrode at a zero of the discretisation error.
-- The lead field and the direct solve agree to `5e-10` at every level and
+- The lead field and the direct solve agree to `6e-10` at every level and
   every electrode, at the level of the fixed-point and linear-solver
   tolerances.
