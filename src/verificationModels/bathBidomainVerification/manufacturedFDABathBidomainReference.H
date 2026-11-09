@@ -19,7 +19,15 @@ Class
     manufacturedFDABathBidomainReference
 
 Description
-    Manufactured FDA bath bidomain reference solution.
+    Manufactured FDA bath bidomain reference solution: a heart slab
+    0 <= x <= 1 between bath slabs, grounded on x = -1, with the bath
+    current alpha leaving through x = 2.
+
+    The formulas between "// BEGIN GENERATED <name>" and
+    "// END GENERATED <name>" are written from the sympy definitions in
+    tutorials/manufacturedSolutions/generators/fda_bath_bidomain_mms.py.
+    Regenerate them with --write and compare with --check; the rest of the
+    file is hand-written.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -62,7 +70,9 @@ inline scalar manufacturedFDABathSe(const volTensorField& Ge)
 
 inline scalar manufacturedFDABathSigmaB(const scalar se)
 {
-    return 0.5*se;
+    // BEGIN GENERATED manufacturedFDABathSigmaB
+    return (1.0/2.0)*se;
+    // END GENERATED manufacturedFDABathSigmaB
 }
 
 
@@ -74,7 +84,11 @@ inline scalar manufacturedFDABathC
     const scalar se
 )
 {
-    return k*Foam::sqrt(1.0 + t) + alpha/manufacturedFDABathSigmaB(se);
+    const scalar sigmaB = manufacturedFDABathSigmaB(se);
+
+    // BEGIN GENERATED manufacturedFDABathC
+    return alpha/sigmaB + k*sqrt(t + 1);
+    // END GENERATED manufacturedFDABathC
 }
 
 
@@ -84,11 +98,15 @@ inline void computeManufacturedFDABathF
     const scalarField& x
 )
 {
+    const scalar pi = constant::mathematical::pi;
+
     F.setSize(x.size());
 
     forAll(x, i)
     {
-        F[i] = Foam::cos(constant::mathematical::pi*x[i]);
+        // BEGIN GENERATED computeManufacturedFDABathF
+        F[i] = cos(pi*x[i]);
+        // END GENERATED computeManufacturedFDABathF
     }
 }
 
@@ -114,11 +132,11 @@ inline void computeManufacturedFDABathV
 
     V.setSize(x.size());
 
-    const scalar coeff = Foam::sqrt(1.0 + t);
-
     forAll(x, i)
     {
-        V[i] = coeff*F[i] - alpha*x[i]/se;
+        // BEGIN GENERATED computeManufacturedFDABathV
+        V[i] = F[i]*sqrt(t + 1) - alpha*x[i]/se;
+        // END GENERATED computeManufacturedFDABathV
     }
 }
 
@@ -145,14 +163,13 @@ inline void computeManufacturedFDABathU
     u2.setSize(x.size());
     u3.setSize(x.size());
 
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
-    const scalar inv1t = 1.0/(1.0 + t);
-
     forAll(x, i)
     {
-        u1[i] = (1.0 + t)*G[i] + sqrt1t*F[i];
-        u2[i] = inv1t*Foam::pow(G[i], -0.5);
+        // BEGIN GENERATED computeManufacturedFDABathU
+        u1[i] = F[i]*sqrt(t + 1) + G[i]*(t + 1);
+        u2[i] = 1/(sqrt(G[i])*(t + 1));
         u3[i] = -alpha*x[i]/se;
+        // END GENERATED computeManufacturedFDABathU
     }
 }
 
@@ -166,27 +183,26 @@ inline scalar manufacturedFDABathPhiEAt
     const scalar se
 )
 {
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
+    const scalar pi = constant::mathematical::pi;
     const scalar sigmaB = manufacturedFDABathSigmaB(se);
     const scalar C = manufacturedFDABathC(t, k, alpha, se);
 
-    if (x <= 0.0)
+    if (x <= 0)
     {
-        return -k*sqrt1t + alpha*x/sigmaB + C;
+        // BEGIN GENERATED bathPhiE_leftBath
+        return C + alpha*x/sigmaB - k*sqrt(t + 1);
+        // END GENERATED bathPhiE_leftBath
     }
-    else if (x <= 1.0)
+    if (x <= 1)
     {
-        return
-            -k*sqrt1t*Foam::cos(constant::mathematical::pi*x)
-          + alpha*x/se
-          + C;
+        // BEGIN GENERATED bathPhiE_heart
+        return C + alpha*x/se - k*sqrt(t + 1)*cos(pi*x);
+        // END GENERATED bathPhiE_heart
     }
 
-    return
-        -k*sqrt1t*Foam::cos(constant::mathematical::pi)
-      + alpha/se
-      + alpha*(x - 1.0)/sigmaB
-      + C;
+    // BEGIN GENERATED bathPhiE_rightBath
+    return C + alpha*(x - 1)/sigmaB + alpha/se + k*sqrt(t + 1);
+    // END GENERATED bathPhiE_rightBath
 }
 
 
@@ -232,8 +248,118 @@ inline void computeManufacturedFDABathPhiI
 
     forAll(x, i)
     {
+        // BEGIN GENERATED computeManufacturedFDABathPhiI
         phiI[i] = V[i] + phiE[i];
+        // END GENERATED computeManufacturedFDABathPhiI
     }
+}
+
+
+//- V_m at point p
+inline scalar manufacturedFDABathVmAt
+(
+    const point& p,
+    const scalar t,
+    const scalar alpha,
+    const scalar se
+)
+{
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    // BEGIN GENERATED manufacturedFDABathVmAt
+    return -alpha*x/se + sqrt(t + 1)*cos(pi*x);
+    // END GENERATED manufacturedFDABathVmAt
+}
+
+
+//- phi_i = V_m + phi_e at point p
+inline scalar manufacturedFDABathPhiIAt
+(
+    const point& p,
+    const scalar t,
+    const scalar k,
+    const scalar alpha,
+    const scalar se
+)
+{
+    const scalar V = manufacturedFDABathVmAt(p, t, alpha, se);
+    const scalar phiE = manufacturedFDABathPhiEAt(p.x(), t, k, alpha, se);
+
+    // BEGIN GENERATED manufacturedFDABathPhiIAt
+    return V + phiE;
+    // END GENERATED manufacturedFDABathPhiIAt
+}
+
+
+//- grad V_m at point p
+inline vector manufacturedFDABathGradVm
+(
+    const point& p,
+    const scalar t,
+    const scalar alpha,
+    const scalar se
+)
+{
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    // BEGIN GENERATED manufacturedFDABathGradVm
+    return vector(-alpha/se - pi*sqrt(t + 1)*sin(pi*x), 0, 0);
+    // END GENERATED manufacturedFDABathGradVm
+}
+
+
+//- grad phi_e of the heart formula at point p
+inline vector manufacturedFDABathGradPhiEHeart
+(
+    const point& p,
+    const scalar t,
+    const scalar k,
+    const scalar alpha,
+    const scalar se
+)
+{
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    // BEGIN GENERATED manufacturedFDABathGradPhiEHeart
+    return vector(alpha/se + pi*k*sqrt(t + 1)*sin(pi*x), 0, 0);
+    // END GENERATED manufacturedFDABathGradPhiEHeart
+}
+
+
+//- grad phi_i of the heart formulas at point p
+inline vector manufacturedFDABathGradPhiIHeart
+(
+    const point& p,
+    const scalar t,
+    const scalar k,
+    const scalar alpha,
+    const scalar se
+)
+{
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    // BEGIN GENERATED manufacturedFDABathGradPhiIHeart
+    return vector(pi*k*sqrt(t + 1)*sin(pi*x) - pi*sqrt(t + 1)*sin(pi*x), 0, 0);
+    // END GENERATED manufacturedFDABathGradPhiIHeart
+}
+
+
+//- grad phi_e of the bath formula (uniform)
+inline vector manufacturedFDABathGradPhiEBath
+(
+    const scalar alpha,
+    const scalar se
+)
+{
+    const scalar sigmaB = manufacturedFDABathSigmaB(se);
+
+    // BEGIN GENERATED manufacturedFDABathGradPhiEBath
+    return vector(alpha/sigmaB, 0, 0);
+    // END GENERATED manufacturedFDABathGradPhiEBath
 }
 
 } // End namespace Foam

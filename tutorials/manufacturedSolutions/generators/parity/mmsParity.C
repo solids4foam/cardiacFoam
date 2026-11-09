@@ -45,6 +45,9 @@ Usage
                                gradVm(3) gradPhiE(3) gradPhiI(3)
     leadFieldSlab     1        Vm phi
     leadFieldLayered  1        R phi
+    bathBidomain      1,2,3    V u1 u2 u3 phiE phiI VmAt phiEAt phiIAt
+                               gradVm_x gradPhiEHeart_x gradPhiIHeart_x
+                               gradPhiEBath_x
 
     keys
         beta=<v>                    Beta of the FDA ionic closure
@@ -57,6 +60,7 @@ Usage
         alpha=<v>                   leadFieldLayered: surface current (required)
         xLeft= xRight= sigmaOuterLeft= sigmaInnerLeft= sigmaHeart=
         sigmaInnerRight= sigmaOuterRight=   leadFieldLayered layers (required)
+        k= alpha= se=               bathBidomain (required)
 
     Case parameters are those of the tutorials under
     tutorials/manufacturedSolutions; each constant cites its source.
@@ -72,6 +76,7 @@ Usage
 #include "eikonalVerification/manufacturedEikonalReference.H"
 #include "bidomainVerification/manufacturedFDABidomainReference.H"
 #include "ecgVerification/manufacturedLeadFieldECGReference.H"
+#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 
 #include <cstdio>
 #include <cstdlib>
@@ -430,6 +435,34 @@ void leadFieldLayeredRow(const scalar x, const scalar t, const Options& opt)
     });
 }
 
+void bathBidomainRow
+(
+    const scalar x, const scalar y, const scalar z, const scalar t,
+    const label d, const Options& opt
+)
+{
+    const scalar k = opt.required("k");
+    const scalar alpha = opt.required("alpha");
+    const scalar se = opt.required("se");
+    const point p(x, y, z);
+    scalarField X(1, x), Y(1, y), Z(1, z), V, u1, u2, u3, phiE, phiI;
+    computeManufacturedFDABathV(V, X, Y, Z, t, d, alpha, se);
+    computeManufacturedFDABathU(u1, u2, u3, X, Y, Z, t, d, alpha, se);
+    computeManufacturedFDABathPhiE(phiE, X, t, k, alpha, se);
+    computeManufacturedFDABathPhiI(phiI, X, Y, Z, t, d, k, alpha, se);
+    emit
+    ({
+        V[0], u1[0], u2[0], u3[0], phiE[0], phiI[0],
+        manufacturedFDABathVmAt(p, t, alpha, se),
+        manufacturedFDABathPhiEAt(x, t, k, alpha, se),
+        manufacturedFDABathPhiIAt(p, t, k, alpha, se),
+        manufacturedFDABathGradVm(p, t, alpha, se).x(),
+        manufacturedFDABathGradPhiEHeart(p, t, k, alpha, se).x(),
+        manufacturedFDABathGradPhiIHeart(p, t, k, alpha, se).x(),
+        manufacturedFDABathGradPhiEBath(alpha, se).x()
+    });
+}
+
 } // End anonymous namespace
 
 
@@ -506,6 +539,7 @@ int main(int argc, char* argv[])
         else if (name == "bidomain") bidomainRow(x, y, z, t, d, opt);
         else if (name == "leadFieldSlab") leadFieldSlabRow(x, t, opt);
         else if (name == "leadFieldLayered") leadFieldLayeredRow(x, t, opt);
+        else if (name == "bathBidomain") bathBidomainRow(x, y, z, t, d, opt);
         else fail("unknown case '" + name + "'");
     }
 
