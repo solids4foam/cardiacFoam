@@ -651,11 +651,11 @@ void eikonalECG::solve
 
     if (checkGradVm_)
     {
-        // Same normalisation for both, so the ratio is unit-free.
+        // Both traces go through the same lead field, so the ratio is
+        // unit-free.
         Info<< "eikonalECG checkGradVm: max |ECG(product rule) - "
             << "ECG(fvc::grad Vm)| / max |ECG| = "
-            << checkMaxDiff/max(checkMaxSignal, VSMALL)
-            << " (before 1/(4 pi sigma) scaling)" << nl << endl;
+            << checkMaxDiff/max(checkMaxSignal, VSMALL) << nl << endl;
     }
 
     Info<< "eikonalECG: wrote sampled ECG from t=" << startTime_
