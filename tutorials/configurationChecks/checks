@@ -35,6 +35,8 @@ eikonal                                slab  eikonal                            
 monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion    pass
 monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
 monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
+# Bidomain myocardium excited through the junctions only (no tissue stimulus)
+bidomainPurkinjeReactionDiffusion      slab  bidomainPurkinjeReactionDiffusion      pass
 eikonalPurkinje                        slab  eikonalPurkinje                        pass
 eikonalSeedBoxList                     slab  eikonal                                pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3)~(10e-3~10e-3~0.1e-3))
 eikonalSeedBoxListSingle               slab  eikonal                                pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
@@ -59,6 +61,8 @@ eikonalECGRegionStates                 slab  eikonalECGRegionStates             
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
 bathBidomain                           bath  bathBidomain                           pass
 bathTorsoECG                           bath  bathTorsoECG                           pass
+# Bath composition with a Purkinje network as the only activation
+bathBidomainPurkinjeReactionDiffusion  bath  bathBidomainPurkinjeReactionDiffusion  pass
 
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
@@ -78,6 +82,8 @@ eikonalPurkinjeSeedFlat                slab  eikonalPurkinje                    
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
 bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2
+bidomainPurkinjeReactionDiffusionParallel slab bidomainPurkinjeReactionDiffusion pass np=2
+bathBidomainPurkinjeReactionDiffusionParallel bath bathBidomainPurkinjeReactionDiffusion pass np=2
 # The decomposition splits the periodic faces into processorCyclic faces
 monodomainPeriodicFieldConductivityParallel slab monodomainPeriodicFieldConductivity pass np=2
 

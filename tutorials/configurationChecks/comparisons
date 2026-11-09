@@ -28,6 +28,7 @@ differ  eikonalECG                           eikonalECGRegionStates             
 differ  monodomainExplicit                   monodomainPurkinjeReactionDiffusion              0.005/Vm
 differ  monodomainExplicit                   monodomainPurkinjeRestitutionEikonal             0.005/Vm
 differ  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusionBidirectional 0.005/Vm
+differ  bidomain                             bidomainPurkinjeReactionDiffusion                0.005/Vm
 
 # Options that must not change the myocardium solution
 same    monodomainExplicit                   monodomainFieldConductivity                      0.005/Vm
@@ -50,6 +51,15 @@ close:1e-6:1e-12  monodomainImplicit                   monodomainImplicitParalle
 close:1e-6:1e-12  bidomain                             bidomainParallel                             .
 close:1e-6:1e-12  eikonal                              eikonalParallel                              .
 close:1e-6:1e-12  monodomainPurkinjeReactionDiffusion  monodomainPurkinjeReactionDiffusionParallel  .
+close:1e-6:1e-12  bidomainPurkinjeReactionDiffusion     bidomainPurkinjeReactionDiffusionParallel     .
+# A cellZone myocardium: redistributeRestartState does not yet gather its
+# per-cell ionic state (BuenoOrovioState), so the solution files are compared
+# here instead of the whole run.
+close:1e-6:1e-12  bathBidomainPurkinjeReactionDiffusion bathBidomainPurkinjeReactionDiffusionParallel 0.005/Vm
+close:1e-6:1e-12  bathBidomainPurkinjeReactionDiffusion bathBidomainPurkinjeReactionDiffusionParallel 0.005/phiE
+close:1e-6:1e-12  bathBidomainPurkinjeReactionDiffusion bathBidomainPurkinjeReactionDiffusionParallel 0.005/activationTime
+close:1e-6:1e-12  bathBidomainPurkinjeReactionDiffusion bathBidomainPurkinjeReactionDiffusionParallel postProcessing/purkinjeNetwork.dat
+close:1e-6:1e-12  bathBidomainPurkinjeReactionDiffusion bathBidomainPurkinjeReactionDiffusionParallel postProcessing/torsoECG.dat
 close:1e-6:1e-12  monodomainPurkinjeRestitutionEikonal monodomainPurkinjeRestitutionEikonalParallel .
 close:1e-6:1e-12  monodomainPurkinjeIonicExport        monodomainPurkinjeIonicExportParallel        .
 close:1e-6:1e-12  eikonalPurkinje                      eikonalPurkinjeParallel                      .
