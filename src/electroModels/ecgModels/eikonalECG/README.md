@@ -41,4 +41,4 @@ The compiled templates are selected by region name (`endocardialCells`, `mCells`
 
 `checkGradVm true;` (default `false`) also evaluates the ECG from `fvc::grad` of the reconstructed `Vm`. It writes `postProcessing/eikonalECG_checkGradVm.dat` and prints the largest difference from the main ECG. The two agree as the mesh resolves the template upstroke and the weight transitions; the check is a diagnostic, not a reference.
 
-A worked set-up is in [tutorials/manufacturedSolutions/eikonalECG](../../../../tutorials/manufacturedSolutions/eikonalECG/README.md).
+A worked set-up is in [tutorials/manufacturedSolutions/eikonal/cube](../../../../tutorials/manufacturedSolutions/eikonal/cube/README.md).

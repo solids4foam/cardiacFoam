@@ -157,7 +157,7 @@ Unit cube $[0,1]^d$, all faces sealed, $\chi$, $C_m$ and $\beta_d$ as in
 
 In cardiacFoam:
 
-- tutorial `monodomainPseudoECG`, options `-field fda` and `-dim 1|2|3`;
+- tutorial `monodomain/cube`, options `-field fda` and `-dim 1|2|3`;
 - ionic model `monodomainFDAManufactured`;
 - verifier `manufacturedFDAMonodomainVerifier`.
 
@@ -227,7 +227,7 @@ $J_{\mathrm{ion}}$), `F_d<d>`, `G_d<d>` of `reference/fda_monodomain.py`.
 
 ![tet: `-mesh tet -N 5`](figures/mesh_fda_cube_tet.png){#fig-fda-mesh-tet}
 
-Meshes of the unit cube from the tutorial `monodomainPseudoECG` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with $N=8$ cells per unit length; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell. The rotated cube of @sec-rotated uses the same meshes.
+Meshes of the unit cube from the tutorial `monodomain/cube` (`-dim 3`), made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=20$): (a) `blockMesh` with $N=8$ cells per unit length; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell. The rotated cube of @sec-rotated uses the same meshes.
 :::
 
 ## Regeneration
@@ -269,7 +269,7 @@ the tensor
 
 {{< include ../../latex/rotated_K.tex >}}
 
-In cardiacFoam this is `monodomainPseudoECG` with `-field anisotropic` (the
+In cardiacFoam this is `monodomain/cube` with `-field anisotropic` (the
 default) and the verifier `manufacturedAnisotropicMonodomainVerifier`.
 
 ## Construction
@@ -354,7 +354,7 @@ with $\chi=3$, $C_m=2$ and $\beta=\beta_3$ (@sec-ionic). The inner sphere is
 the patch `endocardium` and the outer sphere the patch `epicardium`. In
 cardiacFoam:
 
-- tutorial `monodomainPseudoECG/sphericalShell`;
+- tutorial `monodomain/sphericalShell`;
 - verifier `manufacturedShellMonodomainVerifier`.
 
 ## Construction
@@ -467,7 +467,7 @@ parameters.
 
 ![tet: `-mesh tet -N 5`](figures/mesh_shell_tet.png){#fig-shell-mesh-tet}
 
-Meshes of the shell from the tutorial `monodomainPseudoECG/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
+Meshes of the shell from the tutorial `monodomain/sphericalShell`, made by the meshing steps of its `Allrun` at a coarse resolution chosen for legibility (the tutorial default is $N=12$): (a) the `blockMesh` cubed sphere with $N=8$; (b) `gmsh` tetrahedra of element size $1/5$, seed 1, converted by `gmshToFoam`. The octant facing the viewer is removed cell by cell, exposing the cavity.
 :::
 
 ## Regeneration
@@ -503,7 +503,7 @@ verifier from the shell header and is not part of the emitted modules.
 
 The fields $V_m=\sqrt{1+t}\,F$ of @sec-fda ($F=F_d$, diagonal tensor) and of
 @sec-rotated ($F$ the $\sin^2$ factor, full tensor). The cardiacFoam tutorial
-`monodomainPseudoECG` uses 161 electrodes outside the unit cube and
+`monodomain/cube` uses 161 electrodes outside the unit cube and
 evaluates the pseudo-ECG in three dimensions.
 
 ## Construction
@@ -600,7 +600,7 @@ diagonal entry of the FDA tensor, tuned to the eigenvalue of $\cos(\pi x)$.
 Root $\mathbf x_{\mathrm{root}}$, terminals $\mathbf x_1$, $\mathbf x_2$ on
 the faces $x=0$ and $x=1$ of the tissue cube, each branch along $x$ with arc
 coordinate equal to $x$. In cardiacFoam this is the graph of the tutorial
-`monodomain1D3DCube` (graph files `purkinjeGraph.nodes<k>`, edge length
+`monodomain/coupled1D3DCube` (graph files `purkinjeGraph.nodes<k>`, edge length
 $1/(k-1)$), with the verifier `manufacturedGraphVerifier`; the tutorial sets
 the Purkinje fibre radius $\rho=1/\sqrt\pi$ m, so that $\pi\rho^2=1$.
 
@@ -690,7 +690,7 @@ Tissue: the FDA cube of @sec-fda with $d=3$. Graph: @sec-graph. Junction:
 
 {{< include ../../latex/coupled_params.tex >}}
 
-In cardiacFoam this is the tutorial `monodomain1D3DCube`. Its coupler is
+In cardiacFoam this is the tutorial `monodomain/coupled1D3DCube`. Its coupler is
 `reactionDiffusionPvjCoupler` (`pvjKernel`, `pvjRadius`, `rPvj`) and its
 verifier `coupled1D3DMonodomainVerifier`: with `reference continuum` it adds
 the continuum junction source defined below (`pvjContinuumReference`), with
@@ -824,7 +824,7 @@ $\lceil N/2\rceil$ equal edges per branch, terminals $(\mp0.5, y_g, 0)$.
 
 : Placements of the shell junction; $R_{\mathrm{PVJ}}=1$. {#tbl-pvj-shell-placements tbl-colwidths="[20,20,16,10,34]"}
 
-In cardiacFoam this is the tutorial `monodomain1D3DShell` (gmsh tetrahedra;
+In cardiacFoam this is the tutorial `monodomain/coupled1D3DShell` (gmsh tetrahedra;
 `-graphY` and `-graphY2` set $y_g$), with `manufacturedShellMonodomainVerifier`,
 `manufacturedGraphVerifier` (`xOrigin -0.5`) and
 `coupled1D3DMonodomainVerifier` (`tissueField shell`, `reference continuum`).

@@ -135,8 +135,7 @@ def tutorial_electrodes(case_dir):
 
 def shell_electrodes(case_dir):
     """E1-E5 of a tutorial's sphericalShell case; the built-in set when absent."""
-    path = os.path.join(GENERATORS, "..", case_dir, "sphericalShell", "constant",
-                        "electroProperties")
+    path = os.path.join(GENERATORS, "..", case_dir, "constant", "electroProperties")
     found = read_electrodes(path) if os.path.exists(path) else {}
     if not found:
         print("note: %s not found; using the built-in shell electrode set" % path)

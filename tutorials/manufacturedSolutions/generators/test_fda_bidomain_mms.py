@@ -11,7 +11,7 @@ import fda_monodomain_mms as fmm
 
 DIMS = (1, 2, 3)
 x, y, z, t = fbm.x, fbm.y, fbm.z, fbm.t
-TUTORIAL = os.path.join(fbm.HERE, "..", "bidomain", "constant", "electroProperties")
+TUTORIAL = os.path.join(fbm.HERE, "..", "bidomain", "cube", "constant", "electroProperties")
 DOCS_REFERENCE = os.path.join(fbm.HERE, "docs", "bidomain", "bidomain_reference.py")
 
 

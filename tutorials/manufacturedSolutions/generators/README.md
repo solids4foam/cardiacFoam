@@ -51,6 +51,33 @@ no solver output.
 | `requirements.txt` | Python dependencies |
 | `parity/` | cardiacFoam-only: an OpenFOAM application comparing the C++ headers with the NumPy references |
 
+## Cases that use each generator
+
+The tutorial case of a generator is `tutorials/manufacturedSolutions/<case>`;
+the case README links back to the generator and the section of the documents
+that define its problem.
+
+| generator | cases |
+|---|---|
+| `fda_monodomain_mms.py` | `monodomain/cube` (`-field fda`), `monodomain/coupled1D3DCube` |
+| `rotated_monodomain_mms.py` | `monodomain/cube` (`-field anisotropic`) |
+| `pseudo_ecg_mms.py` | `monodomain/cube` |
+| `shell_monodomain_mms.py` | `monodomain/sphericalShell`, `monodomain/coupled1D3DShell` |
+| `graph_monodomain_mms.py` | `monodomain/coupled1D3DCube` |
+| `coupled_1d3d_mms.py` | `monodomain/coupled1D3DCube`, `monodomain/coupled1D3DShell` |
+| `cartesian_eikonal_mms.py` | `eikonal/cube` |
+| `eikonal_ecg_mms.py` | `eikonal/cube` |
+| `shell_eikonal_mms.py` | `eikonal/sphericalShell` |
+| `radial_eikonal_mms.py` | `eikonal/coupled1D3DSphere` |
+| `fda_bidomain_mms.py` | `bidomain/cube` |
+| `shell_bidomain_mms.py` | `bidomain/sphericalShell` |
+| `fda_bath_bidomain_mms.py` | `bathBidomain/slab` |
+| `slab_leadfield_mms.py` | `leadFieldECG` (`-problem slab\|layered`) |
+| `shell_mms.py` | `leadFieldECG/sphericalShell` |
+
+`electromechanics/totalLagrangianEM` has no generator; its reference is in
+`src/verificationModels/`.
+
 ## Reproduce
 
 From a fresh clone, regenerate everything and check that it matches the
@@ -154,8 +181,8 @@ tutorial outside the repository with only the meshing steps of its `Allrun`
 (write `N n;` to `local/mesh`, then `blockMesh`, or `gmsh` with
 `-setnumber lc 1/n -setnumber seed 1` and `gmshToFoam`). The committed mesh
 figures use the hex meshes at `N = 8` and the tet meshes at element size
-`1/5` of `monodomainPseudoECG`, `monodomainPseudoECG/sphericalShell`,
-`eikonalECG`, `eikonalECG/sphericalShell`, `bidomain` and
+`1/5` of `monodomain/cube`, `monodomain/sphericalShell`,
+`eikonal/cube`, `eikonal/sphericalShell`, `bidomain/cube` and
 `bidomain/sphericalShell`; the lead-field mesh figures use the meshes of
 `leadFieldECG` (`-problem slab|layered`) at `N = 10` and of
 `leadFieldECG/sphericalShell` at `N = 8`, as made by their `Allrun`:

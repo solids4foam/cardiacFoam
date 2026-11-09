@@ -1,0 +1,137 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver monodomainSolver;
+
+// The sealed-shell manufactured monodomain problem of
+// monodomain/sphericalShell (r1 = 0.5 < |x| < r2 = 1, sealed on both
+// spheres) coupled to a Purkinje graph across the cavity on the x axis, with
+// its terminals on the endocardium at (-0.5 0 0) and (0.5 0 0). Each support
+// is cut by the curved sealed wall.
+
+monodomainSolverCoeffs
+{
+    conductivitySource field;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    ionicModel      monodomainFDAManufactured;
+    timeCouplingScheme godunov;
+    sealedHeartBoundary true;
+
+    outputVariables
+    {
+        ionic
+        {
+            export          ( u1 u2 u3 );
+            debug           ( V u1 u2 u3 Iion );
+        }
+    }
+
+    verificationModel
+    {
+        type    manufacturedShellMonodomainVerifier;
+        N       12;
+        #includeIfPresent "<case>/local/verification"
+    }
+
+    dimension    "3D";
+    solutionAlgorithm    implicit;
+    solver          RKF45;
+    maxSteps        1000000000;
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    externalStimulus
+    {
+        stimulusLocationMin ( 0 0 0.0055 );
+        stimulusLocationMax ( 0.0015 0.0015 0.007 );
+        stimulusDuration [ 0 0 1 0 0 0 0 ] 0;
+        stimulusIntensity [ 0 -3 0 0 0 1 0 ] 0;
+        stimulusStartTime 0;
+    }
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver monodomain1DSolver;
+                graphFile purkinjeGraph;
+                purkinjeConductivity 0.111453302;
+                // Unit cross-section (1/sqrt(pi) m), which the manufactured
+                // junction current assumes; used in bidirectional mode.
+                purkinjeFibreRadius 0.5641895835477563;
+
+                ionicModel monodomainFDAManufactured;
+                dimension "1D";
+
+                chi 3;
+                cm 2;
+                vm1DRest -0.084;
+
+                rootStimulus
+                {
+                    node 0;
+                    startTime 0.0;
+                    duration 0.0;
+                    intensity 0.0;
+                }
+
+                // V1 = sqrt(1 + t) cos(pi (x + 0.5)): slope zero at both
+                // terminals x = -0.5 and x = 0.5
+                verificationModel
+                {
+                    type manufacturedGraphVerifier;
+                    xOrigin -0.5;
+                }
+
+                solver RKF45;
+                maxSteps 1000000000;
+
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        couplingA
+        {
+            electroDomainCoupler reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+
+            verificationModel
+            {
+                type coupled1D3DMonodomainVerifier;
+                tissueField shell;
+                xOrigin -0.5;
+                #includeIfPresent "<case>/local/couplingVerification"
+            }
+
+            rPvj 1.0;
+            pvjRadius 0.2;
+            pvjKernel linear;
+            pvjCouplingScheme explicit;
+            couplingMode unidirectional;
+            debugCoupling true;
+            #includeIfPresent "<case>/local/coupling"
+        }
+    }
+}
+
+// ************************************************************************* //

@@ -341,7 +341,7 @@ Meshes of the unit cube from the tutorial `manufacturedSolutions/bidomain` (`-di
 python fda_bidomain_mms.py --emit
 python fda_bidomain_mms.py --self-check
 python docs/bidomain/bidomain_reference.py --self-check
-R=../bidomain/setup/studies/cartesianConvergence/results
+R=../bidomain/cube/setup/studies/cartesianConvergence/results
 python docs/bidomain/bidomain_reference.py --run-check fda=$R/3D_N10
 ```
 

@@ -12,7 +12,7 @@ import rotated_monodomain_mms as rot
 
 DIMS = (1, 2, 3)
 ELECTRODE_FILE = os.path.join(
-    ecg.HERE, "..", "monodomainPseudoECG", "constant", "electroProperties")
+    ecg.HERE, "..", "monodomain", "cube", "constant", "electroProperties")
 
 
 BUILTIN_ELECTRODES = [(-0.5, 0.5, 0.5), (1.5, 0.5, 0.5), (1.2, 0.23, 0.61),

@@ -92,7 +92,7 @@ def read_dictionary_conductivities(path):
 
 
 def fda_case_checks():
-    case = read_dictionary_conductivities(os.path.join(TUTORIAL, "constant", "electroProperties"))
+    case = read_dictionary_conductivities(os.path.join(TUTORIAL, "cube", "constant", "electroProperties"))
     gi6, ge6 = case["conductivityIntracellular"], case["conductivityExtracellular"]
     assert gi6 == [GI[0], 0, 0, GI[1], 0, GI[2]], "Gi of the tutorial"
     assert ge6 == [GE[0], 0, 0, GE[1], 0, GE[2]], "Ge of the tutorial"
