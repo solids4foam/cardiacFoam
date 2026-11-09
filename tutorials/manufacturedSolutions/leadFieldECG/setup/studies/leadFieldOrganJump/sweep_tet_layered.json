@@ -5,7 +5,8 @@
     "system/controlDict:endTime": 0.02,
     "system/controlDict:writeInterval": 0.02,
     "mesh": "tet",
-    "problem": "layered"
+    "problem": "layered",
+    "myocardium": "bidomain"
   },
   "sweep": {
     "mode": "zip",

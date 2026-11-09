@@ -318,11 +318,11 @@ generated in the heart crosses both curved heart-torso interfaces.
 ## Studies
 
 `setup/studies/` holds one study per question. Each study is run in copies of
-the case, with the commands in its README. `setup/studies/summarize.py` prints
-the tables.
+the case, with the commands in its README, and uses the bidomain myocardium
+(`-myocardium bidomain`). `setup/studies/summarize.py` prints the tables.
 
 | study | question |
 |---|---|
 | [leadFieldConvergence](setup/studies/leadFieldConvergence/README.md) | order of the lead field and of the direct solve against the exact slab potential at the torso electrodes, on hexahedra and tetrahedra, with Ge proportional to Gi and with unequal anisotropy ratios |
-| [leadFieldReciprocity](setup/studies/leadFieldReciprocity/README.md) | gap between the lead field and the direct forward solve, on hexahedra and tetrahedra, monodomain and bidomain, serial and parallel |
+| [leadFieldReciprocity](setup/studies/leadFieldReciprocity/README.md) | gap between the lead field and the direct forward solve, on hexahedra and tetrahedra, serial and parallel |
 | [leadFieldOrganJump](setup/studies/leadFieldOrganJump/README.md) | order of the lead field and of the direct solve with torso layers of different conductivity and a current across them, and the independence of the insulated ECG from the layer conductivities |
