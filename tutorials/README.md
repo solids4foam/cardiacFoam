@@ -1,57 +1,37 @@
-# tutorials architecture
+# Tutorials
 
-This folder contains maintained reference, cardiac protocols, and verification cases for
-`cardiacFoam`. The table below is the canonical index of committed runnable
-cases; local research cases and generated sweep directories are not part of
-this documented contract.
+Maintained reference, protocol and verification cases for `cardiacFoam`. The
+tables below are the canonical index of the committed runnable cases, grouped by
+the equation each case solves. Local research cases and generated sweep
+directories are not part of this documented contract.
+
+Every case has its own `README.md` with its inputs, options, expected cost and
+outputs. The tables here only say what a case is for and where it is; read the
+case README before running it.
 
 ## Folder layout
 
 ```text
 tutorials/
 ├── electrophysiologyProtocols/    small EP checks: cells, restitution, CV, re-entry, Purkinje
-├── electromechanicsProtocols/     small electromechanics checks: supports, active tension
-├── NiedererEtAl2011verification/  Niederer et al. (2011) monodomain slab benchmark
-├── manufacturedSolutions/         verification against known (manufactured) solutions
-└── idealizedHeart/                anatomical biventricular cases (EP, EM, pathologies)
+├── electromechanicsProtocols/     small electromechanics checks: supports
+├── benchmarks/                    published benchmarks (Niederer et al. 2011 slab)
+├── manufacturedSolutions/         verification against known solutions, by equation
+│   ├── generators/                the definition of each manufactured solution
+│   ├── monodomain/  eikonal/  bidomain/  bathBidomain/  electromechanics/
+├── idealizedHeart/                anatomical biventricular cases (EP, EM, pathologies)
+├── configurationChecks/           which electroProperties configurations are accepted
+└── regression/                    shared regression library and index check
 ```
 
-## Canonical tutorial cases
+## Run a case
 
-`Regression` means coverage by the cross-case `Alltest-regression` runner,
-not merely the presence of an `Allrun` script. The runner discovers every
-case with a `regression/regressionTest.sh`, and `regression/checkIndex.sh`
-fails when this column and that discovery disagree.
-
-| Canonical path | Purpose | Solver or workflow | Build mode | Regression | Principal outputs |
-| --- | --- | --- | --- | --- | --- |
-| `electrophysiologyProtocols/singleCell` | Single-point action-potential runs and ionic-model sweeps | `singleCellSolver` | lightweight or full | `Alltest-regression` | voltage traces under `postProcessing/` |
-| `electrophysiologyProtocols/ionicHeterogeneity` | Probe transmural ionic heterogeneity without a tissue PDE | Bueno-Orovio probe and plotting workflow | lightweight or full | `Alltest-regression` | trace, AP-metric, and smoothness CSV files under `postProcessing/ionicHeterogeneityProbe/` |
-| `electrophysiologyProtocols/restitutionCurves_s1s2Protocol` | Generate S1-S2 action-potential-duration restitution curves | `singleCellSolver` pacing sweep | lightweight or full | not covered | per-run traces and restitution tables/plots |
-| `electrophysiologyProtocols/cableProtocol/monodomain1DCableCV` | Measure and refine 1D conduction velocity | `monodomainSolver` cable convergence workflow | lightweight or full | not covered | activation probes, CV summaries, convergence CSV files and plots |
-| `electrophysiologyProtocols/cableProtocol/eikonal1DCableCV` | Compare eikonal 1D conduction velocity across resolutions | `eikonalSolver` cable workflow | lightweight or full | not covered | activation probes and CV summaries |
-| `electrophysiologyProtocols/rotorInstability` | Exercise sustained re-entry and activation-time behavior | monodomain rotor protocol | lightweight or full | `Alltest-regression` | probe traces and activation-time metrics |
-| `electrophysiologyProtocols/purkinjeRestitution2D` | Pace a Purkinje network coupled to a 2D slab over several beats, antegrade and retrograde | `monodomainSolver` with `restitutionEikonalSolver1D` or `monodomain1DSolver`, variant selected at run time | lightweight or full | `Alltest-regression` | per-node network activation time, `Vm` and junction current under `postProcessing/` |
-| `NiedererEtAl2011verification` | Run the Niederer slab electrophysiology benchmark | `monodomainSolver` verification workflow | lightweight or full | `Alltest-regression` | activation probes, smoke-check fields, summaries and plots |
-| `electromechanicsProtocols/springSupportedSlab` | Show spring (Robin) supports in electromechanics: slab shortening from isometric to free as the end-spring stiffness drops | `electroMechanicalModel` with monodomain electrophysiology and `solidSpringDashpot` end supports | full only | `Alltest-regression` (expected skip in lightweight mode) | end displacement and end force (`solidForces`), `Ta` and `Vm` probes |
-| `manufacturedSolutions/monodomainPseudoECG` | Verify monodomain fields and pseudo-ECG against manufactured solutions | `monodomainFDAManufactured` plus pseudo-ECG verification | lightweight or full | `Alltest-regression` | manufactured error summaries and pseudo-ECG series under `postProcessing/` |
-| `manufacturedSolutions/monodomainPseudoECG/sphericalShell` | Verify the monodomain on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a cubed-sphere or gmsh-tetrahedra mesh | `monodomainFDAManufactured` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellMonodomainVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
-| `manufacturedSolutions/bidomain` | Verify spatial bidomain convergence | `bidomainFDAManufactured` | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
-| `manufacturedSolutions/bidomain/sphericalShell` | Verify the heart-only bidomain on a spherical heart shell with sealed curved walls, unequal rotated full conductivity tensors and a cubed-sphere or gmsh-tetrahedra mesh | `monodomainFDAManufactured` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellBidomainVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured field-error summaries under `postProcessing/` |
-| `manufacturedSolutions/bathBidomain` | Verify the bidomain with a bath: heart and bath fields and the heart-bath interface | `bathBidomainFDAManufactured` | lightweight or full | `Alltest-regression` | manufactured error summaries and interface metrics |
-| `manufacturedSolutions/eikonalECG` | Verify activation time and template/quadrature ECG calculations | `eikonalSolver` with manufactured eikonal verification | lightweight or full | `Alltest-regression` | activation-time and ECG reference/error series plus summary CSV files |
-| `manufacturedSolutions/eikonalECG/sphericalShell` | Verify the eikonal solver on a spherical heart shell with sealed curved walls, a rotated full conductivity tensor and a cubed-sphere or gmsh-tetrahedra mesh | `eikonalSolver` with `sealedHeartBoundary`, `setManufacturedFields` and `manufacturedShellEikonalVerifier`; gmsh and `gmshToFoam` for tetrahedra | lightweight or full | `Alltest-regression` | manufactured activation-time error summaries under `postProcessing/` |
-| `manufacturedSolutions/monodomain1D3DCube` | Verify 1D-3D monodomain coupling on the unit cube, against the production sampling and deposition map or against the continuum junction (`-reference`), with four junction kernels | `monodomainSolver` with 1D graph coupling and `coupled1D3DMonodomainVerifier` | lightweight or full | `Alltest-regression` | 3-D and graph error summaries and coupling diagnostics under `postProcessing/` and `verification/` |
-| `manufacturedSolutions/monodomain1D3DShell` | Verify the 1D-3D junction against its continuum definition on tetrahedra, with the supports cut by the sealed curved endocardium, inside the wall (`-graphY`) or overlapping (`-graphY2`) | `monodomainSolver` on the sealed spherical shell (`manufacturedShellMonodomainVerifier`) coupled to a Purkinje graph, `coupled1D3DMonodomainVerifier` with `reference continuum`; gmsh and `gmshToFoam` | lightweight or full | `Alltest-regression`, skipped without gmsh | map, step and support-local CSV files under `verification/`, shell and graph error summaries under `postProcessing/` |
-| `manufacturedSolutions/eikonal1D3D` | Verify the eikonal path from a graph into tissue against an exact solution with no manufactured source | `eikonalSolver`, `eikonalSolver1D`, `eikonalPvjCoupler`, `manufacturedRadialEikonalVerifier` | lightweight or full | `Alltest-regression`, skipped without gmsh | `postProcessing/radial_errors.dat` |
-| `manufacturedSolutions/monodomainTotalLagrangianEM` | Verify coupled monodomain and nonlinear solid mechanics | manufactured total-Lagrangian electromechanics workflow | full only | `Alltest-regression` (expected skip in lightweight mode) | `Vm`, `D`, `lambda`, and `Ta` error/convergence tables and plots |
-| `idealizedHeart/electroHeart` | Run whole-ventricle electrophysiology with a Purkinje network and pseudo-ECG | `monodomainSolver`, `eikonalSolver` or the hybrid combination, selected at run time | lightweight or full | `Alltest-regression` (`monodomain` on the human tree; all variants and trees with `CARDIAC_REGRESSION_SCOPE=full`) | activation-time probes and pseudo-ECG series under `postProcessing/` |
-| `idealizedHeart/electroMechHeart` | Couple whole-ventricle electrophysiology to the solid on the same anatomy | `electroMechanicalModel` with monodomain electrophysiology | full only | `Alltest-regression` (expected skip in lightweight mode) | `Ta` and `D` probes on the solid, activation-time and `Vm` probes on the electro region |
-| `idealizedHeart/pathos/conductionBlock` | Model left or right bundle-branch block structurally | `monodomainSolver` with one Purkinje bundle severed, variant selected at run time | lightweight or full | `Alltest-regression` | junction activation-time probes and pseudo-ECG series |
-| `idealizedHeart/pathos/ionicPathology` | Model acute ischemia or Brugada syndrome type-1 | `monodomainSolver` with `ionicConstantOverrides` on `TNNP`, variant selected at run time | lightweight or full | not covered | pseudo-ECG series and monodomain fields |
-| `configurationChecks` | Check which `electroProperties` configurations are accepted, what they write, and which are rejected | short runs of every myocardium, conduction, coupler and ECG selection, plus invalid ones | lightweight or full | `Alltest-regression` | per-check runs under `runs/`, compared with `regression/manifests/` |
-
-## Common script pattern
+```bash
+cd tutorials/manufacturedSolutions/bidomain/cube
+./Allrun -h        # options of this case
+./Allrun           # mesh, run, post-process
+./Allclean         # remove the generated output
+```
 
 Most runnable cases provide:
 
@@ -61,11 +41,85 @@ Most runnable cases provide:
   `regression/*.reference` rows. Every script sources the shared library
   `regression/lib.sh` at this level, which owns the options (`--check-only`,
   `--report PATH`), the build-mode gate, the reference grammar and the
-  comparator; a case script only declares its reference, its Allrun
+  comparator; a case script only declares its reference, its `Allrun`
   arguments and any case-local check.
 
-Read the case-local `README.md` before running a case. It defines its inputs,
-parallel options, expected cost, and output details.
+`Build mode` below is how `cardiacFoam` has to be built: `lightweight` is
+without solids4foam, `full` with it.
+
+## Cases by equation
+
+`Regression` means coverage by the cross-case `Alltest-regression` runner, not
+merely the presence of an `Allrun` script. The runner discovers every case with
+a `regression/regressionTest.sh`, and `regression/checkIndex.sh` fails when this
+column and that discovery disagree.
+
+### Ionic models, no tissue equation
+
+Single-cell and meshless cases: an ionic model integrated without a spatial PDE.
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`electrophysiologyProtocols/singleCell`](electrophysiologyProtocols/singleCell/README.md) | Single-point action-potential runs and ionic-model sweeps | lightweight or full | `Alltest-regression` |
+| [`electrophysiologyProtocols/ionicHeterogeneity`](electrophysiologyProtocols/ionicHeterogeneity/README.md) | Probe transmural ionic heterogeneity without a tissue PDE | lightweight or full | `Alltest-regression` |
+| [`electrophysiologyProtocols/restitutionCurves_s1s2Protocol`](electrophysiologyProtocols/restitutionCurves_s1s2Protocol/README.md) | Generate S1-S2 action-potential-duration restitution curves | lightweight or full | not covered |
+
+### Monodomain
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`electrophysiologyProtocols/cableProtocol/monodomain1DCableCV`](electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/README.md) | Measure and refine 1D conduction velocity | lightweight or full | not covered |
+| [`electrophysiologyProtocols/rotorInstability`](electrophysiologyProtocols/rotorInstability/README.md) | Exercise sustained re-entry and activation-time behavior | lightweight or full | `Alltest-regression` |
+| [`electrophysiologyProtocols/purkinjeRestitution2D`](electrophysiologyProtocols/purkinjeRestitution2D/README.md) | Pace a Purkinje network coupled to a 2D slab over several beats, antegrade and retrograde | lightweight or full | `Alltest-regression` |
+| [`benchmarks/NiedererEtAl2011verification`](benchmarks/NiedererEtAl2011verification/README.md) | Run the Niederer et al. (2011) slab benchmark | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/monodomain/cube`](manufacturedSolutions/monodomain/README.md) | Verify the monodomain and the pseudo-ECG on the unit cube | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/monodomain/sphericalShell`](manufacturedSolutions/monodomain/README.md) | Verify the monodomain on a spherical shell with sealed curved walls | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/monodomain/coupled1D3DCube`](manufacturedSolutions/monodomain/README.md) | Verify the 1D-3D Purkinje-myocardial coupling on the unit cube | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/monodomain/coupled1D3DShell`](manufacturedSolutions/monodomain/README.md) | Verify the 1D-3D junction against its continuum definition on the shell (needs gmsh) | lightweight or full | `Alltest-regression` |
+| [`idealizedHeart/pathos/conductionBlock`](idealizedHeart/pathos/README.md) | Model left or right bundle-branch block structurally | lightweight or full | `Alltest-regression` |
+| [`idealizedHeart/pathos/ionicPathology`](idealizedHeart/pathos/README.md) | Model acute ischemia or Brugada syndrome type-1 | lightweight or full | not covered |
+
+### Eikonal
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`electrophysiologyProtocols/cableProtocol/eikonal1DCableCV`](electrophysiologyProtocols/cableProtocol/eikonal1DCableCV/README.md) | Compare eikonal 1D conduction velocity across resolutions | lightweight or full | not covered |
+| [`manufacturedSolutions/eikonal/cube`](manufacturedSolutions/eikonal/README.md) | Verify activation time and the eikonal ECG on the unit cube | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/eikonal/sphericalShell`](manufacturedSolutions/eikonal/README.md) | Verify the eikonal solver on a spherical shell with sealed curved walls | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/eikonal/coupled1D3DSphere`](manufacturedSolutions/eikonal/README.md) | Verify the path from a graph into tissue against an exact solution (needs gmsh) | lightweight or full | `Alltest-regression` |
+
+### Bidomain
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`manufacturedSolutions/bidomain/cube`](manufacturedSolutions/bidomain/README.md) | Verify spatial bidomain convergence on the unit cube | lightweight or full | `Alltest-regression` |
+| [`manufacturedSolutions/bidomain/sphericalShell`](manufacturedSolutions/bidomain/README.md) | Verify the heart-only bidomain on a spherical shell with sealed curved walls | lightweight or full | `Alltest-regression` |
+
+### Bidomain with bath
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`manufacturedSolutions/bathBidomain/slab`](manufacturedSolutions/bathBidomain/README.md) | Verify the heart and bath fields and the heart-bath interface | lightweight or full | `Alltest-regression` |
+
+### Whole heart, solver chosen at run time
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`idealizedHeart/electroHeart`](idealizedHeart/electroHeart/README.md) | Run whole-ventricle electrophysiology with a Purkinje network and pseudo-ECG, with `monodomainSolver`, `eikonalSolver` or the hybrid combination | lightweight or full | `Alltest-regression` (`monodomain` on the human tree; all variants and trees with `CARDIAC_REGRESSION_SCOPE=full`) |
+
+### Electromechanics
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`electromechanicsProtocols/springSupportedSlab`](electromechanicsProtocols/springSupportedSlab/README.md) | Show spring (Robin) supports: slab shortening from isometric to free as the end-spring stiffness drops | full only | `Alltest-regression` (expected skip in lightweight mode) |
+| [`manufacturedSolutions/electromechanics/totalLagrangianEM`](manufacturedSolutions/electromechanics/README.md) | Verify coupled monodomain and nonlinear solid mechanics | full only | `Alltest-regression` (expected skip in lightweight mode) |
+| [`idealizedHeart/electroMechHeart`](idealizedHeart/electroMechHeart/README.md) | Couple whole-ventricle electrophysiology to the solid on the same anatomy | full only | `Alltest-regression` (expected skip in lightweight mode) |
+
+### Configuration
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`configurationChecks`](configurationChecks/README.md) | Check which `electroProperties` configurations are accepted, what they write, and which are rejected | lightweight or full | `Alltest-regression` |
 
 ## Cross-case regression entrypoint
 
@@ -75,23 +129,26 @@ runs the script there. `--list` prints the discovered cases and `--only PATTERN`
 restricts a run. Select the build mode explicitly:
 
 ```bash
+./tutorials/Alltest-regression --list
 CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression
 CARDIAC_REGRESSION_BUILD_MODE=with-solids4foam ./tutorials/Alltest-regression
+CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression --only 'bidomain/cube'
+./tutorials/regression/checkIndex.sh      # this index against the discovered cases
 ```
 
 A case that needs cardiacFoam built with solids4foam carries an empty marker
-file `regression/needs-solids4foam`; today those are the spring-supported
-electromechanics slab (`electromechanicsProtocols/springSupportedSlab`), the
-electromechanics manufactured solution
-(`manufacturedSolutions/monodomainTotalLagrangianEM`) and the idealized-heart
-electromechanics case (`idealizedHeart/electroMechHeart`). In lightweight
-mode their regression scripts exit 77 and the runner reports an expected
-skip. A case that cannot run on some OpenFOAM versions lists them in
-`regression/skips-on-openfoam`; today `manufacturedSolutions/bidomain/sphericalShell`
-lists `v2312`, where its Vm and ionic-state error rows differ from the
-reference in the CI image. A case that needs tools beyond OpenFOAM has the marker
-`regression/needs-tools`; today `manufacturedSolutions/eikonal1D3D`. Any other exit-77
-skip fails the aggregate run.
+file `regression/needs-solids4foam`; today those are
+`electromechanicsProtocols/springSupportedSlab`,
+`manufacturedSolutions/electromechanics/totalLagrangianEM` and
+`idealizedHeart/electroMechHeart`. In lightweight mode their regression scripts
+exit 77 and the runner reports an expected skip. A case that cannot run on some
+OpenFOAM versions lists them in `regression/skips-on-openfoam`; today
+`manufacturedSolutions/bidomain/sphericalShell` lists `v2312`, where its Vm and
+ionic-state error rows differ from the reference in the CI image. A case that
+needs tools beyond OpenFOAM has the marker `regression/needs-tools`; today
+`manufacturedSolutions/eikonal/coupled1D3DSphere` and
+`manufacturedSolutions/monodomain/coupled1D3DShell`. Any other exit-77 skip
+fails the aggregate run.
 
 `CARDIAC_REGRESSION_SCOPE` selects how much a case checks: `standard` (the
 default) is the suite gate, `full` widens cases that offer a larger matrix.

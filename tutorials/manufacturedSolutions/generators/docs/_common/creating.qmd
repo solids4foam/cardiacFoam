@@ -104,9 +104,11 @@ quarto render docs/monodomain/monodomain_mms.qmd --to pdf
 3. Add the case to `parity/mmsParity.C` and `CASES` of `parity/test_parity.py`,
    and a `test_parity_<case>` to the generator test that compares the
    compiled header with `reference/mycase.py`.
-4. Add a tutorial case in `tutorials/manufacturedSolutions/` with `Allrun`, a
-   `regression/regressionTest.sh` on `tutorials/regression/lib.sh` and its
-   reference, and mark it in the case table of `tutorials/README.md`.
+4. Add a tutorial case in `tutorials/manufacturedSolutions/<equation>/<geometry>/`
+   with `Allrun`, a `regression/regressionTest.sh` on
+   `tutorials/regression/lib.sh` and its reference. List it in the README of
+   its equation folder and in the table of `tutorials/README.md`, and add its
+   row to "Cases that use each generator" in `generators/README.md`.
 5. Check the header, the parity and the regression:
 
    ```bash

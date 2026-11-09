@@ -1,6 +1,37 @@
-# Manufactured Solutions Tutorials
+# Manufactured solutions
 
-This folder groups the manufactured-solution verification cases by model scope.
+Verification cases that run a solver against a known (manufactured or exact)
+solution and check the error against the reference solution. The cases are
+grouped by the equation they solve, then by the geometry they exercise.
+
+```text
+manufacturedSolutions/
+├── generators/       the definition of each manufactured solution
+├── monodomain/       cube, sphericalShell, coupled1D3DCube, coupled1D3DShell
+├── eikonal/          cube, sphericalShell, coupled1D3DSphere
+├── bidomain/         cube, sphericalShell
+├── bathBidomain/     slab
+└── electromechanics/ totalLagrangianEM
+```
+
+## Cases
+
+| Equation | Case | Geometry |
+| --- | --- | --- |
+| [monodomain](monodomain/README.md) | [`cube`](monodomain/cube/README.md) | unit cube, hexahedra or tetrahedra, pseudo-ECG |
+| | [`sphericalShell`](monodomain/sphericalShell/README.md) | spherical shell with sealed curved walls |
+| | [`coupled1D3DCube`](monodomain/coupled1D3DCube/README.md) | Purkinje graph joined to the unit cube |
+| | [`coupled1D3DShell`](monodomain/coupled1D3DShell/README.md) | Purkinje graph joined to the shell, tetrahedra |
+| [eikonal](eikonal/README.md) | [`cube`](eikonal/cube/README.md) | unit cube, hexahedra or tetrahedra, eikonal ECG |
+| | [`sphericalShell`](eikonal/sphericalShell/README.md) | spherical shell with sealed curved walls |
+| | [`coupled1D3DSphere`](eikonal/coupled1D3DSphere/README.md) | graph into a sealed tissue sphere, tetrahedra |
+| [bidomain](bidomain/README.md) | [`cube`](bidomain/cube/README.md) | unit cube, hexahedra or tetrahedra |
+| | [`sphericalShell`](bidomain/sphericalShell/README.md) | spherical shell with sealed curved walls |
+| [bathBidomain](bathBidomain/README.md) | [`slab`](bathBidomain/slab/README.md) | myocardium slab between two bath slabs |
+| [electromechanics](electromechanics/README.md) | [`totalLagrangianEM`](electromechanics/totalLagrangianEM/README.md) | unit cube, needs solids4foam |
+
+The Niederer slab benchmark is in
+[`../benchmarks`](../benchmarks/NiedererEtAl2011verification/README.md).
 
 ## Definitions of the manufactured solutions
 
@@ -13,88 +44,42 @@ headers in `src/verificationModels/` are generated from the generators, in
 whole or in marked regions. The case READMEs describe how to run a case and
 point to these definitions.
 
-## Cases
+## Run a case
 
-- `monodomainPseudoECG` : spatial manufactured-solution verification for the monodomain solver with pseudo-ECG output
-- `bidomain` : spatial manufactured-solution verification for the bidomain solver
-- `bathBidomain` : spatial manufactured-solution verification for the bidomain solver with bath
-- `eikonalECG` : activation-time and ECG manufactured verification for the eikonal solver
-- [`monodomain1D3DCube`](monodomain1D3DCube/README.md) : 1D-3D monodomain coupling on the unit cube, against the production map or the continuum junction, four junction kernels
-- [`monodomain1D3DShell`](monodomain1D3DShell/README.md) : 1D-3D coupling on the sealed spherical shell, gmsh tetrahedra, against the continuum junction: supports cut by the curved endocardium, inside the wall (`-graphY`) or overlapping at a branch point (`-graphY2`)
-- [`eikonal1D3D`](eikonal1D3D/README.md) : graph into tissue on tetrahedra against an exact solution with no manufactured source
-- `monodomainTotalLagrangianEM` : full coupled electromechanics manufactured-solution verification
-- [`monodomainPseudoECG/sphericalShell`](monodomainPseudoECG/sphericalShell/README.md) : 3D monodomain with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient and a parallel hex regression
-- [`bidomain/sphericalShell`](bidomain/sphericalShell/README.md) : 3D heart-only bidomain with sealed curved walls crossed by two unequal rotated full conductivity tensors, on a cubed sphere or gmsh tetrahedra, with the sealed-wall gradient, a compatibility-projected phiE equation and a parallel hex regression
-- [`eikonalECG/sphericalShell`](eikonalECG/sphericalShell/README.md) : 3D eikonal with sealed curved walls crossed by a rotated full conductivity tensor, on a cubed sphere or gmsh tetrahedra, with a pinned stimulus ball, the sealed-wall gradient and a parallel hex regression
-
-## Naming Pattern
-
-The subdirectory names follow the spatial PDE target being verified.
-
-## omnidriver Usage
-
-The commands below run from the repository root, which holds `omnidriver.toml`.
-A record stages the case into a scratch directory you supply; this tree is not
-modified. Configure the host OpenFOAM runtime file as described in
-omnidriver's own README before a real run.
-
-### Validate or run one case
+Each case has its own `Allrun` (`./Allrun -h` lists its options), `Allclean`
+and `regression/regressionTest.sh`. There is no suite-level `Allrun`.
 
 ```bash
-omnidriver --plugin cardiacfoam --repo . plan --strict \
-    --entry manufacturedBidomain --scratch-dir <scratch>
+cd tutorials/manufacturedSolutions/bidomain/cube
+./Allrun -h                       # options of this case
+./Allrun                          # mesh, run, post-process
+./Allrun -mesh tet                # the same case on gmsh tetrahedra
 ```
 
-`plan` validates and reports the generated case; `run` executes it. The
-records are `manufacturedMonodomainPseudoECG`, `manufacturedBidomain`,
-`manufacturedBathBidomain`, `manufacturedEikonalECG` and
-`manufacturedMonodomain1D3D`. `monodomainTotalLagrangianEM` has no record: run
-its own `Allrun`.
-
-### Plan or run a convergence sweep
-
-Use a sweep only for a study that varies mesh, timestep, numerical scheme or
-another declared axis. Give every simultaneous run its own output directory;
-it holds the manifest and per-case state, so reusing one while another run is
-active can mix or resume state from the other run.
+`tutorials/Alltest-regression` runs the regressions; `--only` selects cases by
+path:
 
 ```bash
-omnidriver --plugin cardiacfoam --repo . sweep-plan \
-    --spec tutorials/manufacturedSolutions/monodomainPseudoECG/setup/studies/cartesianConvergence/sweep_hex_convergence.json \
-    --scratch-dir <scratch> --output-dir <output>
+CARDIAC_REGRESSION_BUILD_MODE=lightweight \
+    ./tutorials/Alltest-regression --only 'manufacturedSolutions/bidomain'
 ```
 
-Run `sweep-run` with the same arguments once the plan is ready. Every study
-README names its own specs.
+See [`../README.md`](../README.md) for the build modes and the regression
+rules, and each case README for its inputs, options and checks.
 
-### Run a case directly
+## Convergence studies
 
-Each case has its own `Allrun` (`./Allrun -h` lists its options) and
-`regression/regressionTest.sh`. There is no suite-level `Allrun`;
-`tutorials/Alltest-regression` runs every regression.
+Convergence studies of a case are in `<case>/setup/studies/<study>/`, each with
+its own README (the ladder, the options, the quantities checked). The
+`summarize.py` next to the studies prints the convergence tables from a folder
+of finished run copies:
 
-## Convergence Verification
+```bash
+python3 tutorials/manufacturedSolutions/bidomain/cube/setup/studies/summarize.py <results folder>
+```
 
-Each case emits `setup/results/<key>_convergence.csv` (fresh, gitignored) plus a
-per-case `provenance.json` (OpenFOAM version + git SHAs + dict hashes). There is
-nothing committed to diff those against: the frozen `reference/<key>_convergence.csv`
-baselines have been removed, and the harness that compared them never lived in this
-repository. Automated coverage of these cases is the per-case `regression/`
-directory, run through `tutorials/Alltest-regression`.
-
-| key | case |
-|---|---|
-| tet | monodomainPseudoECG (`setup/studies/tetConvergence`) |
-| eikonal_tet | eikonalECG (`-mesh tet`) |
-| coupling | monodomain1D3DCube |
-| eikonal | eikonalECG |
-| mono_spatial | monodomainPseudoECG |
-| pseudo_ecg_spatial | monodomainPseudoECG |
-| bidomain | bidomain |
-| bidomain_tet | bidomain (`-mesh tet`) |
-| bath | bathBidomain |
-| bath_tet | bathBidomain (`-mesh tet`) |
-| niederer | NiedererEtAl2011verification |
+The run copies and the tables are generated output and are not tracked. The
+automated coverage of a case is its `regression/` directory.
 
 ## Bulk, boundary and gradient rows
 

@@ -75,22 +75,22 @@ using namespace Foam;
 namespace
 {
 
-// chi, Cm of every case: tutorials/manufacturedSolutions/monodomainPseudoECG/
-// constant/electroProperties:25-26 (also eikonalECG and monodomain1D3DCube)
+// chi, Cm of every case: tutorials/manufacturedSolutions/monodomain/cube/
+// constant/electroProperties:25-26 (also eikonal/cube and monodomain/coupled1D3DCube)
 const scalar chi = 3.0;
 const scalar Cm = 2.0;
 
 // FDA diagonal conductivity:
-// tutorials/manufacturedSolutions/monodomainPseudoECG/README.md:27 and
-// monodomainPseudoECG/Allrun:178
+// tutorials/manufacturedSolutions/monodomain/cube/README.md:27 and
+// monodomain/cube/Allrun:178
 tensor fdaConductivity()
 {
     return tensor(0.111453302, 0, 0, 0, 0.121585420, 0, 0, 0, 0.030396355);
 }
 
 // Rotated conductivity, symmetric tensor (xx xy xz yy yz zz):
-// tutorials/manufacturedSolutions/monodomainPseudoECG/constant/
-// electroProperties:23 and eikonalECG/constant/electroProperties
+// tutorials/manufacturedSolutions/monodomain/cube/constant/
+// electroProperties:23 and eikonal/cube/constant/electroProperties
 tensor rotatedConductivity()
 {
     const scalar xx = 0.106875, xy = -0.0084931, xz = -0.022561;
@@ -99,7 +99,7 @@ tensor rotatedConductivity()
 }
 
 // Axis conductivity of eikonalECG (-conductivity axis):
-// tutorials/manufacturedSolutions/eikonalECG/README.md (Problem)
+// tutorials/manufacturedSolutions/eikonal/cube/README.md (Problem)
 tensor axisConductivity()
 {
     return tensor(0.111453302, 0, 0, 0, 0.121585420, 0, 0, 0, 0.030396355);
@@ -115,13 +115,13 @@ scalar defaultBeta(const label d)
     return -8.6;
 }
 
-// Terminals of the coupled case: monodomain1D3DCube/constant/purkinjeGraph.nodes003
+// Terminals of the coupled case: monodomain/coupled1D3DCube/constant/purkinjeGraph.nodes003
 // pvjLocations
 const scalar terminalY = 0.166666666667;
 const scalar terminalZ = 0.333333333333;
 const scalar terminalX[2] = {0.0, 1.0};
 
-// Junction resistance of the coupled case: monodomain1D3DCube/constant/
+// Junction resistance of the coupled case: monodomain/coupled1D3DCube/constant/
 // electroProperties (rPvj 1.0)
 const scalar rPvj = 1.0;
 

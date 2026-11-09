@@ -19,7 +19,7 @@ fi
 
 test_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd "${test_dir}/../../.." && pwd)"
-template="${repo_dir}/tutorials/manufacturedSolutions/monodomainPseudoECG/sphericalShell"
+template="${repo_dir}/tutorials/manufacturedSolutions/monodomain/sphericalShell"
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/wall-gradient-probe.XXXXXX")"
 if [[ "${KEEP_CASES:-0}" != 1 ]]; then
     trap 'rm -rf "${scratch}"' EXIT

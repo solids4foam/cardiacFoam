@@ -202,7 +202,7 @@ def test_compare_detects_mismatch(app):
 
 
 def test_coupled_terminal_current_matches_continuum_value(app):
-    # README of monodomain1D3DCube: with R_pvj = 1 the terminal currents are
+    # README of monodomain/coupled1D3DCube: with R_pvj = 1 the terminal currents are
     # +-(3/2) sqrt(1 + t); terminal 0 carries +, terminal 1 carries -.
     # The graph file holds y and z to 12 digits, hence rel 1e-10.
     t = 0.07

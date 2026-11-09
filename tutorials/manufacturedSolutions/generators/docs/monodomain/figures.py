@@ -167,8 +167,8 @@ def shell_monodomain(settings, outdir):
 
 def pseudo_ecg(settings, outdir):
     ref = fs.load_reference("pseudo_ecg")
-    electrodes = fs.tutorial_electrodes("monodomainPseudoECG")
-    shell = fs.shell_electrodes("monodomainPseudoECG")
+    electrodes = fs.tutorial_electrodes("monodomain/cube")
+    shell = fs.shell_electrodes("monodomain/sphericalShell")
     sig_fda = np.diag(ref.PARAMS["SIGMA_FDA"])
     sig_rot = np.array(ref.PARAMS["SIGMA_ROTATED"], float)
     order = settings.ecg_order if settings.draft else settings.ecg_order // 2 + 4
