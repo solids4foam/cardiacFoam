@@ -80,7 +80,7 @@ do
 done
 run parallel_hex_N20 parallel -mesh hex -N 20
 run parallel_tet_N20 parallel -mesh tet -N 20
-run fixedPointTight_tet_N20 -mesh tet -N 20 -fixedPointTolerance 1e-12
+run solveTight_tet_N20 -mesh tet -N 20 -solveTolerance 1e-14
 python3 ../summarize.py ../leadFieldConvergence/results results
 ```
 
