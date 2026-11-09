@@ -36,6 +36,7 @@ Author
 #include "fvMesh.H"
 #include "overrideTypeName.H"
 #include "scalarField.H"
+#include "Switch.H"
 
 namespace Foam
 {
@@ -45,6 +46,8 @@ class eikonalSolver1D
     public conductionSystemSolver
 {
     dimensionedScalar purkinjeCV_;        //- conduction velocity [m/s]
+    Switch useEdgeConductance_;           //- edge conductance scales or blocks conduction
+    scalar refConductance_;               //- conductance at which the speed is purkinjeCV
     bool warnedRootStartTimes_;           //- extra rootStimulus entries already reported
 
 public:

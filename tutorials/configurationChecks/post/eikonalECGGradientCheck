@@ -1,0 +1,32 @@
+#!/bin/bash
+# Compare the eikonal template ECG with the same ECG evaluated from fvc::grad
+# of the reconstructed Vm (checkGradVm), over the repolarisation window
+# (t >= 30 ms). With blended endocardial/epicardial templates the two agree
+# only if the template-weight gradient term is included; on this 20 x 20 slab
+# the largest difference is 4 % of peak with it and 39 % without it.
+cd "${0%/*}" || exit 1
+
+python3 - > log.eikonalECGGradientCheck 2>&1 <<'PY'
+import sys
+
+def load(path):
+    rows = []
+    with open(path) as f:
+        for line in f:
+            if line.strip() and not line.startswith('#'):
+                rows.append([float(x) for x in line.split()])
+    return rows
+
+ecg = load('postProcessing/eikonalECG.dat')
+ref = load('postProcessing/eikonalECG_checkGradVm.dat')
+tolerance = 0.1
+worst = 0.0
+for e in range(1, len(ecg[0])):
+    peak = max(abs(r[e]) for r in ref)
+    diff = max(abs(a[e] - b[e]) for a, b in zip(ecg, ref) if a[0] >= 0.03)
+    worst = max(worst, diff/peak)
+    print('electrode %d: max difference in repolarisation %.4f of peak'
+          % (e, diff/peak))
+print('End')
+sys.exit(0 if worst <= tolerance else 1)
+PY

@@ -40,8 +40,18 @@ eikonal                                slab  eikonal                            
 monodomainPurkinjeReactionDiffusion    slab  monodomainPurkinjeReactionDiffusion    pass
 monodomainPurkinjeReactionDiffusionBidirectional slab monodomainPurkinjeReactionDiffusionBidirectional pass
 monodomainPurkinjeRestitutionEikonal   slab  monodomainPurkinjeRestitutionEikonal   pass
+# Bidomain myocardium excited through the junctions only (no tissue stimulus)
+bidomainPurkinjeReactionDiffusion      slab  bidomainPurkinjeReactionDiffusion      pass
 eikonalPurkinje                        slab  eikonalPurkinje                        pass
+eikonalSeedBoxList                     slab  eikonal                                pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3)~(10e-3~10e-3~0.1e-3))
+eikonalSeedBoxListSingle               slab  eikonal                                pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
+eikonalPurkinjeCutBranch               slab  eikonalPurkinjeCutBranch               pass
+eikonalPurkinjeCutBranchIgnored        slab  eikonalPurkinjeCutBranch               pass  eikonalSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/useEdgeConductance=false
 eikonalPurkinjePvjDelay                slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
+# The seed box is optional: the junctions alone seed the myocardium;
+# with neither a box nor a network the solve must stop
+eikonalPurkinjeNoSeedBox               slab  eikonalPurkinje                        pass  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!
+eikonalNoSeed                          slab  eikonal                                fail:no~activation~seed  eikonalSolverCoeffs/stimulusLocationMin!  eikonalSolverCoeffs/stimulusLocationMax!
 # An ionic state of the graph model exported next to the coupling outputs;
 # in parallel each processor holds only its share of the graph nodes (#48)
 monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion    pass  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/outputVariables={export~(IcouplingSource~Vm~v);}
@@ -50,12 +60,14 @@ monodomainPurkinjeIonicExport          slab  monodomainPurkinjeReactionDiffusion
 monodomainPseudoECG                    slab  monodomainPseudoECG                    pass
 bidomainPseudoECG                      slab  bidomainPseudoECG                      pass
 eikonalECG                             slab  eikonalECG                             pass
+eikonalECGGradientCheck                slab  eikonalECG                             pass  post=eikonalECGGradientCheck
 eikonalECGRegionStates                 slab  eikonalECGRegionStates                 pass
-twoEcgDomains                          slab  monodomainPseudoECG                    pass  ecgDomains/ECG2={ecgSolver~pseudoECG;sigmaExtracellular~0.2;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 
 # ---- Bath (extracellular potential domain) and torso ECG ------------------
 bathBidomain                           bath  bathBidomain                           pass
 bathTorsoECG                           bath  bathTorsoECG                           pass
+# Bath composition with a Purkinje network as the only activation
+bathBidomainPurkinjeReactionDiffusion  bath  bathBidomainPurkinjeReactionDiffusion  pass
 
 # ---- Torso ECG from lead fields (torsoCoupling leadField; the variants'
 # Allprepare runs buildLeadFields) -------------------------------------------
@@ -97,6 +109,8 @@ bathTorsoECGParallel                   bath  bathTorsoECG                       
 bidomainLeadFieldECGParallel           bath  bidomainLeadFieldECG                   pass  np=2  skip=v2312
 # The heart wall x = 0 of the box is the processor boundary
 leadFieldBoxParallel                   leadFieldBox  leadFieldBox               pass  np=2  skip=v2312
+bidomainPurkinjeReactionDiffusionParallel slab bidomainPurkinjeReactionDiffusion pass np=2
+bathBidomainPurkinjeReactionDiffusionParallel bath bathBidomainPurkinjeReactionDiffusion pass np=2
 # The decomposition splits the periodic faces into processorCyclic faces
 monodomainPeriodicFieldConductivityParallel slab monodomainPeriodicFieldConductivity pass np=2
 
@@ -146,6 +160,8 @@ eikonalPvjCouplerOnMonodomain          slab  monodomainPurkinjeRestitutionEikona
 unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 ecgDomains/ECG/ecgSolver=bogusECG
 # A complete eikonalECG entry (sampling is required) on a monodomain heart
 eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:requires~myocardiumSolver~eikonalSolver  ecgDomains/ECG/ecgSolver=eikonalECG  ecgDomains/ECG/sampling={start~0;end~0.01;deltaT~1e-3;}
+eikonalSeedBoxListSizeMismatch         slab  eikonal                                fail:same~size  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
+twoPseudoECGDomains                    slab  monodomainPseudoECG         fail:both~select~ecgSolver~pseudoECG ecgDomains/ECG2={ecgSolver~pseudoECG;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!
 # The torso: torsoECG without one; the torso without torsoCoupling and
 # torsoCoupling without the torso; the bath with a monodomain heart; a key of

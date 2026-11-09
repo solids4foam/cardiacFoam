@@ -30,6 +30,7 @@ License
 #include "facePeclet.H"
 #include "sealedWallPolicy.H"
 #include "regionSplit.H"
+#include "stimulusIO.H"
 
 #include <cmath>
 #include <limits>
@@ -515,24 +516,45 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
 {
     sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
-    const boundBox bb
+    // Optional seed boxes: one (stimulusLocationMin/Max) or several
+    // (stimulusLocationMinList/MaxList), read as for the external stimulus.
+    // Without a box the activation comes from other seeds, e.g. the
+    // junctions of a coupled conduction network; advance() stops if a step
+    // has no seed at all.
+    List<boundBox> stimulusBoxes;
+    if
     (
-        point(electroProperties.lookup("stimulusLocationMin")),
-        point(electroProperties.lookup("stimulusLocationMax"))
-    );
-
-    labelHashSet stimCellSet;
-    const fvMesh& myocardiumMesh = mesh();
-
-    forAll(myocardiumMesh.C(), cellI)
+        electroProperties.found("stimulusLocationMin")
+     || electroProperties.found("stimulusLocationMax")
+     || electroProperties.found("stimulusLocationMinList")
+     || electroProperties.found("stimulusLocationMaxList")
+    )
     {
-        if (bb.contains(myocardiumMesh.C()[cellI]))
-        {
-            stimCellSet.insert(cellI);
-        }
+        stimulusIO::readStimulusBoxes(electroProperties, stimulusBoxes);
     }
 
-    stimulusCellIDs_ = stimCellSet.toc();
+    labelHashSet stimCellSet;
+    const vectorField& centres = mesh().C();
+
+    forAll(stimulusBoxes, boxI)
+    {
+        label nBoxCells = 0;
+
+        forAll(centres, cellI)
+        {
+            if (stimulusBoxes[boxI].contains(centres[cellI]))
+            {
+                stimCellSet.insert(cellI);
+                ++nBoxCells;
+            }
+        }
+
+        Info<< "Eikonal stimulus box " << boxI << " " << stimulusBoxes[boxI]
+            << ": " << returnReduce(nBoxCells, sumOp<label>()) << " cells"
+            << endl;
+    }
+
+    stimulusCellIDs_ = stimCellSet.sortedToc();
 
 
     verificationModelPtr_ =
@@ -689,6 +711,16 @@ void eikonalMyocardiumDomain::advance
         constrainedCells,
         constrainedValues
     );
+
+    if (returnReduce(constrainedCells.size(), sumOp<label>()) == 0)
+    {
+        FatalErrorInFunction
+            << "The eikonal myocardium has no activation seed: give a seed "
+            << "box (stimulusLocationMin/Max or stimulusLocationMinList/"
+            << "MaxList) or couple a conduction network whose junctions "
+            << "seed the myocardium."
+            << exit(FatalError);
+    }
 
     warnUnconstrainedRegions(activationTime_, constrainedCells);
 

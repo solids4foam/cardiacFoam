@@ -58,53 +58,6 @@ const dictionary* externalStimulusDict(const dictionary& dict)
     return &dict.subDict("externalStimulus");
 }
 
-void readMonodomainStimulusBoxes
-(
-    const dictionary& stimDict,
-    List<boundBox>& boxes
-)
-{
-    const bool hasMinList = stimDict.found("stimulusLocationMinList");
-    const bool hasMaxList = stimDict.found("stimulusLocationMaxList");
-
-    if (hasMinList != hasMaxList)
-    {
-        FatalErrorInFunction
-            << "Both stimulusLocationMinList and stimulusLocationMaxList "
-            << "must be provided together."
-            << abort(FatalError);
-    }
-
-    if (hasMinList)
-    {
-        const List<point> mins(stimDict.lookup("stimulusLocationMinList"));
-        const List<point> maxs(stimDict.lookup("stimulusLocationMaxList"));
-
-        if (mins.size() != maxs.size())
-        {
-            FatalErrorInFunction
-                << "stimulusLocationMinList and stimulusLocationMaxList must "
-                << "have the same size."
-                << abort(FatalError);
-        }
-
-        boxes.setSize(mins.size());
-        forAll(mins, i)
-        {
-            boxes[i] = boundBox(mins[i], maxs[i]);
-        }
-    }
-    else
-    {
-        boxes.setSize(1);
-        boxes[0] = boundBox
-        (
-            point(stimDict.lookup("stimulusLocationMin")),
-            point(stimDict.lookup("stimulusLocationMax"))
-        );
-    }
-}
-
 void checkSize
 (
     const List<scalar>& values,
@@ -301,6 +254,53 @@ bool stimulusIO::hasActiveStimulus(const StimulusProtocol& stim)
     return hasS1 || hasS2;
 }
 
+void stimulusIO::readStimulusBoxes
+(
+    const dictionary& stimDict,
+    List<boundBox>& boxes
+)
+{
+    const bool hasMinList = stimDict.found("stimulusLocationMinList");
+    const bool hasMaxList = stimDict.found("stimulusLocationMaxList");
+
+    if (hasMinList != hasMaxList)
+    {
+        FatalErrorInFunction
+            << "Both stimulusLocationMinList and stimulusLocationMaxList "
+            << "must be provided together."
+            << abort(FatalError);
+    }
+
+    if (hasMinList)
+    {
+        const List<point> mins(stimDict.lookup("stimulusLocationMinList"));
+        const List<point> maxs(stimDict.lookup("stimulusLocationMaxList"));
+
+        if (mins.size() != maxs.size())
+        {
+            FatalErrorInFunction
+                << "stimulusLocationMinList and stimulusLocationMaxList must "
+                << "have the same size."
+                << abort(FatalError);
+        }
+
+        boxes.setSize(mins.size());
+        forAll(mins, i)
+        {
+            boxes[i] = boundBox(mins[i], maxs[i]);
+        }
+    }
+    else
+    {
+        boxes.setSize(1);
+        boxes[0] = boundBox
+        (
+            point(stimDict.lookup("stimulusLocationMin")),
+            point(stimDict.lookup("stimulusLocationMax"))
+        );
+    }
+}
+
 ExternalStimulusProtocol stimulusIO::loadExternalStimulusProtocol
 (
     const dictionary& dict
@@ -315,7 +315,7 @@ ExternalStimulusProtocol stimulusIO::loadExternalStimulusProtocol
     }
 
     const dictionary& stimDict = *stimDictPtr;
-    readMonodomainStimulusBoxes(stimDict, stim.boxes);
+    readStimulusBoxes(stimDict, stim.boxes);
 
     stim.startTimes.setSize(stim.boxes.size());
     if (stimDict.found("stimulusStartTimeList"))
