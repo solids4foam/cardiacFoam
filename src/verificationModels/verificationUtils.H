@@ -583,8 +583,10 @@ inline void writeNormRow
 }
 
 
-//- The error table the monodomain, bidomain, graph and electromechanics
-//  verifiers print and write. A row label is the exact text before the first
+//- The error table of the FDA monodomain, anisotropic monodomain, FDA bidomain,
+//  FDA bath-bidomain (terminal only), graph and electromechanics verifiers.
+//  The shell, eikonal and ECG verifiers write other layouts by hand. A row
+//  label is the exact text before the first
 //  norm, padded by the caller to the width of its table ("Vm     "), so each
 //  verifier keeps the layout that its study summarisers parse. splitRows are
 //  the bulk/boundary rows, written by writeNormRow after the labelled rows.
