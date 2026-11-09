@@ -50,10 +50,8 @@ The seed 2 tetrahedra at `N = 12` stop in `buildLeadFields`: the fixed point
 of the first electrode, `surface1`, diverges. Its `phiE` initial residual
 falls to `2e-5` by pass 100, then grows by a factor of about 2.7 per 100
 passes and levels near `5e-3`, and the run stops at `maxPasses 1000` with a
-relative change of `1e-2`. More passes do not converge it. The same mesh
-needed 496 to 620 passes with the bidomain wall conductivity `Ge`; with the
-lead-field wall `Gi + Ge` the fixed point on this mesh is no longer a
-contraction. The levels and seeds that ran converge as before.
+relative change of `1e-2`. More passes do not converge it: on this mesh the
+fixed point is not a contraction.
 
 All levels and seeds run in parallel on 6 ranks (`parallel`, the case's
 `decomposeParDict`).
