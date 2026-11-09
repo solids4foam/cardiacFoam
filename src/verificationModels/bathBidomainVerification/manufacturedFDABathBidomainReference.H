@@ -20,8 +20,8 @@ Class
 
 Description
     Manufactured FDA bath bidomain reference solution: a heart slab
-    0 <= x <= 1 between bath slabs, grounded on x = -1, with the bath
-    current alpha leaving through x = 2.
+    0 <= x <= 1 between bath slabs, grounded on x = -1, with the current
+    alpha into x = 2.
 
     The formulas between "// BEGIN GENERATED <name>" and
     "// END GENERATED <name>" are written from the sympy definitions in

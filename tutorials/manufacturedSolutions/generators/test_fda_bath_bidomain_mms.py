@@ -202,3 +202,18 @@ def test_parity_bath(d):
 
     compare("bathBidomain", d, numpy_fn, p, rtol=1e-12,
             k="%.17g" % par[0], alpha="%.17g" % par[1], se="%.17g" % par[2])
+
+
+METRICS = os.path.join(fbb.HERE, "..", "..", "..", "applications", "utilities",
+                       "bathBidomainInterfaceMetrics", "bathBidomainInterfaceMetrics.C")
+
+
+@pytest.mark.skipif(not os.path.exists(METRICS), reason="cardiacFoam-only")
+def test_interface_metrics_uses_the_generated_potential():
+    """bathBidomainInterfaceMetrics evaluates the exact phi_e through the
+    generated header, not a copy of its branches."""
+    text = open(METRICS).read()
+    assert '#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"' in text
+    assert "manufacturedFDABathPhiEAt(" in text
+    assert not re.search(r"\bscalar\s+phiEExact\s*\(", text), "hand-written phiEExact"
+    assert "sqrt1t" not in text and "0.5*sigmaE" not in text

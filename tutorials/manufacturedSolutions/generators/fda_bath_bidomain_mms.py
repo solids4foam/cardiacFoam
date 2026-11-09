@@ -13,8 +13,8 @@ sigma_b = s_e/2 (t in units of 1 s, x in units of 1 m):
           =  k S + alpha/s_e + alpha (x - 1)/sigma_b + C        x > 1
     C = k S + alpha/sigma_b,  phi_i = V_m + phi_e,
 
-so that phi_e = 0 on the grounded face x = -1 and the bath carries the
-current alpha out through x = 2.  The ionic model bathBidomainFDAManufactured
+so that phi_e = 0 on the grounded face x = -1 and the current alpha enters
+the bath through x = 2 (sigma_b phi_e' = alpha there).  The ionic model bathBidomainFDAManufactured
 (hand-written) has the rates and the current of the FDA monodomain model with
 beta = -1.1 (1 - k), C_m = 2 and chi = 3; k = 1/sqrt(2) and alpha = 1/100 are
 the tutorial's.
