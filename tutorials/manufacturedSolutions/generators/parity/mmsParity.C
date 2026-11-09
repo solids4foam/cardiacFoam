@@ -48,6 +48,7 @@ Usage
     bathBidomain      1,2,3    V u1 u2 u3 phiE phiI VmAt phiEAt phiIAt
                                gradVm_x gradPhiEHeart_x gradPhiIHeart_x
                                gradPhiEBath_x
+    radial            1        slope scaledTime (s = x; y z t ignored)
 
     keys
         beta=<v>                    Beta of the FDA ionic closure
@@ -61,6 +62,7 @@ Usage
         xLeft= xRight= sigmaOuterLeft= sigmaInnerLeft= sigmaHeart=
         sigmaInnerRight= sigmaOuterRight=   leadFieldLayered layers (required)
         k= alpha= se=               bathBidomain (required)
+        Pe= a=                      radial: Peclet number and ball ratio (required)
 
     Case parameters are those of the tutorials under
     tutorials/manufacturedSolutions; each constant cites its source.
@@ -74,6 +76,7 @@ Usage
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
+#include "eikonalVerification/manufacturedRadialEikonalReference.H"
 #include "bidomainVerification/manufacturedFDABidomainReference.H"
 #include "ecgVerification/manufacturedLeadFieldECGReference.H"
 #include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
@@ -435,6 +438,19 @@ void leadFieldLayeredRow(const scalar x, const scalar t, const Options& opt)
     });
 }
 
+void radialRow(const scalar s, const Options& opt)
+{
+    // the quadrature of the header against the closed form with Ei
+    const scalar Pe = opt.required("Pe");
+    const scalar a = opt.required("a");
+    emit
+    ({
+        radialEikonalMMS::slope(s, Pe, a),
+        radialEikonalMMS::scaledTime(s, Pe, a)
+    });
+}
+
+
 void bathBidomainRow
 (
     const scalar x, const scalar y, const scalar z, const scalar t,
@@ -499,7 +515,8 @@ int main(int argc, char* argv[])
         fail(name + " exists for d = 3 only");
     }
 
-    if ((name == "leadFieldSlab" || name == "leadFieldLayered") && d != 1)
+    if ((name == "leadFieldSlab" || name == "leadFieldLayered" || name == "radial")
+     && d != 1)
     {
         fail(name + " exists for d = 1 only");
     }
@@ -540,6 +557,7 @@ int main(int argc, char* argv[])
         else if (name == "leadFieldSlab") leadFieldSlabRow(x, t, opt);
         else if (name == "leadFieldLayered") leadFieldLayeredRow(x, t, opt);
         else if (name == "bathBidomain") bathBidomainRow(x, y, z, t, d, opt);
+        else if (name == "radial") radialRow(x, opt);
         else fail("unknown case '" + name + "'");
     }
 

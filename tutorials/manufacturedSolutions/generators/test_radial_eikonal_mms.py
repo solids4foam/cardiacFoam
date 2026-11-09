@@ -70,3 +70,24 @@ def test_seed_offset_slope_solves_unbounded_radial_equation():
     assert abs(offset(rhoC)) < 1e-15
     eps = 1e-7
     assert np.max(np.abs((offset(rho + eps) - offset(rho - eps))/(2*eps) - s)) < 1e-7
+
+
+@pytest.mark.parametrize("Pe,a", [(2.0, 0.05), (5.0, 0.02), (21.0, 0.25), (46.0, 0.25),
+                                  (94.0, 0.1), (94.0, 0.5)])
+def test_parity_radial(Pe, a):
+    """The quadrature of the C++ header equals the closed form with the
+    exponential integral to 1e-9 (P5 states 1e-10 for its tested range)."""
+    try:
+        from parity.test_parity import compare, parity_available
+    except ImportError:
+        pytest.skip("parity harness absent (cardiacFoam-only)")
+    ok, why = parity_available()
+    if not ok:
+        pytest.skip(why)
+    s = np.linspace(1.01*a, a + 1.0, 30)
+    pts = np.column_stack([s, np.zeros_like(s), np.zeros_like(s), np.zeros_like(s)])
+
+    def numpy_fn(p):
+        return np.column_stack([rad.slope(p[:, 0], Pe, a), rad.scaled_time(p[:, 0], Pe, a)])
+
+    compare("radial", 1, numpy_fn, pts, rtol=1e-9, Pe=Pe, a=a)
