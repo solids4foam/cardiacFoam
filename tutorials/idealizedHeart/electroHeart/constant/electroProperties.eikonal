@@ -29,8 +29,7 @@ eikonalSolverCoeffs
     useGraphPrePopulation true;
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
 
-    stimulusLocationMin (1e6 1e6 1e6);
-    stimulusLocationMax (1e6 1e6 1e6);
+    // No seed box: the Purkinje junctions seed the myocardium
 
     ionicHeterogeneity
     {

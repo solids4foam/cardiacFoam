@@ -556,10 +556,22 @@ eikonalMyocardiumDomain::eikonalMyocardiumDomain
 {
     sealedWallPolicy::publish(activationTime_, sealedHeartBoundary_);
 
-    // One box (stimulusLocationMin/Max) or several
-    // (stimulusLocationMinList/MaxList), read as for the external stimulus
+    // Optional seed boxes: one (stimulusLocationMin/Max) or several
+    // (stimulusLocationMinList/MaxList), read as for the external stimulus.
+    // Without a box the activation comes from other seeds, e.g. the
+    // junctions of a coupled conduction network; advance() stops if a step
+    // has no seed at all.
     List<boundBox> stimulusBoxes;
-    stimulusIO::readStimulusBoxes(electroProperties, stimulusBoxes);
+    if
+    (
+        electroProperties.found("stimulusLocationMin")
+     || electroProperties.found("stimulusLocationMax")
+     || electroProperties.found("stimulusLocationMinList")
+     || electroProperties.found("stimulusLocationMaxList")
+    )
+    {
+        stimulusIO::readStimulusBoxes(electroProperties, stimulusBoxes);
+    }
 
     labelHashSet stimCellSet;
     const vectorField& centres = mesh().C();
@@ -739,6 +751,16 @@ void eikonalMyocardiumDomain::advance
         constrainedCells,
         constrainedValues
     );
+
+    if (returnReduce(constrainedCells.size(), sumOp<label>()) == 0)
+    {
+        FatalErrorInFunction
+            << "The eikonal myocardium has no activation seed: give a seed "
+            << "box (stimulusLocationMin/Max or stimulusLocationMinList/"
+            << "MaxList) or couple a conduction network whose junctions "
+            << "seed the myocardium."
+            << exit(FatalError);
+    }
 
     warnUnconstrainedRegions(activationTime_, constrainedCells);
 
