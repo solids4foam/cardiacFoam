@@ -43,6 +43,8 @@ Usage
     coupled           3        V1D_0 Vm3D_0 I_0 V1D_1 Vm3D_1 I_1
     bidomain          1,2,3    phiE phiI shift phiEAt phiIAt VmAt
                                gradVm(3) gradPhiE(3) gradPhiI(3)
+    leadFieldSlab     1        Vm phi
+    leadFieldLayered  1        R phi
 
     keys
         beta=<v>                    Beta of the FDA ionic closure
@@ -51,7 +53,10 @@ Usage
         c0=<v>                      eikonal speed constant
         template=singleEvent|sine   eikonalECG template
         duration=<v> rise=<v>       singleEvent template parameters
-        k=<v>                       bidomain: k of phi_e = -k V_m + c (required)
+        k=<v>                       bidomain, leadField*: k (required)
+        alpha=<v>                   leadFieldLayered: surface current (required)
+        xLeft= xRight= sigmaOuterLeft= sigmaInnerLeft= sigmaHeart=
+        sigmaInnerRight= sigmaOuterRight=   leadFieldLayered layers (required)
 
     Case parameters are those of the tutorials under
     tutorials/manufacturedSolutions; each constant cites its source.
@@ -66,6 +71,7 @@ Usage
 #include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
 #include "bidomainVerification/manufacturedFDABidomainReference.H"
+#include "ecgVerification/manufacturedLeadFieldECGReference.H"
 
 #include <cstdio>
 #include <cstdlib>
@@ -392,6 +398,38 @@ void bidomainRow
     });
 }
 
+void leadFieldSlabRow(const scalar x, const scalar t, const Options& opt)
+{
+    const point p(x, 0, 0);
+    emit
+    ({
+        manufacturedLeadFieldSlabVm(p, t),
+        manufacturedLeadFieldSlabPhi(p, t, opt.required("k"))
+    });
+}
+
+
+void leadFieldLayeredRow(const scalar x, const scalar t, const Options& opt)
+{
+    manufacturedLeadFieldLayers l;
+    l.xLeft = opt.required("xLeft");
+    l.xRight = opt.required("xRight");
+    l.sigmaOuterLeft = opt.required("sigmaOuterLeft");
+    l.sigmaInnerLeft = opt.required("sigmaInnerLeft");
+    l.sigmaInnerRight = opt.required("sigmaInnerRight");
+    l.sigmaOuterRight = opt.required("sigmaOuterRight");
+    l.sigmaHeart = opt.required("sigmaHeart");
+    const point p(x, 0, 0);
+    emit
+    ({
+        manufacturedLeadFieldLayeredResistance(x, l),
+        manufacturedLeadFieldLayeredPhi
+        (
+            p, t, opt.required("k"), opt.required("alpha"), l
+        )
+    });
+}
+
 } // End anonymous namespace
 
 
@@ -428,6 +466,11 @@ int main(int argc, char* argv[])
         fail(name + " exists for d = 3 only");
     }
 
+    if ((name == "leadFieldSlab" || name == "leadFieldLayered") && d != 1)
+    {
+        fail(name + " exists for d = 1 only");
+    }
+
     std::string line;
     while (std::getline(std::cin, line))
     {
@@ -461,6 +504,8 @@ int main(int argc, char* argv[])
         else if (name == "graph") graphRow(x, y, z, t, d);
         else if (name == "coupled") coupledRow(t);
         else if (name == "bidomain") bidomainRow(x, y, z, t, d, opt);
+        else if (name == "leadFieldSlab") leadFieldSlabRow(x, t, opt);
+        else if (name == "leadFieldLayered") leadFieldLayeredRow(x, t, opt);
         else fail("unknown case '" + name + "'");
     }
 

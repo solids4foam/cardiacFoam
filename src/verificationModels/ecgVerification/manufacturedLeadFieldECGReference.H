@@ -23,9 +23,8 @@ Description
         Vm  = sqrt(1+t) cos(pi x)                      (heart)
         phi = -k sqrt(1+t) cos(pi x) + C               (heart)
         phi = -k sqrt(1+t) + C   (x < 0),   k sqrt(1+t) + C   (x > 1)
-    with k = Gi_xx/(Gi_xx + Ge_xx). These are the FDA bath-slab fields
-    (manufacturedFDABathBidomainReference.H) with alpha = 0; the constant C
-    is fixed by the reference of the conductor.
+    with k = Gi_xx/(Gi_xx + Ge_xx) and C = k sqrt(1+t); the verifier's gauge
+    removes C.
 
     layered: the slab with each torso side split at x = xL < 0 and
     x = xR > 1 into two layers of isotropic conductivity, and the current
@@ -37,6 +36,12 @@ Description
     the torso: continuous, with current -alpha in every layer. Vm is the
     slab's.
 
+    The formulas between "// BEGIN GENERATED <name>" and
+    "// END GENERATED <name>" are written from the sympy definitions in
+    tutorials/manufacturedSolutions/generators/slab_leadfield_mms.py.
+    Regenerate them with --write and compare with --check; the rest of the
+    file is hand-written.
+
 Author
     Simao Nieto de Castro. All rights reserved.
 \*---------------------------------------------------------------------------*/
@@ -44,7 +49,7 @@ Author
 #ifndef manufacturedLeadFieldECGReference_H
 #define manufacturedLeadFieldECGReference_H
 
-#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
+#include "mathematicalConstants.H"
 #include "verificationUtils.H"
 #include "volFields.H"
 
@@ -54,12 +59,16 @@ namespace Foam
 //- Heart Vm of the slab at point p and time t
 inline scalar manufacturedLeadFieldSlabVm(const point& p, const scalar t)
 {
-    return Foam::sqrt(1.0 + t)*Foam::cos(constant::mathematical::pi*p.x());
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    // BEGIN GENERATED manufacturedLeadFieldSlabVm
+    return sqrt(t + 1)*cos(pi*x);
+    // END GENERATED manufacturedLeadFieldSlabVm
 }
 
 
-//- Potential of the slab at point p and time t, up to a constant. The FDA
-//  bath-slab extracellular conductivity enters only through alpha.
+//- Potential of the slab at point p and time t, up to a constant
 inline scalar manufacturedLeadFieldSlabPhi
 (
     const point& p,
@@ -67,9 +76,25 @@ inline scalar manufacturedLeadFieldSlabPhi
     const scalar k
 )
 {
-    const scalar alpha = 0.0;
-    const scalar se = 1.0;
-    return manufacturedFDABathPhiEAt(p.x(), t, k, alpha, se);
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    if (x <= 0)
+    {
+        // BEGIN GENERATED slabPhi_leftTorso
+        return 0;
+        // END GENERATED slabPhi_leftTorso
+    }
+    if (x <= 1)
+    {
+        // BEGIN GENERATED slabPhi_heart
+        return -k*sqrt(t + 1)*cos(pi*x) + k*sqrt(t + 1);
+        // END GENERATED slabPhi_heart
+    }
+
+    // BEGIN GENERATED slabPhi_rightTorso
+    return 2*k*sqrt(t + 1);
+    // END GENERATED slabPhi_rightTorso
 }
 
 
@@ -144,25 +169,35 @@ inline scalar manufacturedLeadFieldLayeredResistance
 {
     if (x <= l.xLeft)
     {
-        return l.xLeft/l.sigmaInnerLeft + (x - l.xLeft)/l.sigmaOuterLeft;
+        // BEGIN GENERATED resistance_outerLeft
+        return (-l.xLeft + x)/l.sigmaOuterLeft + l.xLeft/l.sigmaInnerLeft;
+        // END GENERATED resistance_outerLeft
     }
     if (x <= 0)
     {
+        // BEGIN GENERATED resistance_innerLeft
         return x/l.sigmaInnerLeft;
+        // END GENERATED resistance_innerLeft
     }
     if (x <= 1)
     {
+        // BEGIN GENERATED resistance_heart
         return x/l.sigmaHeart;
+        // END GENERATED resistance_heart
     }
-
-    const scalar heart = 1.0/l.sigmaHeart;
     if (x <= l.xRight)
     {
-        return heart + (x - 1.0)/l.sigmaInnerRight;
+        // BEGIN GENERATED resistance_innerRight
+        return (x - 1)/l.sigmaInnerRight + (1.0/(l.sigmaHeart));
+        // END GENERATED resistance_innerRight
     }
+
+    // BEGIN GENERATED resistance_outerRight
     return
-        heart + (l.xRight - 1.0)/l.sigmaInnerRight
-      + (x - l.xRight)/l.sigmaOuterRight;
+        (-l.xRight + x)/l.sigmaOuterRight
+      + (l.xRight - 1)/l.sigmaInnerRight
+      + (1.0/(l.sigmaHeart));
+    // END GENERATED resistance_outerRight
 }
 
 
@@ -176,9 +211,12 @@ inline scalar manufacturedLeadFieldLayeredPhi
     const manufacturedLeadFieldLayers& l
 )
 {
-    return
-        manufacturedLeadFieldSlabPhi(p, t, k)
-      + alpha*manufacturedLeadFieldLayeredResistance(p.x(), l);
+    const scalar phiSlab = manufacturedLeadFieldSlabPhi(p, t, k);
+    const scalar R = manufacturedLeadFieldLayeredResistance(p.x(), l);
+
+    // BEGIN GENERATED manufacturedLeadFieldLayeredPhi
+    return R*alpha + phiSlab;
+    // END GENERATED manufacturedLeadFieldLayeredPhi
 }
 
 } // End namespace Foam

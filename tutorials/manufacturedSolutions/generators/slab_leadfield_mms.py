@@ -26,15 +26,14 @@ left torso is 0 there and 2 k S in the right torso; with alpha = 0 the
 layered potential equals the slab's; k equals 1/sqrt(2) to K_RTOL for both
 conductivity pairs of the tutorial; the printed constants round-trip.
 
-The cardiacFoam functions of these solutions (manufacturedLeadFieldECGReference.H
-and manufacturedFDABathPhiEAt of manufacturedFDABathBidomainReference.H) carry
-no generated regions, so this generator has no --write or --check;
-test_slab_leadfield_mms.py compares the emitted NumPy module with
-docs/leadField/leadfield_reference.py, which follows those headers branch by
-branch.
+--write PATH rewrites, and --check PATH compares, the generated regions of
+manufacturedLeadFieldECGReference.H: V_m, the three branches of phi*_slab,
+the five branches of R and phi*_layered.
 
     python slab_leadfield_mms.py --emit
     python slab_leadfield_mms.py --self-check
+    python slab_leadfield_mms.py --write ../../../src/verificationModels/ecgVerification/manufacturedLeadFieldECGReference.H
+    python slab_leadfield_mms.py --check ../../../src/verificationModels/ecgVerification/manufacturedLeadFieldECGReference.H
 """
 
 import functools
@@ -115,13 +114,18 @@ def _piecewise(branches):
     return sp.Piecewise(*[(e, True if b is None else x <= b) for e, b in branches])
 
 
+def layered_of(phi_slab, R):
+    """phi*_layered = phi*_slab + alpha R."""
+    return phi_slab + alpha*R
+
+
 @functools.lru_cache(maxsize=None)
 def fields():
     """{Vm, phiSlab, resistance, phiLayered} as sympy expressions."""
     phi_slab = _piecewise(slab_branches())
     R = _piecewise(resistance_branches())
     return {"Vm": vm(), "phiSlab": phi_slab, "resistance": R,
-            "phiLayered": phi_slab + alpha*R}
+            "phiLayered": layered_of(phi_slab, R)}
 
 
 def case_layers():
@@ -302,8 +306,44 @@ def outputs_match(root=HERE):
     return True
 
 
+# -------------------------------------------------------------------- C++ ----
+
+SLAB_REGIONS = ("slabPhi_leftTorso", "slabPhi_heart", "slabPhi_rightTorso")
+RESISTANCE_REGIONS = ("resistance_outerLeft", "resistance_innerLeft", "resistance_heart",
+                      "resistance_innerRight", "resistance_outerRight")
+
+
+def leadfield_header_regions(text):
+    """{region name: C++ lines} of manufacturedLeadFieldECGReference.H; the
+    layer parameters print as members of `l`, the branches in the order of
+    slab_branches() and resistance_branches()."""
+    ind = functools.partial(codegen.region_indent, text)
+    members = {L[n]: sp.Symbol("l." + n, real=True) for n in LAYER_NAMES}
+    out = {"manufacturedLeadFieldSlabVm": codegen.statement(
+        "return", vm(), ind("manufacturedLeadFieldSlabVm"))}
+    for name, (expr, _) in zip(SLAB_REGIONS, slab_branches()):
+        out[name] = codegen.statement("return", expr, ind(name))
+    for name, (expr, _) in zip(RESISTANCE_REGIONS, resistance_branches()):
+        out[name] = codegen.statement("return", expr.subs(members), ind(name))
+    phis, R = sp.Symbol("phiSlab", real=True), sp.Symbol("R", real=True)
+    out["manufacturedLeadFieldLayeredPhi"] = codegen.statement(
+        "return", layered_of(phis, R), ind("manufacturedLeadFieldLayeredPhi"))
+    return out
+
+
+HEADER_PATH = ("../../../src/verificationModels/ecgVerification/"
+               "manufacturedLeadFieldECGReference.H")
+HEADER_PATHS = {"manufacturedLeadFieldECGReference.H": HEADER_PATH}
+HEADERS = {"manufacturedLeadFieldECGReference.H": leadfield_header_regions}
+
+
+def header_matches(path):
+    return codegen.regions_match(__file__, path, HEADERS[os.path.basename(path)])
+
+
 def main(argv=None):
-    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs, {})
+    return codegen.generator_main(argv, __doc__, __file__, run_self_checks, write_outputs,
+                                  HEADERS)
 
 
 if __name__ == "__main__":

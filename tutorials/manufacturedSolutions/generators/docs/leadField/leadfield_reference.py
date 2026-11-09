@@ -4,9 +4,9 @@
     python leadfield_reference.py --self-check
     python leadfield_reference.py --run-check RUN [--run-check RUN ...]
 
-The slab and layered potentials repeat manufacturedLeadFieldECGReference.H
-(and manufacturedFDABathPhiEAt of manufacturedFDABathBidomainReference.H with
-alpha = 0 and se = 1) term by term.  The sphericalShell potential is the
+The slab and layered potentials are those of generators/reference/
+slab_leadfield.py, emitted by slab_leadfield_mms.py, which also writes the
+formulas of manufacturedLeadFieldECGReference.H.  The sphericalShell potential is the
 transmission solution of generators/shell_mms.py, evaluated with the formula
 of the zone that contains the point, as the verifier does.
 
@@ -17,6 +17,7 @@ the verifier wrote with this module.
 """
 
 import argparse
+import importlib.util
 import math
 import os
 import re
@@ -69,39 +70,37 @@ BUILTIN_SHELL_ELECTRODES = {
 BUILTIN_SHELL_PIN = (1.3137, 0.0371, 0.0459)
 
 
+def _load_slab():
+    path = os.path.join(GENERATORS, "reference", "slab_leadfield.py")
+    spec = importlib.util.spec_from_file_location("slab_leadfield", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# The emitted NumPy module of slab_leadfield_mms.py
+SLAB = _load_slab()
+_LAYER_ARGS = lambda layers: [layers[n] for n in SLAB.PARAMS["LAYER_NAMES"]]  # noqa: E731
+
+
 def slab_vm(x, t):
     """Heart Vm = sqrt(1+t) cos(pi x)."""
-    return np.sqrt(1.0 + t)*np.cos(math.pi*np.asarray(x, float))
+    return SLAB.Vm(np.asarray(x, float), t)
 
 
 def slab_phi_raw(x, t, k=K):
-    """manufacturedFDABathPhiEAt(x, t, k, 0, 1): the slab potential up to the
-    gauge, with the constant C = k sqrt(1+t) of the FDA bath slab."""
-    x = np.asarray(x, float)
-    s = math.sqrt(1.0 + t)
-    c = k*s
-    return np.where(x <= 0.0, -k*s + c,
-                    np.where(x <= 1.0, -k*s*np.cos(math.pi*x) + c,
-                             -k*s*math.cos(math.pi) + c))
+    """The slab potential before the gauge (0 in the left torso)."""
+    return SLAB.phi_slab(np.asarray(x, float), t, k)
 
 
 def layered_resistance(x, layers=LAYERS):
-    """R(x) = integral from 0 to x of dx'/sigma(x'), branch by branch as
-    manufacturedLeadFieldLayeredResistance."""
-    x = np.asarray(x, float)
-    xl, xr = layers["xLeft"], layers["xRight"]
-    heart = 1.0/layers["sigmaHeart"]
-    return np.select(
-        [x <= xl, x <= 0.0, x <= 1.0, x <= xr],
-        [xl/layers["sigmaInnerLeft"] + (x - xl)/layers["sigmaOuterLeft"],
-         x/layers["sigmaInnerLeft"],
-         x/layers["sigmaHeart"],
-         heart + (x - 1.0)/layers["sigmaInnerRight"]],
-        heart + (xr - 1.0)/layers["sigmaInnerRight"] + (x - xr)/layers["sigmaOuterRight"])
+    """R(x) = integral from 0 to x of dx'/sigma(x')."""
+    return SLAB.resistance(np.asarray(x, float), *_LAYER_ARGS(layers))
 
 
 def layered_phi_raw(x, t, k=K, alpha=ALPHA, layers=LAYERS):
-    return slab_phi_raw(x, t, k) + alpha*layered_resistance(x, layers)
+    """The layered potential before the gauge."""
+    return SLAB.phi_layered(np.asarray(x, float), t, k, alpha, *_LAYER_ARGS(layers))
 
 
 def gauged(raw, x, x_ref, t, value=0.0, **kw):

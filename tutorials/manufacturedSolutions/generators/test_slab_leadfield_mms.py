@@ -65,25 +65,92 @@ def test_emitted_numpy_matches_sympy():
         np.testing.assert_allclose(got, want, rtol=1e-13, atol=1e-15)
 
 
-def test_numpy_matches_the_cxx_transcription():
-    """reference/slab_leadfield.py against docs/leadField/leadfield_reference.py,
-    which follows manufacturedLeadFieldECGReference.H branch by branch."""
-    ref = _reference()
+# ---------------------------------------------------- C++ header regions ----
+
+@pytest.mark.parametrize("name", sorted(slm.HEADER_PATHS))
+def test_header_up_to_date(name):
+    assert slm.header_matches(slm.HEADER_PATHS[name])
+
+
+@pytest.mark.parametrize("name", sorted(slm.HEADER_PATHS))
+def test_header_check_cli(name):
+    assert slm.main(["--check", slm.HEADER_PATHS[name]]) == 0
+
+
+def test_header_write_touches_only_regions(tmp_path):
+    import mms_codegen as codegen
+    for name, rel in slm.HEADER_PATHS.items():
+        text = open(codegen.resolve(slm.__file__, rel)).read()
+        stale = codegen.splice_regions(text, {n: ["// stale"] for n in slm.HEADERS[name](text)})
+        assert stale != text
+        dst = tmp_path/name
+        dst.write_text(stale)
+        assert slm.main(["--check", str(dst)]) == 1
+        assert slm.main(["--write", str(dst)]) == 0
+        assert dst.read_text() == text
+
+
+def test_header_without_regions_is_refused(tmp_path):
+    for name in slm.HEADER_PATHS:
+        dst = tmp_path/name
+        dst.write_text("namespace Foam {}\n")
+        assert slm.main(["--check", str(dst)]) == 1
+        assert slm.main(["--write", str(dst)]) == 1
+        assert dst.read_text() == "namespace Foam {}\n"
+
+
+def test_docs_reference_uses_the_generated_module():
+    """docs/leadField/leadfield_reference.py takes the slab and layered
+    potentials from reference/slab_leadfield.py, not from a transcription."""
     lf = _load(DOCS_REFERENCE, "leadfield_reference")
-    assert abs(ref.PARAMS["K"] - lf.K) < 1e-15
-    assert ref.PARAMS["ALPHA"] == lf.ALPHA
+    ref = _reference()
+    assert os.path.samefile(lf.SLAB.__file__, os.path.join(HERE, "reference", "slab_leadfield.py"))
+    xs = np.concatenate([np.linspace(-1.0, 2.0, 31), [-0.5, 0.0, 1.0, 1.5]])
+    largs = [lf.LAYERS[n] for n in ref.PARAMS["LAYER_NAMES"]]
+    for tt in (0.0, 0.05):
+        assert np.array_equal(lf.slab_phi_raw(xs, tt), ref.phi_slab(xs, tt, lf.K))
+        assert np.array_equal(lf.layered_phi_raw(xs, tt),
+                              ref.phi_layered(xs, tt, lf.K, lf.ALPHA, *largs))
+
+
+def _parity_points():
+    from parity.test_parity import sample_points
+    p = sample_points()
+    p[:, 0] = 3.0*p[:, 0] - 1.0
+    edges = np.array([[v, 0.31, 0.62, 0.04] for v in (-1.0, -0.5, 0.0, 1.0, 1.5, 2.0)])
+    return np.vstack([p, edges])
+
+
+def _parity_or_skip():
+    try:
+        from parity.test_parity import compare, parity_available
+    except ImportError:
+        pytest.skip("parity harness absent (cardiacFoam-only)")
+    ok, why = parity_available()
+    if not ok:
+        pytest.skip(why)
+    return compare
+
+
+def test_parity_slab():
+    compare = _parity_or_skip()
+    ref = _reference()
+    k = ref.PARAMS["K"]
+    compare("leadFieldSlab", 1,
+            lambda p: np.column_stack([ref.Vm(p[:, 0], p[:, 3]), ref.phi_slab(p[:, 0], p[:, 3], k)]),
+            _parity_points(), rtol=1e-12, k="%.17g" % k)
+
+
+def test_parity_layered():
+    compare = _parity_or_skip()
+    ref = _reference()
+    k, a = ref.PARAMS["K"], ref.PARAMS["ALPHA"]
     largs = [ref.PARAMS["LAYERS"][n] for n in ref.PARAMS["LAYER_NAMES"]]
-    for n in ref.PARAMS["LAYER_NAMES"]:
-        assert abs(ref.PARAMS["LAYERS"][n] - lf.LAYERS[n]) <= 1e-15*abs(lf.LAYERS[n]), n
-    xs = np.concatenate([np.linspace(-1.0, 2.0, 301), [-0.5, 0.0, 1.0, 1.5]])
-    for tt in (0.0, 0.013, 0.05):
-        np.testing.assert_allclose(ref.Vm(xs, tt), lf.slab_vm(xs, tt), rtol=0, atol=1e-15)
-        np.testing.assert_allclose(ref.phi_slab(xs, tt, lf.K), lf.slab_phi_raw(xs, tt),
-                                   rtol=0, atol=1e-15)
-        np.testing.assert_allclose(ref.resistance(xs, *largs), lf.layered_resistance(xs),
-                                   rtol=1e-15, atol=1e-14)
-        np.testing.assert_allclose(ref.phi_layered(xs, tt, lf.K, lf.ALPHA, *largs),
-                                   lf.layered_phi_raw(xs, tt), rtol=1e-15, atol=1e-15)
+    keys = {n: "%.17g" % ref.PARAMS["LAYERS"][n] for n in ref.PARAMS["LAYER_NAMES"]}
+    compare("leadFieldLayered", 1,
+            lambda p: np.column_stack([ref.resistance(p[:, 0], *largs),
+                                       ref.phi_layered(p[:, 0], p[:, 3], k, a, *largs)]),
+            _parity_points(), rtol=1e-12, k="%.17g" % k, alpha="%.17g" % a, **keys)
 
 
 def _case_value(path, pattern):
