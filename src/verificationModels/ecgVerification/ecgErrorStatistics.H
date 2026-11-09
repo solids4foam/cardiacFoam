@@ -25,9 +25,9 @@ Description
     Each is accumulated as L1 sum, L2 sum of squares and L-infinity over the
     samples, and written as the per-electrode table of the summary file.
 
-    Shared by manufacturedPseudoECGVerifier and manufacturedEikonalECGVerifier,
-    which took the same statistics by hand. The arithmetic and the layout of
-    the table are unchanged.
+    Used by manufacturedPseudoECGVerifier and manufacturedEikonalECGVerifier.
+    The lists are sized for the number of checks and electrodes the verifier
+    reports, and add() must be given that number of checks.
 
 Author
     Simao Nieto de Castro. All rights reserved.
