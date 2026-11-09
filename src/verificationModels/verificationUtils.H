@@ -559,6 +559,129 @@ inline void writeNormRow
 }
 
 
+//- The error table the monodomain, bidomain, graph and electromechanics
+//  verifiers print and write. A row label is the exact text before the first
+//  norm, padded by the caller to the width of its table ("Vm     "), so each
+//  verifier keeps the layout that its study summarisers parse. splitRows are
+//  the bulk/boundary rows, written by writeNormRow after the labelled rows.
+struct errorTable
+{
+    //- First line is titlePrefix, t and "):", for example
+    //  "Bidomain manufactured-solution error summary (t = " 1 "):". The time
+    //  is printed by the stream that writes the table, so the terminal and
+    //  the file each keep their own precision.
+    string titlePrefix;
+
+    //- Time in the title
+    scalar t = 0;
+
+    //- Column header line
+    string header = "Field     L1-error       L2-error       Linf-error";
+
+    //- Labelled rows: the pre-padded label and its L1, L2, Linf
+    List<Tuple2<string, Tuple2<Tuple2<scalar, scalar>, scalar>>> rows;
+
+    //- Rows written by writeNormRow
+    List<Tuple2<word, Tuple2<Tuple2<scalar, scalar>, scalar>>> splitRows;
+
+    void addRow
+    (
+        const string& paddedLabel,
+        const Tuple2<Tuple2<scalar, scalar>, scalar>& norms
+    )
+    {
+        rows.append
+        (
+            Tuple2<string, Tuple2<Tuple2<scalar, scalar>, scalar>>
+            (
+                paddedLabel,
+                norms
+            )
+        );
+    }
+};
+
+
+//- The labelled and split rows of an errorTable, in the layout of the table
+inline void writeErrorTableRows(Ostream& os, const errorTable& table)
+{
+    for (const auto& row : table.rows)
+    {
+        os  << row.first().c_str() << row.second().first().first() << "   "
+            << row.second().first().second() << "   "
+            << row.second().second() << nl;
+    }
+
+    for (const auto& row : table.splitRows)
+    {
+        writeNormRow(os, row.first(), row.second());
+    }
+}
+
+
+//- The table as printed to the terminal: a blank line, the title, an optional
+//  rule, the header, the rows, and an optional closing rule
+inline void writeErrorTableConsole
+(
+    Ostream& os,
+    const errorTable& table,
+    const bool rules = true
+)
+{
+    const char* const rule = "-------------------------------------------------";
+
+    os  << nl << table.titlePrefix.c_str() << table.t << "):" << nl;
+
+    if (rules)
+    {
+        os  << rule << nl;
+    }
+
+    os  << table.header.c_str() << nl;
+
+    writeErrorTableRows(os, table);
+
+    if (rules)
+    {
+        os  << rule;
+    }
+
+    os  << endl;
+}
+
+
+//- The table as written to the output file: the title, the header and the
+//  rows. The caller writes whatever follows (a rule, the run summary).
+inline void writeErrorTableFile(Ostream& os, const errorTable& table)
+{
+    os  << table.titlePrefix.c_str() << table.t << "):" << nl
+        << table.header.c_str() << nl;
+
+    writeErrorTableRows(os, table);
+}
+
+
+//- The grid and time lines of a structured-mesh verifier's run summary, from
+//  "Number of cells (N)" to "Final simulation time". The caller appends its
+//  own constants (k, Beta) after them.
+inline void writeStructuredRunLines
+(
+    Ostream& os,
+    const label nPerDirection,
+    const scalar dx,
+    const scalar dt,
+    const label nSteps,
+    const scalar t
+)
+{
+    os  << "Number of cells (N)   = " << nPerDirection << nl
+        << "Grid spacing (dx)     = " << dx << nl
+        << "Time step (dt)        = " << dt << nl
+        << "Number of steps       = " << nSteps << nl
+        << "Final simulation time = " << t << nl;
+}
+
+
 //- Rows for one field, computed on every rank: <name>_bulk and <name>_boundary
 //  from the field error; grad<Name>, grad<Name>_bulk and grad<Name>_boundary from
 //  the solved-field gradient error; the same three gradRecon rows from the

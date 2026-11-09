@@ -542,28 +542,19 @@ void manufacturedFDABathBidomainVerifier::postProcess
 
     if (Pstream::master())
     {
-        Info<< nl
-            << "Bath-bidomain manufactured-solution error summary (t = "
-            << t << "):" << nl
-            << "-------------------------------------------------" << nl
-            << "Field     L1-error       L2-error       Linf-error" << nl
-            << "Vm        " << VmNorms.first().first() << "   "
-            << VmNorms.first().second() << "   " << VmNorms.second() << nl
-            << "phiE      " << phiENorms.first().first() << "   "
-            << phiENorms.first().second() << "   " << phiENorms.second() << nl
-            << "phiI      " << phiINorms.first().first() << "   "
-            << phiINorms.first().second() << "   " << phiINorms.second() << nl
-            << "u1        " << u1Norms.first().first() << "   "
-            << u1Norms.first().second() << "   " << u1Norms.second() << nl
-            << "u2        " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << nl
-            << "u3        " << u3Norms.first().first() << "   "
-            << u3Norms.first().second() << "   " << u3Norms.second() << nl;
-        for (const auto& row : splitRows)
-        {
-            writeNormRow(Info, row.first(), row.second());
-        }
-        Info<< "-------------------------------------------------" << endl;
+        errorTable table;
+        table.titlePrefix =
+            "Bath-bidomain manufactured-solution error summary (t = ";
+        table.t = t;
+        table.addRow("Vm        ", VmNorms);
+        table.addRow("phiE      ", phiENorms);
+        table.addRow("phiI      ", phiINorms);
+        table.addRow("u1        ", u1Norms);
+        table.addRow("u2        ", u2Norms);
+        table.addRow("u3        ", u3Norms);
+        table.splitRows = splitRows;
+
+        writeErrorTableConsole(Info, table);
 
         OFstream os(outputFile);
         os  << "# Bath-bidomain manufactured solution error summary\n"

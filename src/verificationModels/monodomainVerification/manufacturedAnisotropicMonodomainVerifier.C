@@ -407,46 +407,23 @@ void manufacturedAnisotropicMonodomainVerifier::postProcess
 
     if (Pstream::master())
     {
-        Info << "\nRotated-anisotropy manufactured-solution error summary "
-             << "(t = " << t << "):" << nl
-             << "-------------------------------------------------" << nl
-             << "Field     L1-error       L2-error       Linf-error" << nl
-             << "Vm     " << VmNorms.first().first() << "   "
-             << VmNorms.first().second() << "   " << VmNorms.second() << nl
-             << "u1     " << u1Norms.first().first() << "   "
-             << u1Norms.first().second() << "   " << u1Norms.second() << nl
-             << "u2     " << u2Norms.first().first() << "   "
-             << u2Norms.first().second() << "   " << u2Norms.second() << nl;
-        for (const auto& row : splitRows)
-        {
-            writeNormRow(Info, row.first(), row.second());
-        }
-        Info << "-------------------------------------------------" << endl;
+        errorTable table;
+        table.titlePrefix =
+            "Rotated-anisotropy manufactured-solution error summary (t = ";
+        table.t = t;
+        table.addRow("Vm     ", VmNorms);
+        table.addRow("u1     ", u1Norms);
+        table.addRow("u2     ", u2Norms);
+        table.splitRows = splitRows;
+
+        writeErrorTableConsole(Info, table);
 
         OFstream out(outputFile);
-        out << "Rotated-anisotropy manufactured-solution error summary "
-            << "(t = " << t << "):\n";
-        out << "Field     L1-error       L2-error       Linf-error\n";
-        out << "Vm     " << VmNorms.first().first() << "   "
-            << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
-        out << "u1     " << u1Norms.first().first() << "   "
-            << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
-        out << "u2     " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
-        for (const auto& row : splitRows)
-        {
-            writeNormRow(out, row.first(), row.second());
-        }
+        writeErrorTableFile(out, table);
         out << "-------------------------------------------------\n\n";
-
         out << "Simulation summary:\n";
         out << "-------------------\n";
-        out << "Number of cells (N)   = " << nPerDirection << "\n";
-
-        out << "Grid spacing (dx)     = " << dx << "\n";
-        out << "Time step (dt)        = " << dt << "\n";
-        out << "Number of steps       = " << nSteps << "\n";
-        out << "Final simulation time = " << t << "\n";
+        writeStructuredRunLines(out, nPerDirection, dx, dt, nSteps, t);
         out << "Beta                  = " << beta_ << "\n";
         out << "-------------------\n\n";
     }

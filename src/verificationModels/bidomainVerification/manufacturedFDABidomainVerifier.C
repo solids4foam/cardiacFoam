@@ -363,65 +363,25 @@ void manufacturedFDABidomainVerifier::postProcess
 
     if (Pstream::master())
     {
-        Info<< nl
-            << "Bidomain manufactured-solution error summary (t = " << t
-            << "):" << nl
-            << "-------------------------------------------------" << nl
-            << "Field     L1-error       L2-error       Linf-error" << nl
-            << "Vm        " << VmNorms.first().first() << "   "
-            << VmNorms.first().second() << "   " << VmNorms.second() << nl
-            << "phiE      " << phiENorms.first().first() << "   "
-            << phiENorms.first().second() << "   " << phiENorms.second() << nl
-            << "phiE_gauge " << phiEGaugeNorms.first().first() << "   "
-            << phiEGaugeNorms.first().second() << "   "
-            << phiEGaugeNorms.second() << nl
-            << "phiI      " << phiINorms.first().first() << "   "
-            << phiINorms.first().second() << "   " << phiINorms.second() << nl
-            << "phiI_gauge " << phiIGaugeNorms.first().first() << "   "
-            << phiIGaugeNorms.first().second() << "   "
-            << phiIGaugeNorms.second() << nl
-            << "u1        " << u1Norms.first().first() << "   "
-            << u1Norms.first().second() << "   " << u1Norms.second() << nl
-            << "u2        " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << nl;
-        for (const auto& row : splitRows)
-        {
-            writeNormRow(Info, row.first(), row.second());
-        }
-        Info<< "-------------------------------------------------" << endl;
+        errorTable table;
+        table.titlePrefix = "Bidomain manufactured-solution error summary (t = ";
+        table.t = t;
+        table.addRow("Vm        ", VmNorms);
+        table.addRow("phiE      ", phiENorms);
+        table.addRow("phiE_gauge ", phiEGaugeNorms);
+        table.addRow("phiI      ", phiINorms);
+        table.addRow("phiI_gauge ", phiIGaugeNorms);
+        table.addRow("u1        ", u1Norms);
+        table.addRow("u2        ", u2Norms);
+        table.splitRows = splitRows;
+
+        writeErrorTableConsole(Info, table);
 
         OFstream out(outputFile);
-        out << "Bidomain manufactured-solution error summary (t = "
-            << t << "):\n";
-        out << "Field     L1-error       L2-error       Linf-error\n";
-        out << "Vm        " << VmNorms.first().first() << "   "
-            << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
-        out << "phiE      " << phiENorms.first().first() << "   "
-            << phiENorms.first().second() << "   " << phiENorms.second() << "\n";
-        out << "phiE_gauge " << phiEGaugeNorms.first().first() << "   "
-            << phiEGaugeNorms.first().second() << "   "
-            << phiEGaugeNorms.second() << "\n";
-        out << "phiI      " << phiINorms.first().first() << "   "
-            << phiINorms.first().second() << "   " << phiINorms.second() << "\n";
-        out << "phiI_gauge " << phiIGaugeNorms.first().first() << "   "
-            << phiIGaugeNorms.first().second() << "   "
-            << phiIGaugeNorms.second() << "\n";
-        out << "u1        " << u1Norms.first().first() << "   "
-            << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
-        out << "u2        " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
-        for (const auto& row : splitRows)
-        {
-            writeNormRow(out, row.first(), row.second());
-        }
+        writeErrorTableFile(out, table);
         out << "\n";
 
-        out << "Number of cells (N)   = " << nPerDirection << "\n";
-
-        out << "Grid spacing (dx)     = " << dx << "\n";
-        out << "Time step (dt)        = " << dt << "\n";
-        out << "Number of steps       = " << nSteps << "\n";
-        out << "Final simulation time = " << t << "\n";
+        writeStructuredRunLines(out, nPerDirection, dx, dt, nSteps, t);
         out << "k                     = " << k_ << "\n";
         out << "phiE reference point  = " << phiEReferencePoint_ << "\n";
         out << "phiE reference value  = " << phiEReferenceValue_ << "\n";
