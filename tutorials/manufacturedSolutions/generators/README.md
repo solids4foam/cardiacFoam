@@ -9,7 +9,9 @@ generator checks its construction before it writes anything and emits:
 - `reference/<case>.py`: a NumPy-only module with the exact fields, sources
   and, for the ECG and junction cases, the reference quadratures (all
   generators except `shell_mms.py`);
-- `latex/<case>_*.tex`: the formula fragments the documents print;
+- `latex/<case>_*.tex`: the formula fragments the documents print (all
+  generators except `fda_bath_bidomain_mms.py`, whose solution no document
+  prints);
 - for cardiacFoam only, the generated regions (or the whole) of a C++
   reference header under `src/verificationModels/`.
 
@@ -33,6 +35,7 @@ no solver output.
 | `eikonal_ecg_mms.py` | eikonal-driven ECG integrand, templates and Gauss-Legendre reference |
 | `shell_eikonal_mms.py` | activation time on the sealed shell, parametric in `c0`; critical-point report |
 | `fda_bidomain_mms.py` | FDA bidomain potentials on the unit cube, d = 1, 2, 3: the FDA monodomain field with phi_e a multiple of V_m |
+| `fda_bath_bidomain_mms.py` | FDA bath bidomain fields: a heart slab between grounded and current-carrying bath slabs, d = 1, 2, 3 for the ionic states |
 | `shell_bidomain_mms.py` | heart-only bidomain potentials on the sealed shell with unequal anisotropy ratios |
 | `slab_leadfield_mms.py` | lead-field ECG potentials of the insulated slab and the layered torso |
 | `shell_mms.py` | lead-field ECG transmission field of a heart shell between a bath ball and an outer bath (LaTeX fragments and C++ header, no NumPy module) |
@@ -43,7 +46,7 @@ no solver output.
 | `latex/` | emitted LaTeX fragments |
 | `docs/_common/` | document preamble, nomenclature, bibliography and figure style (`figstyle.py`) |
 | `docs/monodomain/`, `docs/eikonal/`, `docs/bidomain/`, `docs/leadField/` | Quarto entry file `<equation>_mms.qmd` (front matter), its includable text `_<equation>_body.qmd`, rendered PDF, figure script `figures.py` and `figures/` |
-| `docs/bidomain/bidomain_reference.py`, `docs/leadField/leadfield_reference.py` | checks that the tutorial dictionaries match the generators, and comparison of the exact fields with finished runs (`--run-check`); the lead-field module also transcribes the hand-written C++ slab functions |
+| `docs/bidomain/bidomain_reference.py`, `docs/leadField/leadfield_reference.py` | checks that the tutorial dictionaries match the generators, and comparison of the exact fields with finished runs (`--run-check`); the lead-field module takes the slab and layered potentials from `reference/slab_leadfield.py` |
 | `test_*.py` | generator tests; `test_release.py` holds the release checks |
 | `requirements.txt` | Python dependencies |
 | `parity/` | cardiacFoam-only: an OpenFOAM application comparing the C++ headers with the NumPy references |
@@ -58,8 +61,8 @@ cd tutorials/manufacturedSolutions/generators
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 for g in fda_monodomain rotated_monodomain shell_monodomain pseudo_ecg \
          graph_monodomain coupled_1d3d cartesian_eikonal eikonal_ecg \
-         shell_eikonal fda_bidomain shell_bidomain slab_leadfield shell \
-         template; do
+         shell_eikonal fda_bidomain fda_bath_bidomain shell_bidomain \
+         slab_leadfield shell template; do
     .venv/bin/python ${g}_mms.py --self-check && .venv/bin/python ${g}_mms.py --emit || break
 done
 git status --short reference latex     # empty: the emitted files are unchanged
@@ -111,6 +114,7 @@ python cartesian_eikonal_mms.py --emit
 python eikonal_ecg_mms.py --emit
 python shell_eikonal_mms.py --emit
 python fda_bidomain_mms.py --emit
+python fda_bath_bidomain_mms.py --emit
 python shell_bidomain_mms.py --emit
 python slab_leadfield_mms.py --emit
 python shell_mms.py --emit
@@ -220,7 +224,9 @@ taken against this directory; `--check` exits 1 on a difference.
 | `pseudo_ecg_mms.py` | both headers above (generated regions) |
 | `cartesian_eikonal_mms.py`, `eikonal_ecg_mms.py` | `eikonalVerification/manufacturedEikonalReference.H` (generated regions) |
 | `shell_monodomain_mms.py` | `monodomainVerification/manufacturedShellMonodomainReference.H` |
-| `fda_bidomain_mms.py`, `slab_leadfield_mms.py` | none: `bidomainVerification/manufacturedFDABidomainReference.H` and `ecgVerification/manufacturedLeadFieldECGReference.H` are hand-written without generated regions; `test_slab_leadfield_mms.py` compares the slab module with `docs/leadField/leadfield_reference.py`, a branch-by-branch transcription of the latter |
+| `fda_bidomain_mms.py` | `bidomainVerification/manufacturedFDABidomainReference.H` (generated regions) |
+| `fda_bath_bidomain_mms.py` | `bathBidomainVerification/manufacturedFDABathBidomainReference.H` (generated regions) |
+| `slab_leadfield_mms.py` | `ecgVerification/manufacturedLeadFieldECGReference.H` (generated regions) |
 | `shell_bidomain_mms.py` | `bidomainVerification/manufacturedShellBidomainReference.H` |
 | `shell_mms.py` | `ecgVerification/manufacturedShellLeadFieldECGReference.H` |
 | `shell_eikonal_mms.py` | `eikonalVerification/manufacturedShellEikonalReference.H` |
@@ -232,6 +238,9 @@ it, and `--check` compares text exactly, so it holds only for that version.
 
 ```bash
 python fda_monodomain_mms.py --check ../../../src/verificationModels/monodomainVerification/manufacturedFDAReference.H
+python fda_bidomain_mms.py --check ../../../src/verificationModels/bidomainVerification/manufacturedFDABidomainReference.H
+python fda_bath_bidomain_mms.py --check ../../../src/verificationModels/bathBidomainVerification/manufacturedFDABathBidomainReference.H
+python slab_leadfield_mms.py --check ../../../src/verificationModels/ecgVerification/manufacturedLeadFieldECGReference.H
 python -m pytest parity/test_parity.py
 ```
 

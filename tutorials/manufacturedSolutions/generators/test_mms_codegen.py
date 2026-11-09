@@ -65,10 +65,14 @@ def test_print_pi_as_local():
 
 
 REGION_GENERATORS = ("fda_monodomain_mms", "pseudo_ecg_mms", "rotated_monodomain_mms",
-                     "cartesian_eikonal_mms", "eikonal_ecg_mms")
+                     "cartesian_eikonal_mms", "eikonal_ecg_mms", "fda_bidomain_mms",
+                     "fda_bath_bidomain_mms", "slab_leadfield_mms")
 REGION_HEADERS = ("manufacturedFDAReference.H",
                   "manufacturedAnisotropicMonodomainReference.H",
-                  "manufacturedEikonalReference.H")
+                  "manufacturedEikonalReference.H",
+                  "manufacturedFDABidomainReference.H",
+                  "manufacturedFDABathBidomainReference.H",
+                  "manufacturedLeadFieldECGReference.H")
 
 
 @pytest.mark.parametrize("header", REGION_HEADERS)
@@ -96,6 +100,7 @@ def test_every_marker_owned_by_exactly_one_generator(header):
 CLI_GENERATORS = ("fda_monodomain_mms", "rotated_monodomain_mms", "pseudo_ecg_mms",
                   "graph_monodomain_mms", "coupled_1d3d_mms", "cartesian_eikonal_mms",
                   "eikonal_ecg_mms", "shell_monodomain_mms", "shell_eikonal_mms",
+                  "fda_bidomain_mms", "fda_bath_bidomain_mms", "slab_leadfield_mms",
                   "template_mms")
 
 
