@@ -98,9 +98,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 `--emit` runs the self-checks first and writes nothing if one fails;
-`--self-check` runs them alone. `shell_mms.py` also takes `--check PATH` and
-`--write PATH`, which compare or rewrite its C++ header and are needed only by
-cardiacFoam developers. `docs/leadField/leadfield_reference.py` holds what
+`--self-check` runs them alone. `slab_leadfield_mms.py` and `shell_mms.py`
+also take `--check PATH` and `--write PATH`, which compare or rewrite their C++
+headers and are needed only by cardiacFoam developers. `docs/leadField/leadfield_reference.py` holds what
 depends on the tutorial cases and on finished runs:
 
 ```bash
@@ -304,17 +304,17 @@ The full expressions are `fields()` of `slab_leadfield_mms.py` and `Vm`,
 whose layer arguments carry each side separately (`sigmaOuterLeft`,
 `sigmaInnerLeft`, `sigmaHeart`, `sigmaInnerRight`, `sigmaOuterRight`) as the
 C++ structure does; `PARAMS` holds the values of the tutorial. In code, the
-functions of `manufacturedLeadFieldECGReference.H`:
+functions of `manufacturedLeadFieldECGReference.H`, whose formulas are
+generated regions written from these expressions:
 
 - `manufacturedLeadFieldSlabVm`;
-- `manufacturedLeadFieldSlabPhi`, which calls `manufacturedFDABathPhiEAt`
-  with the bath current 0 and $\sigma_e=1$;
-- `manufacturedLeadFieldLayeredResistance`;
-- `manufacturedLeadFieldLayeredPhi`;
+- `manufacturedLeadFieldSlabPhi`, one region per slab;
+- `manufacturedLeadFieldLayeredResistance`, one region per layer;
+- `manufacturedLeadFieldLayeredPhi`.
 
-and their transcription `slab_vm`, `slab_phi_raw`, `layered_resistance`,
-`layered_phi_raw` and `gauged` of `docs/leadField/leadfield_reference.py`,
-which follows the header branch by branch.
+`slab_vm`, `slab_phi_raw`, `layered_resistance` and `layered_phi_raw` of
+`docs/leadField/leadfield_reference.py` evaluate `reference/slab_leadfield.py`,
+and `gauged` applies the gauge of the conductor.
 
 ## Self-checks {#sec-slab-checks}
 
@@ -332,9 +332,9 @@ which follows the header branch by branch.
 - $\kappa=1/\sqrt2$ to $10^{-8}$ for both conductivity pairs of the tutorial;
 - the printed constants round-trip.
 
-`test_slab_leadfield_mms.py` compares `reference/slab_leadfield.py` with
-`leadfield_reference.py`, the transcription of the C++ header, to
-$10^{-15}$ on $-1\le x\le2$ at three times, and the constants with the
+`test_slab_leadfield_mms.py` compares the header, compiled by the parity
+harness of cardiacFoam, with `reference/slab_leadfield.py` to $10^{-12}$ on
+$-1\le x\le2$, the interfaces included, and the constants with the
 dictionaries of the tutorial. `leadfield_reference.py --self-check` asserts
 that $\kappa=1/\sqrt2$ to $10^{-11}$; that $\phi^\ast_{\mathrm{slab}}$ is $0$ on
 the left, $2\kappa S$ on the right and continuous at $x=0$ and $x=1$; that $R$ is
@@ -397,10 +397,10 @@ python docs/leadField/figures.py --mesh-case slab_hex=SLAB_HEX \
 
 `--emit` writes `reference/slab_leadfield.py` and `latex/leadfield_*.tex`. A
 run is a copy of the tutorial outside the repository after
-`./Allrun [-problem layered] -mesh hex|tet -N 10`. The C++ functions are
-hand-written and carry no generated regions, so the generator has no
-`--check`; the comparison of the NumPy module with their transcription and
-the run check above are the comparisons.
+`./Allrun [-problem layered] -mesh hex|tet -N 10`. In cardiacFoam,
+`python slab_leadfield_mms.py --check
+../../../src/verificationModels/ecgVerification/manufacturedLeadFieldECGReference.H`
+compares the generated regions of the header.
 
 # Curved conductor {#sec-shell}
 
