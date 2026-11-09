@@ -20,6 +20,7 @@ fi
 # reference.
 regression_init "Lead-field ECG curved-shell manufactured-solution regression test" \
     regression/sphericalShell.reference "$@"
+regression_require_solids4foam
 
 regression_run_or_fail
 
