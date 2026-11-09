@@ -321,7 +321,7 @@ void manufacturedEikonalVerifier::postProcess
             << mesh_.time().timeName() << endl;
     }
 
-    const fileName outputDir(mesh_.time().globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(mesh_.time()));
     mkDir(outputDir);
     const fileName outputFile(outputDir/"manufacturedEikonalActivationTime.dat");
 

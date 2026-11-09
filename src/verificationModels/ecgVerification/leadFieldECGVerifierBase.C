@@ -174,7 +174,7 @@ void leadFieldECGVerifierBase::initialise()
         }
         outputPtr_ = ecgModelIO::openTimeSeries
         (
-            mesh_.time().globalPath()/"postProcessing",
+            verificationUtils::postProcessingDir(mesh_.time()),
             "manufacturedLeadFieldECG_" + domainName_ + ".dat",
             columns
         );
@@ -469,7 +469,7 @@ void leadFieldECGVerifierBase::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().globalPath()/"postProcessing"
+        verificationUtils::postProcessingDir(mesh_.time())
       / ("manufacturedLeadFieldECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);

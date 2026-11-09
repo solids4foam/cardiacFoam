@@ -290,28 +290,21 @@ void manufacturedElectromechanicsVerifier::postProcess
 
     if (Pstream::master())
     {
-        const fileName outputDir(Vm.mesh().time().globalPath()/"postProcessing");
+        const fileName outputDir(postProcessingDir(Vm.mesh().time()));
         mkDir(outputDir);
 
         OFstream out(outputDir/"manufacturedElectromechanicsSummary.dat");
 
-        Info<< nl
-            << "Manufactured electromechanics error summary (t = "
-            << t << "):" << nl
-            << "Field     L1-error       L2-error       Linf-error" << nl
-            << "Vm     " << VmNorms.first().first() << "   " << VmNorms.first().second() << "   " << VmNorms.second() << nl
-            << "D      " << DNorms.first().first() << "   " << DNorms.first().second() << "   " << DNorms.second() << nl
-            << "lambda " << lambdaNorms.first().first() << "   " << lambdaNorms.first().second() << "   " << lambdaNorms.second() << nl
-            << "Ta     " << TaNorms.first().first() << "   " << TaNorms.first().second() << "   " << TaNorms.second() << nl
-            << endl;
+        errorTable table;
+        table.titlePrefix = "Manufactured electromechanics error summary (t = ";
+        table.t = t;
+        table.addRow("Vm     ", VmNorms);
+        table.addRow("D      ", DNorms);
+        table.addRow("lambda ", lambdaNorms);
+        table.addRow("Ta     ", TaNorms);
 
-        out << "Manufactured electromechanics error summary (t = "
-            << t << "):\n";
-        out << "Field     L1-error       L2-error       Linf-error\n";
-        out << "Vm     " << VmNorms.first().first() << "   " << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
-        out << "D      " << DNorms.first().first() << "   " << DNorms.first().second() << "   " << DNorms.second() << "\n";
-        out << "lambda " << lambdaNorms.first().first() << "   " << lambdaNorms.first().second() << "   " << lambdaNorms.second() << "\n";
-        out << "Ta     " << TaNorms.first().first() << "   " << TaNorms.first().second() << "   " << TaNorms.second() << "\n";
+        writeErrorTableConsole(Info, table, false);
+        writeErrorTableFile(out, table);
     }
 
     errorsReported_ = true;
