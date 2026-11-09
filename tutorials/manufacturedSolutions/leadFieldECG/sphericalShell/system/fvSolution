@@ -25,8 +25,8 @@ solvers
         relTol          0.0;
     }
 
-    // phiE: the bidomain heart potential and the verifier's direct
-    // forward solve
+    // phiE: the bidomain heart potential (the verifier's direct solve is
+    // leadFieldDirect)
     "phiE|phiEFinal"
     {
         solver          PCG;

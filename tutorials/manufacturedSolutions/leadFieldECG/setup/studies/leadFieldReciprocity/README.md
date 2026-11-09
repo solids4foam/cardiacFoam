@@ -4,8 +4,8 @@ Does the lead-field channel equal the direct forward solve of the same
 conductor on the same `Vm`?
 
 The direct solve gives `e^T A^-1 b`, sampled in the electrode cell, with `A`
-the forward operator (implicit part and explicit face terms iterated to
-their fixed point). The lead field is the discrete adjoint
+the forward operator (implicit part `M` and explicit face terms `C`). The
+lead field is the discrete adjoint
 `z_e = A^-T e`, so the channel `z_e^T b = e^T A^-1 b` equals it for any `A`.
 The adjoint matters because `A` is not symmetric on general meshes: the
 non-orthogonal correction of the `corrected` snGrad and OpenFOAM's tensor
@@ -13,9 +13,11 @@ cross-diffusion `(Sf.G - (Sf.G.n) n) . grad` are explicit terms whose
 transpose differs from them, and they vanish only on orthogonal faces whose
 normal is an eigenvector of the conductivity (the Cartesian hexahedra with
 diagonal conductivities here). `buildLeadFields` transposes them exactly
-(probed explicit operator, see its README), and both fixed points stop at the
-relative change set by `leadFieldFixedPoint` in `system/fvSolution`
-(`tolerance 1e-10`), which sets the size of the gap.
+(probed explicit operator, see its README). Both solves use the assembled
+matrix `M + C` (or `M + C^T`) through PETSc, GMRES preconditioned by GAMG to
+`ksp_rtol 1e-12`, and stop on the true residual of the assembled system
+(`residualTolerance 1e-10` of `leadField` and `leadFieldDirect` in
+`system/fvSolution`); the solve tolerance sets the size of the gap.
 
 Rows of the verifier summary used here, per electrode (Linf over the
 samples):
@@ -40,11 +42,9 @@ This study adds:
 | `bidomain_hex` | `-mesh hex -myocardium bidomain` | 10, 20, 40 |
 | `bidomain_tet` | `-mesh tet -myocardium bidomain` | 10, 14, 20, 28 |
 | `parallel_hex`, `parallel_tet` | `parallel` (2 ranks, `numberOfSubdomains 2` in `system/decomposeParDict`) | 20 |
-| `fixedPointTight_tet` | `-mesh tet -fixedPointTolerance 1e-12` | 20 |
+| `solveTight_tet` | `-mesh tet -solveTolerance 1e-14` (`ksp_rtol`) | 20 |
 
-The `parallel` rows run on 2 ranks; every other run is serial. The largest
-`phiE` iteration count is 667 (`bidomain_tet_N28`), below the
-`maxIter 5000` of `system/fvSolution`.
+The `parallel` rows run on 2 ranks; every other run is serial.
 
 All runs use `-endTime 0.02` (two samples, `dt = 0.01`) and build 13 lead
 fields, one per electrode. The electrodes are those of the case, in three
@@ -89,8 +89,9 @@ The omnidriver specs for this study are `sweep_hex_reciprocity.json` and
 omnidriver does not have. They name the `Allrun` options as axes
 (`myocardium`, `conductivity`, `mesh`, `parallel`; `-N` is `numberCells` on hexahedra and `tetNumberCells` on tetrahedra),
 `-endTime` as the keys `system/controlDict:endTime` and `writeInterval`, and
-`-fixedPointTolerance` as the key
-`system/fvSolution:leadFieldFixedPoint.tolerance`.
+`-solveTolerance` as the keys
+`system/fvSolution:solvers.leadField.options.ksp_rtol` and
+`solvers.leadFieldDirect.options.ksp_rtol`.
 
 ## Measured behaviour
 
@@ -104,80 +105,60 @@ Hexahedra (corrected; the snGrad scheme has no effect there):
 
 | configuration | N | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
 |---|---|---|---|---|---|---|---|
-| default | 10 | 2.689e-13 | 5.389e-13 | 2.451e-13 | 2.806e-13 | 7.693e-14 | 3.080e-13 |
-|  | 20 | 1.070e-12 | 7.111e-13 | 1.161e-12 | 6.813e-13 | 1.298e-12 | 6.731e-13 |
-|  | 40 | 1.492e-12 | 2.950e-12 | 1.481e-12 | 2.955e-12 | 1.248e-12 | 1.988e-12 |
-| `unequal` | 10 | 3.032e-13 | 4.854e-13 | 1.637e-13 | 2.584e-13 | 3.400e-13 | 6.903e-13 |
-|  | 20 | 5.437e-13 | 4.913e-13 | 6.848e-13 | 6.368e-13 | 1.219e-12 | 1.169e-12 |
-|  | 40 | 1.449e-12 | 2.903e-12 | 9.855e-13 | 2.929e-12 | 1.008e-12 | 2.998e-12 |
-| bidomain | 10 | 1.660e-13 | 1.147e-13 | 1.470e-13 | 9.779e-14 | 1.206e-13 | 6.607e-14 |
-|  | 20 | 3.695e-13 | 1.957e-13 | 2.470e-13 | 8.419e-14 | 2.652e-13 | 9.468e-14 |
-|  | 40 | 5.191e-13 | 8.134e-13 | 1.842e-13 | 4.604e-13 | 4.148e-13 | 7.231e-13 |
-| parallel (2 ranks) | 20 | 3.778e-12 | 3.076e-12 | 3.591e-12 | 1.566e-12 | 2.062e-12 | 2.298e-12 |
+| default (corrected, anisotropic) | 10 | 8.143e-13 | 5.632e-13 | 1.056e-12 | 7.809e-13 | 3.540e-13 | 5.771e-13 |
+|  | 14 | 1.189e-12 | 1.099e-12 | 7.390e-13 | 6.864e-13 | 1.001e-12 | 8.683e-13 |
+|  | 20 | 9.630e-13 | 1.367e-12 | 5.779e-13 | 1.003e-12 | 5.630e-13 | 9.887e-13 |
+|  | 28 | 3.348e-12 | 2.944e-12 | 2.567e-12 | 2.221e-12 | 3.332e-12 | 2.776e-12 |
+| `unequal` | 10 | 2.640e-13 | 3.086e-13 | 3.541e-13 | 3.362e-13 | 6.410e-13 | 5.811e-13 |
+|  | 14 | 1.753e-12 | 6.842e-13 | 8.557e-13 | 7.150e-13 | 1.344e-12 | 3.746e-13 |
+|  | 20 | 1.020e-12 | 1.265e-12 | 1.146e-12 | 1.054e-12 | 6.606e-13 | 9.684e-13 |
+|  | 28 | 2.645e-12 | 2.425e-12 | 2.713e-12 | 3.158e-12 | 2.318e-12 | 2.691e-12 |
+| `isotropic` | 10 | 1.479e-12 | 1.292e-12 | 3.101e-13 | 4.532e-13 | 1.326e-12 | 1.170e-12 |
+|  | 14 | 1.661e-12 | 1.703e-12 | 1.438e-12 | 1.489e-12 | 1.216e-12 | 1.243e-12 |
+|  | 20 | 3.837e-12 | 3.387e-12 | 8.827e-13 | 8.414e-13 | 1.221e-12 | 1.187e-12 |
+| bidomain | 10 | 4.689e-13 | 4.647e-13 | 1.566e-13 | 1.432e-13 | 3.299e-13 | 3.305e-13 |
+|  | 14 | 7.558e-13 | 6.960e-13 | 7.136e-13 | 6.653e-13 | 2.546e-13 | 1.999e-13 |
+|  | 20 | 8.129e-13 | 1.014e-12 | 7.295e-13 | 6.749e-13 | 1.259e-12 | 1.479e-12 |
+|  | 28 | 7.171e-13 | 1.093e-12 | 4.386e-13 | 6.517e-13 | 3.033e-13 | 6.904e-13 |
+| parallel (2 ranks) | 20 | 3.925e-12 | 4.136e-12 | 4.906e-12 | 5.121e-12 | 2.488e-12 | 1.564e-12 |
 
-Tetrahedra:
-
-| configuration | N | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
-|---|---|---|---|---|---|---|---|
-| default (corrected, anisotropic) | 10 | 6.033e-11 | 5.395e-11 | 4.646e-11 | 4.142e-11 | 3.756e-11 | 3.455e-11 |
-|  | 14 | 1.943e-10 | 1.975e-10 | 1.736e-10 | 1.759e-10 | 2.484e-10 | 2.536e-10 |
-|  | 20 | 1.073e-10 | 1.085e-10 | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 |
-|  | 28 | 1.677e-10 | 1.692e-10 | 1.129e-10 | 1.137e-10 | 1.102e-10 | 1.099e-10 |
-| `unequal` | 10 | 6.098e-11 | 5.197e-11 | 4.822e-11 | 4.305e-11 | 3.212e-11 | 3.344e-11 |
-|  | 14 | 5.846e-10 | 5.921e-10 | 3.540e-10 | 3.571e-10 | 2.532e-10 | 2.536e-10 |
-|  | 20 | 2.842e-10 | 2.834e-10 | 3.782e-10 | 3.766e-10 | 2.704e-10 | 2.716e-10 |
-|  | 28 | 1.520e-10 | 1.529e-10 | 1.006e-10 | 1.008e-10 | 1.105e-10 | 1.105e-10 |
-| `isotropic` | 10 | 2.589e-12 | 3.040e-12 | 1.310e-12 | 1.831e-12 | 1.047e-12 | 1.672e-12 |
-|  | 14 | 4.013e-12 | 3.864e-12 | 3.337e-12 | 4.007e-12 | 1.783e-12 | 1.935e-12 |
-|  | 20 | 4.890e-12 | 3.646e-12 | 2.693e-12 | 2.819e-12 | 3.183e-12 | 3.372e-12 |
-| bidomain | 10 | 1.610e-11 | 1.588e-11 | 1.351e-11 | 1.299e-11 | 1.098e-11 | 1.081e-11 |
-|  | 14 | 1.041e-10 | 1.050e-10 | 6.000e-11 | 5.992e-11 | 1.020e-10 | 1.006e-10 |
-|  | 20 | 5.207e-11 | 5.157e-11 | 4.039e-11 | 3.970e-11 | 4.418e-11 | 4.488e-11 |
-|  | 28 | 5.037e-11 | 5.036e-11 | 3.682e-11 | 3.687e-11 | 3.943e-11 | 3.937e-11 |
-| parallel (2 ranks) | 20 | 1.104e-10 | 1.075e-10 | 8.564e-11 | 8.465e-11 | 1.281e-10 | 1.303e-10 |
-
-- **Hexahedra.** The gap on the body surface is at round-off and rises
-  slightly with the cell count. It is of the same size for `unequal`, for
-  the bidomain myocardium and on two ranks. Over all groups the gap lies
-  between 6.6e-14 and 3.8e-12.
-- **Tetrahedra.** The gap on the body surface is at the level of the
-  fixed-point tolerances at every level and for every configuration, with
-  no trend in `N`; over all groups it lies between 1.1e-11 and 5.9e-10.
-  With only the non-orthogonal correction (`isotropic`) the fixed points
-  take fewer passes (lead fields 32 to 59, direct solves 28 to 53, against
-  40 to 77 and 39 to 84 for `default` and `unequal`) and the gap is
-  1.0e-12 to 4.9e-12.
-- **Parallel.** The parallel channels agree with the serial ones to 8.1e-12
+- **Hexahedra.** The gap is at round-off in every group, for `unequal`, for
+  the bidomain myocardium and on two ranks: between 1.9e-13 and 4.2e-12.
+- **Tetrahedra.** The gap is at round-off as well, with no trend in `N` and
+  no dependence on the configuration: between 1.4e-13 and 5.1e-12, and
+  3.1e-13 to 3.8e-12 with only the non-orthogonal correction
+  (`isotropic`). The lead fields take 25 to 44 GMRES iterations and the
+  direct solves 27 to 47.
+- **Parallel.** The parallel channels agree with the serial ones to 5.9e-12
   (absolute) on both meshes, at every electrode.
 - **Probes.** The interior `torso` and `near` probes have gaps of the size
   of the surface group, `near` included, in torso cells that touch the
   heart. Electrodes inside the heart are not supported (case
   [README](../../../README.md)).
 
-## Fixed-point tolerance control
+## Solve tolerance control
 
-`fixedPointTight_tet_N20` repeats the default tetrahedral run at `N = 20`
-with both fixed points stopped at `1e-12` instead of `1e-10`:
+`solveTight_tet_N20` repeats the default tetrahedral run at `N = 20` with
+both solves at `ksp_rtol 1e-14` instead of `1e-12`:
 
-| tolerance | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
+| `ksp_rtol` | surface dynamic | surface static | torso dynamic | torso static | near dynamic | near static |
 |---|---|---|---|---|---|---|
-| `1e-10` | 1.073e-10 | 1.085e-10 | 8.177e-11 | 8.257e-11 | 1.245e-10 | 1.252e-10 |
-| `1e-12` | 4.030e-12 | 3.111e-12 | 2.137e-12 | 1.478e-12 | 2.208e-12 | 1.956e-12 |
+| `1e-12` | 9.630e-13 | 1.367e-12 | 5.779e-13 | 1.003e-12 | 5.630e-13 | 9.887e-13 |
+| `1e-14` | 4.860e-13 | 7.386e-13 | 4.249e-13 | 2.493e-13 | 4.564e-13 | 3.220e-13 |
 
 Static Linf errors of the lead-field channel against the exact potential,
 and of the direct static field over the surface cells (the direct channel
 has the same electrode values):
 
-| tolerance | LF surface | `phiStatic_surface` RMS | `phiStatic_surface` max | LF torso | LF near |
+| `ksp_rtol` | LF surface | `phiStatic_surface` RMS | `phiStatic_surface` max | LF torso | LF near |
 |---|---|---|---|---|---|
-| `1e-10` | 1.5989e-03 | 1.0391e-03 | 1.6101e-03 | 1.6008e-03 | 1.6392e-03 |
 | `1e-12` | 1.5989e-03 | 1.0391e-03 | 1.6101e-03 | 1.6008e-03 | 1.6392e-03 |
+| `1e-14` | 1.5989e-03 | 1.0391e-03 | 1.6101e-03 | 1.6008e-03 | 1.6392e-03 |
 
-With the tighter tolerance the gap drops by more than an order of
-magnitude in every group, to the round-off level of the hexahedra and of
-`isotropic`, the errors against the exact potential are identical, and the
-lead-field fixed points take about a third more passes. The tetrahedral gap
-is set by the fixed-point tolerance, not by the transposed operator.
+With the tighter tolerance the gap drops by a factor of 2 to 4, the errors
+against the exact potential are identical to every printed digit, and the
+lead fields take 39 to 41 iterations instead of 33 to 36. The solve
+tolerance does not reach the reported errors.
 
 ## Outputs
 

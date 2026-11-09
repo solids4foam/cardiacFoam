@@ -50,12 +50,13 @@ Its error, the **alpha part**, is reported for two groups of probes:
 The tetrahedral `N = 40` runs use two ranks (the `parallel` argument of
 `Allrun`); every other run is serial. All runs are monodomain with `corrected` snGrad, and use
 `-endTime 0.02` (two samples, `dt = 0.01`). Each run builds 13 lead fields,
-one per electrode. The fixed points stop at the `leadFieldFixedPoint`
-tolerance of `system/fvSolution`. On hexahedra the lead fields need 5 or 6
-passes and each direct solve 2. On tetrahedra the lead fields need 38 to 64
-passes and each direct solve 39 to 77, within the `maxPasses 100` of
-`system/fvSolution`. The largest `phiE` iteration count is 888
-(`layered_tet_N40`), below the `maxIter 5000` of `system/fvSolution`.
+one per electrode. The lead fields and the direct solves use the assembled
+matrix through PETSc (GMRES preconditioned by GAMG) and stop on the true
+residual of the assembled system at the `residualTolerance 1e-10` of
+`system/fvSolution`. On hexahedra the lead fields need 24 to 34 iterations
+and each direct solve 24 to 36; on tetrahedra 30 to 37 and 32 to 41. The true
+residuals are at most `7.4e-16` (lead fields) and `1.2e-14` (direct
+solves).
 
 ## Execution
 
@@ -128,9 +129,9 @@ Alpha part:
 
 | N | LF left | LF right | direct left | direct right |
 |---|---|---|---|---|
-| 10 | 7.7383e-14 | 5.1292e-14 | 7.0360e-13 | 7.0588e-13 |
-| 20 | 6.3405e-13 | 3.2152e-13 | 4.7679e-13 | 4.7740e-13 |
-| 40 | 2.7947e-12 | 3.5263e-12 | 7.1154e-12 | 7.1378e-12 |
+| 10 | 6.3838e-14 | 7.7716e-14 | 5.6011e-13 | 5.3446e-13 |
+| 20 | 3.5322e-13 | 1.3456e-13 | 1.2520e-12 | 1.2508e-12 |
+| 40 | 1.6141e-12 | 1.5672e-12 | 8.3733e-13 | 8.2734e-13 |
 
 Static errors at the electrode point:
 
@@ -220,9 +221,9 @@ Alpha part (the lead field and the direct solve give the same values):
 | 40 | 2.0407e-05 | 1.02 | 5.6939e-05 | 1.51 |
 
 - **Lead field and direct solve.** The reciprocity gap is at the level of the
-  fixed-point tolerances (at most 2.7e-10 over every group, `layered` and
-  `layeredAlpha0`), and the lead field equals the direct solve in every
-  row, alpha part included.
+  linear-solve tolerances (at most 3.7e-11 relative over every group,
+  `layered` and `layeredAlpha0`), and the lead field equals the direct
+  solve in every row, alpha part included.
 - **Total error.** The body-surface ECG converges below second order at the
   intermediate levels (1.82, 1.80) and at second order between `N = 28` and
   `40` (1.95), and the RMS over the surface cells follows it (1.99 at

@@ -46,13 +46,13 @@ Two conductivity configurations, both monodomain with `corrected` snGrad:
 | tet (gmsh 4.15.2, seed 1) | 10, 14, 20, 28 | 14792, 39131, 111482, 299957 |
 
 All runs are serial and use `-endTime 0.02` (two samples, `dt = 0.01`).
-Each run builds 13 lead fields, one per electrode. The lead-field and direct
-fixed points stop at the `leadFieldFixedPoint` tolerance of
-`system/fvSolution`. On hexahedra the lead fields need 5 or 6 passes and
-each direct solve 2. On tetrahedra the lead fields need 40 to 77 passes and
-each direct solve 39 to 84, within the `maxPasses 100` of
-`system/fvSolution`. The largest `phiE` iteration count is 625
-(`unequal_tet_N28`), below the `maxIter 5000` of `system/fvSolution`.
+Each run builds 13 lead fields, one per electrode. The lead fields and the
+direct solves use the assembled matrix through PETSc (GMRES preconditioned
+by GAMG) and stop on the true residual of the assembled system at the
+`residualTolerance 1e-10` of `system/fvSolution`. On hexahedra the lead
+fields need 25 to 39 iterations and each direct solve 25 to 41; on
+tetrahedra 30 to 44 and 33 to 47. The true residuals are at most
+`8.1e-16` (lead fields) and `1.2e-14` (direct solves).
 
 ## Execution
 
@@ -164,7 +164,7 @@ Lead field, tetrahedra:
   `unequal`, whose heart rows carry a truncation error, has an error about
   1.2 times that of `default` at every level, with the same orders. The lead
   field equals the direct solve to every printed digit (gap at most
-  5.9e-10 relative, see [leadFieldReciprocity](../leadFieldReciprocity/README.md)).
+  3.4e-12 relative, see [leadFieldReciprocity](../leadFieldReciprocity/README.md)).
 - **Probes.** The `torso` probes have errors of the size of the surface
   group and the same orders. The `near` probes, next to the heart, have
   errors of the same size and converge at about second order with larger

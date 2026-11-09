@@ -709,7 +709,7 @@ with their compiled functions.
 Both problems compare the lead-field channel with a direct solve of the same
 discrete conductor, and both with the exact potential. The comparison with
 the direct solve is algebraic: it holds on any mesh to the tolerance of the
-fixed points, and it checks the adjoint, not the discretisation. The
+linear solves, and it checks the adjoint, not the discretisation. The
 comparison with the exact potential measures the discretisation of the
 conductor and the recording at a cell.
 
@@ -724,9 +724,13 @@ interface terms). For electrode $e$, `buildLeadFields` solves the adjoint
 problem
 
 $$
-\mathbf A^{\mathsf T}\mathbf z_e=\mathbf e_{c(e)},
-\qquad\text{as the fixed point}\quad \mathbf M\mathbf z_e=\mathbf e_{c(e)}-\mathbf C^{\mathsf T}\mathbf z_e,
+\mathbf A^{\mathsf T}\mathbf z_e=\left(\mathbf M+\mathbf C^{\mathsf T}\right)\mathbf z_e=\mathbf e_{c(e)}
 $$
+
+with the assembled matrix ($\mathbf C$ stored by probing the assembly), by a
+Krylov method preconditioned by algebraic multigrid (PETSc), and stops on the
+true residual of this system; the direct solve is the same with
+$\mathbf M+\mathbf C$.
 
 and the channel is
 
@@ -758,7 +762,7 @@ electrodes and the interior probes alike):
 | column | meaning |
 |:--|:--|
 | `leadField` | the channel $\Phi_e^{\mathrm{LF},h}$ on the computed $V_m$ |
-| `direct` | the forward solve of the same conductor on the computed $V_m$, assembly and solve repeated until the relative change is below `leadFieldFixedPoint tolerance`, in cell $c(e)$ |
+| `direct` | the forward solve of the same conductor on the computed $V_m$, with the assembled matrix to the true-residual tolerance of `leadFieldDirect`, in cell $c(e)$ |
 | `exactPoint` | $\phi(\mathbf r_e,t)$, gauged at $\mathbf x_{\mathrm{ref}}$ |
 | `exactCentroid` | $\phi(\mathbf x_{c(e)},t)$, gauged at $\mathbf x_{\mathrm{ref}}$ |
 | `leadFieldStatic` | the channel on the exact $V_m$ at the heart cell centres (plus $\mathbf s$ in the curved conductor) |
