@@ -242,7 +242,9 @@ private:
     };
 
     // Index into wallFits_ of each heart cell (-1: not a wall cell), and
-    // the fits, built at the first transferWallLayer on a static mesh
+    // the fits, built at the first transferWallLayer on a static mesh. The
+    // build communicates, so every rank builds, also one without heart cells
+    mutable bool wallFitsBuilt_;
     mutable labelList wallFitIndex_;
     mutable List<wallFit> wallFits_;
 

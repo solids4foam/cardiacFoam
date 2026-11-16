@@ -268,6 +268,7 @@ passiveConductor::passiveConductor
     sigmaIglobalPtr_(),
     sigmaExtracellularfPtr_(),
     referenceCell_(-1),
+    wallFitsBuilt_(false),
     wallFitIndex_(),
     wallFits_()
 {
@@ -1414,9 +1415,10 @@ void passiveConductor::transferWallLayer
 ) const
 {
     const fvMesh& heartMesh = Vm.mesh();
-    if (wallFitIndex_.size() != heartMesh.nCells())
+    if (!wallFitsBuilt_)
     {
         buildWallFits(heartMesh);
+        wallFitsBuilt_ = true;
     }
     const vectorField& heartC = heartMesh.C().primitiveField();
 
