@@ -153,8 +153,8 @@ verified elsewhere) has none, and its README names the cases that cover it.
 | `none` | never | the cases the index marks `none` |
 
 The standard tier is the gate for every change: the manufactured solutions
-check the operators against exact solutions, the single-cell cases the ionic
-models, their overrides, the S1-S2 stimulus and the ODE integrators, and
+check the operators against exact solutions, the single-cell cases the
+action potential, its overrides and its S1-S2 restitution, and
 `configurationChecks` the configuration contract.
 
 A case is in the full tier when its regression folder holds the empty marker
