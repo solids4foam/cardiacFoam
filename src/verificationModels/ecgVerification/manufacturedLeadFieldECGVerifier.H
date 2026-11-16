@@ -19,20 +19,23 @@ Class
     manufacturedLeadFieldECGVerifier
 
 Description
-    Lead-field ECG verifier against the slab and layered references
+    Lead-field ECG verifier against the slab, layered and wallCurrent references
     (manufacturedLeadFieldECGReference.H), with the channels of
     leadFieldECGVerifierBase.
 
     Keys of verificationModel:
-        reference   slab;    // required: slab or layered
+        reference   slab;    // required: slab, layered or wallCurrent
         layerInterfaces (-0.5 1.5);  // layered only, required: xL < 0, xR > 1
 
-    slab needs an insulated conductor: no ground or surface-current
-    patches. layered is pinned (no ground patches); it takes alpha from the
+    slab and wallCurrent need an insulated conductor: no ground or
+    surface-current patches. wallCurrent is the slab with Vm given a wall
+    slope, so that the wall layer n.Gi grad(Vm) of the source is non-zero;
+    the myocardium solver does not solve its Vm, so only the static rows
+    (exact Vm) verify it. layered is pinned (no ground patches); it takes alpha from the
     surface-current patches of the conductor (faces normal to x, current
     times n_x equal to alpha on every face, no net current; none for
     alpha = 0) and the layer conductivities from its torso cells, which must
-    each lie in one layer with one isotropic value per layer. Both prescribe
+    each lie in one layer with one isotropic value per layer. All prescribe
     no fields: their conductivities are those of the case.
 
 SourceFiles
@@ -63,7 +66,8 @@ public:
     enum class referenceType
     {
         slab,
-        layered
+        layered,
+        wallCurrent
     };
 
     static const Enum<referenceType> referenceTypeNames;

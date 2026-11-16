@@ -36,6 +36,10 @@ Description
     the torso: continuous, with current -alpha in every layer. Vm is the
     slab's.
 
+    wallCurrent: the slab with Vm = sqrt(1+t) (cos(pi x) + x/2), so that
+    n.Gi grad(Vm) is non-zero on both walls; phi = -k Vm + C in the heart
+    and the wall values in the insulated torso slabs (zero total current).
+
     The formulas between "// BEGIN GENERATED <name>" and
     "// END GENERATED <name>" are written from the sympy definitions in
     tutorials/manufacturedSolutions/generators/slab_leadfield_mms.py.
@@ -95,6 +99,50 @@ inline scalar manufacturedLeadFieldSlabPhi
     // BEGIN GENERATED slabPhi_rightTorso
     return 2*k*sqrt(t + 1);
     // END GENERATED slabPhi_rightTorso
+}
+
+
+//- Heart Vm of wallCurrent at point p and time t: the slab's Vm with a
+//  wall slope, so that the wall layer n.Gi grad(Vm) is non-zero
+inline scalar manufacturedLeadFieldWallVm(const point& p, const scalar t)
+{
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    // BEGIN GENERATED manufacturedLeadFieldWallVm
+    return sqrt(t + 1)*((1.0/2.0)*x + cos(pi*x));
+    // END GENERATED manufacturedLeadFieldWallVm
+}
+
+
+//- Potential of wallCurrent at point p and time t, up to a constant: -k Vm
+//  in the heart, the wall values in the insulated torso slabs
+inline scalar manufacturedLeadFieldWallPhi
+(
+    const point& p,
+    const scalar t,
+    const scalar k
+)
+{
+    const scalar pi = constant::mathematical::pi;
+    const scalar x = p.x();
+
+    if (x <= 0)
+    {
+        // BEGIN GENERATED wallPhi_leftTorso
+        return 0;
+        // END GENERATED wallPhi_leftTorso
+    }
+    if (x <= 1)
+    {
+        // BEGIN GENERATED wallPhi_heart
+        return -k*sqrt(t + 1)*((1.0/2.0)*x + cos(pi*x)) + k*sqrt(t + 1);
+        // END GENERATED wallPhi_heart
+    }
+
+    // BEGIN GENERATED wallPhi_rightTorso
+    return (3.0/2.0)*k*sqrt(t + 1);
+    // END GENERATED wallPhi_rightTorso
 }
 
 

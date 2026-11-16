@@ -39,7 +39,8 @@ const Enum<manufacturedLeadFieldECGVerifier::referenceType>
 manufacturedLeadFieldECGVerifier::referenceTypeNames
 ({
     { referenceType::slab, "slab" },
-    { referenceType::layered, "layered" }
+    { referenceType::layered, "layered" },
+    { referenceType::wallCurrent, "wallCurrent" }
 });
 
 
@@ -127,7 +128,7 @@ void manufacturedLeadFieldECGVerifier::initialiseReference
     const leadFieldConductor& lfc
 )
 {
-    if (reference_ == referenceType::slab)
+    if (reference_ != referenceType::layered)
     {
         const passiveConductor::torsoSettings& torso =
             lfc.conductor().torso();
@@ -139,7 +140,8 @@ void manufacturedLeadFieldECGVerifier::initialiseReference
         )
         {
             FatalErrorInFunction
-                << "The slab reference is insulated: it needs no ground "
+                << "The " << referenceName() << " reference is insulated: "
+                << "it needs no ground "
                 << "or surface-current patches, but has "
                 << torso.groundPatches << " and "
                 << torso.surfaceCurrentPatches << "."
@@ -329,7 +331,10 @@ scalar manufacturedLeadFieldECGVerifier::exactVm
     const scalar t
 ) const
 {
-    return manufacturedLeadFieldSlabVm(p, t);
+    return
+        reference_ == referenceType::wallCurrent
+      ? manufacturedLeadFieldWallVm(p, t)
+      : manufacturedLeadFieldSlabVm(p, t);
 }
 
 
@@ -340,10 +345,17 @@ scalar manufacturedLeadFieldECGVerifier::referencePhi
     const label
 ) const
 {
-    return
-        reference_ == referenceType::slab
-      ? manufacturedLeadFieldSlabPhi(p, t, slabK_)
-      : manufacturedLeadFieldLayeredPhi(p, t, slabK_, alpha_, layers_);
+    switch (reference_)
+    {
+        case referenceType::slab:
+            return manufacturedLeadFieldSlabPhi(p, t, slabK_);
+        case referenceType::wallCurrent:
+            return manufacturedLeadFieldWallPhi(p, t, slabK_);
+        case referenceType::layered:
+            break;
+    }
+
+    return manufacturedLeadFieldLayeredPhi(p, t, slabK_, alpha_, layers_);
 }
 
 

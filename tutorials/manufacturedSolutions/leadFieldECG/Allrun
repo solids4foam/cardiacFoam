@@ -21,8 +21,12 @@ Usage: ${0##*/} [parallel] [OPTION]...
 Options (parameters are written to local/ and included by the dictionaries):
   parallel                  decomposePar (2 subdomains), then buildLeadFields
                             and cardiacFoam in parallel
-  -problem slab|layered     exact passive solution (default slab):
+  -problem slab|layered|wallCurrent
+                            exact passive solution (default slab):
                               slab     insulated heart slab between torso slabs
+                              wallCurrent  the slab with Vm given the wall
+                                       slope 1/2 (n.Gi grad Vm non-zero on the
+                                       walls); only the static rows verify it
                               layered  the slab with each torso slab split in
                                        two layers (conductivity 0.1 next to
                                        the heart, 0.02 beyond x = $layerLeft and
@@ -123,7 +127,7 @@ do
             ;;
         -problem)
             needValue "$@"; problem="$2"; shift
-            oneOf -problem "$problem" slab layered
+            oneOf -problem "$problem" slab layered wallCurrent
             ;;
         -alpha)
             needValue "$@"; alpha="$2"; shift
@@ -259,8 +263,8 @@ echo "myocardiumSolver ${myocardium}Solver;" > local/myocardium
 
 # The exact solution of the verifier, and its geometry and torso
 case "$problem" in
-    slab)
-        echo "reference slab;" > local/reference
+    slab|wallCurrent)
+        echo "reference $problem;" > local/reference
         geometry=three_domain_box
         dictSuffix=
         ;;

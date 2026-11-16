@@ -17,18 +17,34 @@ torso carries the surface currents n.sigma grad phi = -alpha on x = -1 and
 +alpha on x = 2.  The verifier gauges phi* at the centroid of the cell that
 holds the reference point, so the constant C cancels.
 
+wallCurrent is the slab with V_m given a wall slope, so that the wall layer
+q = n.Gi grad V_m of the source is non-zero on both walls:
+
+    V_m = S (cos(pi x) + beta x),   beta = WALL_SLOPE   (heart)
+    phi*_wall = -k V_m(0) + C_w       x <= 0
+              = -k V_m + C_w          0 < x <= 1        C_w = k S
+              = -k V_m(1) + C_w       x > 1
+
+The total current (Gi + Ge) grad phi + Gi grad V_m vanishes in the heart, so
+the insulated torso slabs are at the potentials of the walls.  It tests the
+share of the wall layer between the heart and the torso cells of the
+lead-field source.
+
 Checks (--self-check): in the heart (Gi + Ge)_xx phi'' = -Gi_xx V_m'' with
 k (Gi + Ge)_xx = Gi_xx, and V_m' vanishes on both walls; phi* is continuous
 at x = 0 and x = 1 and linear in each torso slab; R is continuous at x_L, 0, 1,
 x_R with sigma R' = 1 in every layer, so the normal current is continuous;
 the surface currents are -alpha and +alpha; the slab potential gauged in the
-left torso is 0 there and 2 k S in the right torso; with alpha = 0 the
+left torso is 0 there and 2 k S in the right torso; wallCurrent: the heart
+equation, V_m' = beta S on both walls, zero total current in the heart,
+continuity at x = 0 and x = 1 and constant torso slabs; with alpha = 0 the
 layered potential equals the slab's; k equals 1/sqrt(2) to K_RTOL for both
 conductivity pairs of the tutorial; the printed constants round-trip.
 
 --write PATH rewrites, and --check PATH compares, the generated regions of
 manufacturedLeadFieldECGReference.H: V_m, the three branches of phi*_slab,
-the five branches of R and phi*_layered.
+the five branches of R and phi*_layered, and the wallCurrent V_m and the
+three branches of phi*_wall.
 
     python slab_leadfield_mms.py --emit
     python slab_leadfield_mms.py --self-check
@@ -64,6 +80,7 @@ X_RIGHT = sp.Rational(3, 2)
 SIGMA_INNER = sp.Rational(1, 10)
 SIGMA_OUTER = sp.Rational(1, 50)
 ALPHA = sp.Rational(1, 100)
+WALL_SLOPE = sp.Rational(1, 2)
 BOX = ((-1, 2), (0, 1), (0, 1))
 PHI_REF_POINT = tuple(sp.Rational(s) for s in ("-0.9013", "0.0437", "0.0437"))
 PHI_REF_VALUE = sp.Integer(0)
@@ -91,6 +108,19 @@ def slab_branches(C=None):
     to slab_constant()."""
     C = slab_constant() if C is None else C
     return [(-k*S + C, 0), (-k*S*sp.cos(sp.pi*x) + C, 1), (k*S + C, None)]
+
+
+def wall_vm():
+    """V_m = S (cos(pi x) + beta x) of wallCurrent."""
+    return S*(sp.cos(sp.pi*x) + WALL_SLOPE*x)
+
+
+def wall_branches():
+    """[(phi*_wall, upper end of its interval)] from left to right, with
+    C_w = k S."""
+    v = wall_vm()
+    C = k*S
+    return [(-k*v.subs(x, 0) + C, 0), (-k*v + C, 1), (-k*v.subs(x, 1) + C, None)]
 
 
 def resistance_branches():
@@ -125,7 +155,8 @@ def fields():
     phi_slab = _piecewise(slab_branches())
     R = _piecewise(resistance_branches())
     return {"Vm": vm(), "phiSlab": phi_slab, "resistance": R,
-            "phiLayered": layered_of(phi_slab, R)}
+            "phiLayered": layered_of(phi_slab, R), "VmWall": wall_vm(),
+            "phiWall": _piecewise(wall_branches())}
 
 
 def case_layers():
@@ -171,6 +202,20 @@ def run_self_checks():
     left, right = slab_branches()[0][0], slab_branches()[2][0]
     _check(_zero(left.subs(x, PHI_REF_POINT[0]) - left)
            and _zero(right - left - 2*k*S), "gauged slab potential")
+    wall = [e.subs(k, kk) for e, _ in wall_branches()]
+    _check(_zero((gi + ge)*sp.diff(wall[1], x, 2) + gi*sp.diff(wall_vm(), x, 2)),
+           "wallCurrent heart equation")
+    _check(_zero((gi + ge)*sp.diff(wall[1], x) + gi*sp.diff(wall_vm(), x)),
+           "wallCurrent total current in the heart")
+    for end in (0, 1):
+        _check(_zero(sp.diff(wall_vm(), x).subs(x, end) - WALL_SLOPE*S),
+               "wallCurrent V_m' on x=%d" % end)
+    for (a, end), (b, _) in zip(wall_branches()[:-1], wall_branches()[1:]):
+        _check(_zero((a - b).subs(x, end)), "phi*_wall continuity at x=%s" % end)
+    for side in (0, 2):
+        _check(_zero(sp.diff(wall_branches()[side][0], x)), "wallCurrent torso not constant")
+    _check(_zero(wall_branches()[0][0]), "wallCurrent left torso gauged to 0")
+    _check(WALL_SLOPE != 0, "wallCurrent needs a non-zero wall slope")
     f = fields()
     _check(_zero(f["phiLayered"].subs(alpha, 0) - f["phiSlab"]), "alpha = 0")
     for name, (a, b) in (("monodomain", MONODOMAIN_PAIR), ("bidomain", BIDOMAIN_PAIR)):
@@ -178,7 +223,7 @@ def run_self_checks():
         _check(abs(value - 2**-0.5) <= K_RTOL*2**-0.5,
                "k of the %s pair differs from 1/sqrt(2)" % name)
     _check(BOX[0][0] < PHI_REF_POINT[0] < X_LEFT, "reference point in the outer left layer")
-    for v in (SIGMA_SLAB, SIGMA_INNER, SIGMA_OUTER, ALPHA) + PHI_REF_POINT:
+    for v in (SIGMA_SLAB, SIGMA_INNER, SIGMA_OUTER, ALPHA, WALL_SLOPE) + PHI_REF_POINT:
         printed_constant(v, 10)
 
 
@@ -263,15 +308,19 @@ def numpy_module():
     functions = {"Vm": ((x, t), f["Vm"]),
                  "phi_slab": ((x, t, k), f["phiSlab"]),
                  "resistance": ((x,) + LAYER_ARGS, f["resistance"]),
-                 "phi_layered": ((x, t, k, alpha) + LAYER_ARGS, f["phiLayered"])}
+                 "phi_layered": ((x, t, k, alpha) + LAYER_ARGS, f["phiLayered"]),
+                 "Vm_wall": ((x, t), f["VmWall"]),
+                 "phi_wall": ((x, t, k), f["phiWall"])}
     doc = ("Lead-field ECG slab and layered manufactured potentials, functions of x and t: "
            "Vm(x, t) in the heart; phi_slab(x, t, k) and phi_layered(x, t, k, alpha, "
            "*LAYER_NAMES) before the gauge (phi(x) - phi(x_ref) + PHI_REF_VALUE); "
-           "resistance(x, *LAYER_NAMES), R with R' = 1/sigma and R(0) = 0.  PARAMS holds "
+           "resistance(x, *LAYER_NAMES), R with R' = 1/sigma and R(0) = 0; Vm_wall(x, t) "
+           "and phi_wall(x, t, k) of wallCurrent.  PARAMS holds "
            "the values of the tutorial.  Generated by slab_leadfield_mms.py.")
     layers = {str(s): float(v) for s, v in case_layers().items()}
     params = {"K": float(MONODOMAIN_PAIR[0]/(MONODOMAIN_PAIR[0] + MONODOMAIN_PAIR[1])),
-              "ALPHA": float(ALPHA), "SIGMA_SLAB": float(SIGMA_SLAB), "LAYERS": layers,
+              "ALPHA": float(ALPHA), "WALL_SLOPE": float(WALL_SLOPE),
+              "SIGMA_SLAB": float(SIGMA_SLAB), "LAYERS": layers,
               "LAYER_NAMES": list(LAYER_NAMES),
               "PHI_REF_POINT": [float(v) for v in PHI_REF_POINT],
               "PHI_REF_VALUE": float(PHI_REF_VALUE)}
@@ -309,6 +358,7 @@ def outputs_match(root=HERE):
 # -------------------------------------------------------------------- C++ ----
 
 SLAB_REGIONS = ("slabPhi_leftTorso", "slabPhi_heart", "slabPhi_rightTorso")
+WALL_REGIONS = ("wallPhi_leftTorso", "wallPhi_heart", "wallPhi_rightTorso")
 RESISTANCE_REGIONS = ("resistance_outerLeft", "resistance_innerLeft", "resistance_heart",
                       "resistance_innerRight", "resistance_outerRight")
 
@@ -322,6 +372,10 @@ def leadfield_header_regions(text):
     out = {"manufacturedLeadFieldSlabVm": codegen.statement(
         "return", vm(), ind("manufacturedLeadFieldSlabVm"))}
     for name, (expr, _) in zip(SLAB_REGIONS, slab_branches()):
+        out[name] = codegen.statement("return", expr, ind(name))
+    out["manufacturedLeadFieldWallVm"] = codegen.statement(
+        "return", wall_vm(), ind("manufacturedLeadFieldWallVm"))
+    for name, (expr, _) in zip(WALL_REGIONS, wall_branches()):
         out[name] = codegen.statement("return", expr, ind(name))
     for name, (expr, _) in zip(RESISTANCE_REGIONS, resistance_branches()):
         out[name] = codegen.statement("return", expr.subs(members), ind(name))
