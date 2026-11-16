@@ -21,6 +21,7 @@ License
 #include "referenceCell.H"
 #include "extracellularFaceConductivity.H"
 #include "insulatedFaceConductivity.H"
+#include "sealedWallPolicy.H"
 #include "interfaceGradient.H"
 #include "centredCPCCellToCellStencilObject.H"
 #include "SVD.H"
@@ -1064,6 +1065,45 @@ bool faceStencilGradient(const fvMesh& mesh, const word& name)
     return false;
 }
 
+
+// Mark the cells of mesh whose gradient name reads beyond the face
+// neighbours: none for a face-stencil scheme, the cells with a face on a
+// sealed or value patch for sealedWallLeastSquares (whose other cells take
+// the face-neighbour least squares), every cell otherwise
+void markPointStencilCells
+(
+    const fvMesh& mesh,
+    const word& name,
+    boolList& mark
+)
+{
+    if (faceStencilGradient(mesh, name))
+    {
+        return;
+    }
+
+    ITstream is(mesh.gradScheme(name));
+    const word scheme(is);
+    if (scheme != "sealedWallLeastSquares")
+    {
+        mark = true;
+        return;
+    }
+
+    const labelList& states =
+        sealedWallPolicy::states(mesh, sealedWallPolicy::fieldKey(name));
+    forAll(states, patchI)
+    {
+        if (states[patchI] != sealedWallPolicy::stock)
+        {
+            for (const label cellI : mesh.boundary()[patchI].faceCells())
+            {
+                mark[cellI] = true;
+            }
+        }
+    }
+}
+
 } // End anonymous namespace
 
 
@@ -1090,6 +1130,26 @@ List<probedOperator::hop> passiveConductor::explicitStencil() const
         faceStencil ? probedOperator::hop::face : probedOperator::hop::point
     );
     return hops;
+}
+
+
+boolList passiveConductor::explicitStencilPointCells() const
+{
+    boolList base(baseMesh_.nCells(), false);
+    boolList heart(heartMesh_.nCells(), false);
+    for (const word& name : gradientNames())
+    {
+        markPointStencilCells(baseMesh_, name, base);
+        markPointStencilCells(heartMesh_, name, heart);
+    }
+    forAll(heart, heartCellI)
+    {
+        if (heart[heartCellI])
+        {
+            base[heartCellToBaseCell_[heartCellI]] = true;
+        }
+    }
+    return base;
 }
 
 

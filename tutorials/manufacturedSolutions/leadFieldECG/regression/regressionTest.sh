@@ -23,6 +23,33 @@ fi
 # layered run's current crosses the heart wall and the torso layer
 # interfaces.
 
+# leadFieldStencil <probes|entries> <expected> <tolerance>: the probed
+# explicit operator of buildLeadFields (log.buildLeadFields, "leadFieldAdjoint:
+# ... <n> probes, <n> entries"). With sealedWallLeastSquares only the wall
+# cells take point-neighbour rows; a point row on every cell stores the zero
+# entries of all the others.
+regression_case_check()
+{
+    local kind="$1" column="$2" expected="$3" tolerance="$4" file actual
+    case "${kind}:${column}" in
+        leadFieldStencil:probes|leadFieldStencil:entries) ;;
+        *)
+            regression_fail "unknown reference kind '${kind} ${column}'"
+            return 1
+            ;;
+    esac
+    file=log.buildLeadFields
+    actual="$(sed -n "s/^leadFieldAdjoint: .* \([0-9][0-9]*\) probes, \([0-9][0-9]*\) entries\$/\1 \2/p" \
+        "${file}" 2>/dev/null | tail -1)" || actual=""
+    if [[ "${column}" == probes ]]; then
+        actual="${actual%% *}"
+    else
+        actual="${actual##* }"
+    fi
+    regression_check "${kind} ${column}" "${actual}" "${expected}" "${tolerance}" \
+        "${kind}" "${file}" "" "${column}"
+}
+
 regression_init "Lead-field ECG manufactured-solution regression test" \
     regression/leadFieldECG.reference "$@"
 regression_require_solids4foam
