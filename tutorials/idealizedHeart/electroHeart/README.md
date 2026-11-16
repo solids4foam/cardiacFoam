@@ -18,9 +18,11 @@ combination; `hybrid` is the middle ground (full 3D myocardium, cheaper
 ## Mesh and shared anatomy fields
 
 The mesh (`constant/polyMesh`) and the anatomy fields `fiber`, `sheet`,
-`sheetNormal`, `tm`, `tv`, `apicobasal`, and `Conductivity` live once in
-the sibling `../mesh/` directory, shared with `electroMechHeart` and
-`pathos/{conductionBlock,ionicPathology}`. `Allrun` copies them in each run.
+`sheetNormal`, `tm`, `tv`, `apicobasal`, and `Conductivity` are written in
+the sibling `../mesh/` directory by `../prepareHeartMesh` from the
+heart/torso mesh `../mesh/heartTorso` (see `../README.md`), shared with
+`electroMechHeart` and `pathos/{conductionBlock,ionicPathology}`. `Allrun`
+calls it, then copies them in each run.
 
 The mesh in `../mesh/` is already scaled to adult-heart-scale SI
 metres (from a raw idealized geometry spanning x:[0,4.0] y:[-2.0,3.0]

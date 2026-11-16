@@ -23,7 +23,9 @@ radius valid on this mesh.
 
 ## Mesh and anatomy fields
 
-`Allrun` copies from `../../mesh/`:
+`Allrun` runs `../../prepareHeartMesh` (which writes the heart mesh and
+fields from `../../mesh/heartTorso`, see `../../README.md`) and copies from
+`../../mesh/`:
 `fiber`/`sheet`/`sheetNormal`/`tm`/`tv`/`apicobasal`/`Conductivity`/
 `polyMesh`, and the baseline `constant/purkinjeGraph` (as
 `purkinjeGraph.healthy`, the source both variants are derived from).

@@ -165,11 +165,17 @@ for testCase in "${CASES[@]}"; do
     copyCase "${testCase}"
 
     # idealizedHeart/* cases read their shared mesh and anatomy fields from
-    # a mesh/ directory at the idealizedHeart/ root (see
-    # tutorials/idealizedHeart/README.md), which is not part of the case
-    # copy: bring it in once per sweep.
+    # a mesh/ directory at the idealizedHeart/ root, written from
+    # mesh/heartTorso by idealizedHeart/prepareHeartMesh (see
+    # tutorials/idealizedHeart/README.md). Neither is part of the case copy:
+    # bring both in once per sweep (the committed inputs only).
     if [[ "${testCase}" == idealizedHeart/* && ! -d "${REG_ROOT}/idealizedHeart/mesh" ]]; then
-        cp -a "${ROOT_DIR}/idealizedHeart/mesh" "${REG_ROOT}/idealizedHeart/mesh"
+        mkdir -p "${REG_ROOT}/idealizedHeart/mesh/constant"
+        cp -a "${ROOT_DIR}/idealizedHeart/mesh/heartTorso" "${REG_ROOT}/idealizedHeart/mesh/heartTorso"
+        cp -a "${ROOT_DIR}/idealizedHeart/mesh/constant/purkinjeGraph" \
+              "${ROOT_DIR}/idealizedHeart/mesh/constant/purkinjeGraphPig" \
+              "${REG_ROOT}/idealizedHeart/mesh/constant/"
+        cp -a "${ROOT_DIR}/idealizedHeart/prepareHeartMesh" "${REG_ROOT}/idealizedHeart/"
     fi
 
     rc=0

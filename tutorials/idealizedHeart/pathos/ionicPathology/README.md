@@ -46,7 +46,9 @@ where the `brugada` variant's `g_to`/`g_CaL` override applies.
 
 ## Mesh and anatomy fields
 
-`Allrun` copies from `../../mesh/`:
+`Allrun` runs `../../prepareHeartMesh` (which writes the heart mesh and
+fields from `../../mesh/heartTorso`, see `../../README.md`) and copies from
+`../../mesh/`:
 `fiber`/`sheet`/`sheetNormal`/`tm`/`tv`/`apicobasal`/`Conductivity`/
 `polyMesh`/`purkinjeGraph` as-is (no graph modification for either
 variant here).

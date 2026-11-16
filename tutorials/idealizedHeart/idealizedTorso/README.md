@@ -37,8 +37,7 @@ holds them as `(fibre crossFibre)` pairs. `Allrun` runs
 `setup/heartConductivity.py`, which writes `0/ConductivityIntracellular` and
 `0/ConductivityExtracellular` as `sigmaCross I + (sigmaFibre - sigmaCross) f f`
 from the fibre field `0/fiber` (the frame fiber, sheet, sheetNormal is
-orthonormal). The conductivity tensor fields of `../mesh/heartTorso` are not
-used. Membrane: `chi` 1400 cm^-1, `cm` 1 µF/cm^2.
+orthonormal). Membrane: `chi` 1400 cm^-1, `cm` 1 µF/cm^2.
 
 ## Model
 

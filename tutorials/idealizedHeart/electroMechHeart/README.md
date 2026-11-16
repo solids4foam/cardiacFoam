@@ -33,7 +33,7 @@ The isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test ap
 
 ## Run prerequisites
 
-This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun eikonal`, and `parallel` for either). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live in `../mesh/` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
+This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun eikonal`, and `parallel` for either). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — `../prepareHeartMesh` writes them in `../mesh/` from the heart/torso mesh `../mesh/heartTorso` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`). `f0f` is made from `f0` by `interpolateFibreField -region solid`, with the solid region's `skewCorrected linear` interpolation; `t` is derived from `tm`. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
 
 ## Notes on dictionary entries
 

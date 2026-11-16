@@ -62,7 +62,7 @@ fi
 
 # The shared heart/torso geometry and the Purkinje graph (Git LFS)
 geometry=../mesh/heartTorso
-for file in "$geometry"/constant/polyMesh/points "$geometry"/0/ConductivityIntracellular \
+for file in "$geometry"/constant/polyMesh/points "$geometry"/0/fiber \
     ../mesh/constant/purkinjeGraph
 do
     if [ ! -f "$file" ] || head -c 200 "$file" | grep -q 'git-lfs.github.com'
