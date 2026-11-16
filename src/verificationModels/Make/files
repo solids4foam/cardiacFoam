@@ -17,6 +17,7 @@ coupledVerification/coupled1D3DMonodomainVerifier.C
 bidomainVerification/manufacturedFDABidomainVerifier.C
 bidomainVerification/manufacturedShellBidomainVerifier.C
 bathBidomainVerification/manufacturedFDABathBidomainVerifier.C
+bathBidomainVerification/manufacturedShellBathBidomainVerifier.C
 
 
 LIB = $(FOAM_USER_LIBBIN)/libverificationModels
