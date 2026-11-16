@@ -15,8 +15,10 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Heart-only bidomain on the myocardium zone of the heart/torso mesh: the
-// source of the lead-field ECG. The torso is passive and does not feed back.
+// Bidomain myocardium in the idealized torso. The torso coupling, local/coupling
+// written by Allrun: leadField (heart-only bidomain, recorded through lead
+// fields; the torso does not feed back) or bath (one phiE over the heart and
+// the torso, solved with Vm every step).
 myocardiumSolver bidomainSolver;
 
 bidomainSolverCoeffs
@@ -24,10 +26,13 @@ bidomainSolverCoeffs
     // Wall treatment: local/wall, written by Allrun (sealed or stock)
     #include "<case>/local/wall"
 
-    // The heart trace of the torso conductor
+    // The heart phiE at the heart-torso wall: zeroGradient, the trace the
+    // lead-field conductor supports, for both couplings
     bathHeartPhiETrace zeroGradient;
 
     cellZone           myocardium;
+    // The heart-torso faces become boundary faces of the heart mesh
+    exposedFacesPatch  torsoSurface;
     // ConductivityIntracellular and ConductivityExtracellular of 0/
     conductivitySource field;
     chi         [ 0 -1 0 0 0 0 0 ] 140000;
@@ -68,11 +73,12 @@ bidomainSolverCoeffs
     solver             RKF45;
     maxSteps           1000000000;
 
-    // A point inside the myocardium
-    phiERefPoint       (0.06137746404 0.023833610115 0.0039119150485);
-    phiEReferenceValue 0;
-
     electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    // By coupling, local/myocardium written by Allrun: leadField, the
+    // reference of the heart-only phiE (phiERefPoint, a point inside the
+    // myocardium); bath, bathPredictorCorrector
+    #include "<case>/local/myocardium"
 
     conductionNetworkDomains
     {
@@ -122,20 +128,26 @@ bidomainSolverCoeffs
 }
 
 // Passive torso: blood, lungs, chest wall and the remaining torso, with the
-// cell conductivity field bodyAndOrgansConductivity of 0/
+// cell conductivity field bodyAndOrgansConductivity of 0/. No ground and no
+// surface current: torsoSurface is insulated and phiERefPoint pins the
+// potential (the global phiE with bath, the lead-field conductor with
+// leadField).
 torso
 {
     cellZones          ( blood lungs chestWall torso );
     conductivityField  bodyAndOrgansConductivity;
     interfaceConductivityInterpolation distanceWeightedHarmonic;
+    groundPatches          {}
+    surfaceCurrentPatches  {}
     // A point inside the torso
     phiERefPoint       (0.0174906176 0.174255908 0.197011104);
     phiEReferenceValue 0;
 }
 
-torsoCoupling leadField;
+#include "<case>/local/coupling"
 
-// Body-surface electrodes: the six precordial positions and the limb leads,
+// Body-surface electrodes (leadField: lead fields; bath: phiE of the electrode
+// cell): the six precordial positions and the limb leads,
 // each the nearest point of torsoSurface moved 0.1 mm inward (inside a
 // surface cell). The precordial leads V1-V6 are E1-E6 minus the mean of RA,
 // LA and LL.

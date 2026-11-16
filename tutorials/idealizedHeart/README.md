@@ -10,6 +10,7 @@ idealizedHeart/
 ├── mesh/            the one canonical mesh + anatomy fields every case below shares
 ├── electroHeart/     healthy EP baseline, 3 solver-combination variants
 ├── electroMechHeart/ sequential electromechanical coupling
+├── idealizedTorso/   the bidomain heart in an idealized torso, body-surface ECG
 └── pathos/          pathology-injection techniques (structural + ionic)
 ```
 
@@ -25,6 +26,10 @@ repeatedly. 26,642 points; raw bounding box x:[0.0, 4.0] y:[-2.0, 3.0]
 z:[-2.0, 2.0] scaled uniformly by `0.02` to adult-heart-scale SI metres;
 boundary patches `EPI`, `BASE`, `ENDO_LV`, `ENDO_RV`.
 
+`mesh/heartTorso/` (Git LFS) is the mesh of `idealizedTorso`: the same
+ventricles inside a torso, a conformal heart/torso tetrahedral mesh of
+299,482 cells with its own `0/` fields.
+
 ## `electroHeart/`
 
 Electrophysiology only, three solver combinations (`monodomain` default,
@@ -37,6 +42,15 @@ needed. `monodomain` is the regression-covered variant.
 Sequential electromechanical coupling (TNNP ionic model, Land-Niederer
 active tension) on the same mesh — see its own README for mechanical
 boundary conditions and calibration caveats.
+
+## `idealizedTorso/`
+
+The bidomain ventricles inside an idealized torso (blood, lungs, chest wall,
+torso) on their own heart/torso mesh, `mesh/heartTorso` (Git LFS), over one
+beat. The body-surface ECG comes from lead fields (`leadField`, one-way) or
+from a `phiE` over the heart and the torso (`bath`, two-way), chosen at run
+time. See its own README for the wall condition of each coupling and the
+cost.
 
 ## `pathos/`
 

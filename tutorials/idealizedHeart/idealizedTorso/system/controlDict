@@ -19,8 +19,9 @@ application     cardiacFoam;
 startFrom       latestTime;
 startTime       0;
 stopAt          endTime;
-// One QRS: the ventricles activate over about 70 ms
-endTime         0.1;
+// One beat, QRS and T wave: the last cells activate by about 0.2 s and
+// repolarise about 0.29 s later (README)
+endTime         0.6;
 deltaT          2e-05;
 writeControl    runTime;
 writeInterval   0.005;

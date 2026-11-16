@@ -117,6 +117,7 @@ the source.
 | Case | Purpose | Build mode | Regression |
 | --- | --- | --- | --- |
 | [`idealizedHeart/electroHeart`](idealizedHeart/electroHeart/README.md) | Run whole-ventricle electrophysiology with a Purkinje network and pseudo-ECG, with `monodomainSolver`, `eikonalSolver` or the hybrid combination | lightweight or full | `Alltest-regression` (`monodomain` on the human tree; all variants and trees with `CARDIAC_REGRESSION_SCOPE=full`) |
+| [`idealizedHeart/idealizedTorso`](idealizedHeart/idealizedTorso/README.md) | Run one beat of the bidomain ventricles inside an idealized torso, with the body-surface ECG from lead fields (`leadField`, one-way) or from a heart-and-torso `phiE` (`bath`, two-way) | full; `leadField` also needs PETSc | not covered |
 
 ### Electromechanics
 

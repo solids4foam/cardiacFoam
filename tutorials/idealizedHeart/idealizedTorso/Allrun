@@ -8,30 +8,37 @@ set -e
 usage()
 {
     cat <<USAGE 1>&2
-Usage: ./Allrun [sealed|stock] [parallel] [-endTime t]
+Usage: ./Allrun [leadField|bath] [sealed|stock] [parallel] [-endTime t]
 
-Heart-only bidomain on the idealized ventricles inside the idealized torso,
-recorded at the body surface through lead fields.
+Bidomain idealized ventricles inside the idealized torso, with the
+body-surface ECG at nine electrodes.
 
+  leadField     heart-only bidomain recorded through lead fields; the torso
+                does not feed back (default)
+  bath          one phiE over the heart and the torso, solved with Vm every
+                step (two-way)
   sealed        sealedHeartBoundary true and sealedWallLeastSquares for grad(Vm)
                 and grad(phiE) (default)
   stock         sealedHeartBoundary false and leastSquares
-  parallel      decomposePar, buildLeadFields and cardiacFoam on the ranks of
+  parallel      decomposePar, [buildLeadFields,] cardiacFoam on the ranks of
                 system/decomposeParDict, reconstructPar
-  -endTime t    end time in seconds (default 0.1, system/controlDict)
+  -endTime t    end time in seconds (default 0.6, the QRS and the T wave;
+                system/controlDict)
 
-The lead fields depend on the wall treatment and are built for each run.
-Needs cardiacFoam built with solids4foam and PETSc (the lead-field solve).
+leadField builds the lead fields for each run (they depend on the wall
+treatment) and needs cardiacFoam built with solids4foam and PETSc.
 USAGE
     exit 2
 }
 
+coupling=leadField
 wall=sealed
 parallelRun=false
 endTime=
 while [ "$#" -gt 0 ]
 do
     case "$1" in
+        leadField|bath) coupling="$1" ;;
         sealed|stock) wall="$1" ;;
         parallel)     parallelRun=true ;;
         -endTime)
@@ -82,7 +89,22 @@ else
     : > local/gradSchemes
 fi
 [ -z "$endTime" ] || echo "endTime $endTime;" > local/time
-echo "Wall treatment: $wall"
+
+echo "torsoCoupling $coupling;" > local/coupling
+if [ "$coupling" = leadField ]
+then
+    # The heart-only phiE is pure Neumann: pin it at a point inside the
+    # myocardium
+    cat > local/myocardium <<EOF
+phiERefPoint       (0.06137746404 0.023833610115 0.0039119150485);
+phiEReferenceValue 0;
+EOF
+else
+    # The torso phiERefPoint pins the global phiE. Each step: Vm, then the
+    # PIMPLE nOuterCorrectors passes of (global phiE, Vm)
+    echo "bathPredictorCorrector yes;" > local/myocardium
+fi
+echo "Torso coupling: $coupling, wall treatment: $wall"
 
 cp -a "$geometry"/constant/polyMesh constant/polyMesh
 mkdir -p 0
@@ -98,12 +120,12 @@ runApplication checkMesh
 if $parallelRun
 then
     runApplication decomposePar
-    runParallel buildLeadFields
+    [ "$coupling" = bath ] || runParallel buildLeadFields
     runParallel cardiacFoam
     runApplication reconstructPar
     runApplication redistributeRestartState
 else
-    runApplication buildLeadFields
+    [ "$coupling" = bath ] || runApplication buildLeadFields
     runApplication cardiacFoam
 fi
 
