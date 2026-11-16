@@ -317,19 +317,19 @@ PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double*
 
     double am = (fabs(V + 47.13) < 1e-6) ? 3.2 : 0.32 * (V + 47.13) / (1.0 - exp(-0.1 * (V + 47.13)));
     double bm = 0.08 * exp(-V / 11.0);
-    ALGEBRAIC[AV_ina_m_inf] = am / (am + bm);
+    ALGEBRAIC[AV_ina_m_inf] = 1.0 / (1.0 + exp(-(V + 43.0) / 7.7)); // S24
     ALGEBRAIC[AV_ina_m_tau] = 1.7 / (am + bm);
     RATES[ina_m] = (ALGEBRAIC[AV_ina_m_inf] - STATES[ina_m]) / ALGEBRAIC[AV_ina_m_tau];
 
     double ah = (V < -40.0) ? 0.135 * exp(-(V + 80.0) / 6.8) : 0.0;
-    double bh = (V < -40.0) ? 3.56 * exp(0.079 * V) + 3.1e5 * exp(0.35 * V) : 0.13 / (1.0 + exp(-(V + 10.66) / 11.1));
-    ALGEBRAIC[AV_ina_h_inf] = ah / (ah + bh);
+    double bh = (V < -40.0) ? 3.56 * exp(0.079 * V) + 3.1e5 * exp(0.35 * V) : 1.0 / (0.13 * (1.0 + exp(-(V + 10.66) / 11.1))); // S19
+    ALGEBRAIC[AV_ina_h_inf] = 1.0 / (1.0 + exp((V + 66.5) / 4.4)); // S25
     ALGEBRAIC[AV_ina_h_tau] = 2.0 / (ah + bh);
     RATES[ina_h] = (ALGEBRAIC[AV_ina_h_inf] - STATES[ina_h]) / ALGEBRAIC[AV_ina_h_tau];
 
     double aj = (V < -40.0) ? (-127140.0 * exp(0.2444 * V) - 3.474e-5 * exp(-0.04391 * V)) * (V + 37.78) / (1.0 + exp(0.311 * (V + 79.23))) : 0.0;
     double bj = (V < -40.0) ? 0.1212 * exp(-0.01052 * V) / (1.0 + exp(-0.1378 * (V + 40.14))) : 0.3 * exp(-2.535e-7 * V) / (1.0 + exp(-0.1 * (V + 32.0)));
-    ALGEBRAIC[AV_ina_j_inf] = aj / (aj + bj);
+    ALGEBRAIC[AV_ina_j_inf] = 1.0 / (1.0 + exp((V + 66.5) / 4.1)); // S26
     ALGEBRAIC[AV_ina_j_tau] = 2.0 / (aj + bj);
     RATES[ina_j] = (ALGEBRAIC[AV_ina_j_inf] - STATES[ina_j]) / ALGEBRAIC[AV_ina_j_tau];
     ALGEBRAIC[AV_INa] = CONSTANTS[AC_gNa] * pow(STATES[ina_m], 3.0) * STATES[ina_h] * STATES[ina_j] * (V - ENa);
@@ -338,14 +338,14 @@ PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double*
 
     double axr = 0.0003 * (V + 14.1) / (1.0 - exp(-(V + 14.1) / 5.0));
     double bxr = 7.3898e-5 * (V - 3.3328) / (exp((V - 3.3328) / 5.1237) - 1.0);
-    ALGEBRAIC[AV_ikr_xr_inf] = axr / (axr + bxr);
+    ALGEBRAIC[AV_ikr_xr_inf] = 1.0 / (1.0 + exp(-(V - 4.445095) / 9.33047)); // S44
     ALGEBRAIC[AV_ikr_xr_tau] = 1.0 / (axr + bxr);
     RATES[ikr_xr] = (ALGEBRAIC[AV_ikr_xr_inf] - STATES[ikr_xr]) / ALGEBRAIC[AV_ikr_xr_tau];
-    ALGEBRAIC[AV_IKr] = CONSTANTS[AC_gKr] * STATES[ikr_xr] * (V - EK) / (1.0 + exp((V + 15.0) / 22.4));
+    ALGEBRAIC[AV_IKr] = CONSTANTS[AC_gKr] * STATES[ikr_xr] * (V - EK) / (1.0 + exp((V - 79.4825) / 8.2217)); // S40
 
     double axs = 4e-5 * (V - 18.80816) / (1.0 - exp(-(V - 18.80816) / 17.0));
     double bxs = 3.5e-5 * (V - 18.80816) / (exp((V - 18.80816) / 9.0) - 1.0);
-    ALGEBRAIC[AV_iks_xs_inf] = 1.0 / sqrt(1.0 + exp(-(V - 19.9) / 12.7));
+    ALGEBRAIC[AV_iks_xs_inf] = 1.0 / sqrt(1.0 + exp(-(V - 18.80816) / 12.6475)); // S49
     ALGEBRAIC[AV_iks_xs_tau] = 0.5 / (axs + bxs);
     RATES[iks_xs] = (ALGEBRAIC[AV_iks_xs_inf] - STATES[iks_xs]) / ALGEBRAIC[AV_iks_xs_tau];
     ALGEBRAIC[AV_IKs] = CONSTANTS[AC_gKs] * pow(STATES[iks_xs], 2.0) * (V - EK);
@@ -357,7 +357,7 @@ PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double*
     ALGEBRAIC[AV_ikur_ua_tau] = 1.0 / (CONSTANTS[AC_KQ10] * (aua + bua));
     RATES[ikur_ua] = (ALGEBRAIC[AV_ikur_ua_inf] - STATES[ikur_ua]) / ALGEBRAIC[AV_ikur_ua_tau];
 
-    ALGEBRAIC[AV_ikur_uif_inf] = 1.0 / (1.0 + exp((V + 17.5) / 5.85));
+    ALGEBRAIC[AV_ikur_uif_inf] = 1.0 / (1.0 + exp((V + 17.358) / 5.849)); // S39
     ALGEBRAIC[AV_ikur_uif_tau] = 400.0 + 1068.0 * exp(-pow(V / 50.0, 2.0));
     RATES[ikur_uif] = (ALGEBRAIC[AV_ikur_uif_inf] - STATES[ikur_uif]) / ALGEBRAIC[AV_ikur_uif_tau];
 
@@ -371,7 +371,7 @@ PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double*
     RATES[ical_d] = (ALGEBRAIC[AV_ical_d_inf] - STATES[ical_d]) / ALGEBRAIC[AV_ical_d_tau];
 
     ALGEBRAIC[AV_ical_f_inf] = 1.0 / (1.0 + exp((V + 28.0) / 6.9));
-    ALGEBRAIC[AV_ical_f_tau] = 9.0 / (0.0197 * exp(-0.03372 * pow(V + 5.0, 2.0)) + 0.02);
+    ALGEBRAIC[AV_ical_f_tau] = 9.0 / (0.0197 * exp(-0.0337 * 0.0337 * pow(V + 5.0, 2.0)) + 0.02); // S53
     RATES[ical_f] = (ALGEBRAIC[AV_ical_f_inf] - STATES[ical_f]) / ALGEBRAIC[AV_ical_f_tau];
 
     double fCa_inf = 1.0 / (1.0 + Cai / 0.00035);
@@ -399,12 +399,12 @@ PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double*
 
     double Fn = 1e-12 * CONSTANTS[AC_V_rel] * Irel - 5e-13 / CONSTANTS[AC_F] * (0.5 * ALGEBRAIC[AV_ICaL] - 0.2 * ALGEBRAIC[AV_INaCa]) * CONSTANTS[AC_Cm];
 
-    ALGEBRAIC[AV_iclca_qCa_inf] = 1.0 - pow(1.0 / (1.0 + Fn / 1.1e-10), 3.0);
+    ALGEBRAIC[AV_iclca_qCa_inf] = 1.0 - 1.0 / (1.0 + pow(Fn / 1.1e-10, 3.0)); // S29
     ALGEBRAIC[AV_iclca_qCa_tau] = 2.0;
     RATES[iclca_qCa] = (ALGEBRAIC[AV_iclca_qCa_inf] - STATES[iclca_qCa]) / ALGEBRAIC[AV_iclca_qCa_tau];
     ALGEBRAIC[AV_IClCa] = CONSTANTS[AC_gClCa] * STATES[iclca_qCa] * (V - ECl);
 
-    ALGEBRAIC[AV_ryr_w_inf] = 1.0 - 1.0 / (1.0 + exp(-(V - 40.0) / 17.0));
+    ALGEBRAIC[AV_ryr_w_inf] = 1.0 / (1.0 + exp((V - 70.0) / 8.0)); // S69
     ALGEBRAIC[AV_ryr_w_tau] = 6.0 * (fabs(V - 7.9) < 1e-6 ? 2.0 / 13.0 : (1.0 - exp(-(V - 7.9) / 5.0)) / ((1.0 + 0.3 * exp(-(V - 7.9) / 5.0)) * (V - 7.9)));
     RATES[ryr_w] = (ALGEBRAIC[AV_ryr_w_inf] - STATES[ryr_w]) / ALGEBRAIC[AV_ryr_w_tau];
 
@@ -412,7 +412,7 @@ PerisYaguecomputeVariables(double VOI, double* CONSTANTS, double* RATES, double*
     ALGEBRAIC[AV_ryr_u_inf] = u_inf;
     RATES[ryr_u] = (u_inf - STATES[ryr_u]) / CONSTANTS[AC_cajsr_u_tau];
 
-    double v_inf = 1.0 - 1.0 / (1.0 + exp(-(Fn - 0.2 * CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
+    double v_inf = 1.0 - 1.0 / (1.0 + exp(-(Fn - 6.835e-14) / CONSTANTS[AC_c2])); // S67
     double v_tau = 1.91 + 2.09 / (1.0 + exp(-(Fn - CONSTANTS[AC_c1]) / CONSTANTS[AC_c2]));
     RATES[ryr_v] = (v_inf - STATES[ryr_v]) / v_tau;
 

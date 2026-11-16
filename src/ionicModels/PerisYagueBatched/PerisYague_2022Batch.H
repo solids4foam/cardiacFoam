@@ -197,7 +197,7 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
                           ? 3.2
                           : 0.32 * (V + 47.13) / (1.0 - std::exp(-0.1 * (V + 47.13)));
         const double bm = 0.08 * std::exp(-V / 11.0);
-        const double m_inf = am / (am + bm);
+        const double m_inf = 1.0 / (1.0 + std::exp(-(V + 43.0) / 7.7)); // S24
         const double m_tau = 1.7 / (am + bm);
 
         const double ah = (V < -40.0)
@@ -205,8 +205,8 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
                           : 0.0;
         const double bh = (V < -40.0)
                           ? 3.56 * std::exp(0.079 * V) + 3.1e5 * std::exp(0.35 * V)
-                          : 0.13 / (1.0 + std::exp(-(V + 10.66) / 11.1));
-        const double h_inf = ah / (ah + bh);
+                          : 1.0 / (0.13 * (1.0 + std::exp(-(V + 10.66) / 11.1))); // S19
+        const double h_inf = 1.0 / (1.0 + std::exp((V + 66.5) / 4.4)); // S25
         const double h_tau = 2.0 / (ah + bh);
 
         const double aj = (V < -40.0)
@@ -216,7 +216,7 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
         const double bj = (V < -40.0)
                           ? 0.1212 * std::exp(-0.01052 * V) / (1.0 + std::exp(-0.1378 * (V + 40.14)))
                           : 0.3 * std::exp(-2.535e-7 * V) / (1.0 + std::exp(-0.1 * (V + 32.0)));
-        const double j_inf = aj / (aj + bj);
+        const double j_inf = 1.0 / (1.0 + std::exp((V + 66.5) / 4.1)); // S26
         const double j_tau = 2.0 / (aj + bj);
 
         const double INa = c_gNa * s_m * s_m * s_m * s_h * s_j * (V - ENa);
@@ -225,13 +225,13 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 
         const double axr = 0.0003 * (V + 14.1) / (1.0 - std::exp(-(V + 14.1) / 5.0));
         const double bxr = 7.3898e-5 * (V - 3.3328) / (std::exp((V - 3.3328) / 5.1237) - 1.0);
-        const double xr_inf = axr / (axr + bxr);
+        const double xr_inf = 1.0 / (1.0 + std::exp(-(V - 4.445095) / 9.33047)); // S44
         const double xr_tau = 1.0 / (axr + bxr);
-        const double IKr = c_gKr * s_xr * (V - EK) / (1.0 + std::exp((V + 15.0) / 22.4));
+        const double IKr = c_gKr * s_xr * (V - EK) / (1.0 + std::exp((V - 79.4825) / 8.2217)); // S40
 
         const double axs = 4e-5 * (V - 18.80816) / (1.0 - std::exp(-(V - 18.80816) / 17.0));
         const double bxs = 3.5e-5 * (V - 18.80816) / (std::exp((V - 18.80816) / 9.0) - 1.0);
-        const double xs_inf = 1.0 / std::sqrt(1.0 + std::exp(-(V - 19.9) / 12.7));
+        const double xs_inf = 1.0 / std::sqrt(1.0 + std::exp(-(V - 18.80816) / 12.6475)); // S49
         const double xs_tau = 0.5 / (axs + bxs);
         const double IKs = c_gKs * s_xs * s_xs * (V - EK);
 
@@ -241,7 +241,7 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
         const double bua = 0.65 / (2.5 + std::exp((V + 82.0) / 17.0));
         const double ua_tau = 1.0 / (c_KQ10 * (aua + bua));
 
-        const double uif_inf = 1.0 / (1.0 + std::exp((V + 17.5) / 5.85));
+        const double uif_inf = 1.0 / (1.0 + std::exp((V + 17.358) / 5.849)); // S39
         const double V_over_50 = V / 50.0;
         const double uif_tau = 400.0 + 1068.0 * std::exp(-V_over_50 * V_over_50);
 
@@ -262,7 +262,7 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
 
         const double f_inf = 1.0 / (1.0 + std::exp((V + 28.0) / 6.9));
         const double f_tau = 9.0
-                             / (0.0197 * std::exp(-0.03372 * V_plus_5 * V_plus_5) + 0.02);
+                             / (0.0197 * std::exp(-0.0337 * 0.0337 * V_plus_5 * V_plus_5) + 0.02); // S53
 
         const double fCa_inf = 1.0 / (1.0 + Cai / 0.00035);
 
@@ -301,12 +301,12 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
             1e-12 * c_V_rel * Irel
           - 5e-13 / c_F * (0.5 * ICaL - 0.2 * INaCa) * c_Cm;
 
-        const double inv_qCa_arg = 1.0 / (1.0 + Fn / 1.1e-10);
-        const double qCa_inf = 1.0 - inv_qCa_arg * inv_qCa_arg * inv_qCa_arg;
+        const double qCa_arg = Fn / 1.1e-10;
+        const double qCa_inf = 1.0 - 1.0 / (1.0 + qCa_arg * qCa_arg * qCa_arg); // S29
         const double qCa_tau = 2.0;
         const double IClCa   = c_gClCa * s_qCa * (V - ECl);
 
-        const double w_inf = 1.0 - 1.0 / (1.0 + std::exp(-(V - 40.0) / 17.0));
+        const double w_inf = 1.0 / (1.0 + std::exp((V - 70.0) / 8.0)); // S69
         const double V_minus_7_9 = V - 7.9;
         const double w_tau = 6.0
                              * ((std::fabs(V_minus_7_9) < 1e-6)
@@ -315,7 +315,7 @@ CARDIAC_HOST_DEVICE inline void PerisYagueComputeVariablesBatch
                                   / ((1.0 + 0.3 * std::exp(-V_minus_7_9 / 5.0)) * V_minus_7_9));
 
         const double u_inf_ryr = 1.0 / (1.0 + std::exp(-(Fn - c_c1) / c_c2));
-        const double v_inf_ryr = 1.0 - 1.0 / (1.0 + std::exp(-(Fn - 0.2 * c_c1) / c_c2));
+        const double v_inf_ryr = 1.0 - 1.0 / (1.0 + std::exp(-(Fn - 6.835e-14) / c_c2)); // S67
         const double v_tau_ryr = 1.91 + 2.09 / (1.0 + std::exp(-(Fn - c_c1) / c_c2));
 
         const double Cai_plus_KmTRPN = Cai + c_Km_TRPN;
