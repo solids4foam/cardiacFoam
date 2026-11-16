@@ -82,9 +82,13 @@ Two techniques for injecting a pathology into the model —
 
 ## Regression
 
-`electroHeart` (`monodomain` on the human tree by default, every variant
-and tree with `CARDIAC_REGRESSION_SCOPE=full`) and `pathos/conductionBlock`
-(`lbbb` and `rbbb`) are wired into `tutorials/Alltest-regression`; both
-share a `../mesh/`-relative sibling-mesh copy-in step that
-`Alltest-regression` handles once per sweep: it copies `mesh/heartTorso`,
-the Purkinje graphs and `prepareHeartMesh` (see the comment there).
+| Case | Tier |
+| --- | --- |
+| `electroHeart` | `full`: the three solver variants on the human tree |
+| `electroMechHeart` | `full`, an expected skip in `lightweight` build mode |
+| `pathos/conductionBlock` | `full`: `lbbb` and `rbbb` |
+| `pathos/ionicPathology` | `none`: the solver is checked by `electroHeart`, the overrides by `../electrophysiologyProtocols/ionicHeterogeneity` |
+| `idealizedTorso` | `none`: the couplings are checked by `manufacturedSolutions/bathBidomain/slab` and `manufacturedSolutions/leadFieldECG` |
+
+`Alltest-regression` copies `mesh/heartTorso`, the Purkinje graphs and
+`prepareHeartMesh` into the sweep once, for every `idealizedHeart` case.

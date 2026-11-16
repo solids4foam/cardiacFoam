@@ -1,31 +1,34 @@
 # monodomain1DCableCV tutorial
 
-This tutorial is the minimal tissue-scale conduction-velocity calibration case
-for `cardiacFoam`.
+## What it does
 
-- Electro model: `monodomainSolver`
-- Geometry: 20 mm cable with a single-cell cross-section
-- Purpose: launch one paced wave, measure activation times at several stations,
-  and compute a conduction velocity suitable for conductivity calibration
+Solves the monodomain equation (`monodomainSolver`, implicit) with the
+Stewart myocyte model on a 20 mm cable of 0.1 mm x 0.1 mm cross-section
+(100 x 1 x 1 cells, 0.2 mm), measures activation times at five probes, and
+computes conduction velocity (CV) for conductivity calibration. The committed
+case paces five S1 beats at 1 s and one S2 at 4.5 s from the first 2 mm,
+runs to 5.6 s, and writes `Vm` and `activationTime` at the probes.
 
-## Why this case exists
+- **Exercises:** `monodomainSolver` with the implicit algorithm, the Stewart
+  ionic model with the Euler ODE integrator, a stimulus list in
+  `externalStimulus`, and `probes` sampling of `activationTime`.
+- **Use it for:** tuning `conductivity` to a target CV in isolation before a
+  2D sheet, 3D slab, ventricle or Purkinje-coupled run; CV convergence in
+  mesh and time step (`cable1DCVConvergence`); S1-S2 CV and APD restitution,
+  and measuring the constants compiled into `restitutionEikonalSolver1D`
+  (`cable1DRestitution`, [Purkinje_S1_S2_Calibration.md](Purkinje_S1_S2_Calibration.md)).
 
-Before a 2D sheet, 3D slab, ventricle, or Purkinje-coupled simulation can be
-trusted, the tissue propagation speed has to be checked in isolation. This case
-gives the smallest practical setup for that task:
+## Regression
 
-- one paced wavefront
-- a straight cable geometry
-- conduction confined to the cable myocardium
-- direct access to activation-time-based CV measurements
+Tier: `none`.
 
-The intended workflow is:
-
-1. choose an ionic model and tissue type
-2. run the cable
-3. measure CV
-4. adjust `conductivity` in `constant/electroProperties`
-5. rerun until the central-cable CV matches the target physiology
+None. The monodomain solver is checked by
+[`manufacturedSolutions/monodomain/cube`](../../../manufacturedSolutions/monodomain/cube/README.md)
+(standard) against an exact solution, and with a published ionic model on a
+slab by
+[`benchmarks/NiedererEtAl2011verification`](../../../benchmarks/NiedererEtAl2011verification/README.md)
+(full). What this case adds is the CV and restitution measurement protocol.
+The Stewart ionic model it uses is not run by any regression.
 
 ## Folder structure
 
@@ -38,12 +41,19 @@ tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
 │   ├── blockMeshDict
 │   ├── cableProbes
 │   ├── controlDict
+│   ├── decomposeParDict
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setup/
-│   └── extract_cv.py
+│   ├── extract_cv.py
+│   ├── extract_cv_s2.py
+│   ├── postProcessing_cableRestitution.py
+│   ├── table_summary.py
+│   └── studies/
 ├── Allrun
+├── Allrun.post
 ├── Allclean
+├── Purkinje_S1_S2_Calibration.md
 └── README.md
 ```
 
@@ -54,7 +64,8 @@ tutorials/electrophysiologyProtocols/cableProtocol/monodomain1DCableCV/
 - Resolution: 0.2 mm along the cable (`100 x 1 x 1`)
   - The frozen reference protocol below overrides this to 0.1 mm; the
     committed default is the coarser mesh.
-- Stimulus region: first 0.5 mm of the cable
+- Stimulus region: first 2 mm of the cable, over the whole cross-section
+- Stimuli: five S1 at 0, 1, 2, 3 and 4 s and one S2 at 4.5 s, 4 ms each
 
 Five probes are placed at:
 
@@ -80,6 +91,7 @@ because it avoids both the stimulus source region and the distal boundary.
 - `decomposePar`
 - `runParallel cardiacFoam`
 - `reconstructPar`
+- `redistributeRestartState`
 
 The decomposition is defined in `system/decomposeParDict`.
 
@@ -96,7 +108,9 @@ The decomposition is defined in `system/decomposeParDict`.
 2. run `cardiacFoam` in serial or parallel
 
 To extract CV from a manual run, call `python3 setup/extract_cv.py` separately.
-The driver workflow runs its own CV post-processing.
+It reads the last activation time at each probe, so with the committed
+stimuli it measures the S2 wave. The driver workflow runs its own CV
+post-processing.
 
 ## omniD convergence entry
 
@@ -187,6 +201,14 @@ unforced beat shortly after S2 is not bound to it.
 
 ## Main calibration knob
 
+The calibration workflow is:
+
+1. choose an ionic model and tissue type
+2. run the cable
+3. measure CV
+4. adjust `conductivity` in `constant/electroProperties`
+5. rerun until the central-cable CV matches the target physiology
+
 The primary CV tuning parameter in this case is:
 
 ```cpp
@@ -248,5 +270,7 @@ For a new ionic model or tissue phenotype:
 ## Notes on dictionary entries
 
 The tissue conductivity in `constant/electroProperties` is this tutorial's
-calibration parameter: 3.3 S/m gives roughly 3.0 m/s with the Stewart
-Purkinje/myocyte model.
+calibration parameter. The committed 2.3 S/m is the conductivity of the
+Stewart/myocyte restitution calibration, whose central CV runs from 1.40 m/s
+at DI90 62 ms to 3.33 m/s at 401 ms
+([Purkinje_S1_S2_Calibration.md](Purkinje_S1_S2_Calibration.md)).

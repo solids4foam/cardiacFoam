@@ -4,4 +4,17 @@ set -e
 
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
+# ./Allrun             the endocardial/M/epicardial probe of constant/electroProperties
+# ./Allrun overrides   the same probe with constant/ionicConstantOverrides added
+#                      (written to local/overrides, which electroProperties includes)
+mkdir -p local
+case "${1:-}" in
+    "")        : > local/overrides ;;
+    overrides) cp constant/ionicConstantOverrides local/overrides ;;
+    *)
+        echo "Usage: ./Allrun [overrides]" 1>&2
+        exit 1
+        ;;
+esac
+
 runApplication ionicHeterogeneityProbe

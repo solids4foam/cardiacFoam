@@ -1,30 +1,57 @@
 # monodomain/coupled1D3DCube
 
+## What it does
+
 Coupled 1D-3D monodomain manufactured solution: a reaction-diffusion Purkinje
 graph and the 3D myocardium on the unit cube, joined at two Purkinje-myocardial
-junctions (PVJs) by `reactionDiffusionPvjCoupler`. It checks the node-edge graph
-operator, the 3D monodomain operator and the PVJ source (sampling the tissue
-voltage, depositing the junction current) under joint refinement, for
-unidirectional transfer with explicit and implicit tissue-side assembly and for
-bidirectional transfer, which is always explicit on the tissue side.
+junctions (PVJs) by `reactionDiffusionPvjCoupler`. The case writes the 3D and
+graph errors against the exact solution and the junction source against its
+exact value, built with the solver's own map (`-reference discrete`, default)
+or from the continuum kernel (`-reference continuum`).
 
-The junction forcing has two references (`-reference`). `discrete` (the
-default) builds the exact junction source with the same sampling and
-deposition map as the solver, so map errors cancel and the case checks the
-coupled workflow against that map. `continuum` builds it from the continuum
-kernel normalised over the tissue part of the support and averaged over each
-cell (`pvjContinuumReference`), so the discrete map's own error reaches the
-solution and the junction is verified against its continuum definition. The
-case does not check a calibrated junction resistance, graph branch points with
-more than two edges, or a wall treatment (the 3D field has a zero normal
-gradient on every face); the sealed curved wall is
-[monodomain/coupled1D3DShell](../coupled1D3DShell/README.md).
+- **Exercises:** the node-edge graph operator, the 3D monodomain operator and
+  the PVJ source (sampling the tissue voltage, depositing the junction
+  current) under joint refinement, for unidirectional transfer with explicit
+  and implicit tissue-side assembly and for bidirectional transfer, which is
+  always explicit on the tissue side. It does not check a calibrated junction
+  resistance, graph branch points with more than two edges, or a wall
+  treatment (the 3D field has a zero normal gradient on every face); the
+  sealed curved wall is [monodomain/coupled1D3DShell](../coupled1D3DShell/README.md).
+  Only this case's regression checks the junction source against the
+  discrete-map reference.
+- **Use it for:** verifying a change to the Purkinje graph solver, the PVJ
+  coupler or its sampling and deposition map; starting a joint 1D-3D
+  convergence study or a junction study against the continuum definition
+  (`setup/studies/`); trying a new kernel or junction radius against an exact
+  solution.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `./Allrun` in serial with the case
+defaults only (`N = 20`, the 21-node graph, unidirectional explicit transfer,
+linear kernel, `pvjRadius 0.11`, discrete reference, `T = 0.1`); the implicit,
+bidirectional and continuum options are not run. It compares 28 rows:
+`regression/coupled1D3DCube.reference` (19 rows) holds the cells per
+direction, the final time, 12 error norms of `Vm`, `u1`, `u2` and the boundary
+and gradient rows, and, from
+`verification/coupled1D3DMonodomain_diagnostics.csv` at `t = 0.1`, the
+junction source, its exact value, its L1 and L2 errors and the number of
+cells it reaches; `regression/coupled1D3DCube.graph.reference` (9 rows) holds
+the L1, L2 and Linf errors of `Vm1D`, `u1` and `u2` on the graph. The expected
+values are frozen from an earlier run, with absolute tolerances of about
+`1e-5` of each value (the cell count is exact). No marker applies.
+
+```bash
+./regression/regressionTest.sh
+```
+
+## Problem
 
 Origin: the 3D field is the monodomain problem of the FDA regulatory science
 tool (Pathmanathan & Gray 2014); the graph field and the PVJ coupling problem
 are this work.
-
-## Problem
 
 The tissue field, the graph field and the junction are defined in the
 construction document
@@ -54,6 +81,14 @@ junction source, computed from the exact fields with the same map and kernel,
 and write the difference between the numerical and the exact junction source.
 With `-reference continuum` they add the continuum junction source instead
 (below).
+
+The two references answer different questions. `discrete` builds the exact
+junction source with the same sampling and deposition map as the solver, so
+map errors cancel and the case checks the coupled workflow against that map.
+`continuum` builds it from the continuum kernel normalised over the tissue
+part of the support and averaged over each cell (`pvjContinuumReference`), so
+the discrete map's own error reaches the solution and the junction is
+verified against its continuum definition.
 
 ### Continuum reference
 
@@ -97,10 +132,12 @@ in `pvjContinuumReference` from these definitions and not shared with
 ## Mesh
 
 - 3D (`system/blockMeshDict.3D`): `N` cells per unit length in each direction.
-- Graph (`constant/purkinjeGraph.nodes<k>`, `k` = 3, 11, 21, 41, 81, 161):
-  `(k - 1)/2` equal edges per branch, edge length `1/(k - 1)`. The coupled
-  studies refine both together, `k = N + 1`. `setup/generate_purkinje_graphs.py`
-  writes these files to `constant/` and VTK views to `constant/graphFiles/`.
+- Graph (`constant/purkinjeGraph.nodes<k>`, `k` = 3, 11, 17, 21, 25, 33, 41,
+  49, 65, 81, 97, 161): `(k - 1)/2` equal edges per branch, edge length
+  `1/(k - 1)`. The coupled studies refine both together, `k = N + 1`.
+  `setup/generate_purkinje_graphs.py` writes these files to `constant/` and VTK
+  views to `constant/graphFiles/`; by default it writes `k` = 3, 11, 21, 41,
+  81 and 161, and `--segments` sets the edges per branch of the others.
 
 ## Usage
 
@@ -158,14 +195,6 @@ Outputs:
     current against the continuum ones (the step maxima are continuum only),
     and the far-field tissue error over the cells at least `farFieldDistance`
     from every terminal
-
-Regression (the defaults: `N = 20`, the 21-node graph, unidirectional explicit
-transfer, serial): the 3D errors with their boundary and gradient rows, the
-junction source, its exact value and its error, and the graph errors.
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Studies
 

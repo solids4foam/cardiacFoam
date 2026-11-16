@@ -1,9 +1,39 @@
 # Bundle branch block on the idealized biventricular heart
 
+## What it does
+
 Monodomain tissue simulation modelling left or right bundle branch block via
-a modified Purkinje graph with one bundle severed. No `ionicConstantOverrides`
-are used — the conduction delay is entirely structural. Two variants of the
-same case, selected at run time; no default — see Execution below.
+a modified Purkinje graph with one bundle severed: `Allrun` zeroes the
+conductance of one bundle-branch edge (`severBundleBranch`), so that
+ventricle's tree is cut off from the root. No `ionicConstantOverrides` are
+used — the conduction delay is entirely structural. Two variants of the same
+case (`lbbb`, `rbbb`), selected at run time; no default — see Execution below.
+
+- **Exercises:** a Purkinje graph with a zero-conductance edge in the cable
+  solver (`monodomain1DSolver`), coupled to monodomain tissue: the blocked
+  subtree must stay silent. It is the only regression that checks a severed
+  branch in the cable Purkinje solver.
+- **Use it for:** bundle branch block activation sequences and pseudo-ECGs on
+  the whole heart, and as a starting point for other structural conduction
+  defects made by editing the Purkinje graph.
+
+## Regression
+
+Tier: `full`.
+
+`regression/regressionTest.sh` runs `./Allrun lbbb parallel` and
+`./Allrun rbbb parallel` (6 subdomains, `scotch`) with `endTime` set to 0.035
+instead of the tutorial's 0.7. It compares the two `activationTime` probes of
+`system/injectionProbe` at 35 ms against `regression/lbbb.reference` and
+`regression/rbbb.reference` (2 rows each, tolerance 1e-4 s, values frozen
+from an earlier run of the code): the blocked ventricle's probe still reads
+-1 while the other has activated (RV at 12.3 ms in `lbbb`, LV at 28.6 ms in
+`rbbb`). The script does not accept `--check-only`, since each variant needs
+its own run.
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Stack
 
@@ -25,10 +55,11 @@ radius valid on this mesh.
 
 `Allrun` runs `../../prepareHeartMesh` (which writes the heart mesh and
 fields from `../../mesh/heartTorso`, see `../../README.md`) and copies from
-`../../mesh/`:
-`fiber`/`sheet`/`sheetNormal`/`tm`/`tv`/`apicobasal`/`Conductivity`/
-`polyMesh`, and the baseline `constant/purkinjeGraph` (as
-`purkinjeGraph.healthy`, the source both variants are derived from).
+`../../mesh/` only what this case reads: `constant/polyMesh`, `0/tm`,
+`0/Conductivity`, and the baseline `constant/purkinjeGraph` (as
+`purkinjeGraph.healthy`, the source both variants are derived from). The
+other anatomy fields there (`fiber`, `sheet`, `sheetNormal`, `tv`,
+`apicobasal`) are not read by this case and are not copied.
 
 ## Tissue heterogeneity
 

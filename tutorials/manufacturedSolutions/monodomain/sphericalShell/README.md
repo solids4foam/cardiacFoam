@@ -1,18 +1,50 @@
 # monodomain/sphericalShell
 
+## What it does
+
 Monodomain manufactured solution on a spherical heart shell, meshed as a
 cubed sphere (`-mesh hex`, default) or with gmsh tetrahedra (`-mesh tet`):
 sealed curved boundaries approximated by planar faces, a rotated anisotropic
 conductivity with all six tensor components that turns through the wall, and
-a solution whose conormal flux vanishes on both spheres. The case checks the
-sealed-wall operators (wall-cell gradient, face flux at a sealed wall) with a
-field whose normal and tangential gradients do not vanish on the walls; with
-`-ecg` it also checks the pseudo-ECG of that field. It does not check a
-stimulus or a wall that carries current.
+a solution whose conormal flux vanishes on both spheres. The case writes the
+field errors against the exact solution, split into bulk, boundary and
+wall-gradient rows, and with `-ecg` the pseudo-ECG errors.
 
-Origin: this work.
+- **Exercises:** the sealed-wall operators (the `sealedWallLeastSquares`
+  wall-cell gradient, the face flux at a sealed wall) with a field whose
+  normal and tangential gradients do not vanish on the walls, and with `-ecg`
+  the pseudo-ECG of that field. It does not check a stimulus or a wall that
+  carries current. Its regression is the monodomain check of the sealed
+  curved wall on the cubed sphere;
+  [coupled1D3DShell](../coupled1D3DShell/README.md) checks the same wall on
+  tetrahedra, with a Purkinje junction.
+- **Use it for:** verifying a change to the sealed-wall gradient or the wall
+  flux (`-wallGradient stock` gives the stock gradient for comparison);
+  starting a convergence study on a curved geometry (`setup/studies/`);
+  checking a new mesh type of a curved wall against an exact solution.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `./Allrun parallel` with the case
+defaults only (hex cubed sphere, `N = 12`, `T = 0.2`, sealed-wall gradient,
+no pseudo-ECG, four ranks with scotch); no gmsh is needed. It compares the 10
+rows of `regression/sphericalShell.reference` with
+`postProcessing/3D_hex_12_cells.dat`: the cells per direction, the final time,
+and 8 error norms against the exact solution (`Vm` L2 and Linf, `u1` and `u2`
+L2, and the `Vm` bulk, `Vm` boundary and two wall-gradient rows). The expected
+values are frozen from an earlier run, with absolute tolerances of about
+`1e-5` of each value. The pseudo-ECG of the shell is not in the regression.
+No marker applies.
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
+
+Origin: this work.
 
 The shell field and its conductivity are defined in the construction document
 [monodomain_mms.pdf](../../generators/docs/monodomain/monodomain_mms.pdf),
@@ -111,14 +143,6 @@ samples). The field outputs are the same with and without `-ecg`.
 
 ```bash
 ./Allrun -mesh tet -N 10 -wallGradient stock -ecg
-```
-
-Regression (the case defaults: hex cubed sphere, `N = 12`, `T = 0.2`, parallel
-on four ranks; no gmsh needed): the `Vm`, `u1` and `u2` errors and the bulk,
-boundary and wall-gradient rows.
-
-```bash
-./regression/regressionTest.sh
 ```
 
 ## Studies

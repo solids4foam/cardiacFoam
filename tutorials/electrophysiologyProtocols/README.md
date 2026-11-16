@@ -67,7 +67,15 @@ regression gate (e.g. its `tworldVsGaur` study).
 
 ## Regression
 
-`singleCell`, `ionicHeterogeneity`, `rotorInstability` and
-`purkinjeRestitution2D` are wired into
-`tutorials/Alltest-regression`; see `../README.md` for the full canonical
-table and coverage status of the rest.
+| Case | Tier |
+| --- | --- |
+| `singleCell` | `standard` |
+| `ionicHeterogeneity` | `standard` (including the `ionicConstantOverrides` run) |
+| `rotorInstability` | `full` |
+| `purkinjeRestitution2D` | `full` |
+| `restitutionCurves_s1s2Protocol` | `none`: `singleCellSolver` is checked by `singleCell`, Bueno-Orovio by `ionicHeterogeneity` |
+| `cableProtocol/monodomain1DCableCV` | `none`: the monodomain is checked by `manufacturedSolutions/monodomain/cube` and the Niederer benchmark |
+| `cableProtocol/eikonal1DCableCV` | `none`: the eikonal solver is checked by `manufacturedSolutions/eikonal/cube` |
+
+Each case README says what its regression checks; `../README.md` gives the
+tiers and the rule for when a case has a regression.

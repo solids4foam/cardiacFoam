@@ -1,12 +1,55 @@
 # leadFieldECG/sphericalShell
 
-Lead-field ECG against an exact torso potential on a curved heart: a heart
-shell `0.5 < |x| < 1` between the bath ball `bloodPool` (`|x| < 0.5`) and the
-outer bath `1 < |x| < 1.5`. Current generated in the heart crosses
-both spheres into the torso, the heart conductivities are rotated full
-tensors whose fibre angle varies with the radius, and the bath conductivity
-varies in space. The parent case [leadFieldECG](../README.md) has the
-lead-field method and its slab and layered references.
+## What it does
+
+Runs the lead-field ECG against an exact torso potential on a curved heart: a
+heart shell `0.5 < |x| < 1` between the bath ball `bloodPool` (`|x| < 0.5`)
+and the outer bath `1 < |x| < 1.5`, on a cubed sphere (`-mesh hex`, default)
+or gmsh tetrahedra (`-mesh tet`). Current generated in the heart crosses both
+spheres into the torso, the heart conductivities are rotated full tensors
+whose fibre angle varies with the radius, and the bath conductivity varies in
+space. The parent case [leadFieldECG](../README.md) has the lead-field method
+and its slab and layered references.
+
+- **Exercises:** the lead-field reciprocity and the transmission solution
+  across curved heart-torso interfaces, with rotated heart tensors, a
+  spatially varying torso conductivity and a pure-Neumann conductor with a
+  pin; the manufactured sources are added to both the lead-field channel and
+  the direct solve (`manufacturedShellLeadFieldECGVerifier`). No other
+  regression checks the lead field on curved heart-torso interfaces against an
+  exact solution.
+- **Use it for:** verifying a change to the lead-field conductor, its
+  interface conductivities or its source assembly on curved and skewed
+  interfaces; starting the curved convergence study in `setup/studies/`.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs the case defaults (hex cubed sphere,
+`N = 12`, one time step of `0.001`) serially and compares
+`postProcessing/manufacturedLeadFieldECGSummary_ECG.dat` with
+`regression/sphericalShell.reference` (12 rows):
+
+- the reciprocity gaps `leadField-direct_relative` and
+  `leadFieldStatic-directStatic` (Linf), checked against zero within `1e-8`;
+- the lead field on the exact `Vm` against the exact potential at the
+  electrode-cell centroids (Linf): the largest over the electrodes, three
+  body-surface electrodes (`surface2`, `surface4`, `surface5`) and the
+  bath-ball probe `pool`;
+- the direct static potential against the exact one over all cells (L2,
+  Linf), over the band of cells next to the spheres (L2) and over the cells of
+  the outer surface (L2, Linf).
+
+The non-zero values are frozen from an earlier run, with an absolute
+tolerance of `1e-7`. Marker: `regression/needs-solids4foam` (exit 77 under
+`CARDIAC_REGRESSION_BUILD_MODE=lightweight` or without a solids4foam tree).
+The `leadField` and `leadFieldDirect` solves also need cardiacFoam built with
+PETSc. Run it alone with:
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
 
@@ -85,7 +128,7 @@ electrode lies in the myocardium.
 
 | option | sets | default |
 |---|---|---|
-| `parallel` | `decomposePar`, `buildLeadFields` and `cardiacFoam` in parallel | serial |
+| `parallel` | `decomposePar` (6 subdomains, scotch), `buildLeadFields` and `cardiacFoam` in parallel | serial |
 | `-mesh hex\|tet` | cubed sphere or gmsh tetrahedra | `hex` |
 | `-N n` | cells per unit length | 12 |
 | `-seed n` | gmsh seed of `-mesh tet` | 1 |
@@ -102,9 +145,3 @@ its tables.
 | study | question |
 |---|---|
 | [curvedConvergence](setup/studies/curvedConvergence/README.md) | order of the lead field and of the direct solve against the exact transmission potential at the electrodes and over the field, on the cubed sphere and on tetrahedra |
-
-## Regression
-
-`regression/regressionTest.sh` runs the case defaults serially and compares
-the reciprocity gap and the static errors with
-`regression/sphericalShell.reference`.

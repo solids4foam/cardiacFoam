@@ -1,7 +1,43 @@
 # Electrophysiology on the idealized biventricular heart
 
-Three solver combinations on the same idealized biventricular mesh, same
-anatomy, selected at run time.
+## What it does
+
+Three solver combinations (`monodomain`, `eikonal`, `hybrid`) on the same
+idealized biventricular mesh and anatomy, selected at run time, with a grown
+Purkinje tree coupled to the myocardium and a six-lead pseudo-ECG (an eikonal
+ECG for `eikonal`). It stimulates the Purkinje root once and runs to 40 ms.
+
+- **Exercises:** the three myocardium/Purkinje solver and coupler combinations
+  of the Stack table on a 3D anatomy with a grown tree, pre-pacing of the
+  myocardium (`prePacingProperties`), and Purkinje-to-myocardium injection at
+  a junction. It is the only regression that checks values of the all-eikonal
+  combination (`eikonalSolver`, `eikonalSolver1D`, `eikonalPvjCoupler`) and of
+  the `hybrid` combination on a 3D anatomy; `hybrid` on a 2D sheet is also
+  checked by `../../electrophysiologyProtocols/purkinjeRestitution2D`.
+- **Use it for:** the healthy baseline of the whole-heart cases
+  (`../pathos/`), comparing the cost and activation of the three solver
+  combinations, and as a starting point for whole-heart activation and
+  pseudo-ECG studies with a Purkinje network.
+
+## Regression
+
+Tier: `full`.
+
+`regression/regressionTest.sh` runs `./Allrun <variant> human parallel` for
+`monodomain`, `eikonal` and `hybrid` in turn (6 subdomains, `scotch`), on the
+human Purkinje tree only, to the case's `endTime 0.04`. Each variant is
+compared against its own `regression/injection.<variant>.reference` (4 rows
+each, values frozen from an earlier run of the code): `activationTime` at the
+`system/injectionProbe` junction site (tolerance 1e-4 s; 28.6 ms for
+`monodomain`, 28.9 ms for `hybrid`, 7.4 ms for `eikonal`, which writes only
+time 1), and three ECG samples, V4 at 25 ms, V2 at 40 ms (35 ms for
+`eikonal`) and V6 at 40 ms (tolerance 2e-4). The `eikonal` run must also
+log `PIMPLE: converged`. The script does not accept `--check-only`, since
+each variant needs its own run.
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Stack
 
@@ -11,9 +47,8 @@ anatomy, selected at run time.
 | `eikonal` | `eikonalSolver` | `eikonalSolver1D` | `eikonalPvjCoupler` |
 | `hybrid` | `monodomainSolver` | `restitutionEikonalSolver1D` | `eikonalMonodomainPvjCoupler` |
 
-`monodomain` is the regression-covered variant (see `regression/`); `eikonal` is the cheapest
-combination; `hybrid` is the middle ground (full 3D myocardium, cheaper
-1D Purkinje).
+`eikonal` is the cheapest combination; `hybrid` is the middle ground (full
+3D myocardium, cheaper 1D Purkinje).
 
 ## Mesh and shared anatomy fields
 
@@ -189,15 +224,10 @@ as the junction delay. Keep it fixed when comparing meshes.
 `python3 setup/plot_pseudo_ecg.py --case-dir . --monodomain` (`--eikonal` for the
 `eikonal` variant) plots the pseudo-ECG of a finished run.
 
-The regression runs `monodomain` on the human tree by default; with
-`CARDIAC_REGRESSION_SCOPE=full` it runs every variant on both trees
-(`regression/injection.<variant>.reference` for human,
-`injection.<variant>.pig.reference` for pig).
-
 `constant/electroProperties` is a symlink to
 `.monodomain`/`.eikonal`/`.hybrid`, swapped by `Allrun` per variant.
 `system/controlDict` is shared by the variants (`endTime 0.04`): the
-regression probe activates at 28.6 ms (`monodomain`) and 28.9 ms (`hybrid`)
+injection probe activates at 28.6 ms (`monodomain`) and 28.9 ms (`hybrid`)
 on the human tree, 32.5 and 34.5 ms on the pig tree; `eikonal` overrides its
 own time control internally regardless of `controlDict`, per
 `eikonalMyocardiumDomain::applyModelTimeControls`.

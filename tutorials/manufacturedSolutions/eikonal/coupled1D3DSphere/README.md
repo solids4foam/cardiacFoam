@@ -1,16 +1,58 @@
 # eikonal/coupled1D3DSphere
 
-Eikonal activation from a one-dimensional graph into a sealed tissue sphere, on
-gmsh tetrahedra, against an exact solution with no manufactured source. A root
-and one terminal at the centre set the time `Tk`; the terminal seeds the ball of
-cell centres within `R` at `Tk` plus the seed profile, and they stay held until the equation reaches them
-earlier, and the front spreads to a sealed wall. The case checks
-the eikonal operators with the curvature of the front and the exit layer at the
-wall, the path from the graph into the tissue, and the held ball.
+## What it does
 
-Origin: this work.
+Eikonal activation from a one-dimensional graph into a sealed tissue sphere, on
+gmsh tetrahedra, against an exact radial solution with no manufactured source.
+A root and one terminal at the centre set the time `Tk`; through
+`eikonalPvjCoupler` the terminal seeds the ball of cell centres within `R` at
+`Tk` plus the seed profile, they stay held until the equation reaches them
+earlier, and the front spreads to a sealed wall. The case writes the errors
+against the exact solution in the bulk, at the wall and beside the ball.
+
+- **Exercises:** the Purkinje graph to tissue junction of the eikonal model
+  (`eikonalSolver1D` on the graph, `eikonalPvjCoupler` with the `flat`,
+  `front` and `curvedFront` seed profiles, the held ball), and the eikonal
+  operators with the curvature of the front and the exit layer at the sealed
+  wall. Only this case's regression checks the eikonal junction against an
+  exact solution.
+- **Use it for:** verifying a change to the eikonal PVJ coupler or its seed
+  profiles; measuring how the activation error depends on `Pe_L`, `R/L` and
+  `h/L`; comparing gradient, upstream and convection schemes on a curved
+  front against an exact solution (`-gradient`, `-upstream`, `-convection`,
+  and `-seedProfile exact`, which holds the ball at the exact field with no
+  graph).
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `./Allrun` three times in serial, once
+per seed profile: `front` and `flat` with the case defaults (`N = 10`,
+`Pe_L = 46`, `R/L = 0.25`), and `curvedFront` with `-PeL 21 -N 20`, so that
+its critical radius is resolved. The three runs are kept because each takes a
+different seeding path through the coupler (`flat` deposits the terminal time;
+`front` and `curvedFront` add seed offsets from the metric distance and from
+the radial solution) and each runs in serial. Besides the `End` line,
+`log.cardiacFoam` of each run must contain `PIMPLE: converged`, so a run that
+stops at `nOuterCorrectors` fails. Each compares 5 L2 rows of
+`postProcessing/radial_errors.dat` (`eps`, `eps_bulk`, `eps_wall`, `eps_ball`,
+`grad_bulk`), 15 rows in all, with `regression/coupled1D3DSphere.reference`
+(`front`), `coupled1D3DSphere.flat.reference` and
+`coupled1D3DSphere.curvedFront.reference`. The expected values come from gmsh
+4.15.2 at mesh seed 1, and the tolerances cover the spread over mesh seeds 1
+to 4, so they are wider than a frozen-value check. `-seedProfile exact` and
+`-axes` are not run. The marker `regression/needs-tools` (gmsh) applies:
+without gmsh the script exits 77, an expected skip. With `--check-only` it
+compares only the seed profile of the existing run.
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
+
+Origin: this work.
 
 With isotropic `M = m I` and a field of the radius alone, the eikonal equation
 becomes `-m (psi'' + 2 psi'/r) + V psi' = 1`, `V = c0 sqrt(m)`, with `psi(R) = Tk`
@@ -50,6 +92,3 @@ span and to the RMS exact gradient: `eps` over the free cells and its parts in
 the bulk, the wall cells and the cells beside the ball, and the bulk gradient of
 the solved field and of the exact field. Every row uses the whole-domain volume,
 so the parts add in quadrature.
-
-`regression/regressionTest.sh` runs the defaults for each seed profile. The marker `regression/needs-tools`
-makes it an expected skip where gmsh is missing.

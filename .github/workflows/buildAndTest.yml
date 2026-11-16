@@ -1,8 +1,10 @@
-# Build cardiacFoam against solids4foam and run the tutorial regressions.
+# Build cardiacFoam against solids4foam and run the tutorial regressions of
+# the standard tier (tutorials/README.md, "Regression tiers"); the full tier
+# is run locally.
 #
 # Three kinds of leg:
 #   lightweight            electrophysiology-only build, every OpenFOAM image;
-#                          the three electromechanics regressions skip (77).
+#                          the solids4foam regressions skip (77).
 #   with-solids4foam/image full build against the solids4foam shipped in the
 #                          Docker image, i.e. the released solids4foam line.
 #                          That line lacks the fvOptions body force and the
@@ -13,7 +15,7 @@
 #   with-solids4foam/submodule
 #                          full build against modules/solids4foam, the pinned
 #                          solids4foam cardiacFoam targets, built in the job.
-#                          Every regression runs, electromechanics included.
+#                          Every standard regression runs, solids4foam ones included.
 
 name: Build and test
 

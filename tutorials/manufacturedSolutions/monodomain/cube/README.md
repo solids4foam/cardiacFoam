@@ -1,20 +1,51 @@
 # monodomain/cube
 
+## What it does
+
 Monodomain manufactured solutions on the unit cube, on Cartesian hexahedra
-(`-mesh hex`, default) or gmsh Delaunay tetrahedra (`-mesh tet`), with the
-pseudo-ECG checked against its reference integral in 3D. Two fields: the FDA
-cosine field with a diagonal conductivity, and an anisotropic sin^2 field with
-a full rotated conductivity. Both have a zero normal gradient on every face,
-so these cases check the interior operators (diffusion, cell-gradient
-reconstruction, non-orthogonal correction, ionic coupling, time integration)
-and the pseudo-ECG, not a wall treatment; sealed walls are checked by
-[sphericalShell](../sphericalShell/README.md).
+(`-mesh hex`, default) or gmsh Delaunay tetrahedra (`-mesh tet`): the FDA
+cosine field with a diagonal conductivity, or an anisotropic sin^2 field with
+a full rotated conductivity. The case writes the field errors against the
+exact solution and, in 3D, the pseudo-ECG errors against its reference
+integral.
+
+- **Exercises:** the interior operators of `monodomainSolver` (diffusion,
+  cell-gradient reconstruction, non-orthogonal correction on tetrahedra, ionic
+  coupling, time integration) and `pseudoECG`. Both fields have a zero normal
+  gradient on every face, so no wall treatment is tested; sealed walls are
+  checked by [sphericalShell](../sphericalShell/README.md). Only this case's
+  regression checks the pseudo-ECG against an exact reference.
+- **Use it for:** verifying a change to the monodomain operators, the time
+  coupling or the pseudo-ECG; starting a spatial or temporal convergence study
+  (`setup/studies/`); checking a new mesh type against an exact solution
+  (`-mesh tet` shows how a gmsh mesh enters the case).
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` first checks that `constant/electroProperties`
+names the electrodes E1-E5, then runs `./Allrun parallel` with the case
+defaults only (3D hexahedra, anisotropic field, `N = 20`, `T = 0.2`,
+`godunov` and `backward`, six ranks with scotch); none of the other `Allrun`
+options is run. It compares 34 rows: `regression/cube.reference` (19 rows)
+holds the cells per direction, the final time, 12 error norms of `Vm`, `u1`,
+`u2` and the boundary and gradient rows, and the final pseudo-ECG values of
+E1-E5; `regression/cube.ecg.reference` (15 rows) holds the L1, L2 and Linf
+pseudo-ECG errors of E1-E5 against the order-96 reference integral. The
+expected values are frozen from an earlier run, with absolute tolerances of
+about `1e-5` of each value, so the check fails on any change of the results,
+not only on a loss of accuracy. No marker applies.
+
+```bash
+./regression/regressionTest.sh
+```
+
+## Problem
 
 Origin: the FDA field is the monodomain problem of the FDA regulatory science
 tool (Pathmanathan & Gray 2014); the anisotropic field and the pseudo-ECG
 problem are this work.
-
-## Problem
 
 The FDA field (`-field fda`, 1D/2D/3D) and the anisotropic field (`-field
 anisotropic`, 3D, default) are defined in the construction document
@@ -83,13 +114,6 @@ on tetrahedra `n = round(cbrt(cells))`. In 3D,
 `postProcessing/pseudoECG.dat` holds the electrode traces and
 `postProcessing/manufacturedPseudoECGSummary_ECG.dat` their errors against
 the reference integral.
-
-Regression (the defaults: 3D anisotropic field, `N = 20`, parallel on six
-ranks): field errors, the final traces of E1-E5 and their pseudo-ECG errors.
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Studies
 

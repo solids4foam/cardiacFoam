@@ -21,6 +21,6 @@ field matches the spring law at every time step.
 
 ## Regression
 
-`springSupportedSlab` is wired into `tutorials/Alltest-regression`, as an
-expected skip in `lightweight` build mode. See `../README.md` for the full
-canonical table.
+`springSupportedSlab`: tier `full`, an expected skip in `lightweight` build
+mode. Its README says what the regression checks; `../README.md` gives the
+tiers.
