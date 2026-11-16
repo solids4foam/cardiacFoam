@@ -58,7 +58,8 @@ const wordList tissueKeys
     "phiERefPoint", "phiEReferenceValue",
     "conductionNetworkDomains", "domainCouplings", "c0",
     "eikonalAdvectionDiffusionApproach", "stimulusLocationMin",
-    "stimulusLocationMax", "useGraphPrePopulation",
+    "stimulusLocationMax", "stimulusLocationMinList",
+    "stimulusLocationMaxList", "useGraphPrePopulation",
     "eikonalConormalStabilisation"
 });
 
@@ -268,7 +269,8 @@ wordList ecgSolverKeys
     {
         return wordList
         ({
-            "sigmaExtracellular", "sampling", "personalizedTemplates"
+            "sigmaExtracellular", "sampling", "personalizedTemplates",
+            "checkGradVm"
         });
     }
 

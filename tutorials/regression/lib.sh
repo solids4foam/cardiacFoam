@@ -12,7 +12,15 @@
 #
 #     #!/usr/bin/env bash
 #     set -euo pipefail
-#     . "$(dirname "${BASH_SOURCE[0]}")/../../../regression/lib.sh"
+#     regressionLib="${CARDIAC_REGRESSION_LIB:-}"
+#     if [[ -z "${regressionLib}" ]]; then
+#         dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+#         while [[ "${dir}" != / && ! -f "${dir}/regression/lib.sh" ]]; do
+#             dir="$(dirname "${dir}")"
+#         done
+#         regressionLib="${dir}/regression/lib.sh"
+#     fi
+#     . "${regressionLib}"
 #     regression_init "Case title" regression/case.reference "$@"
 #     regression_set system/controlDict endTime 0.05    # regression-only
 #     regression_run parallel
@@ -48,8 +56,10 @@
 #         matched against the first header line, with or without a leading
 #         '#' and with or without a 'numeric_' prefix.
 #     csv     <file> <key> <column> <expected> <tolerance>
-#         Comma-separated table with a header line. Row = nearest first-field
-#         value to <key> within REGRESSION_TIME_WINDOW; <column> by name.
+#         Comma-separated table with a header line; <column> by name. Row =
+#         nearest first-field value to a numeric <key> within
+#         REGRESSION_TIME_WINDOW, or, for <key> = name=value[,name=value...],
+#         the one row whose named columns equal those values.
 #     final   <file> <column> <expected> <tolerance>
 #         Last data row of a whitespace-separated series; <column> by name
 #         or index.
@@ -548,14 +558,31 @@ regression_csv_value()
 
     awk -F, -v target="${key}" -v name="${name}" -v window="${REGRESSION_TIME_WINDOW}" \
         "${regression_awk_common}"'
-        BEGIN { bestDiff = 1e99; found = 0; col = 0 }
-        NR == 1 { col = header_column($0, name); next }
+        BEGIN {
+            bestDiff = 1e99; found = 0; col = 0
+            nKeys = (index(target, "=") > 0) ? split(target, pairs, ",") : 0
+        }
+        NR == 1 {
+            col = header_column($0, name)
+            for (k = 1; k <= nKeys; k++) {
+                split(pairs[k], kv, "=")
+                keyCol[k] = header_column($0, kv[1]); keyValue[k] = kv[2]
+                if (keyCol[k] == 0) exit 1
+            }
+            next
+        }
+        col > 0 && NF >= col && nKeys > 0 {
+            for (k = 1; k <= nKeys; k++) if ($(keyCol[k]) != keyValue[k]) next
+            found++; actual = $col
+            next
+        }
         col > 0 && NF >= col {
             d = $1 - target
             if (d < 0) d = -d
             if (d < bestDiff) { bestDiff = d; actual = $col; found = 1 }
         }
         END {
+            if (nKeys > 0) { if (found == 1) { print actual; exit 0 } exit 1 }
             if (found && bestDiff <= window) { print actual; exit 0 }
             exit 1
         }

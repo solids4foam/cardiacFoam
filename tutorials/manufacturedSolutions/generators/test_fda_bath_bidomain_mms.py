@@ -14,7 +14,7 @@ import slab_leadfield_mms as slm
 DIMS = (1, 2, 3)
 x, y, z, t = fbb.x, fbb.y, fbb.z, fbb.t
 k, alpha, se = fbb.k, fbb.alpha, fbb.se
-CASE = os.path.join(fbb.HERE, "..", "bathBidomain")
+CASE = os.path.join(fbb.HERE, "..", "bathBidomain", "slab")
 IONIC = os.path.join(fbb.HERE, "..", "..", "..", "src", "ionicModels", "verificationModels",
                      "bathBidomainFDAManufactured", "bathBidomainFDAManufactured_2014.H")
 

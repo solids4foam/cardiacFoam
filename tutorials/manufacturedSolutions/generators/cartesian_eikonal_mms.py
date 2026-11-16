@@ -60,10 +60,10 @@ CHI_SYMBOL = sp.Symbol("chi", positive=True)
 CM_SYMBOL = sp.Symbol("cm", positive=True)
 SIGMA_SYMBOLS = sp.symbols("sxx sxy sxz syy syz szz", real=True)
 
-# Tutorial tensors (eikonalECG/constant/electroProperties and README).
+# Tutorial tensors (eikonal/cube/constant/electroProperties and README).
 SIGMA_ROTATED = (0.106875, -0.0084931, -0.022561, 0.116682, -0.0130256, 0.0398782)
 SIGMA_AXIS = (0.111453302, 0.0, 0.0, 0.121585420, 0.0, 0.030396355)
-TUTORIAL_C0 = 1   # eikonalECG/constant/electroProperties
+TUTORIAL_C0 = 1   # eikonal/cube/constant/electroProperties
 
 
 def sigma_matrix(entries):

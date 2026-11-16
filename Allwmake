@@ -55,4 +55,15 @@ then
 else
     echo "There were no build errors: enjoy cardiacFoam!"; echo
 fi
+
+# Record which source built these products, for omnidriver's run provenance, when omnidriver is installed.
+if command -v omnidriver >/dev/null 2>&1
+then
+    if omnidriver build-record --repo "$PWD" >/dev/null
+    then
+        echo "omnidriver build-record: recorded this build"
+    else
+        echo "omnidriver build-record did not record this build; run it with --environment-source naming this build's environment"
+    fi
+fi
 echo

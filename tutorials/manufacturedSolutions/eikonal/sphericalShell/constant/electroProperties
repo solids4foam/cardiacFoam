@@ -1,0 +1,79 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    location        "constant";
+    object          electroProperties;
+}
+
+myocardiumSolver eikonalSolver;
+
+eikonalSolverCoeffs
+{
+    conductivitySource field;
+    chi             [ 0 -1 0 0 0 0 0 ] 3;
+    cm              [ -1 -4 4 0 0 2 0 ] 2;
+    c0              [ 0 0 -0.5 0 0 0 0 ] 1;
+    #includeIfPresent "<case>/local/c0"
+    sealedHeartBoundary true;
+    eikonalAdvectionDiffusionApproach true;
+    #includeIfPresent "<case>/local/formulation"
+    #includeIfPresent "<case>/local/metric"
+    useGraphPrePopulation true;
+    verificationModel
+    {
+        type    manufacturedShellEikonalVerifier;
+        N       12;
+        #includeIfPresent "<case>/local/verification"
+    }
+}
+
+// The ECG domain of Allrun -ecg, which writes ecgDomains { $:_ecgDomains; }
+// into local/ecg; without it the case runs no ECG
+_ecgDomains
+{
+    ECG
+    {
+        ecgSolver    eikonalECG;
+        sigmaExtracellular    0.07957747154594767;
+        sampling
+        {
+            start           -6;
+            end             92;
+            deltaT          0.25;
+        }
+        verificationModel
+        {
+            type    manufacturedEikonalECGVerifier;
+            enabled    yes;
+            domain    shell;
+            dimension    "3D";
+            template    singleEvent;
+            referenceQuadratureOrder    128;
+            checkQuadratureOrders    (24 48 96);
+            #includeIfPresent "<case>/local/ecgVerification"
+        }
+        electrodePositions
+        {
+            E1    (0.4 -0.8 0.8);
+            E2    (0.6 1.2 0.4);
+            E3    (-0.96 0 -1.28);
+            E4    (-0.6 1.2 -1.2);
+            E5    (1.2 -0.96 -1.28);
+        }
+        #includeIfPresent "<case>/local/ecgTemplate"
+    }
+}
+
+#includeIfPresent "<case>/local/ecg"
+
+// ************************************************************************* //

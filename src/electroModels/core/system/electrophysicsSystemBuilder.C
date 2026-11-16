@@ -368,9 +368,8 @@ void configureECGDomains
 
     HashTable<ecgDomain*> ecgDomainsByName(ecgDomainNames.size());
 
-    // The output file (pseudoECG.dat, torsoECG.dat, eikonalECG.dat) is
-    // named after the ecgSolver, not the domain: two domains with the same
-    // ecgSolver write the same file
+    // Each ecgSolver is selected by at most one domain: its output file
+    // (pseudoECG.dat, torsoECG.dat, eikonalECG.dat) is named after the solver
     HashTable<word> ecgDomainBySolverType(ecgDomainNames.size());
 
     forAll(ecgDomainNames, i)
@@ -392,19 +391,16 @@ void configureECGDomains
 
         if (ecgDomainBySolverType.found(ecgSolverType))
         {
-            WarningInFunction
+            FatalErrorInFunction
                 << "ECG domains '" << ecgDomainBySolverType[ecgSolverType]
                 << "' and '" << domainName << "' both select ecgSolver "
-                << ecgSolverType << " and write the same output file in "
-                << "postProcessing/; each write overwrites the other's."
-                << endl;
-        }
-        else
-        {
-            ecgDomainBySolverType.insert(ecgSolverType, domainName);
+                << ecgSolverType << ". Each ecgSolver can be selected by one "
+                << "ECG domain, which holds all its electrodes."
+                << exit(FatalError);
         }
 
         solverPtr->checkMyocardium(myocardium, domainName);
+        ecgDomainBySolverType.insert(ecgSolverType, domainName);
 
         const electroStateProvider* stateProviderPtr =
             solverPtr->source() == ecgSolver::stateSource::bath

@@ -24,7 +24,7 @@ sphere is the patch `endocardium` and the outer sphere the patch
 `epicardium`. The exact potentials are `phiI = sqrt(1 + t) Fi` and
 `phiE = sqrt(1 + t) Fe`, with `n . Gi grad(Fi) = 0` and
 `n . Ge grad(Fe) = 0` on each sphere; `Fi` is the field of
-[monodomainPseudoECG/sphericalShell](../../monodomainPseudoECG/sphericalShell/README.md)
+[monodomain/sphericalShell](../../monodomain/sphericalShell/README.md)
 and `Gi`, `Ge` are full tensors with unequal eigenvalue ratios whose fibre
 and sheet rotate through the wall. The case shares its geometry, mesh
 generators and `N` convention with the monodomain shell.
@@ -32,7 +32,7 @@ The ionic model closes the `Vm` equation with `I_s = sqrt(1 + t) (beta F -
 div(Gi grad Fi))`, `F = Fi - Fe`; the `phiE` equation takes
 `s_e = sqrt(1 + t) (div(Gi grad Fi) + div(Ge grad Fe))`, whose integral over the
 shell is zero. The generator is
-[`shell_bidomain_mms.py`](../../../generators/README.md).
+[`shell_bidomain_mms.py`](../../generators/README.md).
 
 ### Stack
 

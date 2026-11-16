@@ -90,8 +90,8 @@ def template_u(ref, kind, s):
 def eikonal_ecg(settings, outdir):
     ref = fs.load_reference("eikonal_ecg")
     sigma = np.array(ref.PARAMS["SIGMA_ROTATED"], float)
-    electrodes = fs.tutorial_electrodes("eikonalECG")
-    shell = fs.shell_electrodes("eikonalECG")
+    electrodes = fs.tutorial_electrodes("eikonal/cube")
+    shell = fs.shell_electrodes("eikonal/sphericalShell")
     order = 12 if settings.draft else 32
     fig = plt.figure(figsize=(9.6, 10.4))
     gs = GridSpec(3, 2, figure=fig, hspace=0.4, wspace=0.3,

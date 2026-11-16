@@ -124,6 +124,15 @@ public:
     // Return true when any S1/S2 pacing branch can generate a non-zero pulse.
     static bool hasActiveStimulus(const StimulusProtocol& stim);
 
+    // Read the stimulus boxes of dict: the lists stimulusLocationMinList
+    // and stimulusLocationMaxList when present, otherwise the single box
+    // stimulusLocationMin/stimulusLocationMax.
+    static void readStimulusBoxes
+    (
+        const dictionary& dict,
+        List<boundBox>& boxes
+    );
+
     // Parse external spatial stimulus entries from "externalStimulus".
     // If the sub-dictionary is absent, returns an empty protocol.
     static ExternalStimulusProtocol loadExternalStimulusProtocol
