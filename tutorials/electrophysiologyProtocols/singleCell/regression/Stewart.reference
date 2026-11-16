@@ -1,0 +1,9 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
+# Stewart Purkinje myocyte, the tutorial's protocol (stimuli at 0.02 s and
+# 1.02 s). Generated from a run of this case. Plateau and repolarisation of
+# the first beat, plateau and repolarisation of the second.
+probe  postProcessing/Stewart_myocyte_S1_1000.txt  0.1000000  Vm  5.3150    5e-3
+probe  postProcessing/Stewart_myocyte_S1_1000.txt  0.3000010  Vm  -53.2908  5e-3
+probe  postProcessing/Stewart_myocyte_S1_1000.txt  1.1000010  Vm  5.0876    5e-3
+probe  postProcessing/Stewart_myocyte_S1_1000.txt  1.3000010  Vm  -54.2565  5e-3

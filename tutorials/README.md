@@ -65,7 +65,7 @@ Single-cell and meshless cases: an ionic model integrated without a spatial PDE.
 | --- | --- | --- | --- |
 | [`electrophysiologyProtocols/singleCell`](electrophysiologyProtocols/singleCell/README.md) | Single-point action-potential runs and ionic-model sweeps | lightweight or full | `standard` |
 | [`electrophysiologyProtocols/ionicHeterogeneity`](electrophysiologyProtocols/ionicHeterogeneity/README.md) | Probe transmural ionic heterogeneity without a tissue PDE | lightweight or full | `standard` |
-| [`electrophysiologyProtocols/restitutionCurves_s1s2Protocol`](electrophysiologyProtocols/restitutionCurves_s1s2Protocol/README.md) | Generate S1-S2 action-potential-duration restitution curves | lightweight or full | `none` (`singleCellSolver`: `singleCell`; Bueno-Orovio: `ionicHeterogeneity`) |
+| [`electrophysiologyProtocols/restitutionCurves_s1s2Protocol`](electrophysiologyProtocols/restitutionCurves_s1s2Protocol/README.md) | Generate S1-S2 action-potential-duration restitution curves | lightweight or full | `standard` |
 
 ### Monodomain
 
@@ -148,14 +148,14 @@ verified elsewhere) has none, and its README names the cases that cover it.
 
 | Tier | Runs | Cases |
 | --- | --- | --- |
-| `standard` | by default, and in CI | the manufactured solutions (`manufacturedSolutions/`), `configurationChecks`, and the two meshless ionic cases `singleCell` and `ionicHeterogeneity` |
+| `standard` | by default, and in CI | the manufactured solutions (`manufacturedSolutions/`), `configurationChecks`, and the single-cell and meshless ionic cases `singleCell`, `ionicHeterogeneity` and `restitutionCurves_s1s2Protocol` |
 | `full` | locally, with `CARDIAC_REGRESSION_SCOPE=full` (the standard cases as well) | the published benchmarks, the tissue protocols and the whole-heart cases: physical models on real fronts and anatomy, which the manufactured solutions do not have |
 | `none` | never | the cases the index marks `none` |
 
 The standard tier is the gate for every change: the manufactured solutions
-check the operators against exact solutions, the meshless cases the ionic
-models and their overrides, and `configurationChecks` the configuration
-contract.
+check the operators against exact solutions, the single-cell cases the ionic
+models, their overrides, the S1-S2 stimulus and the ODE integrators, and
+`configurationChecks` the configuration contract.
 
 A case is in the full tier when its regression folder holds the empty marker
 file `regression/full-only`.

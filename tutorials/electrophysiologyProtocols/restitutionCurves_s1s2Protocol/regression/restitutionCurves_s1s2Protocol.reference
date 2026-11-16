@@ -1,0 +1,8 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
+# Generated from a run of this case. Last S1 beat at 18.02 s; S2 stimuli at
+# 18.27 s (blocked) and 18.52 s (captured).
+probe  postProcessing/BuenoOrovio_epicardialCells_S1_2000_S2_250.txt  18.25  Vm  -24.0665  5e-3
+probe  postProcessing/BuenoOrovio_epicardialCells_S1_2000_S2_250.txt  18.30  Vm  -62.3710  5e-3
+probe  postProcessing/BuenoOrovio_epicardialCells_S1_2000_S2_250.txt  18.60  Vm  17.5340   5e-3
+probe  postProcessing/BuenoOrovio_epicardialCells_S1_2000_S2_250.txt  18.70  Vm  -7.5687   5e-3

@@ -69,12 +69,12 @@ regression gate (e.g. its `tworldVsGaur` study).
 
 | Case | Tier |
 | --- | --- |
-| `singleCell` | `standard` |
+| `singleCell` | `standard` (TWorld, and a Stewart run) |
 | `ionicHeterogeneity` | `standard` (including the `ionicConstantOverrides` run) |
 | `rotorInstability` | `full` |
 | `purkinjeRestitution2D` | `full` |
-| `restitutionCurves_s1s2Protocol` | `none`: `singleCellSolver` is checked by `singleCell`, Bueno-Orovio by `ionicHeterogeneity` |
-| `cableProtocol/monodomain1DCableCV` | `none`: the monodomain is checked by `manufacturedSolutions/monodomain/cube` and the Niederer benchmark |
+| `restitutionCurves_s1s2Protocol` | `standard` (the S2 stimulus and the Euler integrator) |
+| `cableProtocol/monodomain1DCableCV` | `none`: the monodomain is checked by `manufacturedSolutions/monodomain/cube` and the Niederer benchmark, the Stewart model by `singleCell` |
 | `cableProtocol/eikonal1DCableCV` | `none`: the eikonal solver is checked by `manufacturedSolutions/eikonal/cube` |
 
 Each case README says what its regression checks; `../README.md` gives the

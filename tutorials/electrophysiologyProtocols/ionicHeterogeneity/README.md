@@ -26,7 +26,8 @@ Tier: `standard`.
   `smoothness_report.csv` at a plateau and both blends, against
   `regression/ionicHeterogeneity.reference` (13 rows);
 - with `./Allrun overrides`: its log must report each of the three overrides,
-  and the same metrics are compared against `regression/overrides.reference`.
+  and the same metrics are compared against `regression/overrides.reference`
+  (13 rows).
 
 The values are frozen from an earlier run. Run it alone with:
 

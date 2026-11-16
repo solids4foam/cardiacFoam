@@ -27,8 +27,12 @@ None. The monodomain solver is checked by
 (standard) against an exact solution, and with a published ionic model on a
 slab by
 [`benchmarks/NiedererEtAl2011verification`](../../../benchmarks/NiedererEtAl2011verification/README.md)
-(full). What this case adds is the CV and restitution measurement protocol.
-The Stewart ionic model it uses is not run by any regression.
+(full). The Stewart model is checked by
+[`singleCell`](../../singleCell/README.md) (standard) and the Euler
+integrator by
+[`restitutionCurves_s1s2Protocol`](../../restitutionCurves_s1s2Protocol/README.md)
+(standard). What this case adds is the CV and restitution measurement
+protocol.
 
 ## Folder structure
 

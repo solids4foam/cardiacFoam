@@ -11,9 +11,9 @@ endocardial cell twice at a 1000 ms cycle length, integrates the
 
 - **Exercises:** `singleCellSolver`, the TWorld ionic model with the RKF45
   integrator, the `LandNiedererTWorld` active-tension model and the
-  single-cell trace writers. Only this case checks a calcium-handling ionic
-  model and an active-tension model against reference values in the
-  `standard` tier.
+  single-cell trace writers, and the Stewart model. Only this case checks a
+  calcium-handling ionic model, an active-tension model and the Stewart
+  model against reference values in the `standard` tier.
 - **Use it for:** looking at one ionic model's action potential, calcium
   transient and active tension before using the model in tissue; ionic-model
   and tissue sweeps (`setup/sweep_ionic_model_tissue.json`); the TWorld versus
@@ -23,13 +23,21 @@ endocardial cell twice at a 1000 ms cycle length, integrates the
 
 Tier: `standard`.
 
-`regression/regressionTest.sh` runs `Allrun` (serial, the committed 2 s run)
-and compares six values in `regression/singleCell.reference` with frozen
-values from an earlier run: Vm and `cai` from
-`TWorld_endocardialCells_S1_1000.txt`, and `AV_Ta` from
-`TWorld_endocardialCells_S1_1000_Ta.txt`, each at 1.0 s and 1.5 s, within
-absolute tolerances of 5e-3 (Vm, `AV_Ta`) and 5e-6 (`cai`). Run it on its own
-from the case root:
+`regression/regressionTest.sh` runs `Allrun` twice (serial, the committed
+2 s run, seconds each) and compares values frozen from an earlier run:
+
+- as committed: Vm and `cai` from `TWorld_endocardialCells_S1_1000.txt`, and
+  `AV_Ta` from `TWorld_endocardialCells_S1_1000_Ta.txt`, each at 1.0 s and
+  1.5 s, within absolute tolerances of 5e-3 (Vm, `AV_Ta`) and 5e-6 (`cai`)
+  (`regression/singleCell.reference`, 6 rows);
+- with `ionicModel Stewart` and `tissue myocyte`, set for this run only as
+  `setup/sweep_ionic_model_tissue.json` sets them: Vm of
+  `Stewart_myocyte_S1_1000.txt` on the plateau and the repolarisation of
+  both beats, within 5e-3 (`regression/Stewart.reference`, 4 rows). It is the
+  only regression of the Stewart model.
+
+The script does not accept `--check-only`, since each model needs its own
+run. Run it on its own from the case root:
 
 ```bash
 ./regression/regressionTest.sh
@@ -56,7 +64,8 @@ tutorials/electrophysiologyProtocols/singleCell/
 │       └── tworldVsGaur/
 ├── regression/
 │   ├── regressionTest.sh
-│   └── singleCell.reference
+│   ├── singleCell.reference
+│   └── Stewart.reference
 ├── plotSweep
 ├── plotVoltage
 ├── Allrun
