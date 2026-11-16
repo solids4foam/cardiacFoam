@@ -93,6 +93,7 @@ ecgDomains
         verificationModel
         {
             type            manufacturedShellLeadFieldECGVerifier;
+            #includeIfPresent "<case>/local/verification"
         }
     }
 }
