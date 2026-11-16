@@ -83,6 +83,7 @@ Author
 #include "point.H"
 #include "wordList.H"
 #include "scalarList.H"
+#include "scalarMatrices.H"
 #include "probedOperator.H"
 #include "torsoCoupling.H"
 
@@ -226,6 +227,25 @@ private:
     // ground patches fix the constant.
     label referenceCell_;
 
+    // Least-squares quadratic of Vm about a heart wall cell
+    // (transferWallLayer): the cell-point-cell stencil entries of its value
+    // and gradient rows, the scale 1/(L|d|) of each value row, the length L
+    // and the pseudo-inverse of the row matrix. The rows depend on the
+    // geometry only; Vm and grad(Vm) enter the right-hand side.
+    struct wallFit
+    {
+        scalar L;
+        labelList valueEntries;
+        scalarList valueScale;
+        labelList gradientEntries;
+        scalarRectangularMatrix pinv;
+    };
+
+    // Index into wallFits_ of each heart cell (-1: not a wall cell), and
+    // the fits, built at the first transferWallLayer on a static mesh
+    mutable labelList wallFitIndex_;
+    mutable List<wallFit> wallFits_;
+
     // Build and check the heart -> base cell and face maps.
     void buildHeartScatterMap
     (
@@ -244,6 +264,27 @@ private:
     // Cell gradient of psi of the conormalHarmonic corrections: the
     // standard gradient refined by the jump-aware passes
     tmp<volVectorField> jumpAwareGradient(const volScalarField& psi) const;
+
+    // With Gi + Ge on the heart side of the heart-torso faces (leadField):
+    // the wall layer q|S| = S.Gi.grad(Vm) of the source, which the
+    // insulated heart source counts in the heart cell, shared between the
+    // heart and the torso cell of each face as the two-point face flux
+    // shares it. The flux, built on continuity of n.sigma.grad(phi), misses
+    // the jump q; moving w q|S| to the torso cell, with w = kT/(kH + kT)
+    // and k = n.sigma.n/d, restores the jump for any Vm. grad(Vm) at the
+    // face comes from a least-squares quadratic about the heart cell,
+    // fitted to the values of its cell-point-cell stencil and to the
+    // gradients of the stencil cells without boundary faces; fatal where
+    // the fit does not determine the quadratic.
+    void transferWallLayer
+    (
+        const volScalarField& Vm,
+        volScalarField& rhsGlobal
+    ) const;
+
+    // Build wallFitIndex_ and wallFits_ for the heart wall cells of the
+    // heart mesh; fatal where a fit does not determine the quadratic
+    void buildWallFits(const fvMesh& heartMesh) const;
 
     // Torso operator with conormalHarmonic heart-torso faces: normal
     // Laplacian, stabilisation and cross term, the source, then the
@@ -371,8 +412,14 @@ public:
     List<probedOperator::hop> explicitStencil() const;
 
     //- Heart source b = -laplacian(insulated Gi, Vm), scattered to the
-    //  base mesh (zero in torso cells)
+    //  base mesh (zero in torso cells). With leadField coupling the wall
+    //  layer is then shared with the torso cells (transferWallLayer), so b
+    //  is also non-zero in the torso cells of wallTorsoCells().
     tmp<volScalarField> heartSource(const volScalarField& Vm) const;
+
+    //- Local torso cells that share a heart-torso face (internal or
+    //  coupled) with a heart cell
+    labelList wallTorsoCells() const;
 
     //- The torso block the conductor is built from
     const torsoSettings& torso() const

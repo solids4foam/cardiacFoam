@@ -63,6 +63,12 @@ class leadFieldECG
     //- z_e V on the heart cells, per electrode
     List<scalarField> heartWeights_;
 
+    //- Torso cells that carry the shared wall layer of the source
+    labelList wallTorsoCells_;
+
+    //- z_e V on wallTorsoCells_, per electrode
+    List<scalarField> wallTorsoWeights_;
+
     //- Constant term c_e, per electrode
     scalarList constants_;
 

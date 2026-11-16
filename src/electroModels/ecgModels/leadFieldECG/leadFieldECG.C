@@ -118,6 +118,8 @@ void leadFieldECG::load
 
     const labelList& heartToBase = lfc.conductor().heartCellToBaseCell();
     heartWeights_.setSize(names.size());
+    wallTorsoCells_ = lfc.conductor().wallTorsoCells();
+    wallTorsoWeights_.setSize(names.size());
     constants_.setSize(names.size(), 0.0);
 
     const IOdictionary buildRecord(io("leadFieldBuildRecord"));
@@ -159,6 +161,12 @@ void leadFieldECG::load
         {
             heartWeights_[e][c] = z[heartToBase[c]]*mesh.V()[heartToBase[c]];
         }
+        wallTorsoWeights_[e].setSize(wallTorsoCells_.size());
+        forAll(wallTorsoCells_, c)
+        {
+            wallTorsoWeights_[e][c] =
+                z[wallTorsoCells_[c]]*mesh.V()[wallTorsoCells_[c]];
+        }
 
         if (hasConstant)
         {
@@ -187,10 +195,20 @@ void leadFieldECG::evaluate
         bHeart[c] = tb()[heartToBase[c]];
     }
 
+    // The wall layer shared with the torso cells (transferWallLayer)
+    scalarField bWallTorso(wallTorsoCells_.size());
+    forAll(wallTorsoCells_, c)
+    {
+        bWallTorso[c] = tb()[wallTorsoCells_[c]];
+    }
+
     values.setSize(heartWeights_.size());
     forAll(values, e)
     {
-        values[e] = gSum(heartWeights_[e]*bHeart) + constants_[e];
+        values[e] =
+            gSum(heartWeights_[e]*bHeart)
+          + gSum(wallTorsoWeights_[e]*bWallTorso)
+          + constants_[e];
     }
 }
 

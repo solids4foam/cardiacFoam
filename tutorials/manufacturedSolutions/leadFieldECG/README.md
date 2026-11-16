@@ -169,7 +169,7 @@ interface, when a layer has more than one conductivity, when the surface
 currents are not along `x` or carry a net current. With a current the
 heart slope is `alpha/(Gi + Ge)_xx`: the lead-field conductor is the
 passive bulk conductor of reciprocity for either myocardium, with
-`Gi + Ge` on the heart side of the walls and the source `Vm` sealed there,
+`Gi + Ge` on the heart side of the walls and no wall current (`Vm'` = 0 at the walls),
 so the current part of the solution is exact on the hex mesh for the
 monodomain and the bidomain myocardium alike. The pin and the
 electrodes are those of the slab: `surface1`, `surface2`, `surface6` and
@@ -179,6 +179,37 @@ right layer and `surface3`, `surface4`, `surface8` and `torsoRight` in the
 outer right layer. With
 `alpha != 0` the exact potential varies in the torso, so the point and the
 centroid values differ.
+
+### `-problem wallCurrent`: the slab with a wall current
+
+The slab with `Vm` given a wall slope, so that the intracellular wall
+current `q = n.Gi grad(Vm)` of the source is non-zero on both walls:
+
+```text
+Vm  = S (cos(pi x) + x/2)                        0 <= x <= 1
+phi = -k Vm + C                                  0 <= x <= 1
+phi = -k S + C       (x <= 0),     -k Vm(1) + C = k S/2 + C   (x >= 1)
+```
+
+The total current `(Gi + Ge) grad(phi) + Gi grad(Vm)` vanishes in the
+heart, so the insulated torso slabs are at the potentials of the walls; the
+exact ECG between the two slabs is `3 k S/2`. The myocardium solver does not
+solve this `Vm`, so only the static rows (the exact `Vm` at the heart cell
+centres) verify it.
+
+The lead-field wall face carries `Gi + Ge` on the heart side, and its
+two-point flux assumes `n.(Gi + Ge) grad(phi) = sigma_b d phi/dn`, which is
+wrong by `q`. The conductor's heart source therefore moves the share
+`w q |S|`, `w = k_T/(k_H + k_T)`, `k = n.sigma.n/d`, of each wall face
+from the heart cell, where the insulated source counts the wall current, to
+the torso cell. `q` is evaluated at the face from a quadratic least-squares
+fit of `Vm` about the heart cell (`passiveConductor::transferWallLayer`),
+which is second order at the wall where the cell gradient is first order.
+Without the term the lead field is first order wherever `q != 0`
+(hexahedra, bidomain heart, `directStatic-exactPoint` Linf at `N = 10, 20,
+40`: 1.84e-2, 1.36e-2, 7.94e-3); with it, 1.10e-2, 4.03e-3, 1.09e-3. The
+slab (`q = 0`) gives the same numbers as `wallCurrent` with the term,
+because the wall slope is reproduced exactly.
 
 ### Stack
 
@@ -193,10 +224,12 @@ centroid values differ.
   at `(-0.9013 0.0437 0.0437)`;
 - ECG domain:
   - `torsoECG`, with Gi and Ge for the monodomain heart;
-  - the verifier `manufacturedLeadFieldECGVerifier` with `reference slab`
-    or `layered`.
+  - the verifier `manufacturedLeadFieldECGVerifier` with `reference slab`,
+    `layered` or `wallCurrent`.
+- sealing: `sealedHeartBoundary true` for both myocardium solvers;
 - schemes:
-  - gradient `leastSquares`;
+  - gradient `leastSquares`, and `sealedWallLeastSquares` for `Vm` and
+    `phiE`;
   - laplacian and snGrad `corrected` or `orthogonal` (`-snGrad`); the
     lead-field build refuses nonlinear schemes such as `limited`.
 - linear solvers:
@@ -263,7 +296,7 @@ removes `local/`, `0/`, the mesh and the lead fields.
 | option | effect | default |
 |---|---|---|
 | `parallel` | `decomposePar` (2 subdomains, scotch); `buildLeadFields` and `cardiacFoam` in parallel | serial |
-| `-problem slab\|layered` | exact passive solution | slab |
+| `-problem slab\|layered\|wallCurrent` | exact passive solution | slab |
 | `-alpha x` | surface current of `layered` (`-alpha` on `xMin`, `alpha` on `xMax`; 0: insulated) | 0.01 |
 | `-mesh hex\|tet` | blockMesh boxes or gmsh tetrahedra | hex |
 | `-N n` | cells per unit length; tet: element size `1/n` | 10 |

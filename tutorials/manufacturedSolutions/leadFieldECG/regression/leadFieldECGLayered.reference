@@ -13,11 +13,11 @@ error    leadFieldStatic-exactCentroid_nearLeft     Linf  0               1e-9
 error    directStatic-exactCentroid_torsoLeft       Linf  0               1e-9
 # Right electrodes: the current also crosses both heart walls (Gi + Ge on
 # the heart side); the error is the slab's, the current part is exact.
-error    leadFieldStatic-exactCentroid_torsoRight   L2    0.0176705555    1.8e-07
-error    leadFieldStatic-exactCentroid_nearRight    L2    0.0176705555    1.8e-07
-error    directStatic-exactCentroid_torsoRight      L2    0.0176705555    1.8e-07
-error    directStatic-exactCentroid_nearRight       L2    0.0176705555    1.8e-07
+error    leadFieldStatic-exactCentroid_torsoRight   L2    0.0108789369    1.1e-07
+error    leadFieldStatic-exactCentroid_nearRight    L2    0.0108789369    1.1e-07
+error    directStatic-exactCentroid_torsoRight      L2    0.0108789369    1.1e-07
+error    directStatic-exactCentroid_nearRight       L2    0.0108789369    1.1e-07
 # Body surface: an electrode on the right end face and the cells of the
 # outer boundary (direct solve)
-error    leadFieldStatic-exactCentroid_surface3     L2    0.0176705555    1.8e-07
-error    phiStatic_surface                          L2    0.0116378923    1.8e-07
+error    leadFieldStatic-exactCentroid_surface3     L2    0.0108789369    1.1e-07
+error    phiStatic_surface                          L2    0.0071649075    7.2e-08
