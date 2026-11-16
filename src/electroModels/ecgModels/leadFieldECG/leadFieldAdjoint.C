@@ -100,16 +100,20 @@ leadFieldAdjoint::leadFieldAdjoint
     checkLinearity();
 
     const List<probedOperator::hop> hops(lfc.conductor().explicitStencil());
+    const boolList pointRows(lfc.conductor().explicitStencilPointCells());
     CPtr_.reset
     (
         new probedOperator
         (
             lfc.baseMesh(),
             hops,
+            pointRows,
             [this](const scalarField& x) { return assembledC(x); }
         )
     );
-    Info<< "leadFieldAdjoint: " << hops.size() << " pattern hops, "
+    Info<< "leadFieldAdjoint: " << hops.size() << " pattern hops ("
+        << returnReduce(label(findIndices(pointRows, true).size()), sumOp<label>())
+        << " cells with point-neighbour gradients), "
         << CPtr_->nColours() << " probes, " << CPtr_->nNonZeros()
         << " entries" << endl;
 

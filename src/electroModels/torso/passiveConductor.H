@@ -413,6 +413,13 @@ public:
     //  is leastSquares or Gauss linear, point otherwise)
     List<probedOperator::hop> explicitStencil() const;
 
+    //- Base cells whose gradient stencil reaches beyond the face
+    //  neighbours, the cells of the point hop of explicitStencil(): none for
+    //  leastSquares or Gauss linear, the wall cells (faces on a sealed or
+    //  value patch) for sealedWallLeastSquares, every cell for any other
+    //  scheme; the heart mesh's cells mapped to the base mesh
+    boolList explicitStencilPointCells() const;
+
     //- Heart source b = -laplacian(insulated Gi, Vm), scattered to the
     //  base mesh (zero in torso cells). With leadField coupling the wall
     //  layer is then shared with the torso cells (transferWallLayer), so b

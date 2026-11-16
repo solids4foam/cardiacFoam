@@ -32,7 +32,12 @@ Description
     passiveConductor::gradientNames() on the base and heart meshes is
     leastSquares or Gauss linear, the point stencil otherwise, and p the
     number of jump-aware gradient passes (nInterfaceGradientCorrectors with
-    conormalHarmonic, 0 otherwise).
+    conormalHarmonic, 0 otherwise). The point stencil is taken only where a
+    gradient reads point neighbours
+    (passiveConductor::explicitStencilPointCells): with
+    sealedWallLeastSquares, the wall cells; every other cell keeps its face
+    row. A point row everywhere would store the zero entries of every other
+    cell (on tetrahedra eight times the entries and ten times the probes).
 
     Checks, each fatal above its tolerance:
     - linearity:    C(r1 + 2 r2) = C r1 + 2 C r2 on fields of the cell

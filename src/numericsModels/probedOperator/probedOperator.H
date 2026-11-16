@@ -26,7 +26,11 @@ Description
     first:
     - face:  the cell and its face neighbours, across internal faces and
              every coupled patch;
-    - point: the cell and the cells that share a point with it.
+    - point: the cell and the cells that share a point with it; with a
+             point-row set, only for the cells in the set, the face row
+             for every other cell (a gradient whose point stencil is
+             confined to some cells, e.g. the wall cells of
+             sealedWallLeastSquares).
     Columns that share no row get the same colour (distance-2 colouring of
     the pattern), and C x_c with x_c the indicator of colour c gives every
     entry of that colour. An operator whose stencil exceeds the pattern, or
@@ -116,11 +120,22 @@ private:
 
 public:
 
-    //- Probe op on mesh with the pattern given by hops, outermost first
+    //- Probe op on mesh with the pattern given by hops, outermost first;
+    //  a point hop takes the point row of every cell
     probedOperator
     (
         const fvMesh& mesh,
         const List<hop>& hops,
+        const operatorType& op
+    );
+
+    //- As above, with the point row of a point hop only for the local cells
+    //  marked in pointRows (size nCells) and the face row for the others
+    probedOperator
+    (
+        const fvMesh& mesh,
+        const List<hop>& hops,
+        const boolList& pointRows,
         const operatorType& op
     );
 

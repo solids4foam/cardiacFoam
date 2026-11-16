@@ -361,6 +361,18 @@ probedOperator::probedOperator
     const operatorType& op
 )
 :
+    probedOperator(mesh, hops, boolList(mesh.nCells(), true), op)
+{}
+
+
+probedOperator::probedOperator
+(
+    const fvMesh& mesh,
+    const List<hop>& hops,
+    const boolList& pointRows,
+    const operatorType& op
+)
+:
     mesh_(mesh),
     globalCells_(mesh.nCells()),
     nColours_(0),
@@ -381,10 +393,36 @@ probedOperator::probedOperator
     {
         hasPoint = hasPoint || hops[hopI] == hop::point;
     }
+    if (pointRows.size() != mesh_.nCells())
+    {
+        FatalErrorInFunction
+            << "pointRows has " << pointRows.size() << " entries for "
+            << mesh_.nCells() << " cells." << exit(FatalError);
+    }
     labelListList allPoint;
     if (hasPoint)
     {
         allPoint = pointGraph();
+
+        // The face row for the cells whose point hop is confined to faces
+        List<boolList> allRows(Pstream::nProcs());
+        allRows[Pstream::myProcNo()] = pointRows;
+        Pstream::gatherList(allRows);
+        if (Pstream::master())
+        {
+            label cellI = 0;
+            for (const boolList& rows : allRows)
+            {
+                for (const bool point : rows)
+                {
+                    if (!point)
+                    {
+                        allPoint[cellI] = allFace[cellI];
+                    }
+                    ++cellI;
+                }
+            }
+        }
     }
     if (Pstream::master())
     {
