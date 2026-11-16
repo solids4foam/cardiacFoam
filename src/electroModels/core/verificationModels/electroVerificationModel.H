@@ -87,11 +87,6 @@ public:
 
     virtual void bindBidomainField(volScalarField& phiE) {}
 
-    virtual void bindSourceField(const volScalarField& sourceField)
-    {
-        (void)sourceField;
-    }
-
     //- Add a continuous manufactured PDE source after the ordinary external
     //  stimulus has been reset and before domain coupling deposits current.
     virtual void addManufacturedPdeSource

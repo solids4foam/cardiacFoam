@@ -261,42 +261,34 @@ void manufacturedGraphVerifier::postProcess
     auto u1Norms = computeNorms(u1, u1LocalExact);
     auto u2Norms = computeNorms(u2, u2LocalExact);
 
-    const fileName outputDir(runTime.globalPath()/"postProcessing");
+    const fileName outputDir(postProcessingDir(runTime));
     mkDir(outputDir);
     const fileName outputFile
     (
         outputDir
       / (
-            "graph_"
-          + dimensionName(dimension)
-          + "_"
-          + Foam::name(nodeLocations.size())
-          + "_nodes.dat"
+            studyFileName
+            (
+                "graph_" + dimensionName(dimension),
+                nodeLocations.size(),
+                "nodes"
+            )
         )
     );
 
     if (Pstream::master())
     {
-        Info << "\nManufactured-solution graph error summary (t = " << t << "):" << nl
-             << "-------------------------------------------------" << nl
-             << "Field     L1-error       L2-error       Linf-error" << nl
-             << "Vm1D   " << VmNorms.first().first() << "   "
-             << VmNorms.first().second() << "   " << VmNorms.second() << nl
-             << "u1     " << u1Norms.first().first() << "   "
-             << u1Norms.first().second() << "   " << u1Norms.second() << nl
-             << "u2     " << u2Norms.first().first() << "   "
-             << u2Norms.first().second() << "   " << u2Norms.second() << nl
-             << "-------------------------------------------------" << endl;
+        errorTable table;
+        table.titlePrefix = "Manufactured-solution graph error summary (t = ";
+        table.t = t;
+        table.addRow("Vm1D   ", VmNorms);
+        table.addRow("u1     ", u1Norms);
+        table.addRow("u2     ", u2Norms);
+
+        writeErrorTableConsole(Info, table);
 
         OFstream out(outputFile);
-        out << "Manufactured-solution graph error summary (t = " << t << "):\n";
-        out << "Field     L1-error       L2-error       Linf-error\n";
-        out << "Vm1D   " << VmNorms.first().first() << "   "
-            << VmNorms.first().second() << "   " << VmNorms.second() << "\n";
-        out << "u1     " << u1Norms.first().first() << "   "
-            << u1Norms.first().second() << "   " << u1Norms.second() << "\n";
-        out << "u2     " << u2Norms.first().first() << "   "
-            << u2Norms.first().second() << "   " << u2Norms.second() << "\n";
+        writeErrorTableFile(out, table);
         out << "-------------------------------------------------\n\n";
     }
 

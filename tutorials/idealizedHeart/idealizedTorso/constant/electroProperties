@@ -1,0 +1,164 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      electroProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Heart-only bidomain on the myocardium zone of the heart/torso mesh: the
+// source of the lead-field ECG. The torso is passive and does not feed back.
+myocardiumSolver bidomainSolver;
+
+bidomainSolverCoeffs
+{
+    // Wall treatment: local/wall, written by Allrun (sealed or stock)
+    #include "<case>/local/wall"
+
+    // The heart trace of the torso conductor
+    bathHeartPhiETrace zeroGradient;
+
+    cellZone           myocardium;
+    // ConductivityIntracellular and ConductivityExtracellular of 0/
+    conductivitySource field;
+    chi         [ 0 -1 0 0 0 0 0 ] 140000;
+    cm          [ -1 -4 4 0 0 2 0 ] 0.01;
+
+    ionicModel  BuenoOrovio;
+    tissue      epicardialCells;
+
+    ionicHeterogeneity
+    {
+        mode              namedRegions;
+        field             t;
+        transitionMode    blend;
+        transitionWidth   0.1;
+        smoothing         smoothstep;
+        // Endocardial and epicardial only, 60/40 across the wall (t = 0 at
+        // the endocardium)
+        regions
+        {
+            endocardialCells { range (0 0.6); }
+            epicardialCells  { range (0.6 1); }
+        }
+        gradientAxes
+        {
+            apicobasal
+            {
+                field       apicobasal;
+                beta        1.2;
+                scalingMin  0.97;
+                scalingMax  1.04;
+                variables   (tauSi);
+            }
+        }
+    }
+
+    solutionAlgorithm  implicit;
+    timeCouplingScheme godunov;
+    solver             RKF45;
+    maxSteps           1000000000;
+
+    // A point inside the myocardium
+    phiERefPoint       (0.06137746404 0.023833610115 0.0039119150485);
+    phiEReferenceValue 0;
+
+    electrophysicsAdvanceScheme staggeredElectrophysicsAdvanceScheme;
+
+    conductionNetworkDomains
+    {
+        purkinjeNetwork
+        {
+            conductionSystemDomain purkinjeGraphModel;
+            purkinjeGraphModelCoeffs
+            {
+                conductionSystemSolver monodomain1DSolver;
+                graphFile              purkinjeGraph;
+                ionicModel             BuenoOrovio;
+                tissue                 epicardialCells;
+                chi                    14000;
+                cm                     0.01;
+                purkinjeConductivity   0.4;
+                vm1DRest               -0.084;
+                rootStimulus
+                {
+                    node      0;
+                    startTime 0.0;
+                    duration  0.002;
+                    intensity 500000.0;
+                }
+                solver         RKF45;
+                maxSteps       1000000000;
+                outputVariables
+                {
+                    export (Vm activationTime IcouplingSource);
+                    debug  (Vm Iion);
+                }
+            }
+        }
+    }
+
+    domainCouplings
+    {
+        purkinjeToMyocardium
+        {
+            electroDomainCoupler    reactionDiffusionPvjCoupler;
+            conductionNetworkDomain purkinjeNetwork;
+            rPvj                    1000;
+            pvjRadius               1.65e-3;
+            couplingMode            unidirectional;
+            debugCoupling           true;
+        }
+    }
+}
+
+// Passive torso: blood, lungs, chest wall and the remaining torso, with the
+// cell conductivity field bodyAndOrgansConductivity of 0/
+torso
+{
+    cellZones          ( blood lungs chestWall torso );
+    conductivityField  bodyAndOrgansConductivity;
+    interfaceConductivityInterpolation distanceWeightedHarmonic;
+    // A point inside the torso
+    phiERefPoint       (0.0174906176 0.174255908 0.197011104);
+    phiEReferenceValue 0;
+}
+
+torsoCoupling leadField;
+
+// Body-surface electrodes: the six precordial positions and the limb leads,
+// each the nearest point of torsoSurface moved 0.1 mm inward (inside a
+// surface cell). The precordial leads V1-V6 are E1-E6 minus the mean of RA,
+// LA and LL.
+ecgDomains
+{
+    ECG
+    {
+        ecgSolver torsoECG;
+        // One row per time step (default: write times only, every 5 ms)
+        writeEveryTimeStep yes;
+        electrodePositions
+        {
+            E1 ( 0.014452754  0.058515463 -0.057456734);
+            E2 ( 0.030037716  0.016601321 -0.061841592);
+            E3 ( 0.056506128 -0.017158693 -0.057317824);
+            E4 ( 0.072546535 -0.041624298 -0.026651339);
+            E5 ( 0.073437853 -0.043454175 -0.003600234);
+            E6 ( 0.069851915 -0.046937270  0.018495200);
+            RA (-0.118980241  0.149686239 -0.105538142);
+            LA (-0.039457263 -0.054529664 -0.124824430);
+            LL ( 0.183877208  0.018036104  0.027674500);
+        }
+    }
+}
+
+// ************************************************************************* //
