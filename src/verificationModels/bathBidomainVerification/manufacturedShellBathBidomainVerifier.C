@@ -345,12 +345,6 @@ void manufacturedShellBathBidomainVerifier::validateConfiguration
             << "and needs sealedHeartBoundary true." << exit(FatalError);
     }
 
-    if (!phiEPtr_ || !heartCellMapPtr_)
-    {
-        FatalErrorInFunction
-            << typeName << " needs the global phiE of torsoCoupling bath, "
-            << "bound with its heart cell map." << exit(FatalError);
-    }
 }
 
 
@@ -571,10 +565,16 @@ void manufacturedShellBathBidomainVerifier::preProcess
     validateConfiguration(model);
     initialiseBeta(model);
 
+    // The myocardium calls preProcess with its own phiE first and again once
+    // the bath binds the global phiE with the heart cell map; the bath checks
+    // run on the second call
     const fvMesh& heartMesh = Vm.mesh();
-    const fvMesh& baseMesh = phiEPtr_->mesh();
-    validateGeometry(baseMesh);
-    validateConductivity(heartMesh, baseMesh);
+    if (heartCellMapPtr_)
+    {
+        const fvMesh& baseMesh = phiEPtr_->mesh();
+        validateGeometry(baseMesh);
+        validateConductivity(heartMesh, baseMesh);
+    }
 
     const label u1Field = requireFieldIndex(names, "u1", "preProcess");
     const label u2Field = requireFieldIndex(names, "u2", "preProcess");
@@ -599,8 +599,21 @@ void manufacturedShellBathBidomainVerifier::preProcess
     fields[u2Field].correctBoundaryConditions();
     fields[u3Field].correctBoundaryConditions();
 
-    phiEPtr_->primitiveFieldRef() = exactPhiE(baseMesh, t);
-    phiEPtr_->correctBoundaryConditions();
+    if (phiEPtr_ && heartCellMapPtr_)
+    {
+        phiEPtr_->primitiveFieldRef() = exactPhiE(phiEPtr_->mesh(), t);
+        phiEPtr_->correctBoundaryConditions();
+    }
+    else if (phiEPtr_)
+    {
+        const vectorField& Cp = phiEPtr_->mesh().C().primitiveField();
+        scalarField& phiEI = phiEPtr_->primitiveFieldRef();
+        forAll(Cp, cellI)
+        {
+            phiEI[cellI] = mms::phiE(Cp[cellI], t, mms::myocardium, p_);
+        }
+        phiEPtr_->correctBoundaryConditions();
+    }
 
     model.importFields(Vm, names, fields);
 }
@@ -765,6 +778,12 @@ void manufacturedShellBathBidomainVerifier::postProcess
         return;
     }
     validateConfiguration(model);
+    if (!phiEPtr_ || !heartCellMapPtr_)
+    {
+        FatalErrorInFunction
+            << typeName << " needs the global phiE of torsoCoupling bath, "
+            << "bound with its heart cell map." << exit(FatalError);
+    }
 
     const wordList names = requiredPostProcessFieldNames(model);
     const label u1Idx = requireFieldIndex(names, "u1", "postProcess");
