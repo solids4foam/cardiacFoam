@@ -86,12 +86,15 @@ bidomainSolverCoeffs
 
 // The bath: the pool and the outer bath, the conductivity written by
 // setManufacturedFields; insulated outer sphere by default (pinned at
-// phiERefPoint), grounded with Allrun -outer grounded
+// phiERefPoint), grounded with Allrun -outer grounded. conormalHarmonic: the
+// cross and non-orthogonal terms of the interface faces use the jump-aware
+// gradient (distanceWeightedHarmonic leaves a first-order error at the
+// concave interface)
 torso
 {
     cellZones       ( bloodPool bath );
     conductivityField bodyAndOrgansConductivity;
-    interfaceConductivityInterpolation distanceWeightedHarmonic;
+    interfaceConductivityInterpolation conormalHarmonic;
     phiERefPoint    ( 1.3137 0.0371 0.0459 );
     phiEReferenceValue 0;
     #includeIfPresent "<case>/local/torso"

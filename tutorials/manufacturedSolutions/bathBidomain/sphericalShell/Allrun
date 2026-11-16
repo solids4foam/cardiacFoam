@@ -30,7 +30,7 @@ Options (parameters are written to local/ and included by the dictionaries):
                             mode on (default default)
   -interface distanceWeightedHarmonic|conormalHarmonic
                             interfaceConductivityInterpolation (default
-                            distanceWeightedHarmonic)
+                            conormalHarmonic)
   -trace zeroGradient|global
                             bathHeartPhiETrace (default zeroGradient)
   -wallGradient sealed|stock
@@ -54,7 +54,7 @@ N=12
 seed=1
 outer=insulated
 parameterSet=default
-interface=distanceWeightedHarmonic
+interface=conormalHarmonic
 trace=zeroGradient
 wallGradient=sealed
 predictorCorrector=yes

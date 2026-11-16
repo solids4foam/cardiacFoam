@@ -50,7 +50,10 @@ when the outer sphere is insulated.
   `backward`, `bathPredictorCorrector yes`, `bathHeartPhiETrace zeroGradient`;
 - bath: the top-level `torso` block with cellZones `bloodPool` and `bath`,
   `bodyAndOrgansConductivity` (written by `setManufacturedFields`),
-  `distanceWeightedHarmonic`;
+  `conormalHarmonic` (with `distanceWeightedHarmonic` the cross term of
+  the interface faces uses a cell gradient fitted across the kink of
+  `phi_e`, and the pool converges at first order in the maximum norm next
+  to the concave interface; see the P2 bath record);
 - schemes: `sealedWallLeastSquares` for `grad(Vm)` and `grad(phiE)`,
   `Gauss linear corrected`;
 - `phiE`: `PCG`/`DIC` to `1e-15`; PIMPLE with one outer corrector.
@@ -72,7 +75,7 @@ when the outer sphere is insulated.
 | `-seed n` | gmsh random seed (`-mesh tet`) | 1 |
 | `-outer insulated\|grounded` | outer sphere insulated, or grounded at the `c0` of the parameter set (0.1 default, -0.05 alternate) | insulated |
 | `-parameterSet default\|alternate` | manufactured parameters; `alternate` turns the common mode on | default |
-| `-interface distanceWeightedHarmonic\|conormalHarmonic` | `interfaceConductivityInterpolation` | distanceWeightedHarmonic |
+| `-interface distanceWeightedHarmonic\|conormalHarmonic` | `interfaceConductivityInterpolation` | conormalHarmonic |
 | `-trace zeroGradient\|global` | `bathHeartPhiETrace` | zeroGradient |
 | `-wallGradient sealed\|stock` | `sealedWallLeastSquares` or `leastSquares` for `grad(Vm)` and `grad(phiE)` | sealed |
 | `-predictorCorrector yes\|no` | `bathPredictorCorrector` | yes |
