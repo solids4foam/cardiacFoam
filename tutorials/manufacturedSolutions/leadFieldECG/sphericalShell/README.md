@@ -123,7 +123,7 @@ electrode lies in the myocardium.
 ## Run
 
 ```bash
-./Allrun [parallel] [-mesh hex|tet] [-N n] [-seed n]
+./Allrun [parallel] [-mesh hex|tet] [-N n] [-seed n] [-solution transmission|bathShell]
 ```
 
 | option | sets | default |
@@ -132,6 +132,7 @@ electrode lies in the myocardium.
 | `-mesh hex\|tet` | cubed sphere or gmsh tetrahedra | `hex` |
 | `-N n` | cells per unit length | 12 |
 | `-seed n` | gmsh seed of `-mesh tet` | 1 |
+| `-solution transmission\|bathShell` | exact solution of the verifier: the transmission solution of `shell_mms.py`, or the bath shell of `bath_shell_bidomain_mms.py` with the outer sphere insulated, whose `Vm` has a non-zero intracellular wall current (it tests the wall-current term of the lead-field source; the two-way solve of the same fields is [`bathBidomain/sphericalShell`](../../bathBidomain/sphericalShell/README.md)) | transmission |
 
 The verifier writes `postProcessing/manufacturedLeadFieldECG_ECG.dat` and
 `postProcessing/manufacturedLeadFieldECGSummary_ECG.dat`.

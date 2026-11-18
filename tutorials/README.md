@@ -104,6 +104,7 @@ Single-cell and meshless cases: an ionic model integrated without a spatial PDE.
 | Case | Purpose | Build mode | Regression |
 | --- | --- | --- | --- |
 | [`manufacturedSolutions/bathBidomain/slab`](manufacturedSolutions/bathBidomain/slab/README.md) | Verify the heart and bath fields and the heart-bath interface | lightweight or full | `standard` |
+| [`manufacturedSolutions/bathBidomain/sphericalShell`](manufacturedSolutions/bathBidomain/sphericalShell/README.md) | Verify the two-way bath bidomain on curved heart-bath interfaces around a blood pool, with rotated unequal heart tensors and a varying bath conductivity | lightweight or full | `none` (bath coupling: `bathBidomain/slab`) |
 
 ### Lead-field ECG
 

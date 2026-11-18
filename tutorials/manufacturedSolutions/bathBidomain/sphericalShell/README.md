@@ -1,5 +1,7 @@
 # bathBidomain/sphericalShell
 
+## What it does
+
 The bath shell: a bidomain heart shell `0.5 < |x| < 1` coupled every step to
 the bath ball `bloodPool` (`|x| < 0.5`) and the outer bath `1 < |x| < 1.5`
 (`torsoCoupling bath`), verified against the manufactured solution of
@@ -19,6 +21,26 @@ anisotropic interfaces, convex (`|x| = 1`) and concave (`|x| = 0.5`):
   varies in each;
 - the outer sphere is insulated (pure Neumann, `phiE` pinned at
   `phiERefPoint`) or grounded at `c0`, with constant data only.
+
+- **Exercises:** the two-way bath bidomain on curved heart-bath interfaces,
+  convex and concave: the intracellular sealing with a non-zero wall current,
+  the extracellular current transmission and the `phi_e` trace across both
+  spheres, the interface conductivity (`conormalHarmonic`, the jump-aware
+  interface gradient), rotated heart tensors with unequal anisotropy ratios,
+  a bath conductivity that varies between and within its zones, and an
+  insulated (pure-Neumann, pinned) or grounded outer sphere. The FDA box of
+  [`bathBidomain/slab`](../slab/README.md) has planar interfaces normal to
+  `x` and checks none of these.
+- **Use it for:** verifying a change to the bath coupling, the heart-bath
+  interface operator, the `phi_e` trace or the sealed-wall gradient on curved
+  walls; comparing the interface, trace, wall-gradient and coupling options
+  of the table below. [`leadFieldECG/sphericalShell`](../../leadFieldECG/sphericalShell/README.md)
+  `-solution bathShell` records the same exact fields through lead fields.
+
+## Regression
+
+Tier: `none`. No regression runs this case; the bath coupling is checked by
+[`bathBidomain/slab`](../slab/README.md).
 
 ## Problem
 
