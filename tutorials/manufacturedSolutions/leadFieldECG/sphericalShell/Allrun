@@ -23,6 +23,9 @@ Options (parameters are written to local/ and included by the dictionaries):
                             of shell_mms.py, or the bath shell of
                             bath_shell_bidomain_mms.py (insulated), whose Vm has
                             a non-zero intracellular wall current
+  -interface distanceWeightedHarmonic|conormalHarmonic
+                            interfaceConductivityInterpolation of the conductor
+                            (default distanceWeightedHarmonic)
 
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
 USAGE
@@ -34,6 +37,7 @@ mesh=hex
 N=12
 seed=1
 solution=transmission
+interface=distanceWeightedHarmonic
 
 needValue()
 {
@@ -84,6 +88,10 @@ do
             needValue "$@"; solution="$2"; shift
             oneOf -solution "$solution" transmission bathShell
             ;;
+        -interface)
+            needValue "$@"; interface="$2"; shift
+            oneOf -interface "$interface" distanceWeightedHarmonic conormalHarmonic
+            ;;
         -h|-help|--help)
             usage
             ;;
@@ -119,6 +127,7 @@ rm -rf local
 mkdir local
 echo "N $N;" > local/mesh
 echo "solution $solution;" > local/verification
+echo "interfaceConductivityInterpolation $interface;" > local/torso
 
 # Mesh with the cellZones bloodPool, myocardium and bath and the patch outer
 if [ "$mesh" = hex ]

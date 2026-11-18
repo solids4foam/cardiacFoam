@@ -32,6 +32,9 @@ solvers
         tolerance       1e-11;
         relTol          0.0;
         maxIter         5000;
+        // Read with interfaceConductivityInterpolation conormalHarmonic: passes of
+        // the jump-aware interface gradient (as bathBidomain/sphericalShell)
+        nInterfaceGradientCorrectors 2;
     }
     // buildLeadFields: the lead fields solve (M + C^T) z = e with the assembled
     // matrix through PETSc (conductorLinearSolve)

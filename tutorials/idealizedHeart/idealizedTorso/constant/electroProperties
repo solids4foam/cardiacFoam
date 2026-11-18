@@ -136,7 +136,9 @@ torso
 {
     cellZones          ( blood lungs chestWall torso );
     conductivityField  bodyAndOrgansConductivity;
-    interfaceConductivityInterpolation distanceWeightedHarmonic;
+    // Heart-torso faces: the jump-aware interface gradient in the cross term,
+    // in both couplings (the operator the bath shell verifies)
+    interfaceConductivityInterpolation conormalHarmonic;
     groundPatches          {}
     surfaceCurrentPatches  {}
     // A point inside the torso

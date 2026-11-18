@@ -18,7 +18,10 @@ effect of the torso on the heart, together with the wall rule below.
 
 `../mesh/heartTorso` (Git LFS) holds the mesh and its `0/` fields. The
 heart cells are those of the idealized ventricles of `../mesh`; the heart/torso
-interface is conformal.
+interface is conformal. Its faces use `conormalHarmonic`, the jump-aware interface gradient in
+the cross term, in both couplings: on the bath shell
+(`manufacturedSolutions/bathBidomain/sphericalShell`) `distanceWeightedHarmonic`
+loses second order in the blood pool next to the concave interface.
 
 | Cell zone | Cells | Conductivity (S/m) |
 |---|---|---|

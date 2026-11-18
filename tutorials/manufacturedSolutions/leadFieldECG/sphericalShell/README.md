@@ -123,7 +123,7 @@ electrode lies in the myocardium.
 ## Run
 
 ```bash
-./Allrun [parallel] [-mesh hex|tet] [-N n] [-seed n] [-solution transmission|bathShell]
+./Allrun [parallel] [-mesh hex|tet] [-N n] [-seed n] [-solution transmission|bathShell] [-interface distanceWeightedHarmonic|conormalHarmonic]
 ```
 
 | option | sets | default |
@@ -133,6 +133,7 @@ electrode lies in the myocardium.
 | `-N n` | cells per unit length | 12 |
 | `-seed n` | gmsh seed of `-mesh tet` | 1 |
 | `-solution transmission\|bathShell` | exact solution of the verifier: the transmission solution of `shell_mms.py`, or the bath shell of `bath_shell_bidomain_mms.py` with the outer sphere insulated, whose `Vm` has a non-zero intracellular wall current (it tests the wall-current term of the lead-field source; the two-way solve of the same fields is [`bathBidomain/sphericalShell`](../../bathBidomain/sphericalShell/README.md)) | transmission |
+| `-interface distanceWeightedHarmonic\|conormalHarmonic` | `interfaceConductivityInterpolation` of the conductor; `conormalHarmonic` uses the jump-aware interface gradient in the cross term of the heart-torso faces, as [`bathBidomain/sphericalShell`](../../bathBidomain/sphericalShell/README.md) does by default | distanceWeightedHarmonic |
 
 The verifier writes `postProcessing/manufacturedLeadFieldECG_ECG.dat` and
 `postProcessing/manufacturedLeadFieldECGSummary_ECG.dat`.
