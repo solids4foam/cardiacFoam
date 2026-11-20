@@ -1,0 +1,11 @@
+#!/bin/bash
+# Prepare as base/leadFieldBox, building the lead fields with its schemes,
+# then run with system/fvSchemes.run
+cd "${0%/*}" || exit 1
+. "${WM_PROJECT_DIR:?}"/bin/tools/RunFunctions
+
+runApplication blockMesh || exit 1
+runApplication topoSet || exit 1
+runApplication setTorsoOrganConductivityField || exit 1
+runApplication buildLeadFields || exit 1
+cp system/fvSchemes.run system/fvSchemes || exit 1

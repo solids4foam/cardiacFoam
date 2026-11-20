@@ -115,6 +115,11 @@ public:
 
     virtual void write() override;
 
+    virtual bool requiresIonicModel() const override
+    {
+        return false;
+    }
+
     virtual bool writesGraphVm() const override
     {
         return true;

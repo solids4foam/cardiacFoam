@@ -15,34 +15,35 @@ License
     You should have received a copy of the GNU General Public License
     along with cardiacFoam.  If not, see <http://www.gnu.org/licenses/>.
 
+Function
+    locateReferenceCell
+
+Description
+    The cell holding the reference point of a pure-Neumann potential: the
+    cell of mesh that contains p, on the one processor whose cell contains
+    it (-1 on the others). Fatal unless exactly one processor has such a
+    cell. Used by the heart-only bidomain phiE and by the heart+torso
+    conductor.
+
+SourceFiles
+    referenceCell.C
+
 Author
     Simao Nieto de Castro, UCD.
 \*---------------------------------------------------------------------------*/
 
-#include "compatibilityProjection.H"
+#ifndef referenceCell_H
+#define referenceCell_H
 
-// * * * * * * * * * * * * * * * * Functions * * * * * * * * * * * * * * * //
+#include "fvMesh.H"
 
-void Foam::projectCompatibility(fvScalarMatrix& eqn)
+namespace Foam
 {
-    const fvMesh& mesh = eqn.psi().mesh();
 
-    scalar imbalance = sum(eqn.source());
-    forAll(eqn.boundaryCoeffs(), patchI)
-    {
-        if (!mesh.boundary()[patchI].coupled())
-        {
-            imbalance += sum(eqn.boundaryCoeffs()[patchI]);
-        }
-    }
-    reduce(imbalance, sumOp<scalar>());
+label locateReferenceCell(const fvMesh& mesh, const point& p);
 
-    const scalarField& V = mesh.V();
-    eqn.source() -= V*(imbalance/gSum(V));
+} // End namespace Foam
 
-    Info<< eqn.psi().name() << " compatibility projection: imbalance "
-        << imbalance << nl;
-}
-
+#endif
 
 // ************************************************************************* //

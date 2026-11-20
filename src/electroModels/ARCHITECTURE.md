@@ -17,9 +17,11 @@ physicsModel::New()             physicsProperties: type electroModel
 The eikonal spatial entry uses `eikonalMyocardiumDomain` rather than the
 `myocardiumSolver` kernel table. `singleCellSolver` registers directly in the
 parent `electroModel` table and bypasses this spatial assembly. For spatial
-entries, `<name>Coeffs` is the builder's configuration root; optional public
-blocks include `conductionNetworkDomains`, `ecgDomains`,
-`bathPotentialDomain`, and `domainCouplings`. Domain-specific selectors include
+entries, `<name>Coeffs` is the builder's configuration root of the heart;
+its optional public blocks include `conductionNetworkDomains` and
+`domainCouplings`. The top level of `electroProperties` holds the region
+outside the heart and the ECG: `torso`, `torsoCoupling` (`bath` or
+`leadField`) and `ecgDomains`. Domain-specific selectors include
 `conductionSystemSolver` and `ecgSolver`.
 
 This complete electrophysiology path is built in both full solids4foam and
@@ -37,10 +39,13 @@ electroModels/
 │   ├── system/                 Domain container + dictionary-driven builder
 │   ├── advanceSchemes/         Time-step orchestration strategies
 │   └── electrophysiologyModel/ Concrete myocardium-centred entry point
+├── torso/                      Heart+torso conductor shared by the bath and the lead fields:
+│                               passiveConductor, torsoCoupling, heartPhiETrace
 ├── electroDomains/             Physical domain implementations
-│   ├── myocardiumDomain/                3D myocardium: Vm PDE + ionic ODE
+│   ├── myocardiumDomain/                3D myocardium: Vm PDE + ionic ODE; owns its
+│   │                                    ionic model, verification model and restart state
 │   ├── ecgDomain/                       ECG body region: elliptic Vm-driven PDE
-│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath)
+│   ├── extracellularPotentialDomain/    Unified global phiE (heart+bath), bath only
 │   └── conductionSystemDomain/          Purkinje/conduction network: 1D graph ODE
 ├── myocardiumModels/           Run-time-selectable myocardium diffusion solvers
 ├── ecgModels/                  Run-time-selectable ECG field solvers
@@ -122,6 +127,14 @@ The body-surface region. Solves a purely passive Laplace/Poisson equation driven
 
 - Owns: `autoPtr<ecgSolver>`
 
+- Reads its electrodes with `readEcgElectrodes` (`ecgElectrodes.H`): the
+  entry's own electrode positions, else those shared by all ECG domains.
+  The lead-field build reads them with the same function.
+
+**`ecgElectrodeCells`** — the cell of each electrode of a torso ECG, owned
+by one processor; an electrode outside the mesh is fatal. Used by `torsoECG`
+(bath) and `leadFieldConductor` (lead fields).
+
 **`extracellularPotentialDomain`** — unified global extracellular potential
 domain. Implements `electroStateDomain`.
 
@@ -133,21 +146,41 @@ domain. Implements `electroStateDomain`.
 - Solves an elliptic Poisson equation for `phiE` driven by the scattered heart
   `Vm`, with Dirichlet `groundPatches` and Neumann `surfaceCurrentPatches`.
 
-- Binds a restricted local view of `phiE` back into the bidomain myocardium
-  solver via `bindExternalPhiE`, so the bidomain solver no longer solves a
-  local phiE.
+- Owns a `passiveConductor` (`torso/`), built from the top-level `torso`
+  block: the heart+torso cell and face conductivities, the operator, the
+  boundary data of the potential (patch types, ground values, surface
+  currents), the reference pin and the heart source. `passiveConductor` has
+  two users: this domain (`torsoCoupling bath`) and the lead fields of
+  `torsoECG` (`torsoCoupling leadField`: `leadFieldConductor`,
+  `buildLeadFields`).
+
+- Owns both extracellular potentials: the global `phiE` (base mesh) and
+  the heart `phiE` (heart mesh), the restriction of the global one to the
+  heart cells with, under `bathHeartPhiETrace global`, the exposed-face
+  trace. It is their only writer: `updateHeartPhiE` writes the heart `phiE`
+  once at construction and after every global solve. The heart `phiE` gets
+  its patch types and wall-gradient states once, at construction, so its
+  gradient stencils are built from final states. The bidomain myocardium
+  solver constructs no `phiE` of its own with a bath: the model reads
+  `torsoCoupling` once and tells the kernel (`externalPhiE`). The kernel
+  reads the heart `phiE` (`bindExternalPhiE`, a `const` reference) in its Vm
+  equation. A verification model receives the global `phiE` from this
+  domain, its owner, through the separate verification hook
+  `bindVerificationPhiE`, for the manufactured initial values.
 
 - Exposes `phiE` to `torsoECG`-class ECG solvers for electrode sampling.
 
 - Rejects a start-time `phiE` file whose patch types differ from the ground
   and surface-current patches.
 
-- Applies a bound verification model's `phiE` source, boundary data, and
-  compatibility projection to the global equation.
+- Applies a bound verification model's `phiE` source to the global
+  equation. Without a ground patch (pure Neumann) it reports the discrete
+  imbalance of the equation, which the reference cell absorbs, at every
+  solve; it projects nothing.
 
-- Stores the heart-bath interface flux as `phiEInterfaceFlux`, and the cell
-  gradient used by the face corrections of the `phiE` operator as
-  `phiEInterfaceGradient`, for a verification model that requests them.
+- Publishes the cell gradient used by the face corrections of the `phiE`
+  operator as `phiEInterfaceGradient`, for a verification model that
+  requests it (`requiresInterfaceGradient`).
 
 - Writes `phiE`, `sigmaTotal`, and `VmGlobal` through the normal electro-model
   output path at OpenFOAM output times.
@@ -175,7 +208,7 @@ Concrete reaction-diffusion implementations of `myocardiumSolver`.
 | Class | Type name | PDE / method | Notes |
 |---|---|---|---|
 | `monodomainSolver` | `monodomainSolver` | `∂Vm/∂t − ∇·(σᵢ∇Vm) = Iion` | Standard single-domain FVM |
-| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Owns a local `phiE`; with a bath domain, synchronizes it from the global `phiE` owner |
+| `bidomainSolver` | `bidomainSolver` | Coupled `Vm` and `phiE` | Owns and solves its `phiE` without a bath; with a bath it owns none and reads the heart `phiE` that the bath domain owns and writes |
 
 `singleCellSolver` is registered in the parent `electroModel` table and bypasses the myocardium-domain factory. The canonical eikonal workflow selects `myocardiumSolver eikonalSolver` and builds `eikonalMyocardiumDomain`.
 
@@ -204,9 +237,18 @@ Concrete implementations of `ecgSolver`.
 
 | Class | Type name | Method | Notes |
 |---|---|---|---|
-| `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` | No body-conductor mesh required |
-| `torsoECG` | `torsoECG` | Cell-centre sampling of the unified `phiE` at electrode positions | Requires a configured `extracellularPotentialDomain`; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
-| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then pseudo-ECG integrates | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+| `pseudoECGSolver` | `pseudoECG` | Volume integral of `∇Vm · r̂ / r²` (`infiniteMediumLeadField`) | No body-conductor mesh required; requires `sigmaExtracellular` |
+| `torsoECG` | `torsoECG` | The potential at electrodes in the torso: with `torsoCoupling bath`, cell-centre sampling of the unified `phiE`; with `torsoCoupling leadField`, the lead fields of `buildLeadFields` contracted with the heart source of `Vm` (`leadFieldECG`) | Requires the top-level `torso` block; state-provider routing handled by `electrophysicsSystemBuilder::configureECGDomains` |
+| `eikonalECG` | `eikonalECG` | Template-voltage surrogate: reconstructs `Vm(x,t) = U(t - activationTime(x))` from endo/mid/epi single-cell templates, then integrates with `infiniteMediumLeadField` | For eikonal activation-time workflows; no reaction-diffusion solve per step. See [ecgModels/eikonalECG/README.md](ecgModels/eikonalECG/README.md) |
+
+The classes these models are built from:
+
+| Class | Folder | Used by | Role |
+|---|---|---|---|
+| `infiniteMediumLeadField` | `infiniteMediumLeadField/` | `pseudoECG`, `eikonalECG` | The lead field of an infinite homogeneous medium and its `1/(4 pi sigmaExtracellular)` scaling |
+| `leadFieldECG` | `leadFieldECG/` | `torsoECG` (`torsoCoupling leadField`) | Loads the lead fields of `buildLeadFields`, checks their signature and evaluates the channels from the heart source of `Vm` |
+| `leadFieldConductor` | `leadFieldECG/` | `leadFieldECG`, `buildLeadFields`, the lead-field verifiers | The `passiveConductor` of an ECG domain: the heart sub-mesh, Gi and Ge (those of a running bidomain heart), the torso block, the electrodes of the ECG domain and the signature |
+| `leadFieldAdjoint` | `leadFieldECG/` | `buildLeadFields` | The transpose of the explicit part of the conductor's operator (`probedOperator`) and the self-checks of the build |
 
 `tissueTemplates.H`, beside `eikonalECG`, holds the compiled endo/mid/epi
 templates. Templates generated from an ionic model, one per
@@ -366,7 +408,7 @@ electroDomainInterface
 
 myocardiumSolver
     ├── monodomainSolver
-    └── bidomainSolver        (owns local phiE; may bind global phiE)
+    └── bidomainSolver        (owns phiE without a bath; reads the bath's heart phiE with one)
 
 electroStateProvider
     ← implemented by: myocardiumDomain, ecgDomain, extracellularPotentialDomain

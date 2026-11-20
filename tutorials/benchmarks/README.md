@@ -6,6 +6,7 @@ reports.
 | Case | Benchmark |
 | --- | --- |
 | [`NiedererEtAl2011verification`](NiedererEtAl2011verification/README.md) | the Niederer et al. (2011) monodomain slab: activation times and smoke-check fields |
+| [`NiedererEtAl2011verification/bidomain`](NiedererEtAl2011verification/bidomain/README.md) | the same slab with the bidomain model, with the published conductivities or an equal-anisotropy set that reproduces the monodomain case |
 
 ```bash
 cd tutorials/benchmarks/NiedererEtAl2011verification

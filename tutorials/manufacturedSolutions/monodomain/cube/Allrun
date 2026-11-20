@@ -187,7 +187,7 @@ EOF
 # The pseudo-ECG and its verifier are 3D only
 if [ "$dim" != 3 ]
 then
-    echo "#remove ecgDomains" >> local/field
+    echo "#remove ecgDomains" > local/ecg
 fi
 echo "type    $verifier;" > local/verifier
 cat > local/ecgVerification <<EOF

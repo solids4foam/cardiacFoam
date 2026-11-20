@@ -34,6 +34,95 @@ namespace Foam
     addToRunTimeSelectionTable(ionicModel, bidomainFDAManufactured, dictionary);
 }
 
+
+Foam::bidomainFDAConstants Foam::bidomainFDABenchmarkConstants
+(
+    const dictionary& coeffs,
+    const label dimension
+)
+{
+    const word source
+    (
+        coeffs.getOrDefault<word>("conductivitySource", "uniform")
+    );
+
+    if (source != "uniform")
+    {
+        FatalIOErrorInFunction(coeffs)
+            << "The FDA bidomain benchmark needs uniform conductivities, but "
+            << "conductivitySource is '" << source << "'."
+            << exit(FatalIOError);
+    }
+
+    const symmTensor Gi
+    (
+        dimensionedSymmTensor("conductivityIntracellular", coeffs).value()
+    );
+    const symmTensor Ge
+    (
+        dimensionedSymmTensor("conductivityExtracellular", coeffs).value()
+    );
+
+    const tensor GiT(Gi & tensor(I));
+    const tensor GeT(Ge & tensor(I));
+
+    // The separable manufactured fields admit no mixed conductivity between active directions
+    for (label i = 0; i < dimension; ++i)
+    {
+        for (label j = 0; j < dimension; ++j)
+        {
+            if
+            (
+                i != j
+             && (
+                    mag(GiT(i, j)) > SMALL*mag(Gi)
+                 || mag(GeT(i, j)) > SMALL*mag(Ge)
+                )
+            )
+            {
+                FatalIOErrorInFunction(coeffs)
+                    << "The FDA bidomain benchmark needs conductivity tensors "
+                    << "without mixed entries between active directions; got "
+                    << "Gi = " << Gi << " and Ge = " << Ge << "."
+                    << exit(FatalIOError);
+            }
+        }
+    }
+
+    // phiE = -k Vm + s(t) needs k (Gi + Ge) = Gi in every active direction, to input rounding
+    const scalar k = GiT.xx()/(GiT.xx() + GeT.xx());
+    for (label d = 0; d < dimension; ++d)
+    {
+        const scalar kd = GiT(d, d)/(GiT(d, d) + GeT(d, d));
+        if (mag(kd - k) > 1e-6*k)
+        {
+            FatalIOErrorInFunction(coeffs)
+                << "The FDA bidomain benchmark needs Ge proportional to Gi: "
+                << "Gi/(Gi + Ge) is " << k << " in x but " << kd
+                << " in active direction " << d << "."
+                << exit(FatalIOError);
+        }
+    }
+
+    // div(Gm grad Vm) = -sum_d Gm_dd (d pi)^2 Vm for Vm ~ cos(pi x) cos(2 pi y) cos(3 pi z)
+    scalar beta = 0;
+    for (label d = 0; d < dimension; ++d)
+    {
+        const scalar Gm = GiT(d, d)*GeT(d, d)/(GiT(d, d) + GeT(d, d));
+        beta -= Gm*sqr((d + 1)*constant::mathematical::pi);
+    }
+
+    // The solver checks the units of chi and cm
+    return bidomainFDAConstants
+    {
+        dimensionedScalar("chi", coeffs).value(),
+        dimensionedScalar("cm", coeffs).value(),
+        k,
+        beta
+    };
+}
+
+
 Foam::bidomainFDAManufactured::bidomainFDAManufactured
 (
     const dictionary& dict,
@@ -46,14 +135,14 @@ Foam::bidomainFDAManufactured::bidomainFDAManufactured
     STATES_(num),
     CONSTANTS_(BIDOMAIN_NUM_CONSTANTS, 0.0),
     ALGEBRAIC_(num),
-    RATES_(num),
-    k_(dict.subOrEmptyDict("verificationModel").lookupOrDefault<scalar>
-    (
-        "k",
-        1.0/Foam::sqrt(2.0)
-    ))
+    RATES_(num)
 {
     setTissue(ionicSelector::selectDimension(dict, supportedDimensions()));
+
+    const bidomainFDAConstants benchmark
+    (
+        bidomainFDABenchmarkConstants(dict, tissue())
+    );
 
     forAll(STATES_, integrationPtI)
     {
@@ -74,8 +163,9 @@ Foam::bidomainFDAManufactured::bidomainFDAManufactured
             CONSTANTS_.data(),
             RATES_[integrationPtI].data(),
             STATES_[integrationPtI].data(),
-            tissue(),
-            k_
+            benchmark.Cm,
+            benchmark.chi,
+            benchmark.beta
         );
     }
 

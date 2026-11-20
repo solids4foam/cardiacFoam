@@ -15,10 +15,10 @@ case README before running it.
 tutorials/
 ├── electrophysiologyProtocols/    small EP checks: cells, restitution, CV, re-entry, Purkinje
 ├── electromechanicsProtocols/     small electromechanics checks: supports
-├── benchmarks/                    published benchmarks (Niederer et al. 2011 slab)
+├── benchmarks/                    published benchmarks (Niederer et al. 2011 slab, monodomain and bidomain)
 ├── manufacturedSolutions/         verification against known solutions, by equation
 │   ├── generators/                the definition of each manufactured solution
-│   ├── monodomain/  eikonal/  bidomain/  bathBidomain/  electromechanics/
+│   ├── monodomain/  eikonal/  bidomain/  bathBidomain/  leadFieldECG/  electromechanics/
 ├── idealizedHeart/                anatomical biventricular cases (EP, EM, pathologies)
 ├── configurationChecks/           which electroProperties configurations are accepted
 └── regression/                    shared regression library and index check
@@ -92,6 +92,7 @@ Single-cell and meshless cases: an ionic model integrated without a spatial PDE.
 
 | Case | Purpose | Build mode | Regression |
 | --- | --- | --- | --- |
+| [`benchmarks/NiedererEtAl2011verification/bidomain`](benchmarks/NiedererEtAl2011verification/bidomain/README.md) | Run the Niederer et al. (2011) slab benchmark with the bidomain model, with the published conductivities or an equal-anisotropy set that reproduces the monodomain case | lightweight or full | `Alltest-regression` |
 | [`manufacturedSolutions/bidomain/cube`](manufacturedSolutions/bidomain/README.md) | Verify spatial bidomain convergence on the unit cube | lightweight or full | `Alltest-regression` |
 | [`manufacturedSolutions/bidomain/sphericalShell`](manufacturedSolutions/bidomain/README.md) | Verify the heart-only bidomain on a spherical shell with sealed curved walls | lightweight or full | `Alltest-regression` |
 
@@ -100,6 +101,16 @@ Single-cell and meshless cases: an ionic model integrated without a spatial PDE.
 | Case | Purpose | Build mode | Regression |
 | --- | --- | --- | --- |
 | [`manufacturedSolutions/bathBidomain/slab`](manufacturedSolutions/bathBidomain/README.md) | Verify the heart and bath fields and the heart-bath interface | lightweight or full | `Alltest-regression` |
+
+### Lead-field ECG
+
+The torso conductor and its lead fields, solved with PETSc; the myocardium is
+the source.
+
+| Case | Purpose | Build mode | Regression |
+| --- | --- | --- | --- |
+| [`manufacturedSolutions/leadFieldECG`](manufacturedSolutions/leadFieldECG/README.md) | Verify the lead-field ECG against a direct forward solve of the same heart-torso conductor and against the exact potential of an insulated slab and of a layered torso with a current across it | full only, with PETSc | `Alltest-regression` (expected skip in lightweight mode) |
+| [`manufacturedSolutions/leadFieldECG/sphericalShell`](manufacturedSolutions/leadFieldECG/sphericalShell/README.md) | Verify the lead-field ECG on a curved heart shell between a conducting ball and an outer torso bounded by a sphere, with body-surface electrodes | full only, with PETSc | `Alltest-regression` (expected skip in lightweight mode) |
 
 ### Whole heart, solver chosen at run time
 
@@ -139,8 +150,9 @@ CARDIAC_REGRESSION_BUILD_MODE=lightweight ./tutorials/Alltest-regression --only 
 A case that needs cardiacFoam built with solids4foam carries an empty marker
 file `regression/needs-solids4foam`; today those are
 `electromechanicsProtocols/springSupportedSlab`,
-`manufacturedSolutions/electromechanics/totalLagrangianEM` and
-`idealizedHeart/electroMechHeart`. In lightweight mode their regression scripts
+`manufacturedSolutions/electromechanics/totalLagrangianEM`,
+`idealizedHeart/electroMechHeart` and the two `manufacturedSolutions/leadFieldECG`
+cases, whose conductor solve goes through solids4foam's PETSc layer. In lightweight mode their regression scripts
 exit 77 and the runner reports an expected skip. A case that cannot run on some
 OpenFOAM versions lists them in `regression/skips-on-openfoam`; today
 `manufacturedSolutions/bidomain/sphericalShell` lists `v2312`, where its Vm and

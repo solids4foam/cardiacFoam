@@ -81,6 +81,9 @@ class eikonalMyocardiumDomain
 
 public:
 
+    //- The myocardiumSolver name that selects this domain
+    static const word solverName;
+
     using myocardiumDomainInterface::advance;
 
     eikonalMyocardiumDomain
@@ -117,6 +120,16 @@ public:
         (
             meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
           ? &meshSubsetPtr_->cellMap()
+          : nullptr
+        );
+    }
+
+    virtual const fvMeshSubset* meshSubsetPtr() const override
+    {
+        return
+        (
+            meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+          ? meshSubsetPtr_.get()
           : nullptr
         );
     }

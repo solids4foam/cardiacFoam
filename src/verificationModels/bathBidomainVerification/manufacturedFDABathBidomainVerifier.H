@@ -111,7 +111,7 @@ public:
     ) override;
 
     //- The bulk/boundary/interface-band rows read the gradient the bath operator uses
-    virtual bool requiresInterfaceFluxDiagnostic() const override
+    virtual bool requiresInterfaceGradient() const override
     {
         return true;
     }

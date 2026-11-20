@@ -33,17 +33,8 @@ namespace Foam
 namespace extracellularFaceConductivity
 {
 
-inline scalar unweightedHarmonic(const scalar a, const scalar b)
-{
-    const scalar denominator = a + b;
-
-    return
-        (mag(denominator) > SMALL && a*b > 0.0)
-      ? 2.0*a*b/denominator
-      : 0.5*denominator;
-}
-
-
+//- Distance-weighted harmonic mean of two positive scalar conductivities at
+//  distances distanceA and distanceB from the face; linear otherwise
 inline scalar distanceWeightedHarmonic
 (
     const scalar a,
@@ -62,12 +53,7 @@ inline scalar distanceWeightedHarmonic
      && a*b > 0.0
     )
     {
-        const scalar resistance = distanceA/a + distanceB/b;
-
-        if (mag(resistance) > SMALL)
-        {
-            return distance/resistance;
-        }
+        return distance/(distanceA/a + distanceB/b);
     }
 
     return
@@ -77,44 +63,11 @@ inline scalar distanceWeightedHarmonic
 }
 
 
-inline tensor unweightedHarmonic(const tensor& a, const tensor& b)
-{
-    tensor result(tensor::zero);
-
-    for (direction d = 0; d < tensor::nComponents; ++d)
-    {
-        result[d] = unweightedHarmonic(a[d], b[d]);
-    }
-
-    return result;
-}
-
-
-inline tensor distanceWeightedHarmonic
-(
-    const tensor& a,
-    const tensor& b,
-    const scalar distanceA,
-    const scalar distanceB
-)
-{
-    tensor result(tensor::zero);
-
-    for (direction d = 0; d < tensor::nComponents; ++d)
-    {
-        result[d] = distanceWeightedHarmonic
-        (
-            a[d],
-            b[d],
-            distanceA,
-            distanceB
-        );
-    }
-
-    return result;
-}
-
-
+//- Face conductivity between two uniform materials a and b with unit face
+//  normal n, from continuity of the potential and of the normal flux:
+//  normal part the distance-weighted harmonic mean of n.a.n and n.b.n,
+//  conormal part t = (kB ta + kA tb)/(kA + kB) with t = K.n - (n.K.n) n and
+//  k = n.K.n/d, tangential block the mean of the two (it carries no flux)
 inline tensor conormalHarmonic
 (
     const tensor& a,
@@ -129,26 +82,28 @@ inline tensor conormalHarmonic
     const scalar kA = aNN/max(distanceA, SMALL);
     const scalar kB = bNN/max(distanceB, SMALL);
     const scalar kSum = kA + kB;
+    const tensor P(tensor::I - sqr(n));
+    const tensor tangential(P & (0.5*(a + b)) & P);
 
     if (kSum <= SMALL)
     {
-        return distanceWeightedHarmonic(a, b, distanceA, distanceB);
+        return tangential;
     }
 
     const vector t
     (
         (kB*((a & n) - aNN*n) + kA*((b & n) - bNN*n))/kSum
     );
-    const tensor P(tensor::I - sqr(n));
 
     return
         kA*kB/kSum*(distanceA + distanceB)*sqr(n)
       + t*n
       + n*t
-      + (P & (0.5*(a + b)) & P);
+      + tangential;
 }
 
 
+//- Linear interpolation with owner weight weightA
 inline tensor linear
 (
     const tensor& a,
@@ -157,68 +112,6 @@ inline tensor linear
 )
 {
     return weightA*a + (1.0 - weightA)*b;
-}
-
-
-inline tensor unweightedExtracellularFaceTensor
-(
-    const tensor& sigmaTotalA,
-    const tensor& sigmaTotalB,
-    const tensor& sigmaIntracellularA,
-    const tensor& sigmaIntracellularB
-)
-{
-    const bool aIsHeart = magSqr(sigmaIntracellularA) > SMALL;
-    const bool bIsHeart = magSqr(sigmaIntracellularB) > SMALL;
-
-    if (aIsHeart != bIsHeart)
-    {
-        const tensor heartSigmaE =
-            aIsHeart
-          ? sigmaTotalA - sigmaIntracellularA
-          : sigmaTotalB - sigmaIntracellularB;
-        const tensor bathSigma = aIsHeart ? sigmaTotalB : sigmaTotalA;
-
-        return unweightedHarmonic(heartSigmaE, bathSigma);
-    }
-
-    return unweightedHarmonic(sigmaTotalA, sigmaTotalB);
-}
-
-
-inline tensor distanceWeightedExtracellularFaceTensor
-(
-    const tensor& sigmaTotalA,
-    const tensor& sigmaTotalB,
-    const tensor& sigmaIntracellularA,
-    const tensor& sigmaIntracellularB,
-    const scalar weightA
-)
-{
-    const bool aIsHeart = magSqr(sigmaIntracellularA) > SMALL;
-    const bool bIsHeart = magSqr(sigmaIntracellularB) > SMALL;
-
-    if (aIsHeart != bIsHeart)
-    {
-        const tensor coefficientA =
-            aIsHeart
-          ? sigmaTotalA - sigmaIntracellularA
-          : sigmaTotalA;
-        const tensor coefficientB =
-            bIsHeart
-          ? sigmaTotalB - sigmaIntracellularB
-          : sigmaTotalB;
-
-        return distanceWeightedHarmonic
-        (
-            coefficientA,
-            coefficientB,
-            1.0 - weightA,
-            weightA
-        );
-    }
-
-    return linear(sigmaTotalA, sigmaTotalB, weightA);
 }
 
 } // End namespace extracellularFaceConductivity

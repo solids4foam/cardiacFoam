@@ -49,12 +49,15 @@ class myocardiumDomain
 {
 protected:
 
+    //- The ionic model and the verification model (null without one),
+    //  owned here and declared first: the members below refer to them
+    autoPtr<ionicModel> ionicModelPtr_;
+    autoPtr<electroVerificationModel> verificationModelPtr_;
+
     autoPtr<fvMeshSubset> meshSubsetPtr_;
     const fvMesh& supportMesh_;
     autoPtr<myocardiumSolver> diffusionSolverPtr_;
     volScalarField Vm_;
-    // Registered grad(Vm), looked up by name by "corrected" boundary conditions.
-    volVectorField gradVm_;
     volScalarField sourceField_;
     volScalarField implicitSourceCoeff_;
     volScalarField Iion_;
@@ -63,13 +66,12 @@ protected:
     volScalarField VmPrev_;
     volScalarField VmRate_;
     volScalarField activationTime_;
-    PtrList<volScalarField>& outFields_;
+    PtrList<volScalarField> outFields_;
     wordList preProcessFieldNames_;
     PtrList<volScalarField> preProcessFields_;
     wordList postProcessFieldNames_;
-    PtrList<volScalarField>& postProcessFields_;
+    PtrList<volScalarField> postProcessFields_;
     ionicModel& ionicModel_;
-    electroVerificationModel* verificationModelPtr_;
     const dictionary& electroProperties_;
     const dimensionedScalar chi_;
     const dimensionedScalar Cm_;
@@ -88,16 +90,26 @@ protected:
 
     void updateActivationTime();
 
-    //- Refresh gradVm_ before a diffusion solve.
-    void updateGradVm();
-
     //- Advance the ionic ODE over [t0, t0+dt] and update Iion_.
     void solveIonicCurrent(scalar t0, scalar dt);
 
     //- Recompute Iion_ at the freshly solved Vm_ without advancing the state
     void refreshIonicCurrent(scalar t);
 
-    void validateNoIonicStimulusInMonodomain() const;
+    //- The reaction step of both advance paths: the ionic ODE over
+    //  [t0, t0+dt], with the Vm-rate hint under sbdf2
+    void reactionStep(scalar t0, scalar dt);
+
+    //- The end of both advance paths, once Vm(t) is solved: under sbdf2
+    //  move Iion onto time t, then update the activation time
+    void finishStep(scalar t);
+
+    //- Fatal when the ionic model has an active stimulus protocol: the PDE
+    //  externalStimulus is the only stimulus of a reaction-diffusion heart
+    void validateNoIonicStimulus() const;
+
+    //- Vm from the loaded ionic state, unless the start time has a Vm file
+    void setVmFromRestartState();
 
     void bindBidomainField(volScalarField& phiE);
 
@@ -109,34 +121,40 @@ protected:
         return timeCouplingScheme_ == "sbdf2";
     }
 
+    //- Time steps taken since this run started, counting the current one.
+    //  The Iion and Vm histories of sbdf2 are not written, so a restarted
+    //  run rebuilds them exactly as a run from t = 0 does.
+    label stepsThisRun() const
+    {
+        return mesh().time().timeIndex() - mesh().time().startTimeIndex();
+    }
+
     //- Is there enough Iion history for the second-order source extrapolation?
     bool usesSbdf2Coupling() const
     {
-        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 3;
+        return usesSbdf2Scheme() && stepsThisRun() >= 3;
     }
 
     //- Is there enough Vm history to build the linear Vm extrapolant?
     bool usesSbdf2VmRate() const
     {
-        return usesSbdf2Scheme() && mesh().time().timeIndex() >= 2;
+        return usesSbdf2Scheme() && stepsThisRun() >= 2;
     }
 
 public:
 
     using myocardiumDomainInterface::advance;
 
-    //- Factory: derives the solver type from the Coeffs subdict name and
-    //  delegates to the injecting constructor below.
-    //  ("monodomainSolverCoeffs" → selects "monodomainSolver", etc.)
+    //- Factory: builds the heart sub-mesh and the myocardiumSolver kernel
+    //  solverType, then delegates to the injecting constructor below
     static autoPtr<myocardiumDomain> New
     (
         const fvMesh& mesh,
+        const word& solverType,
         const dictionary& electroProperties,
-        PtrList<volScalarField>& outFields,
-        const wordList& postProcessFieldNames,
-        PtrList<volScalarField>& postProcessFields,
-        ionicModel& ionicModel,
-        electroVerificationModel* verificationModelPtr
+        autoPtr<ionicModel> ionic,
+        autoPtr<electroVerificationModel> verifier,
+        const bool externalPhiE
     );
 
     static label configuredCellCount
@@ -149,11 +167,8 @@ public:
     (
         const fvMesh& supportMesh,
         const dictionary& electroProperties,
-        PtrList<volScalarField>& outFields,
-        const wordList& postProcessFieldNames,
-        PtrList<volScalarField>& postProcessFields,
-        ionicModel& ionicModel,
-        electroVerificationModel* verificationModelPtr,
+        autoPtr<ionicModel> ionic,
+        autoPtr<electroVerificationModel> verifier,
         autoPtr<myocardiumSolver> diffusionSolverPtr,
         autoPtr<fvMeshSubset> meshSubsetPtr
     );
@@ -190,6 +205,16 @@ public:
         );
     }
 
+    virtual const fvMeshSubset* meshSubsetPtr() const override
+    {
+        return
+        (
+            meshSubsetPtr_.valid() && meshSubsetPtr_->hasSubMesh()
+          ? meshSubsetPtr_.get()
+          : nullptr
+        );
+    }
+
     virtual const Time& time() const override
     {
         return Vm_.mesh().time();
@@ -215,9 +240,9 @@ public:
         return diffusionSolverPtr_->phiEPtr();
     }
 
-    virtual electroVerificationModel* verificationModel() const override
+    virtual const electroVerificationModel* verificationModel() const override
     {
-        return verificationModelPtr_;
+        return verificationModelPtr_.get();
     }
 
     virtual const volTensorField* conductivityPtr() const override
@@ -250,9 +275,14 @@ public:
         return &implicitSourceCoeff_;
     }
 
-    virtual const volScalarField* implicitSourceCoeffPtr() const override
+    virtual bool hasExtracellularPotential() const override
     {
-        return &implicitSourceCoeff_;
+        return diffusionSolverPtr_->hasExtracellularPotential();
+    }
+
+    virtual const volScalarField& implicitSourceCoeff() const override
+    {
+        return implicitSourceCoeff_;
     }
 
     virtual const volScalarField& activationTime() const override
@@ -280,15 +310,10 @@ public:
         return Iion_;
     }
 
-    virtual const volScalarField* IionOldPtr() const override
-    {
-        return usesSbdf2Coupling() ? &IionOld_ : nullptr;
-    }
-
-    virtual const volScalarField* IionOldOldPtr() const override
-    {
-        return usesSbdf2Coupling() ? &IionOldOld_ : nullptr;
-    }
+    //- Iion, or under sbdf2 (from the third step of the run) its
+    //  extrapolation I^n + r (I^n - I^(n-1)), r = dt/dt_old
+    virtual tmp<volScalarField> ionicCurrentForImplicitDiffusion()
+        const override;
 
     virtual const dimensionedScalar& chi() const override
     {
@@ -313,6 +338,12 @@ public:
 
     virtual void write() override;
 
+    //- Read the ionic restart state of the support mesh; when loaded and
+    //  the start time has no Vm file, set Vm from it
+    virtual bool readRestartState() override;
+
+    virtual void writeRestartState() const override;
+
     virtual bool supportsSplitReactionDiffusion() const override
     {
         return true;
@@ -334,11 +365,13 @@ public:
         pimpleControl* pimplePtr
     ) override;
 
-    virtual void finalizeDiffusionStep() override;
+    virtual void finalizeDiffusionStep(scalar t0, scalar dt) override;
 
-    virtual void bindExternalPhiE
+    virtual void bindExternalPhiE(const volScalarField& heartPhiE) override;
+
+    virtual void bindVerificationPhiE
     (
-        const volScalarField& phiE,
+        volScalarField& globalPhiE,
         const labelUList& heartCellMap
     ) override;
 
@@ -356,6 +389,7 @@ public:
 
     virtual void postProcess() override;
 };
+
 
 } // End namespace Foam
 

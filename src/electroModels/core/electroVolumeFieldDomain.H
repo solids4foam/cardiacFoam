@@ -49,27 +49,16 @@ public:
 
     virtual const volScalarField& Iion() const = 0;
 
-    virtual const volScalarField* IionOldPtr() const
-    {
-        return nullptr;
-    }
-
-    virtual const volScalarField* IionOldOldPtr() const
-    {
-        return nullptr;
-    }
+    //- The ionic current of the implicit diffusion solve: Iion, or its
+    //  extrapolation when the time coupling scheme asks for one (sbdf2).
+    //  The domain owns the time coupling; kernels do not see its history.
+    virtual tmp<volScalarField> ionicCurrentForImplicitDiffusion() const = 0;
 
     virtual volScalarField& sourceField() = 0;
 
-    virtual volScalarField* implicitSourceCoeffPtr()
-    {
-        return nullptr;
-    }
-
-    virtual const volScalarField* implicitSourceCoeffPtr() const
-    {
-        return nullptr;
-    }
+    //- Cell-local implicit coefficient of the junction currents (zero
+    //  without couplers), assembled as fvm::Sp
+    virtual const volScalarField& implicitSourceCoeff() const = 0;
 
     virtual const dimensionedScalar& chi() const = 0;
 

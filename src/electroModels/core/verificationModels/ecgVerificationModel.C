@@ -38,10 +38,25 @@ ecgVerificationModel::ecgVerificationModel
 :
     stateProvider_(stateProvider),
     mesh_(stateProvider.mesh()),
+    solverPtr_(nullptr),
     domainName_(domainName),
     electrodeNames_(electrodeNames),
     electrodePositions_(electrodePositions)
 {}
+
+
+const ecgSolver& ecgVerificationModel::solver() const
+{
+    if (!solverPtr_)
+    {
+        FatalErrorInFunction
+            << "ECG verification model " << type() << " of domain "
+            << domainName_ << " has no ECG solver bound"
+            << exit(FatalError);
+    }
+
+    return *solverPtr_;
+}
 
 
 word ecgVerificationModel::selectedType(const dictionary& dict)
@@ -97,12 +112,10 @@ autoPtr<ecgVerificationModel> ecgVerificationModel::New
             << exit(FatalError);
     }
 
-    autoPtr<ecgVerificationModel> verifier
+    return autoPtr<ecgVerificationModel>
     (
         ctorPtr(stateProvider, domainName, dict, electrodeNames, electrodePositions)
     );
-    verifier->validateProvider();
-    return verifier;
 }
 
 
@@ -267,17 +280,6 @@ void ecgVerificationModel::record
 {
     (void)sampleTime;
     record(numericValues);
-}
-
-
-void ecgVerificationModel::updateElectrodes
-(
-    const wordList& electrodeNames,
-    const List<vector>& electrodePositions
-)
-{
-    electrodeNames_ = electrodeNames;
-    electrodePositions_ = electrodePositions;
 }
 
 } // End namespace Foam

@@ -32,6 +32,10 @@ solvers
         tolerance       1e-15;
         relTol          0.0;
         maxIter         5000;
+        // Jump-aware gradient passes of the phiE corrections under
+        // interfaceConductivityInterpolation conormalHarmonic (Allrun
+        // -interface)
+        nInterfaceGradientCorrectors 2;
     }
 }
 

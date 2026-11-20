@@ -1,0 +1,17 @@
+{
+  "base": {
+    "entry": "niederer2011Bidomain",
+    "cases_root": "tutorials",
+    "dt": 5e-06
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "conductivity": ["equal", "equal", "equal", "published", "published", "published"],
+      "dx": [0.0005, 0.0002, 0.0001, 0.0005, 0.0002, 0.0001],
+      "endTime": [0.2, 0.08, 0.055, 0.2, 0.08, 0.055],
+      "parallel": [false, false, true, false, false, true],
+      "caseId": ["equal_dx5e-4", "equal_dx2e-4", "equal_dx1e-4", "published_dx5e-4", "published_dx2e-4", "published_dx1e-4"]
+    }
+  }
+}

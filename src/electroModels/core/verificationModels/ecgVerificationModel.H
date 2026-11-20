@@ -36,6 +36,8 @@ Author
 namespace Foam
 {
 
+class ecgSolver;
+
 class ecgVerificationModel
 {
 public:
@@ -55,6 +57,9 @@ protected:
 
     const electroStateProvider& stateProvider_;
     const fvMesh& mesh_;
+
+    //- The ECG solver of the domain (bound by ecgDomain after New)
+    const ecgSolver* solverPtr_;
     word domainName_;
     wordList electrodeNames_;
     List<vector> electrodePositions_;
@@ -66,6 +71,9 @@ protected:
     const dimensionedScalar& requireChi() const;
     const dimensionedScalar& requireCm() const;
     const dimensionedScalar& requireC0() const;
+
+    //- The bound ECG solver; fatal before bindSolver
+    const ecgSolver& solver() const;
 
 public:
 
@@ -96,6 +104,13 @@ public:
 
     virtual ~ecgVerificationModel() = default;
 
+    //- Observe the ECG solver whose output this model verifies; the solver
+    //  outlives the verification model (both are owned by ecgDomain)
+    void bindSolver(const ecgSolver& solver)
+    {
+        solverPtr_ = &solver;
+    }
+
     static autoPtr<ecgVerificationModel> New
     (
         const electroStateProvider& stateProvider,
@@ -109,15 +124,9 @@ public:
 
     virtual Requirements requirements() const = 0;
 
+    //- Fatal unless the provider exposes every state the model requires
+    //  (called by the ECG domain that binds the model to its provider)
     void validateProvider() const;
-
-    void updateElectrodes
-    (
-        const wordList& electrodeNames,
-        const List<vector>& electrodePositions
-    );
-
-    virtual bool read(const dictionary& dict) = 0;
 
     virtual void record(const List<scalar>& numericValues) = 0;
 
@@ -128,6 +137,17 @@ public:
     );
 
     virtual void end() {}
+
+    //- Write the fields the manufactured solution prescribes.
+    virtual void writeManufacturedFields(const fvMesh& mesh) const
+    {
+        (void)mesh;
+
+        FatalErrorInFunction
+            << "The selected ECG verification model does not write "
+            << "manufactured fields."
+            << exit(FatalError);
+    }
 };
 
 } // End namespace Foam

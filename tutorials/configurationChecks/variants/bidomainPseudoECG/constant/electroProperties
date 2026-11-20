@@ -42,18 +42,18 @@ bidomainSolverCoeffs
         stimulusIntensity [0 -3 0 0 0 1 0] 50000;
         stimulusStartTime 0;
     }
+}
 
-    ecgDomains
+ecgDomains
+{
+    ECG
     {
-        ECG
+        ecgSolver pseudoECG;
+        sigmaExtracellular 0.2;
+        electrodePositions
         {
-            ecgSolver pseudoECG;
-            sigmaExtracellular 0.2;
-            electrodePositions
-            {
-                E1 (-0.01 0.005 0.00005);
-                E2 (0.02 0.005 0.00005);
-            }
+            E1 (-0.01 0.005 0.00005);
+            E2 (0.02 0.005 0.00005);
         }
     }
 }

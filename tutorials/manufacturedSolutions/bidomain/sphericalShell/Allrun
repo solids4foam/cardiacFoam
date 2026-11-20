@@ -22,6 +22,7 @@ Options (parameters are written to local/ and included by the dictionaries):
                             the stock leastSquares control
   -dt x                     time step
   -endTime x                end time (default 0.2)
+  -phiTolerance x           absolute tolerance of the phiE solve (default 1e-15)
 
 Without -dt the time step is endTime/ceil(endTime/(0.00892857*(10/N)^2)).
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
@@ -36,6 +37,7 @@ seed=1
 wallGradient=sealed
 dt=
 endTime=0.2
+phiTolerance=
 
 needValue()
 {
@@ -100,6 +102,10 @@ do
             needValue "$@"; endTime="$2"; shift
             positiveNumber -endTime "$endTime"
             ;;
+        -phiTolerance)
+            needValue "$@"; phiTolerance="$2"; shift
+            positiveNumber -phiTolerance "$phiTolerance"
+            ;;
         -h|-help|--help)
             usage
             ;;
@@ -146,6 +152,11 @@ grad(Vm.component(0))   leastSquares;
 grad(phiE)              leastSquares;
 grad(phiE.component(0)) leastSquares;
 EOF
+fi
+
+if [ -n "$phiTolerance" ]
+then
+    echo "tolerance       $phiTolerance;" > local/phiTolerance
 fi
 
 # Time step proportional to h^2, ending exactly at endTime

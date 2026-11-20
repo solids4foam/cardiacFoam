@@ -21,11 +21,10 @@ License
 
 #include "dimVoltage.H"
 #include "ecgDomain.H"
+#include "myocardiumDomainInterface.H"
 #include "ecgModelIO.H"
-#include "mathematicalConstants.H"
 #include "fvc.H"
 #include "zeroGradientFvPatchFields.H"
-#include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "IOdictionary.H"
 #include "ionicHeterogeneity.H"
@@ -49,11 +48,9 @@ eikonalECG::eikonalECG(const dictionary& dict)
     startTime_(0.0),
     endTime_(0.0),
     deltaT_(0.0),
-    sigmaE_(dict.lookupOrDefault<scalar>("sigmaExtracellular", 0.0)),
     lastValues_(),
     outputPtr_(),
-    leadVectorsCalculated_(false),
-    leadVectors_(),
+    leadField_(dict),
     weightsCalculated_(false),
     regionWeights_(),
     regionWeightGradients_(),
@@ -319,71 +316,6 @@ void eikonalECG::reconstructVm
 }
 
 
-void eikonalECG::calculatePseudoECG
-(
-    const ecgDomain& domain,
-    const volVectorField& gradVm,
-    scalarField& values
-) const
-{
-    const label nElectrodes = domain.electrodePositions().size();
-    const vectorField& gradVmValues = gradVm.primitiveField();
-
-    values.setSize(nElectrodes);
-    values = 0.0;
-
-    for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
-    {
-        const List<vector>& z = leadVectors_[electrodeI];
-        scalar ecgVal = 0.0;
-
-        forAll(gradVmValues, cellI)
-        {
-            ecgVal += gradVmValues[cellI] & z[cellI];
-        }
-
-        reduce(ecgVal, sumOp<scalar>());
-
-        values[electrodeI] = ecgVal;
-    }
-}
-
-void eikonalECG::calculateLeadVectors(const ecgDomain& domain)
-{
-    const fvMesh& mesh = domain.mesh();
-    const List<vector>& electrodePositions = domain.electrodePositions();
-    const label nElectrodes = electrodePositions.size();
-
-    const scalarField& volumes = mesh.V();
-    const vectorField& cellCentres = mesh.C().primitiveField();
-    const tensorField& conductivityField =
-        domain.conductivity().primitiveField();
-
-    leadVectors_.setSize(nElectrodes);
-    forAll(leadVectors_, i)
-    {
-        leadVectors_[i].setSize(cellCentres.size(), vector::zero);
-    }
-
-    forAll(cellCentres, cellI)
-    {
-        for (label electrodeI = 0; electrodeI < nElectrodes; ++electrodeI)
-        {
-            const vector rVec =
-                cellCentres[cellI] - electrodePositions[electrodeI];
-            const scalar r = mag(rVec);
-
-            if (r > VSMALL)
-            {
-                leadVectors_[electrodeI][cellI] =
-                    (conductivityField[cellI] & rVec)*(volumes[cellI]/(r*r*r));
-            }
-        }
-    }
-
-    leadVectorsCalculated_ = true;
-}
-
 void eikonalECG::calculateTransmuralWeights(const ecgDomain& domain)
 {
     const fvMesh& mesh = domain.mesh();
@@ -552,6 +484,32 @@ void eikonalECG::generatePersonalizedTemplates(const ecgDomain& domain)
 }
 
 
+void eikonalECG::checkMyocardium
+(
+    const myocardiumDomainInterface& myocardium,
+    const word& domainName
+) const
+{
+    if (!myocardium.activationMetricPtr())
+    {
+        FatalErrorInFunction
+            << "ECG domain '" << domainName
+            << "' selects ecgSolver eikonalECG, but the myocardium is not "
+            << "an activation-time tissue. eikonalECG requires "
+            << "myocardiumSolver eikonalSolver because it reconstructs Vm "
+            << "from the activation-time field."
+            << exit(FatalError);
+    }
+}
+
+
+void eikonalECG::checkState(const ecgDomain& domain) const
+{
+    (void)domain.activationTime();
+    (void)domain.conductivity();
+}
+
+
 void eikonalECG::solve
 (
     ecgDomain& domain,
@@ -567,11 +525,6 @@ void eikonalECG::solve
     {
         values = lastValues_;
         return;
-    }
-
-    if (!leadVectorsCalculated_)
-    {
-        calculateLeadVectors(domain);
     }
 
     if (personalizedTemplatesEnabled_ && !personalizedTemplatesGenerated_)
@@ -667,36 +620,23 @@ void eikonalECG::solve
     while (sampleTime <= endTime_ + SMALL)
     {
         reconstructGradVm(sampleTime, activationTime, gradActivationTime, gradVm);
-        calculatePseudoECG(domain, gradVm, lastValues_);
+        leadField_.evaluate(domain, gradVm.primitiveField(), lastValues_);
 
         if (checkGradVm_)
         {
+            // The same lead field applied to fvc::grad of the reconstructed
+            // Vm, as an independent check of the product-rule gradient
             reconstructVm(sampleTime, activationTime, checkVmPtr.ref());
             const volVectorField checkGradVm(fvc::grad(checkVmPtr()));
-            calculatePseudoECG(domain, checkGradVm, checkValues);
+            leadField_.evaluate(domain, checkGradVm.primitiveField(), checkValues);
 
-            scalarField scaledCheck(checkValues);
-            if (sigmaE_ > VSMALL)
-            {
-                scaledCheck *= 1.0/(4.0*constant::mathematical::pi*sigmaE_);
-            }
-            ecgModelIO::writeRow(checkOutputPtr.ref(), sampleTime, scaledCheck);
+            ecgModelIO::writeRow(checkOutputPtr.ref(), sampleTime, checkValues);
 
             forAll(lastValues_, eI)
             {
                 checkMaxDiff =
                     max(checkMaxDiff, mag(lastValues_[eI] - checkValues[eI]));
                 checkMaxSignal = max(checkMaxSignal, mag(lastValues_[eI]));
-            }
-        }
-
-        if (sigmaE_ > VSMALL)
-        {
-            const scalar norm =
-                1.0 / (4.0 * constant::mathematical::pi * sigmaE_);
-            forAll(lastValues_, eI)
-            {
-                lastValues_[eI] *= norm;
             }
         }
 
@@ -711,11 +651,11 @@ void eikonalECG::solve
 
     if (checkGradVm_)
     {
-        // Same normalisation for both, so the ratio is unit-free.
+        // Both traces go through the same lead field, so the ratio is
+        // unit-free.
         Info<< "eikonalECG checkGradVm: max |ECG(product rule) - "
             << "ECG(fvc::grad Vm)| / max |ECG| = "
-            << checkMaxDiff/max(checkMaxSignal, VSMALL)
-            << " (before 1/(4 pi sigma) scaling)" << nl << endl;
+            << checkMaxDiff/max(checkMaxSignal, VSMALL) << nl << endl;
     }
 
     Info<< "eikonalECG: wrote sampled ECG from t=" << startTime_

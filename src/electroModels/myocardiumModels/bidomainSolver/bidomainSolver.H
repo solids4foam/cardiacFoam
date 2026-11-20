@@ -31,6 +31,7 @@ Author
 #include "myocardiumSolver.H"
 #include "conductivityFieldIO.H"
 #include "overrideTypeName.H"
+#include "Tuple2.H"
 #include "fvc.H"
 #include "fvm.H"
 
@@ -41,21 +42,25 @@ class bidomainSolver
 :
     public myocardiumSolver
 {
-    volScalarField phiE_;
-    // Registered grad(phiE), looked up by name by "corrected" boundary conditions.
-    volVectorField gradPhiE_;
+private:
+
+    //- The heart phiE this solver owns and solves without a bath; null with
+    //  a bath (torsoCoupling bath), whose domain owns the heart phiE
+    autoPtr<volScalarField> ownPhiEPtr_;
+
+    //- The heart phiE the Vm equation reads: the owned one, or the bath's
+    //  heart phiE once bound by bindExternalPhiE. This solver never writes
+    //  a bound phiE.
+    const volScalarField* phiEPtr_;
+
     volScalarField phiI_;
     volTensorField Gi_;
     volTensorField Ge_;
     volTensorField GiPlusGe_;
     Switch sealedHeartBoundary_;
-    scalar phiEReferenceValue_;
-    point phiEReferencePoint_;
-    bool hasPhiEReferencePoint_;
-    const volScalarField* externalPhiEBasePtr_;
-    const labelUList* externalPhiECellMapPtr_;
-    const fvMeshSubset* meshSubsetPtr_;
-    word bathHeartPhiETrace_;
+    //- phiERefPoint and the value pinned at its cell; null when the bath
+    //  owns phiE (torsoCoupling bath)
+    autoPtr<Tuple2<point, scalar>> phiEReferencePtr_;
     const electroVerificationModel* verifierPtr_;
 
     tmp<volTensorField> initialiseConductivityTensor
@@ -69,13 +74,12 @@ class bidomainSolver
 
     label referenceCell() const;
 
-    bool externalPhiEBound() const;
+    //- The heart phiE the Vm equation reads; fatal with a bath before the
+    //  bath has bound its heart phiE
+    const volScalarField& phiE() const;
 
-    void restrictExternalPhiE();
-
-    //- Refresh gradPhiE_ before a phiE diffusion solve.
-    void updateGradPhiE();
-
+    //- Solve the owned heart phiE; nothing with a bath, whose domain
+    //  solves the global phiE and updates the bound heart phiE
     void solvePhiEImplicitOnce(electroVolumeFieldDomain& domain);
 
     void solveVmImplicitOnce(electroVolumeFieldDomain& domain);
@@ -89,12 +93,26 @@ public:
         const fvMesh& mesh,
         const fvMesh& supportMesh,
         const fvMeshSubset* meshSubsetPtr,
-        const dictionary& electroProperties
+        const dictionary& electroProperties,
+        const bool externalPhiE
     );
 
+    //- The heart phiE: owned, or bound from the bath; null with a bath
+    //  before binding
     virtual const volScalarField* phiEPtr() const override
     {
-        return &phiE_;
+        return phiEPtr_;
+    }
+
+    virtual bool hasExtracellularPotential() const override
+    {
+        return true;
+    }
+
+    //- The owned phiE (no bath), or null with a bath
+    virtual volScalarField* ownedPhiEPtr() override
+    {
+        return ownPhiEPtr_.get();
     }
 
     virtual const volScalarField* phiIPtr() const override
@@ -127,26 +145,9 @@ public:
         return Gi_;
     }
 
-    const volTensorField& intracellularConductivity() const
-    {
-        return Gi_;
-    }
-
-    const volTensorField& extracellularConductivity() const
-    {
-        return Ge_;
-    }
-
-    const volTensorField& totalConductivity() const
-    {
-        return GiPlusGe_;
-    }
-
-    virtual void bindExternalPhiE
-    (
-        const volScalarField& phiE,
-        const labelUList& heartCellMap
-    ) override;
+    //- Read the bath's heart phiE (torsoCoupling bath) in the Vm
+    //  equation; fatal for a solver that owns its phiE
+    virtual void bindExternalPhiE(const volScalarField& heartPhiE) override;
 
     virtual void unbindExternalPhiE() override;
 

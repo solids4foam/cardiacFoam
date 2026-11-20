@@ -86,6 +86,11 @@ public:
         scalar dt
     ) override;
 
+    virtual bool requiresIonicModel() const override
+    {
+        return true;
+    }
+
     virtual bool writesGraphVm() const override
     {
         return true;

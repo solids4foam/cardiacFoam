@@ -74,9 +74,6 @@ class ecgDomain
     //  only at the case's write times
     bool writeEveryTimeStep_;
 
-    const dictionary* inheritedElectrodePositionsPtr_;
-    const dictionary* inheritedPotentialDomainPtr_;
-
     //- Disallow copy construct
     ecgDomain(const ecgDomain&) = delete;
 
@@ -89,8 +86,12 @@ class ecgDomain
     //- Electrode positions (empty when electrodes not configured)
     List<vector> electrodePositions_;
 
-    //- Read electrode positions from the 'electrodes' subdict (if present)
-    void readElectrodes(const dictionary& dict);
+    //- Read the electrodes of the domain entry (readEcgElectrodes)
+    void readElectrodes
+    (
+        const dictionary& dict,
+        const dictionary* inheritedElectrodePositionsPtr
+    );
 
 public:
 
@@ -98,13 +99,15 @@ public:
 
     // Constructors
 
+        //- Construct around the ECG solver the builder selected for the
+        //  domain entry dict (takes ownership), reading stateProvider
         ecgDomain
         (
             const electroStateProvider& stateProvider,
+            autoPtr<ecgSolver>&& solver,
             const dictionary& dict,
             const word& domainName = "ECG",
-            const dictionary* inheritedElectrodePositionsPtr = nullptr,
-            const dictionary* inheritedPotentialDomainPtr = nullptr
+            const dictionary* inheritedElectrodePositionsPtr = nullptr
         );
 
     // Destructor
@@ -130,6 +133,11 @@ public:
         virtual const labelUList* subsetCellMapPtr() const override
         {
             return stateProvider_.subsetCellMapPtr();
+        }
+
+        virtual const fvMeshSubset* meshSubsetPtr() const override
+        {
+            return stateProvider_.meshSubsetPtr();
         }
 
         const volScalarField& Vm() const;
@@ -215,9 +223,6 @@ public:
         {
             evolve(t0, dt);
         }
-
-        //- Refresh model coefficients from the ECG sub-dictionary.
-        virtual bool read(const dictionary& dict);
 
         void recordVerification
         (

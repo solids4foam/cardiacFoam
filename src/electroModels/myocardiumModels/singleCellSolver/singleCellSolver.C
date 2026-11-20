@@ -43,9 +43,14 @@ addToRunTimeSelectionTable(electroModel, singleCellSolver, dictionary);
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-singleCellSolver::singleCellSolver(Time& runTime, const word& region)
+singleCellSolver::singleCellSolver
+(
+    const word& solverType,
+    Time& runTime,
+    const word& region
+)
 :
-    electroModel(typeName, runTime, region),
+    electroModel(solverType, runTime, region),
     ionicModelPtr_
     (
         ionicModel::New

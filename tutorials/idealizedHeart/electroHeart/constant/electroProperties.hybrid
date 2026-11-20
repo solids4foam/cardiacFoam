@@ -106,23 +106,23 @@ monodomainSolverCoeffs
             debugCoupling           true;
         }
     }
+}
 
-    ecgDomains
+ecgDomains
+{
+    ECG
     {
-        ECG
-        {
-            ecgSolver pseudoECG;
-            sigmaExtracellular 0.2;
+        ecgSolver pseudoECG;
+        sigmaExtracellular 0.2;
 
-            electrodePositions
-            {
-                V1 (0.010407  0.056280  -0.050468);
-                V2 (0.030086  0.016628  -0.061925);
-                V3 (0.052524 -0.019359  -0.050439);
-                V4 (0.070768 -0.037057  -0.026220);
-                V5 (0.073474 -0.043547  -0.003609);
-                V6 (0.068323 -0.043011   0.018866);
-            }
+        electrodePositions
+        {
+            V1 (0.010407  0.056280  -0.050468);
+            V2 (0.030086  0.016628  -0.061925);
+            V3 (0.052524 -0.019359  -0.050439);
+            V4 (0.070768 -0.037057  -0.026220);
+            V5 (0.073474 -0.043547  -0.003609);
+            V6 (0.068323 -0.043011   0.018866);
         }
     }
 }

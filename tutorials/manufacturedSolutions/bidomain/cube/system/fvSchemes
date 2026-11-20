@@ -28,6 +28,7 @@ gradSchemes
     default         leastSquares;
 
     #includeIfPresent "<case>/local/gradient"
+    #includeIfPresent "<case>/local/wallGradient"
 }
 
 divSchemes

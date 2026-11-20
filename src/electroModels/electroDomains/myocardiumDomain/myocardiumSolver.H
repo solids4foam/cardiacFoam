@@ -56,21 +56,24 @@ public:
             const fvMesh& mesh,
             const fvMesh& supportMesh,
             const fvMeshSubset* meshSubsetPtr,
-            const dictionary& electroProperties
+            const dictionary& electroProperties,
+            const bool externalPhiE
         ),
-        (mesh, supportMesh, meshSubsetPtr, electroProperties)
+        (mesh, supportMesh, meshSubsetPtr, electroProperties, externalPhiE)
     );
 
-    //- Construct from explicit solver type name and its Coeffs subdictionary.
-    //  The solverType is resolved by the caller (electroModel::New / builder);
-    //  no dict key lookup is performed here.
+    //- Construct the kernel solverType from its Coeffs subdictionary.
+    //  The caller decides solverType and externalPhiE: true when the bath
+    //  domain solves the extracellular potential (torsoCoupling bath), so a
+    //  kernel with phiE owns none and reads the bath's.
     static autoPtr<myocardiumSolver> New
     (
         const fvMesh& mesh,
         const fvMesh& supportMesh,
         const fvMeshSubset* meshSubsetPtr,
         const word& solverType,
-        const dictionary& coeffs
+        const dictionary& coeffs,
+        const bool externalPhiE
     );
 
     virtual ~myocardiumSolver() = default;
@@ -102,11 +105,23 @@ public:
 
     virtual const volTensorField& explicitConductivityField() const = 0;
 
-    virtual void bindExternalPhiE
-    (
-        const volScalarField& phiE,
-        const labelUList& heartCellMap
-    );
+    //- True for a solver with an extracellular potential (bidomain)
+    virtual bool hasExtracellularPotential() const
+    {
+        return false;
+    }
+
+    //- The phiE this solver owns and writes, or null. Its owner grants it
+    //  to a verification model, which writes the manufactured initial
+    //  values into it.
+    virtual volScalarField* ownedPhiEPtr()
+    {
+        return nullptr;
+    }
+
+    //- Read heartPhiE, owned and written by a bath domain, in place of an
+    //  own phiE; fatal unless the solver supports it
+    virtual void bindExternalPhiE(const volScalarField& heartPhiE);
 
     virtual void unbindExternalPhiE();
 

@@ -107,9 +107,10 @@ public:
 
     // Constructors
 
-        //- Construct from components
+        //- Construct for the myocardiumSolver solverType (singleCellSolver)
         singleCellSolver
         (
+            const word& solverType,
             Time& runTime,
             const word& region = dynamicFvMesh::defaultRegion
         );

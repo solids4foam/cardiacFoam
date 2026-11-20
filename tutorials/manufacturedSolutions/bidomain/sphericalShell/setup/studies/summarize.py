@@ -6,14 +6,17 @@
 #     Convergence tables of the bidomain sphericalShell studies from the
 #     verifier summaries postProcessing/3D_<mesh>_<N>_cells.dat of the run
 #     copies in a results folder. Run copies are named
-#     <sealed|stock>_<hex|tet>_N<n>_s<seed>[_T2|_dthalf|_serial] (wall
-#     gradient, mesh, N, gmsh seed, long window, halved time step or serial
-#     run). For every wall gradient and window it prints the error table
+#     <sealed|stock>_<hex|tet>_N<n>_s<seed>[_T2|_dthalf|_serial|_tol<x>]
+#     (wall gradient, mesh, N, gmsh seed, long window, halved time step,
+#     serial run or phiE solve tolerance x). For every wall gradient and window it prints the error table
 #     (means over seeds), the order fitted by least squares to log(error)
 #     against log(h) over every run of the three finest levels with its
 #     standard error, the change under the halved time step, the largest
 #     relative difference between a serial and the parallel run over all rows,
-#     and the spread over seeds.
+#     the change under a loosened phiE tolerance, the spread over seeds, and,
+#     from log.cardiacFoam, the largest iteration count and final residual of
+#     each linear solve per group of runs (linear_solves.py of the bidomain
+#     studies).
 #
 # Usage
 #     python3 summarize.py hexConvergence/results
@@ -25,7 +28,12 @@ import argparse
 import math
 import re
 import statistics
+import sys
 from pathlib import Path
+
+# linear_solves.py of the bidomain studies (bidomain/setup/studies)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]/"setup"/"studies"))
+from linear_solves import read_solves  # noqa: E402
 
 COLUMNS = (
     ("Vm", "L2"),
@@ -38,7 +46,8 @@ COLUMNS = (
 SPREAD_ROWS = ("Vm", "phiE_gauge")
 NORMS = {"L1": 0, "L2": 1, "Linf": 2}
 RUN_RE = re.compile(
-    r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)(?:_(T2|dthalf|serial))?$"
+    r"^(sealed|stock)_(hex|tet)_N(\d+)_s(\d+)"
+    r"(?:_(T2|dthalf|serial|tol[0-9.eE+-]+))?$"
 )
 
 
@@ -56,8 +65,10 @@ def read_summary(path: Path) -> tuple[float, dict[str, list[float]]]:
     return h, rows
 
 
-def load(results: Path) -> dict[tuple, list]:
+def load(results: Path) -> tuple[dict[tuple, list], dict[tuple, dict]]:
+    """Runs and the largest linear-solve counts, both per group of runs."""
     runs: dict[tuple, list] = {}
+    solves: dict[tuple, dict[str, tuple[int, float]]] = {}
     for run in sorted(results.iterdir()):
         match = RUN_RE.match(run.name)
         summaries = sorted(run.glob("postProcessing/3D_*_cells.dat"))
@@ -65,10 +76,14 @@ def load(results: Path) -> dict[tuple, list]:
             continue
         gradient, mesh, n, seed, window = match.groups()
         key = (gradient, mesh, window or "")
+        group = solves.setdefault(key, {})
+        for field, (its, res) in read_solves(run).items():
+            its0, res0 = group.get(field, (0, 0.0))
+            group[field] = (max(its0, its), max(res0, res))
         runs.setdefault(key, []).append(
             (int(n), int(seed), *read_summary(summaries[0]))
         )
-    return runs
+    return runs, solves
 
 
 def value(rows: dict, column: tuple[str, str]) -> float:
@@ -121,7 +136,7 @@ def table(runs: list) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("results", type=Path, help="folder of run copies")
-    runs = load(parser.parse_args().results)
+    runs, solves = load(parser.parse_args().results)
     if not runs:
         raise SystemExit("no run copies with a verifier summary found")
 
@@ -147,6 +162,24 @@ def main() -> None:
                     for row in SPREAD_ROWS
                 )
                 print(f"\nHalved dt, {gradient} {mesh} N {n} seed {seed}: {change}")
+
+    for (gradient, mesh, window), loosened in sorted(runs.items()):
+        if not window.startswith("tol"):
+            continue
+        for n, seed, _, rows in loosened:
+            full = [
+                r for r in runs.get((gradient, mesh, ""), [])
+                if r[0] == n and r[1] == seed
+            ]
+            if full:
+                change = ", ".join(
+                    f"{row} L2 {100*(rows[row][1]/full[0][3][row][1] - 1):+.3f} %"
+                    for row in SPREAD_ROWS
+                )
+                print(
+                    f"\nphiE tolerance {window[3:]}, {gradient} {mesh} N {n} "
+                    f"seed {seed}: {change}"
+                )
 
     for (gradient, mesh, window), serial in sorted(runs.items()):
         if window != "serial":
@@ -180,6 +213,13 @@ def main() -> None:
                 for row in SPREAD_ROWS
             )
             print(f"Seed spread, {gradient} {mesh} N {level}: {spread}")
+
+    print("\n| runs | field | max iterations | max final residual |")
+    print("|---|---|---|---|")
+    for (gradient, mesh, window), group in sorted(solves.items()):
+        for field, (its, res) in sorted(group.items()):
+            label = f"{gradient} {mesh} {window or 'T = 0.2'}"
+            print(f"| {label} | {field} | {its} | {res:.2e} |")
 
 
 if __name__ == "__main__":
