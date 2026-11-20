@@ -238,26 +238,46 @@ private:
     // ground patches fix the constant.
     label referenceCell_;
 
-    // Least-squares quadratic of Vm about a heart wall cell
-    // (transferWallLayer): the cell-point-cell stencil entries of its value
-    // and gradient rows, the scale 1/(L|d|) of each value row, the length L
-    // and the pseudo-inverse of the row matrix. The rows depend on the
-    // geometry only; Vm and grad(Vm) enter the right-hand side.
-    struct wallFit
-    {
-        scalar L;
-        labelList valueEntries;
-        scalarList valueScale;
-        labelList gradientEntries;
-        scalarRectangularMatrix pinv;
-    };
+    // The wall layer of the heart-torso faces (transferWallLayer), built
+    // at its first call on a static mesh from the geometry and the
+    // conductivities, which do not change. The layer of a face is linear in
+    // the rows of the least-squares quadratic about its heart wall cell:
+    // value rows Vm_k - Vm_c and gradient rows grad(Vm)_k over the cell's
+    // cell-point-cell stencil. Each face stores the coefficients of those
+    // rows; each step gathers the rows and takes one product per face. The
+    // build and the gather communicate, so every rank builds, also one
+    // without heart cells.
+    mutable bool wallTransferBuilt_;
 
-    // Index into wallFits_ of each heart cell (-1: not a wall cell), and
-    // the fits, built at the first transferWallLayer on a static mesh. The
-    // build communicates, so every rank builds, also one without heart cells
-    mutable bool wallFitsBuilt_;
-    mutable labelList wallFitIndex_;
-    mutable List<wallFit> wallFits_;
+    // Heart wall cells (heart-mesh cells) and, per wall cell, the flat
+    // stencil indices of its value and gradient rows (start offsets of
+    // size nWall + 1) and the start of its rows
+    mutable labelList wallCell_;
+    mutable labelList wallValueStart_;
+    mutable labelList wallValueIndex_;
+    mutable labelList wallGradientStart_;
+    mutable labelList wallGradientIndex_;
+    mutable labelList wallRowStart_;
+
+    // Internal heart-torso faces: heart and torso base cells and the wall
+    // cell of the heart side
+    mutable labelList internalLayerHeart_;
+    mutable labelList internalLayerTorso_;
+    mutable labelList internalLayerWall_;
+
+    // Coupled faces: on the heart side the base cell, its boundary-face
+    // slot and wall cell; on the torso side the base cell and slot that
+    // receive the layer
+    mutable labelList coupledLayerHeart_;
+    mutable labelList coupledLayerSlot_;
+    mutable labelList coupledLayerWall_;
+    mutable labelList coupledReceiveCell_;
+    mutable labelList coupledReceiveSlot_;
+
+    // Row coefficients of every layer face, internal faces first: value
+    // rows (scaled), then the x, y and z rows of each gradient entry
+    mutable labelList layerCoeffStart_;
+    mutable scalarList layerCoeff_;
 
     // Build and check the heart -> base cell and face maps.
     void buildHeartScatterMap
@@ -295,9 +315,10 @@ private:
         volScalarField& rhsGlobal
     ) const;
 
-    // Build wallFitIndex_ and wallFits_ for the heart wall cells of the
-    // heart mesh; fatal where a fit does not determine the quadratic
-    void buildWallFits(const fvMesh& heartMesh) const;
+    // Build the wall layer of transferWallLayer: the quadratic fit of
+    // each heart wall cell (fatal where it does not determine the
+    // quadratic) and the row coefficients of each heart-torso face
+    void buildWallTransfer(const fvMesh& heartMesh) const;
 
     // Torso operator with conormalHarmonic heart-torso faces: normal
     // Laplacian, stabilisation and cross term, the source, then the
