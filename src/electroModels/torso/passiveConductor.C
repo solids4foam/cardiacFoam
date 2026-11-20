@@ -269,9 +269,23 @@ passiveConductor::passiveConductor
     sigmaIglobalPtr_(),
     sigmaExtracellularfPtr_(),
     referenceCell_(-1),
-    wallFitsBuilt_(false),
-    wallFitIndex_(),
-    wallFits_()
+    wallTransferBuilt_(false),
+    wallCell_(),
+    wallValueStart_(),
+    wallValueIndex_(),
+    wallGradientStart_(),
+    wallGradientIndex_(),
+    wallRowStart_(),
+    internalLayerHeart_(),
+    internalLayerTorso_(),
+    internalLayerWall_(),
+    coupledLayerHeart_(),
+    coupledLayerSlot_(),
+    coupledLayerWall_(),
+    coupledReceiveCell_(),
+    coupledReceiveSlot_(),
+    layerCoeffStart_(),
+    layerCoeff_()
 {
     if (torso_.interface == interfaceInterpolation::conormalHarmonic)
     {
@@ -1265,12 +1279,66 @@ scalar torsoShare
 } // End anonymous namespace
 
 
-void passiveConductor::buildWallFits(const fvMesh& heartMesh) const
+namespace
+{
+
+// Least-squares quadratic of Vm about a heart wall cell: the stencil
+// entries of its value and gradient rows, the scale 1/(L|d|) of each value
+// row, the length L and the pseudo-inverse of the row matrix
+struct wallFit
+{
+    scalar L;
+    labelList valueEntries;
+    scalarList valueScale;
+    labelList gradientEntries;
+    scalarRectangularMatrix pinv;
+};
+
+
+// fld in the flat (compact) addressing of map: internal values, boundary
+// values, then the remote values the stencil reads; as the first step of
+// extendedCellToFaceStencil::collectData
+template<class Type>
+List<Type> flatStencilField
+(
+    const mapDistribute& map,
+    const GeometricField<Type, fvPatchField, volMesh>& fld
+)
+{
+    List<Type> flat(map.constructSize(), Zero);
+
+    forAll(fld, celli)
+    {
+        flat[celli] = fld[celli];
+    }
+    forAll(fld.boundaryField(), patchi)
+    {
+        const fvPatchField<Type>& pfld = fld.boundaryField()[patchi];
+        label nCompact =
+            pfld.patch().start()
+          - fld.mesh().nInternalFaces()
+          + fld.mesh().nCells();
+
+        forAll(pfld, i)
+        {
+            flat[nCompact++] = pfld[i];
+        }
+    }
+
+    map.distribute(flat);
+
+    return flat;
+}
+
+} // End anonymous namespace
+
+
+void passiveConductor::buildWallTransfer(const fvMesh& heartMesh) const
 {
     if (heartMesh.changing())
     {
         FatalErrorInFunction
-            << "The wall-layer fits are built once; the heart mesh "
+            << "The wall layer is built once; the heart mesh "
             << heartMesh.name() << " changes." << exit(FatalError);
     }
 
@@ -1362,9 +1430,8 @@ void passiveConductor::buildWallFits(const fvMesh& heartMesh) const
     const label nD = heartMesh.nGeometricD();
     const label nUnknowns = nD + nD*(nD + 1)/2;
 
-    wallFitIndex_.setSize(heartMesh.nCells());
-    wallFitIndex_ = -1;
-    wallFits_.setSize(findIndices(wall, true).size());
+    labelList fitIndex(heartMesh.nCells(), -1);
+    List<wallFit> fits(findIndices(wall, true).size());
     label nFits = 0;
 
     forAll(wall, c)
@@ -1374,8 +1441,8 @@ void passiveConductor::buildWallFits(const fvMesh& heartMesh) const
             continue;
         }
         const List<vector>& pts = stencilC[c];
-        wallFit& fit = wallFits_[nFits];
-        wallFitIndex_[c] = nFits++;
+        wallFit& fit = fits[nFits];
+        fitIndex[c] = nFits++;
 
         fit.L = 0;
         forAll(pts, k)
@@ -1462,97 +1529,64 @@ void passiveConductor::buildWallFits(const fvMesh& heartMesh) const
         fit.gradientEntries.transfer(gradientEntries);
     }
 
-    Info<< "passiveConductor: " << returnReduce(nFits, sumOp<label>())
-        << " heart wall cells, quadratic fits of the wall layer built"
-        << endl;
-}
-
-
-void passiveConductor::transferWallLayer
-(
-    const volScalarField& Vm,
-    volScalarField& rhsGlobal
-) const
-{
-    const fvMesh& heartMesh = Vm.mesh();
-    if (!wallFitsBuilt_)
+    // Row addressing of the wall cells, in flat stencil indices
+    const labelListList& compact = stencil.stencil();
+    wallCell_.setSize(nFits);
+    wallValueStart_.setSize(nFits + 1);
+    wallGradientStart_.setSize(nFits + 1);
+    wallRowStart_.setSize(nFits + 1);
+    label nValue = 0, nGradient = 0;
+    forAll(fits, w)
     {
-        buildWallFits(heartMesh);
-        wallFitsBuilt_ = true;
+        nValue += fits[w].valueEntries.size();
+        nGradient += fits[w].gradientEntries.size();
     }
-    const vectorField& heartC = heartMesh.C().primitiveField();
-
-    const extendedCentredCellToCellStencil& stencil =
-        centredCPCCellToCellStencilObject::New(heartMesh);
-    const volVectorField gradVm(fvc::grad(Vm, "grad(Vm)"));
-    List<List<scalar>> stencilV;
-    List<List<vector>> stencilGrad;
-    stencil.collectData(Vm, stencilV);
-    stencil.collectData(gradVm, stencilGrad);
-
-    // grad(Vm) at point x from the stored fit about heart wall cell c
-    const auto wallGradient = [&](const label c, const point& x) -> vector
+    wallValueIndex_.setSize(nValue);
+    wallGradientIndex_.setSize(nGradient);
+    wallValueStart_[0] = 0;
+    wallGradientStart_[0] = 0;
+    wallRowStart_[0] = 0;
+    forAll(wall, c)
     {
-        const wallFit& fit = wallFits_[wallFitIndex_[c]];
-        const label nRows =
-            fit.valueEntries.size() + 3*fit.gradientEntries.size();
-        scalarField r(nRows);
-        label i = 0;
-        forAll(fit.valueEntries, v)
+        const label w = fitIndex[c];
+        if (w < 0)
         {
-            r[i++] =
-                (stencilV[c][fit.valueEntries[v]] - Vm[c])*fit.valueScale[v];
+            continue;
         }
+        const wallFit& fit = fits[w];
+        wallCell_[w] = c;
+        label iv = wallValueStart_[w];
+        for (const label k : fit.valueEntries)
+        {
+            wallValueIndex_[iv++] = compact[c][k];
+        }
+        wallValueStart_[w + 1] = iv;
+        label ig = wallGradientStart_[w];
         for (const label k : fit.gradientEntries)
         {
-            const vector& g = stencilGrad[c][k];
-            r[i++] = g.x();
-            r[i++] = g.y();
-            r[i++] = g.z();
+            wallGradientIndex_[ig++] = compact[c][k];
         }
-
-        FixedList<scalar, 9> u(Zero);
-        for (label j = 0; j < 9; ++j)
-        {
-            for (label row = 0; row < nRows; ++row)
-            {
-                u[j] += fit.pinv(j, row)*r[row];
-            }
-        }
-
-        const vector e((x - heartC[c])/fit.L);
-        return vector
-        (
-            u[0] + u[3]*e.x() + u[4]*e.y() + u[5]*e.z(),
-            u[1] + u[4]*e.x() + u[6]*e.y() + u[7]*e.z(),
-            u[2] + u[5]*e.x() + u[7]*e.y() + u[8]*e.z()
-        );
-    };
-
-    labelList baseToHeart(baseMesh_.nCells(), -1);
-    forAll(heartCellToBaseCell_, heartCellI)
-    {
-        baseToHeart[heartCellToBaseCell_[heartCellI]] = heartCellI;
+        wallGradientStart_[w + 1] = ig;
+        wallRowStart_[w + 1] =
+            wallRowStart_[w]
+          + fit.valueEntries.size() + 3*fit.gradientEntries.size();
     }
 
-    const tmp<volScalarField> tHeart
-    (
-        heartIndicator(baseMesh_, heartCellToBaseCell_)
-    );
-    const volScalarField& heart = tHeart();
+    // The layer of a face, w q|S| with q|S| = S.Gi.grad(Vm)(x) and
+    // grad(Vm)(x) = J(e) u, u = pinv r, e = (x - x_c)/L, is linear in the
+    // rows r of its wall cell: layer = (pinv^T J(e)^T a).r with
+    // a = w Gi^T S. The value-row scales go into the coefficients.
     const volTensorField& sigma = sigmaTotalPtr_();
-    const scalarField& V = baseMesh_.V();
     const surfaceVectorField& Sf = baseMesh_.Sf();
     const surfaceVectorField& Cf = baseMesh_.Cf();
     const surfaceScalarField& magSf = baseMesh_.magSf();
     const scalarField& weights = baseMesh_.weights().primitiveField();
-    const labelUList& own = baseMesh_.owner();
-    const labelUList& nei = baseMesh_.neighbour();
-    scalarField& rhs = rhsGlobal.primitiveFieldRef();
 
-    // The layer w q|S| of a heart-torso face, S from the heart into the
-    // torso; dH is the heart cell's distance share
-    const auto layer = [&]
+    DynamicList<scalar> coeff;
+    DynamicList<label> coeffStart;
+    coeffStart.append(0);
+
+    const auto addLayer = [&]
     (
         const label h,
         const tensor& sigmaTorso,
@@ -1560,14 +1594,53 @@ void passiveConductor::transferWallLayer
         const scalar magS,
         const point& x,
         const scalar dH
-    )
+    ) -> label
     {
         const label hHeart = baseToHeart[h];
-        return
+        const label w = fitIndex[hHeart];
+        const wallFit& fit = fits[w];
+
+        const vector a
+        (
             torsoShare(sigma[h], sigmaTorso, S/magS, dH, 1 - dH)
-           *(S & (Gi_[hHeart] & wallGradient(hHeart, x)));
+           *(S & Gi_[hHeart])
+        );
+        const vector e((x - heartC[hHeart])/fit.L);
+
+        // b = J(e)^T a: grad(Vm)(x) = J(e) u for the quadratic coefficients
+        // u = (a, H_xx, H_xy, H_xz, H_yy, H_yz, H_zz)
+        FixedList<scalar, 9> b;
+        b[0] = a.x();
+        b[1] = a.y();
+        b[2] = a.z();
+        b[3] = a.x()*e.x();
+        b[4] = a.x()*e.y() + a.y()*e.x();
+        b[5] = a.x()*e.z() + a.z()*e.x();
+        b[6] = a.y()*e.y();
+        b[7] = a.y()*e.z() + a.z()*e.y();
+        b[8] = a.z()*e.z();
+
+        const label nRows =
+            fit.valueEntries.size() + 3*fit.gradientEntries.size();
+        for (label row = 0; row < nRows; ++row)
+        {
+            scalar cr = 0;
+            for (label j = 0; j < 9; ++j)
+            {
+                cr += b[j]*fit.pinv(j, row);
+            }
+            if (row < fit.valueEntries.size())
+            {
+                cr *= fit.valueScale[row];
+            }
+            coeff.append(cr);
+        }
+        coeffStart.append(coeff.size());
+
+        return w;
     };
 
+    DynamicList<label> internalHeart, internalTorso, internalWall;
     forAll(own, faceI)
     {
         const bool ownHeart = heart[own[faceI]] > 0.5;
@@ -1580,23 +1653,26 @@ void passiveConductor::transferWallLayer
 
         // The weight is the owner's, so the owner's distance share is
         // 1 - weight
-        const scalar transfer = layer
+        internalWall.append
         (
-            h,
-            sigma[t],
-            (ownHeart ? 1 : -1)*Sf[faceI],
-            magSf[faceI],
-            Cf[faceI],
-            ownHeart ? 1 - weights[faceI] : weights[faceI]
+            addLayer
+            (
+                h,
+                sigma[t],
+                (ownHeart ? 1 : -1)*Sf[faceI],
+                magSf[faceI],
+                Cf[faceI],
+                ownHeart ? 1 - weights[faceI] : weights[faceI]
+            )
         );
-
-        rhs[h] -= transfer/V[h];
-        rhs[t] += transfer/V[t];
+        internalHeart.append(h);
+        internalTorso.append(t);
     }
 
     // Coupled faces: the heart side evaluates the layer, the torso side
     // receives it
-    scalarField boundaryLayer(baseMesh_.nBoundaryFaces(), Zero);
+    DynamicList<label> coupledHeart, coupledSlot, coupledWall;
+    DynamicList<label> receiveCell, receiveSlot;
     forAll(baseMesh_.boundary(), patchI)
     {
         const fvPatch& p = baseMesh_.boundary()[patchI];
@@ -1621,46 +1697,139 @@ void passiveConductor::transferWallLayer
             const label c = cells[faceI];
             if (heart[c] > 0.5 && heartN[faceI] < 0.5)
             {
-                const scalar transfer = layer
+                coupledWall.append
                 (
-                    c,
-                    sigmaN[faceI],
-                    Sf.boundaryField()[patchI][faceI],
-                    magSf.boundaryField()[patchI][faceI],
-                    Cf.boundaryField()[patchI][faceI],
-                    1 - pw[faceI]
+                    addLayer
+                    (
+                        c,
+                        sigmaN[faceI],
+                        Sf.boundaryField()[patchI][faceI],
+                        magSf.boundaryField()[patchI][faceI],
+                        Cf.boundaryField()[patchI][faceI],
+                        1 - pw[faceI]
+                    )
                 );
-                rhs[c] -= transfer/V[c];
-                boundaryLayer[offset + faceI] = transfer;
+                coupledHeart.append(c);
+                coupledSlot.append(offset + faceI);
+            }
+            else if (heart[c] < 0.5 && heartN[faceI] > 0.5)
+            {
+                receiveCell.append(c);
+                receiveSlot.append(offset + faceI);
             }
         }
+    }
+
+    internalLayerHeart_.transfer(internalHeart);
+    internalLayerTorso_.transfer(internalTorso);
+    internalLayerWall_.transfer(internalWall);
+    coupledLayerHeart_.transfer(coupledHeart);
+    coupledLayerSlot_.transfer(coupledSlot);
+    coupledLayerWall_.transfer(coupledWall);
+    coupledReceiveCell_.transfer(receiveCell);
+    coupledReceiveSlot_.transfer(receiveSlot);
+    layerCoeffStart_.transfer(coeffStart);
+    layerCoeff_.transfer(coeff);
+
+    Info<< "passiveConductor: " << returnReduce(nFits, sumOp<label>())
+        << " heart wall cells, quadratic fits of the wall layer built; "
+        << returnReduce
+           (
+               internalLayerHeart_.size() + coupledLayerHeart_.size(),
+               sumOp<label>()
+           )
+        << " heart-torso faces, "
+        << returnReduce(layerCoeff_.size(), sumOp<label>())
+        << " row coefficients" << endl;
+}
+
+
+void passiveConductor::transferWallLayer
+(
+    const volScalarField& Vm,
+    volScalarField& rhsGlobal
+) const
+{
+    const fvMesh& heartMesh = Vm.mesh();
+    if (!wallTransferBuilt_)
+    {
+        buildWallTransfer(heartMesh);
+        wallTransferBuilt_ = true;
+    }
+
+    // Vm and grad(Vm) over the stencil, in flat addressing
+    const extendedCentredCellToCellStencil& stencil =
+        centredCPCCellToCellStencilObject::New(heartMesh);
+    const volVectorField gradVm(fvc::grad(Vm, "grad(Vm)"));
+    const List<scalar> flatV(flatStencilField(stencil.map(), Vm));
+    const List<vector> flatGrad(flatStencilField(stencil.map(), gradVm));
+
+    // The rows of each wall cell: Vm_k - Vm_c, then grad(Vm)_k
+    scalarList rows(wallRowStart_.last());
+    forAll(wallCell_, w)
+    {
+        const scalar Vc = Vm[wallCell_[w]];
+        label i = wallRowStart_[w];
+        for (label k = wallValueStart_[w]; k < wallValueStart_[w + 1]; ++k)
+        {
+            rows[i++] = flatV[wallValueIndex_[k]] - Vc;
+        }
+        for
+        (
+            label k = wallGradientStart_[w];
+            k < wallGradientStart_[w + 1];
+            ++k
+        )
+        {
+            const vector& g = flatGrad[wallGradientIndex_[k]];
+            rows[i++] = g.x();
+            rows[i++] = g.y();
+            rows[i++] = g.z();
+        }
+    }
+
+    // The layer of face f from the rows of its wall cell w
+    const auto layer = [&](const label f, const label w) -> scalar
+    {
+        const label c0 = layerCoeffStart_[f];
+        const label n = layerCoeffStart_[f + 1] - c0;
+        const label r0 = wallRowStart_[w];
+        scalar s = 0;
+        for (label k = 0; k < n; ++k)
+        {
+            s += layerCoeff_[c0 + k]*rows[r0 + k];
+        }
+        return s;
+    };
+
+    const scalarField& V = baseMesh_.V();
+    scalarField& rhs = rhsGlobal.primitiveFieldRef();
+
+    forAll(internalLayerHeart_, i)
+    {
+        const scalar transfer = layer(i, internalLayerWall_[i]);
+        rhs[internalLayerHeart_[i]] -= transfer/V[internalLayerHeart_[i]];
+        rhs[internalLayerTorso_[i]] += transfer/V[internalLayerTorso_[i]];
+    }
+
+    // Coupled faces: the heart side evaluates the layer, the torso side
+    // receives it
+    scalarField boundaryLayer(baseMesh_.nBoundaryFaces(), Zero);
+    const label nInternal = internalLayerHeart_.size();
+    forAll(coupledLayerHeart_, i)
+    {
+        const scalar transfer = layer(nInternal + i, coupledLayerWall_[i]);
+        rhs[coupledLayerHeart_[i]] -= transfer/V[coupledLayerHeart_[i]];
+        boundaryLayer[coupledLayerSlot_[i]] = transfer;
     }
     syncTools::syncBoundaryFaceList
     (
         baseMesh_, boundaryLayer, plusEqOp<scalar>()
     );
-    forAll(baseMesh_.boundary(), patchI)
+    forAll(coupledReceiveCell_, i)
     {
-        const fvPatch& p = baseMesh_.boundary()[patchI];
-        if (!p.coupled())
-        {
-            continue;
-        }
-        const scalarField heartN
-        (
-            heart.boundaryField()[patchI].patchNeighbourField()
-        );
-        const labelUList& cells = p.faceCells();
-        const label offset = p.start() - baseMesh_.nInternalFaces();
-
-        forAll(cells, faceI)
-        {
-            const label c = cells[faceI];
-            if (heart[c] < 0.5 && heartN[faceI] > 0.5)
-            {
-                rhs[c] += boundaryLayer[offset + faceI]/V[c];
-            }
-        }
+        rhs[coupledReceiveCell_[i]] +=
+            boundaryLayer[coupledReceiveSlot_[i]]/V[coupledReceiveCell_[i]];
     }
 }
 
