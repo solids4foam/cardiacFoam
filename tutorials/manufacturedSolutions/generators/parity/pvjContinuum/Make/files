@@ -1,0 +1,4 @@
+pvjContinuumParity.C
+../../../../../src/verificationModels/coupledVerification/pvjContinuumReference.C
+
+EXE = $(PWD)/pvjContinuumParity

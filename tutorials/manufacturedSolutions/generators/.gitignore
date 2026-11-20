@@ -5,6 +5,10 @@ parity/Make/darwin*/
 parity/Make/linux*/
 parity/lnInclude/
 parity/mmsParity
+parity/pvjContinuum/Make/darwin*/
+parity/pvjContinuum/Make/linux*/
+parity/pvjContinuum/lnInclude/
+parity/pvjContinuum/pvjContinuumParity
 docs/**/*_files/
 docs/**/.quarto/
 docs/monodomain/*.tex

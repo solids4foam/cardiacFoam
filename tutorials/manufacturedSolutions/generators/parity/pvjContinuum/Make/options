@@ -1,0 +1,11 @@
+VERIF = ../../../../../src/verificationModels
+
+EXE_INC = \
+    -I$(VERIF) \
+    -I$(VERIF)/coupledVerification \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude
+
+EXE_LIBS = \
+    -lfiniteVolume \
+    -lmeshTools
