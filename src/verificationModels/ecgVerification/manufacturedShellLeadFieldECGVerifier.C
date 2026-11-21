@@ -27,6 +27,13 @@ namespace Foam
 {
 
 defineTypeNameAndDebug(manufacturedShellLeadFieldECGVerifier, 0);
+
+const Enum<manufacturedShellLeadFieldECGVerifier::solutionType>
+manufacturedShellLeadFieldECGVerifier::solutionTypeNames
+({
+    { solutionType::transmission, "transmission" },
+    { solutionType::bathShell, "bathShell" }
+});
 addToRunTimeSelectionTable
 (
     ecgVerificationModel,
@@ -124,7 +131,9 @@ manufacturedShellLeadFieldECGVerifier::manufacturedShellLeadFieldECGVerifier
     (
         stateProvider, domainName, electrodeNames, electrodePositions
     ),
+    solution_(solutionType::transmission),
     shellParams_(shellTransmissionMMS::defaultParams()),
+    bathParams_(shellBathBidomainMMS::defaultParams()),
     leadFields_(),
     shellZones_()
 {
@@ -138,14 +147,20 @@ bool manufacturedShellLeadFieldECGVerifier::read(const dictionary& dict)
 
     for (const entry& e : verifierDict)
     {
-        if (e.keyword() != "type")
+        if (e.keyword() != "type" && e.keyword() != "solution")
         {
             FatalIOErrorInFunction(verifierDict)
-                << type() << " takes no key beyond type (the solution is the "
-                << "spherical shell); found " << e.keyword() << "."
-                << exit(FatalIOError);
+                << type() << " takes the keys type and solution; found "
+                << e.keyword() << "." << exit(FatalIOError);
         }
     }
+
+    solution_ = solutionTypeNames.getOrDefault
+    (
+        "solution", verifierDict, solutionType::transmission
+    );
+    // The lead field of the bath shell is the insulated conductor
+    bathParams_.solution = shellBathBidomainMMS::insulated;
 
     return true;
 }
@@ -153,7 +168,78 @@ bool manufacturedShellLeadFieldECGVerifier::read(const dictionary& dict)
 
 word manufacturedShellLeadFieldECGVerifier::referenceName() const
 {
-    return "sphericalShell";
+    return
+        solution_ == solutionType::bathShell
+      ? "sphericalShell bathShell"
+      : "sphericalShell";
+}
+
+
+label manufacturedShellLeadFieldECGVerifier::refZoneOf(const point& p) const
+{
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::zoneOf(p, bathParams_)
+      : shellTransmissionMMS::zoneOf(p, shellParams_);
+}
+
+
+scalar manufacturedShellLeadFieldECGVerifier::refSigmaB
+(
+    const point& p,
+    const label zone
+) const
+{
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::sigmaB(p, zone, bathParams_)
+      : shellTransmissionMMS::sigmaB(p, zone, shellParams_);
+}
+
+
+symmTensor manufacturedShellLeadFieldECGVerifier::refGi(const point& p) const
+{
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::Gi(p, bathParams_)
+      : shellTransmissionMMS::Gi(p, shellParams_);
+}
+
+
+symmTensor manufacturedShellLeadFieldECGVerifier::refGe(const point& p) const
+{
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::Ge(p, bathParams_)
+      : shellTransmissionMMS::Ge(p, shellParams_);
+}
+
+
+scalar manufacturedShellLeadFieldECGVerifier::refPhiESource
+(
+    const point& p,
+    const scalar t,
+    const label zone
+) const
+{
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::phiESource(p, t, zone, bathParams_)
+      : shellTransmissionMMS::phiESource(p, t, zone, shellParams_);
+}
+
+
+vector manufacturedShellLeadFieldECGVerifier::refGradPhiE
+(
+    const point& p,
+    const scalar t,
+    const label zone
+) const
+{
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::gradPhiE(p, t, zone, bathParams_)
+      : shellTransmissionMMS::gradPhiE(p, t, zone, shellParams_);
 }
 
 
@@ -211,8 +297,8 @@ void manufacturedShellLeadFieldECGVerifier::writeManufacturedFields
         {
             G[cellI] =
                 i == 0
-              ? Gi(C[cellI], shellParams_)
-              : Ge(C[cellI], shellParams_);
+              ? refGi(C[cellI])
+              : refGe(C[cellI]);
         }
         copyInternalToPatches(G);
         G.write();
@@ -229,11 +315,10 @@ void manufacturedShellLeadFieldECGVerifier::writeManufacturedFields
     const labelList zone(shellZones(mesh));
     forAll(C, cellI)
     {
-        sigma[cellI] = sigmaB
+        sigma[cellI] = refSigmaB
         (
             C[cellI],
-            zone[cellI] == myocardium ? label(bath) : zone[cellI],
-            shellParams_
+            zone[cellI] == myocardium ? label(bath) : zone[cellI]
         );
     }
     copyInternalToPatches(sigma);
@@ -285,7 +370,7 @@ void manufacturedShellLeadFieldECGVerifier::initialiseReference
         }
         else if (!heartCells_[cellI])
         {
-            const tensor exact = sigmaB(C[cellI], zone, shellParams_)*tensor::I;
+            const tensor exact = refSigmaB(C[cellI], zone)*tensor::I;
             worst = max(worst, mag(sigma[cellI] - exact)/mag(exact));
         }
     }
@@ -296,8 +381,8 @@ void manufacturedShellLeadFieldECGVerifier::initialiseReference
     const tensorField& GeI = lfc.Ge().primitiveField();
     forAll(Ch, cellI)
     {
-        const tensor gi = Gi(Ch[cellI], shellParams_) & tensor::I;
-        const tensor ge = Ge(Ch[cellI], shellParams_) & tensor::I;
+        const tensor gi = refGi(Ch[cellI]) & tensor::I;
+        const tensor ge = refGe(Ch[cellI]) & tensor::I;
         worst = max(worst, mag(GiI[cellI] - gi)/mag(gi));
         worst = max(worst, mag(GeI[cellI] - ge)/mag(ge));
     }
@@ -321,7 +406,7 @@ void manufacturedShellLeadFieldECGVerifier::initialiseReference
 
     forAll(electrodePositions_, e)
     {
-        if (zoneOf(electrodePositions_[e], shellParams_) == myocardium)
+        if (refZoneOf(electrodePositions_[e]) == myocardium)
         {
             FatalErrorInFunction
                 << "Electrode " << electrodeNames_[e] << " at "
@@ -388,7 +473,7 @@ tmp<volScalarField> manufacturedShellLeadFieldECGVerifier::shellSource
     const vectorField& C = baseMesh.C().primitiveField();
     forAll(C, cellI)
     {
-        S[cellI] = phiESource(C[cellI], t, shellZones_[cellI], shellParams_);
+        S[cellI] = refPhiESource(C[cellI], t, shellZones_[cellI]);
     }
 
     // The exact outward current g on the insulated outer boundary moves into
@@ -409,8 +494,8 @@ tmp<volScalarField> manufacturedShellLeadFieldECGVerifier::shellSource
         {
             const point& pf = Cf[faceI];
             const scalar g =
-                sigmaB(pf, bath, shellParams_)
-               *(nf[faceI] & gradPhiE(pf, t, bath, shellParams_));
+                refSigmaB(pf, bath)
+               *(nf[faceI] & refGradPhiE(pf, t, bath));
             S[cells[faceI]] -= g*magSf[faceI]/V[cells[faceI]];
         }
     }
@@ -428,7 +513,10 @@ scalar manufacturedShellLeadFieldECGVerifier::exactVm
     const scalar t
 ) const
 {
-    return shellTransmissionMMS::Vm(p, t, shellParams_);
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::Vm(p, t, bathParams_)
+      : shellTransmissionMMS::Vm(p, t, shellParams_);
 }
 
 
@@ -441,7 +529,11 @@ scalar manufacturedShellLeadFieldECGVerifier::referencePhi
 {
     using namespace shellTransmissionMMS;
 
-    return phiE(p, t, zone < 0 ? zoneOf(p, shellParams_) : zone, shellParams_);
+    const label z = zone < 0 ? refZoneOf(p) : zone;
+    return
+        solution_ == solutionType::bathShell
+      ? shellBathBidomainMMS::phiE(p, t, z, bathParams_)
+      : shellTransmissionMMS::phiE(p, t, z, shellParams_);
 }
 
 

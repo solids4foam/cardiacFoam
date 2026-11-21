@@ -35,6 +35,9 @@ solvers
         relTol          0.0;
         // PCG iteration cap; the study README gives the counts reached
         maxIter         5000;
+        // Read with interfaceConductivityInterpolation conormalHarmonic: passes of
+        // the jump-aware interface gradient (as bathBidomain/sphericalShell)
+        nInterfaceGradientCorrectors 2;
     }
 
     // buildLeadFields: the lead fields solve (M + C^T) z = e with the assembled

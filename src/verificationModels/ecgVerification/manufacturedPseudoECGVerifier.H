@@ -38,6 +38,7 @@ Author
 #define manufacturedPseudoECGVerifier_H
 
 #include "ecgVerificationModel.H"
+#include "ecgErrorStatistics.H"
 #include "OFstream.H"
 #include "Switch.H"
 #include "overrideTypeName.H"
@@ -63,16 +64,7 @@ class manufacturedPseudoECGVerifier
     tensor cachedConductivity_;
     bool spatialCacheValid_;
 
-    label sampleCount_;
-    List<scalar> referenceErrorL1Sum_;
-    List<scalar> referenceErrorL2Sum_;
-    List<scalar> referenceErrorLinf_;
-    List<List<scalar>> checkErrorL1Sum_;
-    List<List<scalar>> checkErrorL2Sum_;
-    List<List<scalar>> checkErrorLinf_;
-    List<List<scalar>> referenceDeltaL1Sum_;
-    List<List<scalar>> referenceDeltaL2Sum_;
-    List<List<scalar>> referenceDeltaLinf_;
+    ecgErrorStatistics statistics_;
 
     bool summaryWritten_;
 

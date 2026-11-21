@@ -41,6 +41,9 @@ singleCellSolverCoeffs
             epicardialCells  { range (0.7 1); }
         }
     }
+
+    // ./Allrun overrides: constant/ionicConstantOverrides; empty otherwise
+    #includeIfPresent "<case>/local/overrides"
 }
 
 // ************************************************************************* //

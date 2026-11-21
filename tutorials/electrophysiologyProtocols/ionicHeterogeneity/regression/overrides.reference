@@ -1,0 +1,18 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# csv <file> <key> <column> <expected> <tolerance>
+# ./Allrun overrides: the probe of ionicHeterogeneity.reference with
+# constant/ionicConstantOverrides (global tauSi x 0.9, mCells tauSo1 = 80,
+# epicardialCells tauW1Minus x 1.1). Generated from a run of this case.
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.00  peak         45.0532  1e-3
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.00  APD90        306.102  1e-2
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.35  peak         47.3590  1e-3
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.35  APD90        392.417  1e-2
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.50  peak         48.0291  1e-3
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.50  APD90        442.320  1e-2
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.71  peak         49.8734  1e-3
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         0.71  APD90        439.833  1e-2
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         1.00  peak         41.0930  1e-3
+csv  postProcessing/ionicHeterogeneityProbe/AP_metrics.csv         1.00  APD90        293.178  1e-2
+csv  postProcessing/ionicHeterogeneityProbe/smoothness_report.csv  0.10  waveformRMS  0.00000  1e-6
+csv  postProcessing/ionicHeterogeneityProbe/smoothness_report.csv  0.32  waveformRMS  5.95799  1e-3
+csv  postProcessing/ionicHeterogeneityProbe/smoothness_report.csv  0.75  waveformRMS  5.77233  1e-3

@@ -1,0 +1,27 @@
+// Included into singleCellSolverCoeffs by ./Allrun overrides (local/overrides).
+// One entry per override scope: global (every region), and a named region of
+// ionicHeterogeneity, scaled or set.
+ionicConstantOverrides
+{
+    global
+    {
+        scale
+        {
+            tauSi       0.9;
+        }
+    }
+    mCells
+    {
+        set
+        {
+            tauSo1      80;
+        }
+    }
+    epicardialCells
+    {
+        scale
+        {
+            tauW1Minus  1.1;
+        }
+    }
+}

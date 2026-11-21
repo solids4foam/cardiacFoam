@@ -1,0 +1,32 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      prePacingProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+tolerance   1e-4;
+minBeats    10;
+maxBeats    3000;
+
+singleCellStimulus
+{
+    stim_start      20;     // ms
+    stim_duration   1;      // ms
+    stim_amplitude  0.4;    // BuenoOrovio stimulus units
+    stim_period_S1  1000;   // ms: pacing cycle length
+    stim_period_S2  0;
+    nstim2          0;
+}
+
+// ************************************************************************* //

@@ -1,19 +1,54 @@
 # eikonal/sphericalShell
 
+## What it does
+
 Eikonal manufactured solution on a spherical heart shell, meshed as a cubed
 sphere (`-mesh hex`, default) or with gmsh tetrahedra (`-mesh tet`): sealed
 curved boundaries approximated by planar faces, a rotated anisotropic
 conductivity with all six tensor components that turns through the wall, and
 an activation time whose conormal flux vanishes on both spheres and whose
-wavefronts collide on the walls. The case checks the sealed-wall operators and
-the outer iteration of the eikonal solver on a field with non-zero normal and
-tangential gradients on the walls; with `-ecg` it also checks the eikonal
-ECG of that field. It does not check a stimulus region (the verifier pins the
-cells near the stimulus point) or a time dependence of the activation time.
+wavefronts collide on the walls. The case writes the activation-time errors
+against the exact solution, split into bulk, boundary and wall-gradient rows,
+and with `-ecg` the eikonal ECG errors.
 
-Origin: this work.
+- **Exercises:** the sealed-wall operators and the outer iteration of the
+  eikonal solver on a field with non-zero normal and tangential gradients on
+  the walls, and with `-ecg` the eikonal ECG of that field. It does not check
+  a stimulus region (the verifier pins the cells near the stimulus point) or
+  a time dependence of the activation time. Only this case's regression
+  checks the eikonal solver with an anisotropic conductivity at a sealed
+  curved wall.
+- **Use it for:** verifying a change to the sealed-wall gradient, the eikonal
+  metric term or the outer iteration (`-wallGradient stock`, `-formulation`,
+  `-relaxation` and `-iterations` give the alternatives); starting a
+  convergence study on a curved geometry (`setup/studies/`); checking a new
+  mesh type of a curved wall against an exact solution.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `./Allrun parallel` with the case
+defaults only (hex cubed sphere, `N = 12`, sealed-wall gradient,
+advection-diffusion formulation, relaxation `0.9`, no ECG, four ranks with
+scotch); no gmsh is needed. It compares the 8 rows of
+`regression/sphericalShell.reference` with `postProcessing/3D_hex_12_cells.dat`:
+the cells per direction, the final time, and 6 error norms against the exact
+solution (`activationTime` L2 and Linf, its bulk and boundary L2, and two
+wall-gradient rows). The expected values are frozen from an earlier run, with
+absolute tolerances of about `1e-4` of each value, set by the outer residual
+tolerance `1e-8`. The script requires the `End` line of `log.cardiacFoam`; it
+does not check that the outer iteration converged, so a run that stops at
+`nOuterCorrectors` passes if its errors match. The ECG of the shell is not in
+the regression. No marker applies.
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
+
+Origin: this work.
 
 The sealed shell field is defined in the construction document
 [eikonal_mms.pdf](../../generators/docs/eikonal/eikonal_mms.pdf), section
@@ -51,7 +86,7 @@ critical points of `psi` on the walls.
   the activation time of every cell before the constraints are collected, so
   the manufactured field supplies the seeds
 - solver controls (`system/fvSolution`): those of
-  [eikonalECG](../cube/README.md) (`nOuterCorrectors 8000`, outer residual
+  [eikonal/cube](../cube/README.md) (`nOuterCorrectors 8000`, outer residual
   tolerance `1e-8`, equation relaxation `0.9` on every outer iteration, `PBiCGStab`/`DILU` for the
   advection-diffusion matrix), with `PCG`/`DIC` at tolerance `1e-11` for the
   symmetric matrix of the explicit metric; see
@@ -230,14 +265,6 @@ The iterations each level needs, the levels where the unrelaxed iteration
 fails, and the larger-`c0` runs are in the study READMEs
 ([hexConvergence](setup/studies/hexConvergence/README.md#outer-iterations-and-relaxation),
 [tetConvergence](setup/studies/tetConvergence/README.md#outer-iterations-and-relaxation)).
-
-Regression (the case defaults: hex cubed sphere, `N = 12`, parallel on four
-ranks; no gmsh needed): the `activationTime` errors and the bulk, boundary and
-wall-gradient rows.
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Studies
 

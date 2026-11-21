@@ -1,20 +1,53 @@
 # eikonal/cube
 
+## What it does
+
 Eikonal-diffusion manufactured solution on the unit cube, on Cartesian
 hexahedra (`-mesh hex`, default) or gmsh Delaunay tetrahedra (`-mesh tet`),
-with the eikonal-driven ECG checked against its reference integral. The exact
-activation time is imposed on every face and on the cells whose centre has
-the smallest x, y or z (on hexahedra the first cell layer), so the case checks
-the interior discretisation (the metric term, the corrected Laplacian, the
-cell-gradient reconstruction, the outer fixed point) and the template ECG; it
-does not check a wall treatment, the zero-gradient outer boundary of ordinary
-runs or the placement of internal seeds. Sealed curved walls are checked by
-[sphericalShell](../sphericalShell/README.md).
+with the exact activation time imposed on every face and on the cells whose
+centre has the smallest x, y or z (on hexahedra the first cell layer). The
+case writes the activation-time errors against the exact solution and, in 3D,
+the eikonal-driven ECG errors against its reference integral.
+
+- **Exercises:** the interior discretisation of `eikonalSolver` (the metric
+  term, the corrected Laplacian, the cell-gradient reconstruction, the outer
+  fixed point) and `eikonalECG` with its template. It does not check a wall
+  treatment, the zero-gradient outer boundary of ordinary runs or the
+  placement of internal seeds; sealed curved walls are checked by
+  [sphericalShell](../sphericalShell/README.md). Only this case's regression
+  checks `eikonalECG` against an exact reference.
+- **Use it for:** verifying a change to the eikonal operators, the outer
+  iteration or `eikonalECG`; starting a convergence study (`setup/studies/`);
+  checking a new mesh type against an exact solution (`-mesh tet` shows how a
+  gmsh mesh enters the case).
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `./Allrun parallel` with the case
+defaults only (3D hexahedra, rotated conductivity, `N = 20`, advection-diffusion
+formulation, `leastSquares`, outer tolerance `1e-8`, E1-E5, single-event
+template, six ranks with scotch); none of the other `Allrun` options is run.
+It compares 30 rows: `regression/cube.reference` (20 rows) holds the cell
+count, 9 error norms of `activationTime` with its bulk, boundary and gradient
+rows, and the ECG values of E1-E5 at `t = 10`, on the upstroke, and `t = 75`,
+on repolarisation; `regression/cube.ecg.reference` (10 rows) holds the L2 and
+Linf ECG errors of E1-E5 against the reference integral. The expected values
+are frozen from an earlier run, with absolute tolerances of about `1e-5` of
+each value, so the check fails on any change of the results, not only on a
+loss of accuracy. The script requires the `End` line of `log.cardiacFoam`; it
+does not check that the outer iteration converged, so a run that stops at
+`nOuterCorrectors` passes if its errors match. No marker applies.
+
+```bash
+./regression/regressionTest.sh
+```
+
+## Problem
 
 Origin: this work, for both the activation-time and the eikonal-driven ECG
 problems.
-
-## Problem
 
 The activation-time field (`-conductivity rotated`, default, or `axis`; 1D/2D/3D)
 and the eikonal-driven ECG are defined in the construction document
@@ -117,15 +150,6 @@ in 3D, `postProcessing/eikonalECG.dat` holds the electrode traces,
 references, and `postProcessing/manufacturedEikonalECGSummary_ECG.dat` the L1,
 L2 and Linf error over time of every electrode.
 
-Regression (the defaults: 3D hex, rotated conductivity, `N = 20`, parallel on
-six ranks): the activation-time errors with their bulk, boundary and gradient
-rows, the ECG errors of E1-E5 and their trace values at `t = 10`, on the
-upstroke, and `t = 75`, on repolarisation.
-
-```bash
-./regression/regressionTest.sh
-```
-
 ## Studies
 
 `setup/studies/` holds one study per question, each run in copies of the case
@@ -162,7 +186,7 @@ uniform in `[0.05, 1.0]`. The spherical shell uses five directions with
 `|e| = 1.2, 1.4, 1.6, 1.8, 2.0`, as in `monodomain/sphericalShell`.
 
 **Spherical shell.** The mesh is the cubed-sphere shell described in
-`../bidomain/README.md`. The eikonal-driven ECG of the shell field is off
+[sphericalShell](../sphericalShell/README.md#mesh). The eikonal-driven ECG of the shell field is off
 unless `Allrun -ecg` writes `ecg yes;` to `local/ecg`; the template, its
 parameters and its sampling are those of the cube case, and `-template sine`
 writes `local/ecgTemplate`. The reference integrates the same kernel over the

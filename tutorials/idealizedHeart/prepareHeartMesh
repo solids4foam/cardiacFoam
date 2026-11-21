@@ -1,0 +1,232 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+# prepareHeartMesh
+#
+# Writes the idealized ventricles that electroHeart, electroMechHeart and
+# pathos/* run on from the one committed geometry, the heart/torso mesh
+# mesh/heartTorso (Git LFS):
+#
+#   mesh/constant/polyMesh   the myocardium cellZone of heartTorso, with the
+#                            patches EPI, BASE, ENDO_RV and ENDO_LV rebuilt from
+#                            its face zones
+#   mesh/0/{fiber,sheet,sheetNormal,tm,tv,apicobasal,Conductivity}
+#                            the heartTorso fields on those cells
+#
+# heartTorso holds the heart cells and points first, in the order of the
+# heart mesh, so the result is the heart mesh itself: the same points, faces,
+# cells and patches. The script checks the counts.
+#
+# The outputs are generated (git-ignored). They are rewritten when an input
+# or this script changes (mesh/.heartMesh.stamp) and kept otherwise, so
+# every case can call it before copying the mesh in. Needs only OpenFOAM
+# (topoSet, subsetMesh, createPatch) and awk.
+#
+# Usage: prepareHeartMesh          (from any directory)
+#------------------------------------------------------------------------------
+cd "${0%/*}" || exit 1
+self="$PWD/${0##*/}"
+set -e
+
+src=mesh/heartTorso
+fields="fiber sheet sheetNormal tm tv apicobasal Conductivity"
+patches="EPI BASE ENDO_RV ENDO_LV"
+
+for file in "$src"/constant/polyMesh/points "$src"/0/fiber
+do
+    if [ ! -f "$file" ] || head -c 200 "$file" | grep -q 'git-lfs.github.com'
+    then
+        echo "prepareHeartMesh: $file is missing or a Git-LFS pointer." 1>&2
+        echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
+        exit 1
+    fi
+done
+
+inputsHash()
+{
+    {
+        cat "$self"
+        for f in points faces owner neighbour boundary cellZones faceZones
+        do
+            cat "$src/constant/polyMesh/$f"
+        done
+        for f in $fields
+        do
+            cat "$src/0/$f"
+        done
+    } | cksum | awk '{ print $1 "-" $2 }'
+}
+
+# One writer at a time
+lock=mesh/.heartMesh.lock
+waited=0
+until mkdir "$lock" 2>/dev/null
+do
+    if [ "$waited" -ge 300 ]
+    then
+        echo "prepareHeartMesh: $lock has been held for 300 s. If no other" \
+             "prepareHeartMesh is running, remove it and retry." 1>&2
+        exit 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+done
+trap 'rmdir "$lock"' EXIT
+
+hash="$(inputsHash)"
+if [ -f mesh/.heartMesh.stamp ] \
+ && [ "$(cat mesh/.heartMesh.stamp)" = "$hash" ] \
+ && [ -f mesh/constant/polyMesh/owner ]
+then
+    exit 0
+fi
+
+work=mesh/.heartMesh.work
+rm -rf "$work"
+mkdir -p "$work/system" "$work/constant" "$work/0"
+cp -a "$src/constant/polyMesh" "$work/constant/polyMesh"
+
+header()
+{
+    echo "FoamFile { version 2.0; format ascii; class dictionary; object $1; }"
+}
+
+{
+    header controlDict
+    cat <<'EOF'
+application none;
+startFrom startTime; startTime 0; stopAt endTime; endTime 0; deltaT 1;
+writeControl timeStep; writeInterval 1;
+writeFormat ascii; writePrecision 12; writeCompression off;
+timeFormat general; timePrecision 6;
+EOF
+} > "$work/system/controlDict"
+{
+    header fvSchemes
+    echo "ddtSchemes {} gradSchemes {} divSchemes {} laplacianSchemes {}"
+    echo "interpolationSchemes {} snGradSchemes {}"
+} > "$work/system/fvSchemes"
+header fvSolution > "$work/system/fvSolution"
+
+# A face set per heart surface, from the face zones heartTorso keeps
+{
+    header topoSetDict
+    echo "actions ("
+    for p in $patches
+    do
+        echo "    { name $p; type faceSet; action new; source zoneToFace;" \
+             "zone ${p}heart_${p}CutFaceZone; }"
+    done
+    echo ");"
+} > "$work/system/topoSetDict"
+
+# The exposed faces go to torsoSurface, then each set to its patch; the
+# emptied torsoSurface is removed
+{
+    header createPatchDict
+    echo "pointSync false;"
+    echo "patches ("
+    for p in $patches
+    do
+        echo "    { name $p; patchInfo { type patch; physicalType patch; }" \
+             "constructFrom set; set $p; }"
+    done
+    echo ");"
+} > "$work/system/createPatchDict"
+
+(
+    cd "$work"
+    topoSet > log.topoSet 2>&1
+    subsetMesh -zone myocardium -patch torsoSurface -overwrite > log.subsetMesh 2>&1
+    createPatch -overwrite > log.createPatch 2>&1
+) || {
+    echo "prepareHeartMesh: failed; see $work/log.*" 1>&2
+    exit 1
+}
+
+# The heart mesh: 26642 points, 123617 cells, the four heart patches
+note="$(grep -m1 'note' "$work/constant/polyMesh/owner")"
+case "$note" in
+    *"nPoints:26642 "*"nCells:123617 "*) ;;
+    *)
+        echo "prepareHeartMesh: unexpected heart mesh: $note" 1>&2
+        exit 1
+        ;;
+esac
+for p in $patches
+do
+    grep -q "^ *$p\$" "$work/constant/polyMesh/boundary" || {
+        echo "prepareHeartMesh: patch $p missing" 1>&2
+        exit 1
+    }
+done
+rm -rf "$work/constant/polyMesh/sets" "$work/constant/polyMesh/pointMesh"
+
+# The fields on the heart cells: the first nCells entries of each heartTorso
+# field, copied as text (no rounding). The anatomy fields are zeroGradient on
+# every patch; Conductivity is calculated, each face value that of its cell.
+# The owner cell of every face:
+awk '
+    /^\(/ && n { inList = 1; next }
+    /^[0-9]+$/ && !n { n = $1; next }
+    inList && /^\)/ { exit }
+    inList { print }
+' "$work/constant/polyMesh/owner" > "$work/owner.list"
+
+# name nFaces startFace of each patch
+awk '
+    /^ *[A-Za-z_][A-Za-z_0-9]* *$/ { name = $1 }
+    /nFaces/    { sub(";", "", $2); nf = $2 }
+    /startFace/ { sub(";", "", $2); print name, nf, $2 }
+' "$work/constant/polyMesh/boundary" > "$work/patches.list"
+
+nCells="$(grep -m1 'note' "$work/constant/polyMesh/owner" | sed 's/.*nCells:\([0-9]*\).*/\1/')"
+
+for f in $fields
+do
+    awk -v nCells="$nCells" -v field="$f" \
+        -v ownerFile="$work/owner.list" -v patchFile="$work/patches.list" '
+        BEGIN {
+            while ((getline line < ownerFile) > 0) owner[nOwner++] = line
+            while ((getline line < patchFile) > 0) patch[nPatch++] = line
+        }
+        stage == 0 {
+            print
+            if ($1 == "internalField") stage = 1
+            next
+        }
+        stage == 1 { printf "%d\n(\n", nCells; stage = 2; next }   # the size line
+        stage == 2 { stage = 3; next }                              # "("
+        stage == 3 {
+            if (i < nCells) { cell[i] = $0; print; i++ ; next }
+            if ($0 == ")") stage = 4
+            next
+        }
+        stage == 4 { exit }
+        END {
+            print ")\n;\n\nboundaryField\n{"
+            for (p = 0; p < nPatch; p++) {
+                split(patch[p], a, " ")
+                printf "    %s\n    {\n", a[1]
+                if (field == "Conductivity") {
+                    printf "        type            calculated;\n"
+                    printf "        value           nonuniform List<symmTensor> \n%d\n(\n", a[2]
+                    for (k = a[3]; k < a[3] + a[2]; k++) print cell[owner[k]]
+                    printf ")\n;\n"
+                } else {
+                    printf "        type            zeroGradient;\n"
+                }
+                printf "    }\n"
+            }
+            print "}\n\n\n// ************************************************************************* //"
+        }
+    ' "$src/0/$f" > "$work/0/$f"
+done
+
+rm -rf mesh/constant/polyMesh mesh/0
+mv "$work/constant/polyMesh" mesh/constant/polyMesh
+mv "$work/0" mesh/0
+rm -rf "$work"
+echo "$hash" > mesh/.heartMesh.stamp
+echo "prepareHeartMesh: wrote mesh/constant/polyMesh and mesh/0 from $src"
+
+#------------------------------------------------------------------------------

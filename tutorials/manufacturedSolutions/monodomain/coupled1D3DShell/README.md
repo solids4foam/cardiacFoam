@@ -1,18 +1,64 @@
 # monodomain/coupled1D3DShell
 
+## What it does
+
 The 1D-3D junction of [monodomain/coupled1D3DCube](../coupled1D3DCube/README.md) on
 tetrahedra, with the supports cut by a sealed curved wall, inside the wall, or
 overlapping. The myocardium is the sealed-shell monodomain problem of
-[monodomain/sphericalShell](../sphericalShell/README.md)
-on gmsh tetrahedra. By default a Purkinje graph crosses the cavity on the `x`
-axis and ends at two terminals on the endocardium, `(-0.5, 0, 0)` and
-`(0.5, 0, 0)`; `-graphY` and `-graphY2` move them (below).
-The junction forcing is the continuum one (`reference continuum`, see
+[monodomain/sphericalShell](../sphericalShell/README.md) on gmsh tetrahedra,
+and the junction forcing is the continuum one; the case writes the shell and
+graph errors and the junction errors of each terminal against that reference.
+
+- **Exercises:** the Purkinje graph to tissue junction where the support is
+  cut by the sealed curved wall (the default, terminals on the endocardium),
+  lies inside the wall (`-graphY`) or overlaps another support (`-graphY2`,
+  which also adds a graph branch point of degree three), with bidirectional
+  transfer by default, together with the sealed-wall operators on
+  tetrahedra. Only this case's regression checks the junction against its
+  continuum definition, including the charge balance across the junctions.
+- **Use it for:** verifying a change to the PVJ coupler, its kernels or its
+  normalisation where a support meets a wall or another support; measuring
+  the junction error against the continuum definition (the
+  [continuumCoupling](../coupled1D3DCube/setup/studies/continuumCoupling/README.md)
+  study runs here and on the cube).
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `./Allrun` in serial with the case
+defaults only (gmsh tetrahedra `N = 10`, seed 1, two terminals on the
+endocardium, bidirectional transfer, continuum reference, linear kernel,
+`pvjRadius 0.2`, `T = 0.1`); `-graphY`, `-graphY2` and the other kernels are
+not run. It compares 41 rows: `regression/coupled1D3DShell.reference` (32
+rows) holds the cells per direction, the final time and 13 shell error norms
+(`Vm`, `u1`, `u2`, the `Vm` bulk and boundary rows and two wall-gradient
+rows); from `verification/coupled1D3DMonodomain_local.csv`, for each terminal
+the support error, the graph terminal-voltage error, the junction-current
+error and its largest step value, and the largest charge imbalance (expected
+0 within `1e-12`); from `verification/coupled1D3DMonodomain_map.csv`, for
+each terminal the linear-kernel support cell count, normalisation, gather and
+deposit errors. `regression/coupled1D3DShell.graph.reference` (9 rows) holds
+the L1, L2 and Linf errors of `Vm1D`, `u1` and `u2` on the graph. The expected
+values are frozen from an earlier run on the gmsh mesh named in
+`shell.geo.template` (gmsh 4.15.2, seed 1, one thread), with absolute
+tolerances of about `1e-5` of each value (the cell counts are exact). The
+marker `regression/needs-tools` (gmsh) applies: without gmsh the script
+exits 77, an expected skip.
+
+```bash
+./regression/regressionTest.sh
+```
+
+## Problem
+
+By default a Purkinje graph crosses the cavity on the `x` axis and ends at
+two terminals on the endocardium, `(-0.5, 0, 0)` and `(0.5, 0, 0)`; `-graphY`
+and `-graphY2` move them (below). The junction forcing is the continuum one
+(`reference continuum`, see
 [monodomain/coupled1D3DCube](../coupled1D3DCube/README.md#continuum-reference)), with the
 continuum normalisation taken over the part of the support ball outside the
 inner sphere, `mu >= -r/(2 r1)` about the outward radius at the terminal.
-
-## Problem
 
 ```text
 chi Cm dVm/dt = div(G grad Vm) - chi Cm Iion + I_s + S_pvj      r1 < |x| < r2
@@ -83,15 +129,6 @@ sphericalShell), `postProcessing/graph_1D_<k>_nodes.dat` (graph errors), and
 the continuum-reference files `verification/coupled1D3DMonodomain_map.csv`,
 `_steps.csv` and `_local.csv` described in
 [monodomain/coupled1D3DCube](../coupled1D3DCube/README.md#usage).
-
-Regression (the defaults, serial): the shell and graph error summaries, and
-for each terminal the support, terminal-voltage and junction-current errors,
-the charge imbalance, and the linear-kernel normalisation and gather errors.
-The mesh comes from gmsh, so the regression skips where gmsh is missing.
-
-```bash
-./regression/regressionTest.sh
-```
 
 The study and its results are in
 [continuumCoupling](../coupled1D3DCube/setup/studies/continuumCoupling/README.md).

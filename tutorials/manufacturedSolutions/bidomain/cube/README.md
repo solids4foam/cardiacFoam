@@ -1,16 +1,40 @@
 # bidomain/cube
 
-Bidomain manufactured solution on the unit cube, on Cartesian hexahedra
-(`-mesh hex`, default, 1D/2D/3D) or gmsh Delaunay tetrahedra (`-mesh tet`).
-The field has a zero normal gradient on every face and the conductivities are
-diagonal, so this case checks the interior operators of the one-mesh bidomain
-stack (the elliptic `phiE` solve, the parabolic `Vm` solve, their outer
-coupling sweeps, cell-gradient reconstruction, non-orthogonal correction,
-ionic coupling, time integration), not a wall treatment; sealed curved walls
-are checked by [sphericalShell](../sphericalShell/README.md).
+## What it does
 
-Origin: the bidomain problem of the FDA regulatory science tool (Pathmanathan
-& Gray 2014).
+Runs the bidomain problem of the FDA regulatory science tool (Pathmanathan &
+Gray 2014) on the unit cube, on Cartesian hexahedra (`-mesh hex`, default,
+1D/2D/3D) or gmsh Delaunay tetrahedra (`-mesh tet`), and writes the `Vm`,
+`phiE`, `phiI` and ionic-state errors against the exact field to
+`postProcessing/`. The field has a zero normal gradient on every face and the
+conductivities are diagonal, so no wall treatment enters.
+
+- **Exercises:** the interior operators of the one-mesh bidomain stack: the
+  elliptic `phiE` solve with its reference cell, the parabolic `Vm` solve,
+  their outer coupling sweeps, cell-gradient reconstruction, non-orthogonal
+  correction (tetrahedra), ionic coupling and time integration. Sealed curved
+  walls are checked by [sphericalShell](../sphericalShell/README.md).
+- **Use it for:** verifying a change to the bidomain `phiE` or `Vm` solve, the
+  gradient schemes or the ionic-PDE time coupling against an exact solution;
+  starting the spatial, temporal and linear-tolerance studies in
+  `setup/studies/`.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs the case defaults (3D hexahedra, `N = 20`,
+`T = 0.2`) serially and compares `postProcessing/3D_20_cells.dat` with
+`regression/cube.reference` (27 rows): the cells per direction and the final
+time; the L1, L2 and Linf errors of `Vm`, `phiE_gauge`, `phiI_gauge`, `u1` and
+`u2`; the L2 errors of the pinned `phiE` and `phiI`; and the L2 boundary and
+gradient rows of `Vm`, `phiE_gauge` and `phiI_gauge`. The values are frozen
+from an earlier run, with absolute tolerances of about `1e-5` of each value.
+No markers apply. Run it alone with:
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
 
@@ -87,13 +111,6 @@ gradient rows of
 [Bulk, boundary and gradient rows](../../README.md#bulk-boundary-and-gradient-rows));
 on tetrahedra `n = round(cbrt(cells))`.
 
-Regression (the defaults: 3D hexahedra, `N = 20`, serial): the field errors
-and their bulk, boundary and gradient rows.
-
-```bash
-./regression/regressionTest.sh
-```
-
 ## Studies
 
 `setup/studies/` holds one study per question, each run in copies of the case
@@ -119,7 +136,7 @@ tables.
 with `empty` faces; `system/blockMeshDict.3D` is a unit slab with
 `(nx ny nz)` cells in x, y and z.
 
-**Spherical shell mesh.** `sphericalShell/system/blockMeshDict` builds the
+**Spherical shell mesh.** `../sphericalShell/system/blockMeshDict` builds the
 heart shell `r1 < |x| < r2` as six projected blocks of a cubed sphere. `N` (a
 multiple of 4) sets `k = N/4`: `3k` cells along a cube-face edge and `2k`
 radially, i.e. `N` cells per unit length radially.

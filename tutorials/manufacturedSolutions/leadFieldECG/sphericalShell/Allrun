@@ -17,6 +17,15 @@ Options (parameters are written to local/ and included by the dictionaries):
   -N n                      cells per unit length (default 12); hex: a multiple of 4,
                             radial heart cells per unit length; tet: element size 1/n
   -seed n                   gmsh random seed for -mesh tet (default 1)
+  -solution transmission|bathShell
+                            exact solution of the verifier (default
+                            transmission): the lead-field transmission solution
+                            of shell_mms.py, or the bath shell of
+                            bath_shell_bidomain_mms.py (insulated), whose Vm has
+                            a non-zero intracellular wall current
+  -interface distanceWeightedHarmonic|conormalHarmonic
+                            interfaceConductivityInterpolation of the conductor
+                            (default distanceWeightedHarmonic)
 
 -mesh tet needs gmsh (tested with 4.15.2) and gmshToFoam.
 USAGE
@@ -27,6 +36,8 @@ parallel=false
 mesh=hex
 N=12
 seed=1
+solution=transmission
+interface=distanceWeightedHarmonic
 
 needValue()
 {
@@ -73,6 +84,14 @@ do
             needValue "$@"; seed="$2"; shift
             positiveInteger -seed "$seed"
             ;;
+        -solution)
+            needValue "$@"; solution="$2"; shift
+            oneOf -solution "$solution" transmission bathShell
+            ;;
+        -interface)
+            needValue "$@"; interface="$2"; shift
+            oneOf -interface "$interface" distanceWeightedHarmonic conormalHarmonic
+            ;;
         -h|-help|--help)
             usage
             ;;
@@ -107,6 +126,8 @@ fi
 rm -rf local
 mkdir local
 echo "N $N;" > local/mesh
+echo "solution $solution;" > local/verification
+echo "interfaceConductivityInterpolation $interface;" > local/torso
 
 # Mesh with the cellZones bloodPool, myocardium and bath and the patch outer
 if [ "$mesh" = hex ]

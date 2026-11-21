@@ -1,15 +1,51 @@
 # bidomain/sphericalShell
 
-Heart-only bidomain manufactured solution on a spherical heart shell, meshed
-as a cubed sphere (`-mesh hex`, default) or with gmsh tetrahedra
-(`-mesh tet`): sealed curved boundaries approximated by planar faces, two
-unequal rotated anisotropic conductivity tensors with all six components that
-turn through the wall, and potentials whose conormal fluxes vanish on both
-spheres. The case checks the sealed-wall operators of both potentials and the
-pure-Neumann `phiE` system with its reference cell; it does not
-check a bath, the ECG, a stimulus or a wall that carries current.
+## What it does
 
-Origin: this work.
+Runs a heart-only bidomain manufactured solution (origin: this work) on a
+spherical heart shell, meshed as a cubed sphere (`-mesh hex`, default) or with
+gmsh tetrahedra (`-mesh tet`): sealed curved boundaries approximated by planar
+faces, two unequal rotated anisotropic conductivity tensors with all six
+components that turn through the wall, and potentials whose conormal fluxes
+vanish on both spheres. The verifier writes the `Vm`, `phiE_gauge` and
+ionic-state errors against the exact field to `postProcessing/`.
+
+- **Exercises:** the sealed-wall operators of both potentials
+  (`sealedHeartBoundary true`, `sealedWallLeastSquares`) and the pure-Neumann
+  `phiE` system on a curved sealed wall with its reference cell, and the
+  `conormalStabilisation` term of the `phiE` operator with full rotated
+  tensors oblique to the cubed-sphere faces. No other
+  regression checks the bidomain `phiE` system on a curved sealed wall against
+  an exact solution. It does not check a bath, the ECG, a stimulus or a wall
+  that carries current.
+- **Use it for:** verifying a change to the sealed-wall gradient, the sealed
+  face conductivities or the `phiE` reference and compatibility handling;
+  starting the hexahedral and tetrahedral convergence studies in
+  `setup/studies/`.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs the case defaults (hex cubed sphere,
+`N = 12`, `T = 0.2`; no gmsh needed) in parallel on four ranks (scotch) and
+compares `postProcessing/3D_hex_12_cells.dat` with
+`regression/sphericalShell.reference` (15 rows): the cells per direction and
+the final time; the L2 and Linf errors of `Vm` and `phiE_gauge`; the L2 bulk
+and boundary rows of `Vm`, the boundary row of `phiE_gauge` and the
+wall-gradient rows of both potentials; and the L2 errors of `u1` and `u2`. The
+values are frozen from an earlier run, with absolute tolerances of about
+`1e-5` of each value.
+
+Marker: `regression/skips-on-openfoam` lists `v2312`, and the script exits 77
+(skip) on that version. In the CI v2312 image (x86_64) the `Vm` and
+ionic-state rows differ from the reference by about `1e-4` relative while the
+`phiE` and gradient rows match; a native arm64 v2312 build reproduces the
+reference, so the difference is specific to that image. Run it alone with:
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
 
@@ -103,14 +139,6 @@ or `gmshToFoam` is missing or gmsh reports an error.
 `# cellsPerDirection` and the `Vm`, `u1`, `u2`, `phiE_gauge`, bulk, boundary
 and gradient rows of
 [Bulk, boundary and gradient rows](../../README.md#bulk-boundary-and-gradient-rows).
-
-Regression (the case defaults: hex cubed sphere, `N = 12`, `T = 0.2`, parallel
-on four ranks; no gmsh needed): the `Vm`, `phiE_gauge`, `u1` and `u2` errors
-and the bulk, boundary and wall-gradient rows.
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Studies
 

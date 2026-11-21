@@ -1,0 +1,67 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "Vm|VmFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-11;
+        relTol          0.0;
+    }
+    // phiE: the heart-only bidomain potential
+    "phiE|phiEFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-11;
+        relTol          0.0;
+        maxIter         5000;
+        // Read with interfaceConductivityInterpolation conormalHarmonic: passes of
+        // the jump-aware interface gradient (as bathBidomain/sphericalShell)
+        nInterfaceGradientCorrectors 2;
+    }
+    // buildLeadFields: the lead fields solve (M + C^T) z = e with the assembled
+    // matrix through PETSc (conductorLinearSolve)
+    leadField
+    {
+        solver              petsc;
+        // True relative residual of the real operator, fatal above
+        residualTolerance   1e-10;
+        options
+        {
+            snes_type           ksponly;
+            ksp_type            gmres;
+            ksp_gmres_restart   "200";
+            ksp_pc_side         right;
+            ksp_norm_type       unpreconditioned;
+            ksp_rtol            "1e-12";
+            ksp_atol            "0";
+            ksp_max_it          "5000";
+            pc_type             gamg;
+        }
+    }
+}
+
+PIMPLE
+{
+    nOuterCorrectors         2;
+    nNonOrthogonalCorrectors 1;
+}
+
+// ************************************************************************* //

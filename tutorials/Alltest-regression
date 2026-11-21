@@ -8,6 +8,12 @@ set -Eeuo pipefail
 # regression/regressionTest.sh, copies it to ../tutorialsTest-regression
 # without generated output, and runs its regression script there.
 #
+# Two tiers. A case whose regression carries the empty marker file
+# regression/full-only is in the full tier; every other case is in the
+# standard tier. CARDIAC_REGRESSION_SCOPE=standard (the default, and what CI
+# runs) runs the standard tier; full runs both. tutorials/README.md
+# ("Regression tiers") says which case goes where and why.
+#
 # Usage:
 #   Alltest-regression [--list] [--only PATTERN]...
 #
@@ -17,8 +23,7 @@ set -Eeuo pipefail
 #
 # Environment:
 #   CARDIAC_REGRESSION_BUILD_MODE  with-solids4foam | lightweight (required)
-#   CARDIAC_REGRESSION_SCOPE       passed through to the cases, see
-#                                  regression/lib.sh
+#   CARDIAC_REGRESSION_SCOPE       standard (default) | full: the tier to run
 #
 # A case that needs cardiacFoam built with solids4foam carries an empty
 # marker file regression/needs-solids4foam: in lightweight mode it exits 77
@@ -34,6 +39,7 @@ REG_ROOT="${ROOT_DIR}/../tutorialsTest-regression"
 MARKER="regression/needs-solids4foam"
 TOOLS_MARKER="regression/needs-tools"
 VERSION_SKIPS="regression/skips-on-openfoam"
+TIER_MARKER="regression/full-only"
 
 listOnly=0
 onlyPatterns=()
@@ -43,7 +49,7 @@ while (( $# > 0 )); do
         --only)
             (( $# >= 2 )) || { echo "FAIL: --only requires a pattern" >&2; exit 2; }
             onlyPatterns+=("$2"); shift ;;
-        -h|--help) sed -n '4,27p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        -h|--help) sed -n '4,33p' "${BASH_SOURCE[0]}"; exit 0 ;;
         *) echo "FAIL: unknown option: $1" >&2; exit 2 ;;
     esac
     shift
@@ -72,6 +78,11 @@ for c in "${ALL_CASES[@]}"; do
     CASES+=("$c")
 done
 
+fullTierOnly()
+{
+    [[ -e "${ROOT_DIR}/$1/${TIER_MARKER}" ]]
+}
+
 needsSolids4Foam()
 {
     [[ -e "${ROOT_DIR}/$1/${MARKER}" ]]
@@ -91,6 +102,7 @@ expectedSkip()
 if (( listOnly )); then
     for c in "${CASES[@]}"; do
         tag=""
+        fullTierOnly "$c" && tag="${tag}  (full-only)"
         needsSolids4Foam "$c" && tag="${tag}  (needs-solids4foam)"
         [[ -f "${ROOT_DIR}/$c/${TOOLS_MARKER}" ]] && tag="${tag}  (needs-tools)"
         [[ -f "${ROOT_DIR}/$c/${VERSION_SKIPS}" ]] && tag="${tag}  (skips on: $(tr '\n' ' ' < "${ROOT_DIR}/$c/${VERSION_SKIPS}" | sed 's/ $//'))"
@@ -108,9 +120,37 @@ case "${build_mode}" in
         ;;
 esac
 
+scope="${CARDIAC_REGRESSION_SCOPE:-standard}"
+case "${scope}" in
+    standard|full) ;;
+    *)
+        echo "FAIL: CARDIAC_REGRESSION_SCOPE must be 'standard' or 'full', got '${scope}'."
+        exit 2
+        ;;
+esac
+
+# The standard tier leaves out the full-tier cases
+notInTier=()
+if [[ "${scope}" == standard ]]; then
+    tierCases=()
+    for c in "${CASES[@]}"; do
+        if fullTierOnly "$c"; then notInTier+=("$c"); else tierCases+=("$c"); fi
+    done
+    CASES=(${tierCases[@]+"${tierCases[@]}"})
+fi
+
 echo "============================================================"
-echo "cardiacFoam regression tests (${build_mode}, ${#CASES[@]} case(s))"
+echo "cardiacFoam regression tests (${build_mode}, ${scope} tier, ${#CASES[@]} case(s))"
+if (( ${#notInTier[@]} > 0 )); then
+    echo "Full tier, not run (CARDIAC_REGRESSION_SCOPE=full runs them):"
+    printf '  %s\n' "${notInTier[@]}"
+fi
 echo "============================================================"
+
+if (( ${#CASES[@]} == 0 )); then
+    echo "No case to run."
+    exit 0
+fi
 
 rm -rf "${REG_ROOT}"
 mkdir -p "${REG_ROOT}"
@@ -165,11 +205,17 @@ for testCase in "${CASES[@]}"; do
     copyCase "${testCase}"
 
     # idealizedHeart/* cases read their shared mesh and anatomy fields from
-    # a mesh/ directory at the idealizedHeart/ root (see
-    # tutorials/idealizedHeart/README.md), which is not part of the case
-    # copy: bring it in once per sweep.
+    # a mesh/ directory at the idealizedHeart/ root, written from
+    # mesh/heartTorso by idealizedHeart/prepareHeartMesh (see
+    # tutorials/idealizedHeart/README.md). Neither is part of the case copy:
+    # bring both in once per sweep (the committed inputs only).
     if [[ "${testCase}" == idealizedHeart/* && ! -d "${REG_ROOT}/idealizedHeart/mesh" ]]; then
-        cp -a "${ROOT_DIR}/idealizedHeart/mesh" "${REG_ROOT}/idealizedHeart/mesh"
+        mkdir -p "${REG_ROOT}/idealizedHeart/mesh/constant"
+        cp -a "${ROOT_DIR}/idealizedHeart/mesh/heartTorso" "${REG_ROOT}/idealizedHeart/mesh/heartTorso"
+        cp -a "${ROOT_DIR}/idealizedHeart/mesh/constant/purkinjeGraph" \
+              "${ROOT_DIR}/idealizedHeart/mesh/constant/purkinjeGraphPig" \
+              "${REG_ROOT}/idealizedHeart/mesh/constant/"
+        cp -a "${ROOT_DIR}/idealizedHeart/prepareHeartMesh" "${REG_ROOT}/idealizedHeart/"
     fi
 
     rc=0

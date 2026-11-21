@@ -1,0 +1,52 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "Vm|VmFinal|u|uFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-15;
+        relTol          0.0;
+    }
+
+    // The global phiE of the bath; nInterfaceGradientCorrectors is read with
+    // interfaceConductivityInterpolation conormalHarmonic
+    "phiE|phiEFinal"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-15;
+        relTol          0.0;
+        maxIter         5000;
+        nInterfaceGradientCorrectors 2;
+    }
+}
+
+// One staggered pass per step by default (Allrun -outerCorrectors n writes
+// local/pimple)
+PIMPLE
+{
+    nOuterCorrectors         1;
+    nNonOrthogonalCorrectors 0;
+
+    #includeIfPresent "<case>/local/pimple"
+}
+
+
+// ************************************************************************* //

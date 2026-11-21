@@ -18,31 +18,22 @@ fi
 # same point is the one conductionBlock's lbbb check requires to stay
 # un-activated; here it must have activated.
 #
-# CARDIAC_REGRESSION_SCOPE=standard (default): the monodomain variant on the
-# human Purkinje tree, regression/injection.monodomain.reference.
-# CARDIAC_REGRESSION_SCOPE=full: every solver variant (monodomain, eikonal,
-# hybrid) on both trees (human, pig). Each combination has its own reference,
-# injection.<variant>.reference for human and injection.<variant>.pig.reference
-# for pig: monodomain activates the probe at 28.6 ms, hybrid at 28.9 ms, and
-# eikonal solves one steady problem that writes only time 1.
+# Full tier (regression/full-only). The three solver variants, each with
+# its own solver path, on the human Purkinje tree; the pig tree is only a
+# different input and is not run. Each variant has its own reference,
+# regression/injection.<variant>.reference: monodomain activates the probe at
+# 28.6 ms, hybrid at 28.9 ms, and eikonal solves one steady problem that
+# writes only time 1.
 
 regression_init "Idealized heart injection regression test" \
     regression/injection.monodomain.reference "$@"
-regression_scope
+regression_require_run_mode
 
-VARIANTS=(monodomain)
-TREES=(human)
-if [[ "${REGRESSION_SCOPE}" == full ]]; then
-    VARIANTS=(monodomain eikonal hybrid)
-    TREES=(human pig)
-fi
+VARIANTS=(monodomain eikonal hybrid)
+tree=human
 
-for tree in "${TREES[@]}"; do
 for variant in "${VARIANTS[@]}"; do
     refFile="regression/injection.${variant}.reference"
-    if [[ "${tree}" == pig ]]; then
-        refFile="regression/injection.${variant}.pig.reference"
-    fi
 
     echo "------------------------------------------------------------"
     echo "Variant: ${variant}  Purkinje tree: ${tree}"
@@ -59,7 +50,6 @@ for variant in "${VARIANTS[@]}"; do
     fi
     regression_compare "${refFile}" || true
     echo
-done
 done
 
 regression_finish

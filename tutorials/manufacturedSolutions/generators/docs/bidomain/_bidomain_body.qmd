@@ -7,9 +7,10 @@ make them satisfy the equations are derived from them. The document gives the
 exact potentials, the sources, the gauge of the extracellular potential and the
 checks that each construction passes. It states the problems only; it contains
 no solver output. Every displayed field, tensor, source and coefficient below
-is printed by the sympy generator of its problem, `fda_bidomain_mms.py` or
-`shell_bidomain_mms.py`, which also writes the NumPy reference module and, for
-the shell, the C++ reference header of cardiacFoam. A reader with this document
+is printed by the sympy generator of its problem, `fda_bidomain_mms.py`,
+`shell_bidomain_mms.py` or `bath_shell_bidomain_mms.py`, which also writes the
+NumPy reference module and, for the shells, the C++ reference header of
+cardiacFoam. A reader with this document
 and the generator folder can rebuild each problem in another code.
 
 ## Domain and governing equations
@@ -583,3 +584,156 @@ the shared fragments `latex/shell_*.tex` are those of
 `shell_monodomain_mms.py`. `--write` writes the whole cardiacFoam header,
 including a table of self-test samples that the verifier compares with its
 compiled functions at start-up.
+
+# Bath shell {#sec-bath-shell}
+
+## Description and limitations
+
+The sealed shell of @sec-shell, $r_1<|\mathbf x|<r_2$, placed between a bath
+ball, the blood pool $|\mathbf x|<r_1$, and an outer bath $r_2<|\mathbf x|<r_3$.
+Heart and bath are one extracellular conductor, solved together at every step
+(`torsoCoupling bath`). On both spheres the extracellular potential is
+continuous, the extracellular current is continuous through
+$\boldsymbol\sigma_e$ on the heart side,
+$\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e=\sigma_b\,\mathbf n\cdot\nabla\phi_e$,
+and the intracellular space is sealed,
+$\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i=0$. Since $\phi_e$ does not have
+zero normal flux, $\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m
+=-\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_e$ is non-zero: the wall carries
+the intracellular current of a virtual electrode. The case exercises the
+heart--bath interface on a convex and a concave curved sphere oblique to both
+tensors, the kink of $\phi_e$ across it, a scalar bath conductivity that
+differs between the two bath zones and varies within each, and an outer
+sphere that is insulated (pure Neumann, with a reference point in the outer
+bath) or grounded. An optional common mode adds the same function of time to
+$\phi_i$ and $\phi_e$, which changes $\phi_e$ but not $V_m$.
+
+The outer sphere carries constant data only. The problem has no electrode
+inside the domain, no applied current and no stimulus, and, as in the sealed
+shell, the two tensors share their principal axes.
+
+## Problem instance
+
+The parameters of the default set are
+
+{{< include ../../latex/shell_bath_params.tex >}}
+
+The tensors, the transmural coordinate, the base fields and the ionic closure
+are those of the sealed shell; $\bar\sigma_{\mathrm{in}}$,
+$\bar\sigma_{\mathrm{out}}$ and $\varepsilon$ set the bath conductivity of the
+pool and of the outer bath, $c_0$ is the ground value of the grounded variant
+and $A_T$, $\nu$ the amplitude and frequency of the common mode. The
+alternate set turns the common mode on ($A_T=0.3$, $\nu=20$), changes the
+base-field coefficients, rotates the fibre by $70^\circ$ instead of $90^\circ$
+and grounds at $c_0=-0.05$. The reference point of the insulated variant is
+$(1.2,0.3,-0.2)$, in the outer bath. In cardiacFoam:
+
+- tutorial `manufacturedSolutions/bathBidomain/sphericalShell`, options
+  `-mesh hex|tet`, `-N`, `-outer insulated|grounded` and
+  `-parameterSet default|alternate`;
+- myocardium solver `bidomainSolver` (`sealedHeartBoundary true`), bath zones
+  `bloodPool` and `bath` of the `torso` block, bath conductivity written by
+  `setManufacturedFields`;
+- verifier `manufacturedShellBathBidomainVerifier`;
+- `leadFieldECG/sphericalShell -solution bathShell` applies the lead field of
+  the same conductor to the exact $V_m$ of this problem, with the outer sphere
+  insulated.
+
+## Construction
+
+*Base fields and corrections.* $f=S\hat f$ and $h=S\hat h$, with
+$S=\sqrt{1+t}$, are the base fields of the sealed shell, $\omega$ and $d_j$ its
+wall function and normal derivatives, and $f_2$ the second base field of the
+curved lead-field conductor. On sphere $j$, with $\mathbf n_j$ the unit normal
+out of the heart and $\sigma_{b,j}$ the bath conductivity on its bath side,
+the corrections are
+
+{{< include ../../latex/shell_bath_gj.tex >}}
+
+{{< include ../../latex/shell_bath_mj.tex >}}
+
+{{< include ../../latex/shell_bath_qj.tex >}}
+
+{{< include ../../latex/shell_bath_rj.tex >}}
+
+each blended through the wall as $(1-\lambda)X_1+\lambda X_2$. $g_j$ makes the
+extracellular current continuous, $m_j$ and $q_j$ seal the intracellular
+space, and $r_j$ closes the common mode in the bath. The normals
+$\mathbf n_1=-\mathbf x/r_1$ and $\mathbf n_2=\mathbf x/r_2$ are polynomial,
+so every correction is smooth at the origin.
+
+*Potentials.* With $T=A_T\sin(\nu t)$ and
+
+{{< include ../../latex/shell_bath_p.tex >}}
+
+the heart potentials are
+
+{{< include ../../latex/shell_bath_phiI.tex >}}
+
+{{< include ../../latex/shell_bath_phiE.tex >}}
+
+and $V_m=\phi_i-\phi_e$, which does not contain $T$. In the bath zones,
+before the outer closure,
+
+{{< include ../../latex/shell_bath_Phi.tex >}}
+
+where $\beta_j$ vanishes on sphere $j$ with $\mathbf n_j\cdot\nabla\beta_j=1$
+there. $\phi_e$ is then continuous on both spheres and its normal derivative
+jumps by the conductivity ratio.
+
+*Outer closure.* The outer sphere is closed with constant data. Insulated:
+$\phi_e=\Phi+\eta_3c_3$ with $c_3=-\hat{\mathbf x}\cdot\nabla\Phi$, so that
+$\partial\phi_e/\partial r=0$ on $r_3$,
+
+{{< include ../../latex/shell_bath_eta3.tex >}}
+
+Grounded: $\phi_e=\Phi+\tilde\eta_3(c_0-\Phi)$, so that $\phi_e=c_0$ on $r_3$,
+
+{{< include ../../latex/shell_bath_eta3g.tex >}}
+
+Both closures leave the value and the normal derivative of $\phi_e$ on $r_2$
+unchanged. The sources of the $V_m$ and $\phi_e$ equations and the
+interface flux are not printed; they are expressions of
+`bath_shell_bidomain_mms.py` and of the cardiacFoam header
+`manufacturedShellBathBidomainReference.H`, which the generator writes whole.
+
+## Self-checks {#sec-bath-shell-checks}
+
+`bath_shell_bidomain_mms.py --self-check` asserts, for both outer closures
+and both parameter sets:
+
+- the heart-only limit: with $\sigma_b=0$ and $T=0$, $\phi_e$ and $\phi_i$
+  equal $F_e$ and $F_i$ of the sealed shell to $10^{-13}$;
+- the interface conditions (continuity of $\phi_e$, continuity of the
+  extracellular current, intracellular sealing, the interface flux) on both
+  spheres to $10^{-12}$ at 24 directions and three times;
+- the outer closure on $r_3$, and that it leaves $r_2$ unchanged, to
+  $10^{-12}$;
+- the sources and gradients against central differences to $10^{-6}$ at 40
+  points and at the origin, and the zone formulas extended across each sphere
+  by half of a band of 0.05;
+- bounded and finite values, and denominators above $10^{-3}$, over the
+  shells widened by 0.05;
+- richness on each sphere (RMS ratios): the tangential gradient of $\phi_e$,
+  the obliqueness of $\boldsymbol\sigma_e\mathbf n$ and the tangential gradient
+  of $V_m$ above $10^{-2}$, the kink of $\phi_e$ and the virtual-electrode
+  current above 0.1;
+- compatibility: with the insulated sphere the $\phi_e$ source integrates to
+  zero over the three zones to $10^{-12}$ of the integral of its absolute
+  value; with the grounded sphere it does not;
+- the common mode leaves $V_m$ unchanged to $10^{-14}$;
+- the ionic closure to $10^{-13}$;
+- the reference point lies in the outer bath.
+
+## Regeneration
+
+```bash
+python bath_shell_bidomain_mms.py --emit
+python bath_shell_bidomain_mms.py --self-check
+H=../../../src/verificationModels/bathBidomainVerification
+python bath_shell_bidomain_mms.py --check $H/manufacturedShellBathBidomainReference.H
+```
+
+`--emit` writes `latex/shell_bath_*.tex`. `--write` writes the whole
+cardiacFoam header, including a table of self-test samples that the verifier
+compares with its compiled functions at start-up.

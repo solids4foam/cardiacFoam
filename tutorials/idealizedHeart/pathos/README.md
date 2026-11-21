@@ -25,13 +25,12 @@ acute ischemia and Brugada syndrome. Use this technique for anything
 that's a channelopathy or a metabolic/ionic derangement rather than a
 structural conduction problem.
 
-## Regression coverage
+## Regression
 
-`conductionBlock`'s `lbbb` and `rbbb` variants are regression-covered (see
-`conductionBlock/regression/`) — they check the structural technique
-actually blocks propagation: the activation-time probe on the severed
-ventricle's Purkinje-myocardial junction site must still be un-activated at
-t = 35 ms while the intact ventricle's probe has activated. `ionicPathology`
-has no automated regression yet — its pathology signatures only show up
-over timescales (its own case runs 700ms) a short automated check
-wouldn't meaningfully capture.
+- `conductionBlock`: tier `full`. `lbbb` and `rbbb` run to 35 ms; the
+  activation-time probe at the severed ventricle's Purkinje-myocardial
+  junction site must still read -1 while the intact ventricle's probe has
+  activated.
+- `ionicPathology`: tier `none`. Its solver path is that of `../electroHeart`
+  (`full`), and `ionicConstantOverrides` is checked by
+  `../../electrophysiologyProtocols/ionicHeterogeneity` (`standard`).
