@@ -71,7 +71,9 @@ the problem are `Pe_L = c0 L/sqrt(m)`, with `L = Ro - R`, and `R/L`; the mesh ad
 
 The case needs gmsh and gmshToFoam. Run `./Allclean` before running it again.
 
-    ./Allrun -N 20 -PeL 46
+```bash
+./Allrun -N 20 -PeL 46
+```
 
 | Option | Meaning |
 |---|---|

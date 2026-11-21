@@ -134,4 +134,3 @@ python3 ../../../applications/utilities/ionicHeterogeneityProbe/plotIonicHeterog
 
 To also write separate overlays of every computed voltage trace in the Endo-M
 and M-Epi areas, add `--all-traces`.
-
