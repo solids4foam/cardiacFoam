@@ -107,7 +107,14 @@ Foam::electroModel::electroModel
             )
         )
     ),
-    electroProperties_(subDict(type + "Coeffs")),
+    // The Coeffs copy keeps electroProperties as its parent, so that its
+    // readers reach the top-level blocks (torso, torsoCoupling) by topDict()
+    solverType_(type),
+    electroProperties_
+    (
+        static_cast<const dictionary&>(*this),
+        subDict(solverType_ + "Coeffs")
+    ),
     pimplePtr_(),
     advanceTimings_(),
     domainSystem_()
@@ -161,7 +168,7 @@ Foam::autoPtr<Foam::electroModel> Foam::electroModel::New
     {
         // Direct electroModel subclass or orchestration wrapper
         // (e.g. singleCellSolver, electrophysiologyModel).
-        return autoPtr<electroModel>(ctorPtr(runTime, region));
+        return autoPtr<electroModel>(ctorPtr(modelType, runTime, region));
     }
 
     // Type not found in either table -- give a clear error listing all valid
@@ -222,7 +229,7 @@ void Foam::electroModel::configureECGDomains()
         domainSystem_,
         domainSystem_.myocardium(),
         potentialStateProviderPtr,
-        electroProperties_
+        *this
     );
 }
 

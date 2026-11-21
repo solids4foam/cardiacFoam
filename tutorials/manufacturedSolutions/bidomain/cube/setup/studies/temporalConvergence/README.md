@@ -16,10 +16,9 @@ exact field at `endTime 0.2`.
 
 Every time step divides `endTime 0.2`, so every run ends at 0.2. The runs
 use `-gradient GaussLinear`, which on these orthogonal meshes with diagonal
-conductivities gives the same operators as `leastSquares`. At 2D `N = 640`
-the `phiE` solve stops at the PCG limit of 1000 iterations, with a final
-residual near 1e-6, so the last digits of these runs depend on the
-decomposition.
+conductivities gives the same operators as `leastSquares`
+([cartesianConvergence](../cartesianConvergence/README.md) shows equal
+errors to every printed digit).
 
 ## Execution
 
@@ -61,7 +60,7 @@ Results of the last run of this study (`results/`).
 | godunov | Euler | 1.2593e-03 | 6.3443e-04 | 3.1833e-04 | 1.5936e-04 | 7.9653e-05 | 0.99, 0.99, 1.00, 1.00 |
 | godunov | backward | 1.0475e-03 | 5.1405e-04 | 2.5439e-04 | 1.2645e-04 | 6.2957e-05 | 1.03, 1.01, 1.01, 1.01 |
 | sbdf2 | Euler | 4.4622e-04 | 1.8376e-04 | 8.1555e-05 | 3.8071e-05 | 1.8272e-05 | 1.28, 1.17, 1.10, 1.06 |
-| sbdf2 | backward | 2.8633e-04 | 7.3635e-05 | 1.8533e-05 | 4.5129e-06 | 9.7853e-07 | 1.96, 1.99, 2.04, 2.21 |
+| sbdf2 | backward | 2.8633e-04 | 7.3634e-05 | 1.8533e-05 | 4.5128e-06 | 9.7848e-07 | 1.96, 1.99, 2.04, 2.21 |
 
 Godunov splitting is first order whichever time scheme `Vm` uses, SBDF2 with
 `Euler` is first order, and SBDF2 with `backward` is second order over this
@@ -69,16 +68,21 @@ window (2.21 at the finest pair, where the spatial error starts to enter).
 
 3D `N = 80`, `Vm` L2:
 
-| coupling | ddt | 0.025 | 0.0125 | 0.00625 | 0.003125 | 0.0015625 |
-|---|---|---|---|---|---|---|
-| godunov | Euler | 9.8437e-04 | 4.8373e-04 | 2.3182e-04 | 1.0557e-04 | 4.2510e-05 |
-| godunov | backward | 8.3035e-04 | 3.9687e-04 | 1.8605e-04 | 8.2292e-05 | 3.1140e-05 |
-| sbdf2 | Euler | 3.1911e-04 | 1.1485e-04 | 3.7765e-05 | 5.8156e-06 | 8.5106e-06 |
-| sbdf2 | backward | 2.0997e-04 | 3.8640e-05 | 7.9868e-06 | 1.8030e-05 | 2.0754e-05 |
+| coupling | ddt | 0.025 | 0.0125 | 0.00625 | 0.003125 | 0.0015625 | orders |
+|---|---|---|---|---|---|---|---|
+| godunov | Euler | 9.8437e-04 | 4.8373e-04 | 2.3182e-04 | 1.0557e-04 | 4.2510e-05 | 1.03, 1.06, 1.13, 1.31 |
+| godunov | backward | 8.3035e-04 | 3.9687e-04 | 1.8605e-04 | 8.2292e-05 | 3.1140e-05 | 1.07, 1.09, 1.18, 1.40 |
+| sbdf2 | Euler | 3.1911e-04 | 1.1485e-04 | 3.7766e-05 | 5.8159e-06 | 8.5102e-06 | 1.47, 1.60, 2.70, -0.55 |
+| sbdf2 | backward | 2.0997e-04 | 3.8641e-05 | 7.9865e-06 | 1.8030e-05 | 2.0754e-05 | 2.44, 2.27, -1.17, -0.20 |
 
 On the 3D mesh the SBDF2 errors stop decreasing below `dt = 0.00625`
 (`backward`) and `dt = 0.003125` (`Euler`): the error has reached the spatial
 error of the mesh, and the 3D ladder gives no temporal order there.
+
+Every linear solve reaches its absolute tolerance `1e-15` below the explicit
+`maxIter 5000`; the largest iteration count is 1642 for `phiE`
+and 203 for `Vm` in 2D, 457 and 34
+in 3D.
 
 ## Outputs
 

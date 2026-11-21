@@ -29,6 +29,7 @@ Author
 #define eikonalECG_H
 
 #include "ecgSolver.H"
+#include "infiniteMediumLeadField.H"
 #include "OFstream.H"
 #include "Switch.H"
 #include "autoPtr.H"
@@ -52,14 +53,11 @@ class eikonalECG
     scalar startTime_;
     scalar endTime_;
     scalar deltaT_;
-    scalar sigmaE_;
 
     scalarField lastValues_;
     autoPtr<OFstream> outputPtr_;
 
-    // Optimization: precomputed transfer vectors for pseudo-ECG
-    bool leadVectorsCalculated_;
-    List<List<vector>> leadVectors_;
+    infiniteMediumLeadField leadField_;
 
     //- Index-aligned: regionWeights_[i] is the per-cell weight for
     //  personalizedTemplates_[i] (personalized path) or for the i'th of
@@ -95,7 +93,6 @@ class eikonalECG
     dictionary personalizedTemplatesDict_;
     List<ionicTemplates::DynamicTemplate> personalizedTemplates_;
 
-    void calculateLeadVectors(const ecgDomain& domain);
     void calculateTransmuralWeights(const ecgDomain& domain);
 
     //- Fill regionWeightGradients_ from regionWeights_ (zero-gradient
@@ -138,13 +135,6 @@ class eikonalECG
         volVectorField& gradVm
     ) const;
 
-    void calculatePseudoECG
-    (
-        const ecgDomain& domain,
-        const volVectorField& gradVm,
-        scalarField& values
-    ) const;
-
 public:
 
     OverrideTypeName("eikonalECG");
@@ -155,6 +145,17 @@ public:
     {
         return true;
     }
+
+    //- Requires an activation-time myocardium (eikonalSolver), whose Vm it
+    //  reconstructs from the activation time
+    virtual void checkMyocardium
+    (
+        const myocardiumDomainInterface& myocardium,
+        const word& domainName
+    ) const override;
+
+    //- Reads the activation time and the conductivity
+    virtual void checkState(const ecgDomain& domain) const override;
 
     virtual void solve
     (

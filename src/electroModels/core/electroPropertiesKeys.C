@@ -19,6 +19,7 @@ License
 
 #include "electroPropertiesKeys.H"
 #include "dictionaryKeyCheck.H"
+#include "torsoCoupling.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -53,13 +54,28 @@ const wordList tissueKeys
     "sealedHeartBoundary", "exposedFacesPatch", "solutionAlgorithm",
     "timeCouplingScheme", "activationThreshold", "externalStimulus",
     "singleCellStimulus", "verificationModel", "electrophysicsAdvanceScheme",
-    "bathPredictorCorrector", "bathPotentialDomain", "bathHeartPhiETrace",
-    "phiERefPoint", "phiEReferenceValue", "ecgDomains",
+    "bathPredictorCorrector", "bathHeartPhiETrace",
+    "phiERefPoint", "phiEReferenceValue",
     "conductionNetworkDomains", "domainCouplings", "c0",
     "eikonalAdvectionDiffusionApproach", "stimulusLocationMin",
     "stimulusLocationMax", "stimulusLocationMinList",
     "stimulusLocationMaxList", "useGraphPrePopulation",
     "eikonalConormalStabilisation"
+});
+
+// The top-level torso block: the region outside the heart
+const wordList torsoKeys
+({
+    "cellZones", "conductivityField", "interfaceConductivityInterpolation",
+    "groundPatches", "surfaceCurrentPatches", "phiERefPoint",
+    "phiEReferenceValue"
+});
+
+// Every ECG domain entry
+const wordList ecgCommonKeys
+({
+    "ecgSolver", "electrodePositions", "verificationModel",
+    "ecgVerificationModel", "writeEveryTimeStep"
 });
 
 // singleCellSolver, including its optional active-tension model
@@ -235,33 +251,89 @@ void checkConductionNetworks(const dictionary& networks)
 }
 
 
-void checkECGDomains(const dictionary& ecgDomains)
+// The keys of an ECG domain entry with ecgSolver ecgSolver, beyond
+// ecgCommonKeys. torsoECG with torsoCoupling leadField reads Gi and Ge of a
+// monodomainSolver heart from the entry.
+wordList ecgSolverKeys
+(
+    const word& ecgSolver,
+    const torsoCoupling::type coupling
+)
+{
+    if (ecgSolver == "pseudoECG")
+    {
+        return wordList({"sigmaExtracellular", "sampling"});
+    }
+
+    if (ecgSolver == "eikonalECG")
+    {
+        return wordList
+        ({
+            "sigmaExtracellular", "sampling", "personalizedTemplates",
+            "checkGradVm"
+        });
+    }
+
+    if (coupling == torsoCoupling::type::leadField)
+    {
+        return wordList
+        ({
+            "conductivitySource", "conductivityIntracellular",
+            "conductivityExtracellular"
+        });
+    }
+
+    return wordList();
+}
+
+
+void checkECGDomains
+(
+    const dictionary& ecgDomains,
+    const torsoCoupling::type coupling
+)
 {
     dictionaryKeyCheck::checkNamedBlocks
     (
         ecgDomains,
-        keys
-        ({
-            "ecgSolver", "electrodePositions", "sampling",
-            "sigmaExtracellular", "torsoSurface", "verificationModel",
-            "ecgVerificationModel", "personalizedTemplates", "coupling",
-            "writeEveryTimeStep", "checkGradVm"
-        }),
+        wordRes({wordRe(".*", wordRe::REGEX)}),
         wordRes(),
         wordList({"electrodePositions"})
     );
 
     for (const entry& e : ecgDomains)
     {
-        if (!e.isDict() || e.keyword() == "electrodePositions")
+        if
+        (
+            !e.isDict()
+         || e.keyword() == "electrodePositions"
+         || e.keyword().starts_with('_')
+        )
         {
             continue;
         }
 
-        checkSubDict(e.dict(), "sampling", keys({"start", "end", "deltaT"}));
+        const dictionary& ecgDict = e.dict();
+
+        const word ecgSolver(ecgDict.get<word>("ecgSolver"));
+        dictionaryKeyCheck::checkValue
+        (
+            ecgDict,
+            "ecgSolver",
+            ecgSolver,
+            wordList({"pseudoECG", "eikonalECG", "torsoECG"})
+        );
+
+        const wordList modelKeys(ecgSolverKeys(ecgSolver, coupling));
+        dictionaryKeyCheck::checkKeys
+        (
+            ecgDict, join({&ecgCommonKeys, &modelKeys})
+        );
+
+        checkSubDict(ecgDict, "sampling", keys({"start", "end", "deltaT"}));
 
         const dictionary* templatesPtr =
-            e.dict().findDict("personalizedTemplates");
+            ecgDict.findDict("personalizedTemplates");
 
         if (!templatesPtr)
         {
@@ -309,18 +381,6 @@ void checkTissueCoeffs(const dictionary& coeffs)
         })
     );
 
-    checkSubDict
-    (
-        coeffs,
-        "bathPotentialDomain",
-        keys
-        ({
-            "bathCellZones", "bathConductivityField", "groundPatches",
-            "surfaceCurrentPatches", "interfaceConductivityInterpolation",
-            "phiERefPoint", "phiEReferenceValue"
-        })
-    );
-
     if (const dictionary* couplingsPtr = coeffs.findDict("domainCouplings"))
     {
         dictionaryKeyCheck::checkNamedBlocks
@@ -344,11 +404,6 @@ void checkTissueCoeffs(const dictionary& coeffs)
     {
         checkConductionNetworks(*networksPtr);
     }
-
-    if (const dictionary* ecgPtr = coeffs.findDict("ecgDomains"))
-    {
-        checkECGDomains(*ecgPtr);
-    }
 }
 
 } // End anonymous namespace
@@ -365,7 +420,21 @@ void Foam::electroPropertiesKeys::check
     // Coeffs blocks of solvers not selected may stay in the file
     wordRes topKeys(keys({"FoamFile", "myocardiumSolver"}));
     topKeys.append(wordRe(".*Coeffs", wordRe::REGEX));
+
+    // The torso and the ECG belong to a tissue (myocardium) model
+    if (solverType != "singleCellSolver")
+    {
+        topKeys.append(keys({"torso", "torsoCoupling", "ecgDomains"}));
+    }
+
     dictionaryKeyCheck::checkKeys(electroProperties, topKeys);
+
+    checkSubDict(electroProperties, "torso", keys(torsoKeys));
+
+    if (const dictionary* ecgPtr = electroProperties.findDict("ecgDomains"))
+    {
+        checkECGDomains(*ecgPtr, torsoCoupling::read(electroProperties));
+    }
 
     const dictionary& coeffs = electroProperties.subDict(solverType + "Coeffs");
 
@@ -389,6 +458,18 @@ void Foam::electroPropertiesKeys::check
 
     checkIonicBlock(coeffs);
     checkOutputVariables(coeffs);
+}
+
+
+const Foam::dictionary& Foam::electroPropertiesKeys::myocardiumCoeffs
+(
+    const dictionary& electroProperties
+)
+{
+    return electroProperties.subDict
+    (
+        electroProperties.get<word>("myocardiumSolver") + "Coeffs"
+    );
 }
 
 

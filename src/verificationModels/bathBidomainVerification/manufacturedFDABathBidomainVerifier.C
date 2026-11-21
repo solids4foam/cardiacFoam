@@ -102,11 +102,11 @@ manufacturedFDABathBidomainVerifier::manufacturedFDABathBidomainVerifier
     const dictionary& cfg = verificationDict();
 
     // k and alpha belong to the nested verificationModel dictionary.
-    k_ = cfg.lookupOrDefault<scalar>("k", 1.0/Foam::sqrt(2.0));
-    alpha_ = cfg.lookupOrDefault<scalar>("alpha", 0.01);
-    // Preferred key: selects which FDA bidomain-with-bath boundary variant is
-    // being verified, and with it the error metric.
-    variant_ = bathVariantNames.getOrDefault("fdaBathVariant", cfg, bathVariant::electrodePair);
+    k_ = cfg.get<scalar>("k");
+    alpha_ = cfg.get<scalar>("alpha");
+    // The FDA bidomain-with-bath boundary variant being verified, and with
+    // it the error metric
+    variant_ = bathVariantNames.get("fdaBathVariant", cfg);
 }
 
 
@@ -413,12 +413,9 @@ void manufacturedFDABathBidomainVerifier::postProcess
     const auto u3Norms = computeNorms(mesh, u3Values, u3Exact);
 
     // Bulk, boundary-adjacent and interface-band parts of the field errors and of their cell gradients
-    const scalar S = Foam::sqrt(1.0 + t);
-    const scalar pi = constant::mathematical::pi;
-    const scalar sigmaB = manufacturedFDABathSigmaB(se);
     const auto VmAt = [&](const point& c)
     {
-        return S*Foam::cos(pi*c.x()) - alpha_*c.x()/se;
+        return manufacturedFDABathVmAt(c, t, alpha_, se);
     };
     const auto phiEAt = [&](const point& c)
     {
@@ -426,11 +423,11 @@ void manufacturedFDABathBidomainVerifier::postProcess
     };
     const auto gradVmAt = [&](const point& c)
     {
-        return vector(-S*pi*Foam::sin(pi*c.x()) - alpha_/se, 0, 0);
+        return manufacturedFDABathGradVm(c, t, alpha_, se);
     };
     const auto gradPhiEHeartAt = [&](const point& c)
     {
-        return vector(k_*S*pi*Foam::sin(pi*c.x()) + alpha_/se, 0, 0);
+        return manufacturedFDABathGradPhiEHeart(c, t, k_, alpha_, se);
     };
 
     vectorField gradVmExact(centres.size());
@@ -438,7 +435,8 @@ void manufacturedFDABathBidomainVerifier::postProcess
     forAll(centres, cellI)
     {
         gradVmExact[cellI] = gradVmAt(centres[cellI]);
-        gradPhiIExact[cellI] = gradVmExact[cellI] + gradPhiEHeartAt(centres[cellI]);
+        gradPhiIExact[cellI] =
+            manufacturedFDABathGradPhiIHeart(centres[cellI], t, k_, alpha_, se);
     }
 
     const bool sameMesh = (&phiEMesh == &mesh);
@@ -483,7 +481,10 @@ void manufacturedFDABathBidomainVerifier::postProcess
             (
                 mesh,
                 "phiI",
-                [&](const point& c) { return VmAt(c) + phiEAt(c); }
+                [&](const point& c)
+                {
+                    return manufacturedFDABathPhiIAt(c, t, k_, alpha_, se);
+                }
             )().primitiveField(),
             gradPhiIExact
         )
@@ -503,7 +504,7 @@ void manufacturedFDABathBidomainVerifier::postProcess
         gradPhiEExact[cellI] =
             isHeart[cellI]
           ? gradPhiEHeartAt(phiECentres[cellI])
-          : vector(alpha_/sigmaB, 0, 0);
+          : manufacturedFDABathGradPhiEBath(alpha_, se);
     }
     const tmp<volVectorField> tgradPhiE(consumedPhiEGradient(*phiEPtr_));
     const tmp<volVectorField> tgradReconPhiE

@@ -118,7 +118,8 @@ public:
 
     virtual Requirements requirements() const override;
 
-    virtual bool read(const dictionary& dict) override;
+    //- Read the verifier entry (called by the constructor)
+    bool read(const dictionary& dict);
 
     virtual void record(const List<scalar>& numericValues) override;
 

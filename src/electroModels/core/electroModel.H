@@ -60,7 +60,11 @@ private:
   //- Mesh
   autoPtr<dynamicFvMesh> meshPtr_;
 
-  //- Electro properties dictionary
+  //- The myocardiumSolver of electroProperties: read once by New, the
+  //  single source of the solver type
+  const word solverType_;
+
+  //- Electro properties dictionary (the <solverType>Coeffs block)
   dictionary electroProperties_;
 
   //- Pimple control for monitoring the convergence of the outer loop
@@ -96,6 +100,9 @@ public:
   //- Runtime type information
   TypeName("electroModel");
 
+  //- The myocardiumSolver selected in electroProperties
+  const word &myocardiumSolverType() const { return solverType_; }
+
   //- Return electro properties dictionary
   dictionary &electroProperties() { return electroProperties_; }
 
@@ -109,8 +116,9 @@ public:
   // Declare run-time constructor selection table
 
   declareRunTimeSelectionTable(autoPtr, electroModel, dictionary,
-                               (Time & runTime, const word &region),
-                               (runTime, region));
+                               (const word &solverType, Time &runTime,
+                                const word &region),
+                               (solverType, runTime, region));
 
   // Constructors
 

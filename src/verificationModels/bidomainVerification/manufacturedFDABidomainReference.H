@@ -19,7 +19,16 @@ Class
     manufacturedFDABidomainReference
 
 Description
-    Manufactured FDA bidomain reference solution.
+    Manufactured FDA bidomain reference solution: phi_e = -k V_m + c and
+    phi_i = V_m + phi_e on the FDA monodomain field V_m = sqrt(1 + t) F_d
+    (monodomainVerification/manufacturedFDAReference.H), with
+    c = phi_e,ref + k V_m(x_ref, t).
+
+    The formulas between "// BEGIN GENERATED <name>" and
+    "// END GENERATED <name>" are written from the sympy definitions in
+    tutorials/manufacturedSolutions/generators/fda_bidomain_mms.py.
+    Regenerate them with --write and compare with --check; the rest of the
+    file is hand-written.
 
 Author
     Simao Nieto de Castro. All rights reserved.
@@ -33,6 +42,7 @@ Author
 namespace Foam
 {
 
+//- Constant c of phi_e = -k V_m + c that gives phi_e(x_ref, t) = phi_e,ref
 inline scalar manufacturedFDABidomainShift
 (
     const scalar t,
@@ -42,15 +52,13 @@ inline scalar manufacturedFDABidomainShift
     const scalar phiEReferenceValue
 )
 {
-    scalarField x(1, referencePoint.x());
-    scalarField y(1, referencePoint.y());
-    scalarField z(1, referencePoint.z());
-    scalarField F;
+    const scalar Fref = manufacturedFDAFAt(referencePoint, dimension);
 
-    computeF(F, x, y, z, dimension);
-
-    return phiEReferenceValue + k*Foam::sqrt(1.0 + t)*F[0];
+    // BEGIN GENERATED manufacturedFDABidomainShift
+    return Fref*k*sqrt(t + 1) + phiEReferenceValue;
+    // END GENERATED manufacturedFDABidomainShift
 }
+
 
 inline void computeManufacturedBidomainPhiE
 (
@@ -69,13 +77,14 @@ inline void computeManufacturedBidomainPhiE
 
     phiE.setSize(x.size());
 
-    const scalar coeff = -k*Foam::sqrt(1.0 + t);
-
     forAll(x, i)
     {
-        phiE[i] = coeff*F[i] + shift;
+        // BEGIN GENERATED computeManufacturedBidomainPhiE
+        phiE[i] = -F[i]*k*sqrt(t + 1) + shift;
+        // END GENERATED computeManufacturedBidomainPhiE
     }
 }
+
 
 inline void computeManufacturedBidomainPhiI
 (
@@ -99,8 +108,115 @@ inline void computeManufacturedBidomainPhiI
 
     forAll(x, i)
     {
+        // BEGIN GENERATED computeManufacturedBidomainPhiI
         phiI[i] = V[i] + phiE[i];
+        // END GENERATED computeManufacturedBidomainPhiI
     }
+}
+
+
+//- V_m at point p
+inline scalar manufacturedFDABidomainVmAt
+(
+    const point& p,
+    const scalar t,
+    const label dimension
+)
+{
+    const scalar F = manufacturedFDAFAt(p, dimension);
+
+    // BEGIN GENERATED manufacturedFDABidomainVmAt
+    return F*sqrt(t + 1);
+    // END GENERATED manufacturedFDABidomainVmAt
+}
+
+
+//- phi_e at point p
+inline scalar manufacturedFDABidomainPhiEAt
+(
+    const point& p,
+    const scalar t,
+    const label dimension,
+    const scalar k,
+    const scalar shift
+)
+{
+    const scalar F = manufacturedFDAFAt(p, dimension);
+
+    // BEGIN GENERATED manufacturedFDABidomainPhiEAt
+    return -F*k*sqrt(t + 1) + shift;
+    // END GENERATED manufacturedFDABidomainPhiEAt
+}
+
+
+//- phi_i at point p
+inline scalar manufacturedFDABidomainPhiIAt
+(
+    const point& p,
+    const scalar t,
+    const label dimension,
+    const scalar k,
+    const scalar shift
+)
+{
+    const scalar F = manufacturedFDAFAt(p, dimension);
+
+    // BEGIN GENERATED manufacturedFDABidomainPhiIAt
+    return -F*k*sqrt(t + 1) + F*sqrt(t + 1) + shift;
+    // END GENERATED manufacturedFDABidomainPhiIAt
+}
+
+
+//- grad V_m at point p
+inline vector manufacturedFDABidomainGradVm
+(
+    const point& p,
+    const scalar t,
+    const label dimension
+)
+{
+    const vector gradF =
+        pseudoECGManufacturedGradF(p.x(), p.y(), p.z(), dimension);
+
+    // BEGIN GENERATED manufacturedFDABidomainGradVm
+    return gradF*sqrt(t + 1);
+    // END GENERATED manufacturedFDABidomainGradVm
+}
+
+
+//- grad phi_e at point p
+inline vector manufacturedFDABidomainGradPhiE
+(
+    const point& p,
+    const scalar t,
+    const label dimension,
+    const scalar k
+)
+{
+    const vector gradF =
+        pseudoECGManufacturedGradF(p.x(), p.y(), p.z(), dimension);
+
+    // BEGIN GENERATED manufacturedFDABidomainGradPhiE
+    return -gradF*k*sqrt(t + 1);
+    // END GENERATED manufacturedFDABidomainGradPhiE
+}
+
+
+//- grad phi_i at point p
+inline vector manufacturedFDABidomainGradPhiI
+(
+    const point& p,
+    const scalar t,
+    const label dimension,
+    const scalar k
+)
+{
+    const vector gradF =
+        pseudoECGManufacturedGradF(p.x(), p.y(), p.z(), dimension);
+
+    // BEGIN GENERATED manufacturedFDABidomainGradPhiI
+    return gradF*(-k*sqrt(t + 1) + sqrt(t + 1));
+    // END GENERATED manufacturedFDABidomainGradPhiI
 }
 
 } // End namespace Foam

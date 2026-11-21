@@ -21,6 +21,13 @@ Application
 Description
     Compute region-separated potential errors and one-sided heart--bath
     interface flux diagnostics on a reconstructed serial mesh.
+
+    The assembled current density is the face flux of
+    fvm::laplacian(Sef, phiE), Sef the face conductivity of the conductor
+    (passiveConductor::faceConductivity), whose corrections use the
+    standard cell gradient of phiE: the flux of the
+    distanceWeightedHarmonic operator. Under conormalHarmonic the solver's
+    corrections use the jump-aware gradient instead.
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
@@ -30,9 +37,10 @@ Description
 #include "mathematicalConstants.H"
 #include "HashSet.H"
 #include "fvMeshSubset.H"
-#include "extracellularFaceConductivity.H"
+#include "passiveConductor.H"
 #include "sealedWallPolicy.H"
 #include "conductivityFieldIO.H"
+#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 
 using namespace Foam;
 
@@ -58,35 +66,6 @@ struct WeightedNorms
     scalar l1() const { return sumAbs/max(weight, VSMALL); }
     scalar l2() const { return Foam::sqrt(sumSq/max(weight, VSMALL)); }
 };
-
-
-scalar phiEExact
-(
-    const scalar x,
-    const scalar t,
-    const scalar k,
-    const scalar alpha,
-    const scalar sigmaE
-)
-{
-    const scalar sqrt1t = Foam::sqrt(1.0 + t);
-    const scalar sigmaB = 0.5*sigmaE;
-    const scalar C = k*sqrt1t + alpha/sigmaB;
-
-    if (x <= 0.0)
-    {
-        return -k*sqrt1t + alpha*x/sigmaB + C;
-    }
-    if (x <= 1.0)
-    {
-        return
-            -k*sqrt1t*Foam::cos(constant::mathematical::pi*x)
-          + alpha*x/sigmaE + C;
-    }
-
-    return
-        k*sqrt1t + alpha/sigmaE + alpha*(x - 1.0)/sigmaB + C;
-}
 
 
 void writeNorms(OFstream& output, const WeightedNorms& norms)
@@ -277,28 +256,29 @@ int main(int argc, char* argv[])
     );
     const dictionary& coeffs = electroProperties.subDict("bidomainSolverCoeffs");
     const dictionary& verification = coeffs.subDict("verificationModel");
-    const dictionary& bath = coeffs.subDict("bathPotentialDomain");
-    const scalar k = verification.lookupOrDefault<scalar>
-    (
-        "k",
-        1.0/Foam::sqrt(2.0)
-    );
-    const scalar alpha = verification.lookupOrDefault<scalar>("alpha", 0.01);
+    const scalar k = verification.get<scalar>("k");
+    const scalar alpha = verification.get<scalar>("alpha");
     // electrodePair has no Dirichlet ground patch, so phiE floats: the
-    // manufactured phiEExact() below carries a fixed additive constant that
+    // manufactured manufacturedFDABathPhiEAt() below carries a fixed additive constant that
     // pins the groundElectrode variant's phiE(x=-1)=0, and the numerical
     // field is instead pinned by an unrelated reference cell
-    // (bathPotentialDomain.phiERefPoint). Comparing the two directly would
+    // (torso.phiERefPoint). Comparing the two directly would
     // measure that arbitrary gauge difference, not discretisation error, so
     // both are shifted to zero volume-weighted mean first -- the same
     // treatment manufacturedFDABathBidomainVerifier.C applies to its own
     // phiE/phiI norms. groundElectrode's Dirichlet patch fixes the constant
     // physically, so it is compared as-is (means below are then both zero).
-    const word fdaBathVariant = verification.lookupOrDefault<word>
+    const word fdaBathVariant = verification.get<word>("fdaBathVariant");
+    if
     (
-        "fdaBathVariant",
-        "groundElectrode"
-    );
+        fdaBathVariant != "groundElectrode"
+     && fdaBathVariant != "electrodePair"
+    )
+    {
+        FatalIOErrorInFunction(verification)
+            << "fdaBathVariant must be groundElectrode or electrodePair; "
+            << "found " << fdaBathVariant << '.' << exit(FatalIOError);
+    }
     const bool electrodePair = (fdaBathVariant == "electrodePair");
     tmp<volTensorField> sigmaEFieldTmp = readConductivityField
     (
@@ -370,7 +350,7 @@ int main(int argc, char* argv[])
         forAll(phiEcells, cellI)
         {
             phiEcells[cellI] =
-                phiEExact(C[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+                manufacturedFDABathPhiEAt(C[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
         }
 
         volScalarField::Boundary& phiEbf = phiE.boundaryFieldRef();
@@ -385,7 +365,7 @@ int main(int argc, char* argv[])
             forAll(pf, faceI)
             {
                 pf[faceI] =
-                    phiEExact(Cf[faceI].x(), runTime.value(), k, alpha, sigmaE.xx());
+                    manufacturedFDABathPhiEAt(Cf[faceI].x(), runTime.value(), k, alpha, sigmaE.xx());
             }
         }
         // Deliberately NOT calling correctBoundaryConditions() here. evaluate()
@@ -413,11 +393,6 @@ int main(int argc, char* argv[])
             << ", Ge=" << sigmaEVariation << '.'
             << exit(FatalError);
     }
-    const word method = bath.lookupOrDefault<word>
-    (
-        "interfaceConductivityInterpolation",
-        "unweightedHarmonic"
-    );
     const word assembly("matchedSubmesh");
 
 
@@ -451,67 +426,44 @@ int main(int argc, char* argv[])
         isHeart[cellI] = true;
     }
 
-    surfaceTensorField sigmaExtracellularf
+    // The face conductivity of the conductor of the phiE equation, from
+    // sigmaTotal and Gi in the myocardium cells
+    volTensorField sigmaIntracellular
     (
         IOobject
         (
-            "sigmaExtracellularfDiagnostic",
+            "sigmaIntracellularDiagnostic",
             runTime.timeName(),
             mesh,
             IOobject::NO_READ,
             IOobject::NO_WRITE
         ),
         mesh,
-        dimensionedTensor("zero", sigmaTotal.dimensions(), tensor::zero)
+        dimensionedTensor("zero", sigmaTotal.dimensions(), tensor::zero),
+        "zeroGradient"
     );
+    for (const label cellI : mesh.cellZones()[heartZone])
+    {
+        sigmaIntracellular[cellI] = sigmaI;
+    }
+    sigmaIntracellular.correctBoundaryConditions();
+
+    const tmp<surfaceTensorField> tSigmaExtracellularf
+    (
+        passiveConductor::faceConductivity
+        (
+            sigmaTotal,
+            sigmaIntracellular,
+            mesh.cellZones()[heartZone],
+            false,
+            false
+        )
+    );
+    const surfaceTensorField& sigmaExtracellularf = tSigmaExtracellularf();
     const labelUList& owner = mesh.owner();
     const labelUList& neighbour = mesh.neighbour();
     const scalarField& weights = mesh.weights().primitiveField();
     const tensorField& sigma = sigmaTotal.primitiveField();
-    tensorField& sigmaExtracellularFace =
-        sigmaExtracellularf.primitiveFieldRef();
-    forAll(neighbour, faceI)
-    {
-        const label ownCell = owner[faceI];
-        const label neiCell = neighbour[faceI];
-        const tensor sigmaIOwn = isHeart[ownCell] ? sigmaI : tensor::zero;
-        const tensor sigmaINei = isHeart[neiCell] ? sigmaI : tensor::zero;
-        const tensor ownSigmaE = sigma[ownCell] - sigmaIOwn;
-        const tensor neiSigmaE = sigma[neiCell] - sigmaINei;
-
-        if (isHeart[ownCell] == isHeart[neiCell])
-        {
-            sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::linear
-                (
-                    ownSigmaE, neiSigmaE, weights[faceI]
-                );
-        }
-        else if (method == "unweightedHarmonic")
-        {
-            sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::unweightedHarmonic
-                (
-                    ownSigmaE, neiSigmaE
-                );
-        }
-        else
-        {
-            sigmaExtracellularFace[faceI] =
-                extracellularFaceConductivity::distanceWeightedHarmonic
-                (
-                    ownSigmaE,
-                    neiSigmaE,
-                    1.0 - weights[faceI],
-                    weights[faceI]
-                );
-        }
-    }
-    forAll(sigmaExtracellularf.boundaryField(), patchI)
-    {
-        sigmaExtracellularf.boundaryFieldRef()[patchI] =
-            sigmaTotal.boundaryField()[patchI].patchInternalField();
-    }
 
     fvScalarMatrix assembledLaplacian
     (
@@ -538,7 +490,7 @@ int main(int argc, char* argv[])
 
     // Zero for groundElectrode (Dirichlet patch fixes the constant, no gauge
     // freedom to remove); non-zero for electrodePair, applied everywhere
-    // phiE is compared to phiEExact below (region norms, interface trace,
+    // phiE is compared to manufacturedFDABathPhiEAt below (region norms, interface trace,
     // -- see comment at the fdaBathVariant read above).
     scalar phiEComputedMean = 0.0;
     scalar phiEExactMean = 0.0;
@@ -548,7 +500,7 @@ int main(int argc, char* argv[])
         forAll(phiEExactCells, cellI)
         {
             phiEExactCells[cellI] =
-                phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
+                manufacturedFDABathPhiEAt(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx());
         }
         phiEComputedMean = volumeWeightedMean(phiE.primitiveField(), volumes);
         phiEExactMean = volumeWeightedMean(phiEExactCells, volumes);
@@ -558,7 +510,7 @@ int main(int argc, char* argv[])
     {
         const scalar error =
             (phiE[cellI] - phiEComputedMean)
-          - (phiEExact(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx()) - phiEExactMean);
+          - (manufacturedFDABathPhiEAt(centres[cellI].x(), runTime.value(), k, alpha, sigmaE.xx()) - phiEExactMean);
         (isHeart[cellI] ? heartPotential : bathPotential).add
         (
             error,
@@ -689,7 +641,7 @@ int main(int argc, char* argv[])
         const scalar facePotential =
             weights[faceI]*phiE[ownCell]
           + (1.0 - weights[faceI])*phiE[neiCell];
-        const scalar exactPotential = phiEExact
+        const scalar exactPotential = manufacturedFDABathPhiEAt
         (
             faceCentres[faceI].x(),
             runTime.value(),
@@ -786,7 +738,7 @@ int main(int argc, char* argv[])
     );
     OFstream output(outputDir/outputName);
     output
-        << "method,assembly,fieldSource,time,interfaceFaces"
+        << "assembly,fieldSource,time,interfaceFaces"
         << ",heartPhiE_L1,heartPhiE_L2,heartPhiE_Linf"
         << ",bathPhiE_L1,bathPhiE_L2,bathPhiE_Linf"
         << ",x0PhiE_L1,x0PhiE_L2,x0PhiE_Linf"
@@ -813,7 +765,7 @@ int main(int argc, char* argv[])
         << ",sidesFlux_L1,sidesFlux_L2,sidesFlux_Linf"
         << ",exteriorFluxIntegral,fdaBathVariant\n";
     output
-        << method << ',' << assembly << ','
+        << assembly << ','
         << (exactFields ? "exact" : "numerical") << ','
         << runTime.value() << ',' << interfaceFaces;
     writeNorms(output, heartPotential);

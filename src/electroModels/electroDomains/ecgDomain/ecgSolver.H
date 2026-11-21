@@ -31,16 +31,28 @@ Author
 #include "autoPtr.H"
 #include "runTimeSelectionTables.H"
 #include "scalarField.H"
+#include "word.H"
 
 namespace Foam
 {
 
 class dictionary;
 class ecgDomain;
+class myocardiumDomainInterface;
 
 class ecgSolver
 {
 public:
+
+    //- The state an ECG solver reads
+    enum class stateSource
+    {
+        //- The myocardium domain (Vm, activation time, conductivities)
+        myocardium,
+
+        //- The bath domain's global phiE (torsoECG with torsoCoupling bath)
+        bath
+    };
 
     TypeName("ecgSolver");
 
@@ -57,6 +69,10 @@ public:
 
     ecgSolver() = default;
 
+    //- The ecgSolver of an ECG domain entry (required): the single reader
+    //  of the key
+    static word selectedType(const dictionary& dict);
+
     static autoPtr<ecgSolver> New(const dictionary& dict);
 
     virtual ~ecgSolver() = default;
@@ -64,6 +80,30 @@ public:
     virtual bool writesOwnTimeSeries() const
     {
         return false;
+    }
+
+    //- The state this solver reads
+    virtual stateSource source() const
+    {
+        return stateSource::myocardium;
+    }
+
+    //- Fatal when this myocardium cannot drive the solver (default: any can)
+    virtual void checkMyocardium
+    (
+        const myocardiumDomainInterface& myocardium,
+        const word& domainName
+    ) const
+    {
+        (void)myocardium;
+        (void)domainName;
+    }
+
+    //- Fatal when the domain's state lacks a channel this solver reads
+    //  (default: none required at construction)
+    virtual void checkState(const ecgDomain& domain) const
+    {
+        (void)domain;
     }
 
     virtual void solve

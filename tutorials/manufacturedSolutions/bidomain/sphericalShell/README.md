@@ -6,7 +6,7 @@ as a cubed sphere (`-mesh hex`, default) or with gmsh tetrahedra
 unequal rotated anisotropic conductivity tensors with all six components that
 turn through the wall, and potentials whose conormal fluxes vanish on both
 spheres. The case checks the sealed-wall operators of both potentials and the
-pure-Neumann `phiE` system with its compatibility projection; it does not
+pure-Neumann `phiE` system with its reference cell; it does not
 check a bath, the ECG, a stimulus or a wall that carries current.
 
 Origin: this work.
@@ -40,8 +40,10 @@ shell is zero. The generator is
   `timeCouplingScheme sbdf2`
 - ionic model: `monodomainFDAManufactured` (`dimension "3D"`)
 - verifier: `manufacturedShellBidomainVerifier`: adds `s_e` to the `phiE`
-  right-hand side and requests the compatibility projection of the
-  pure-Neumann `phiE` system
+  right-hand side, sampled at cell centres with its volume-weighted mean
+  removed, so that the pure-Neumann `phiE` system is compatible on the mesh
+  (the continuum source integrates to zero; its samples do not, by a
+  second-order quadrature error); the solver itself projects nothing
 - conductivity: `conductivitySource field`; `0/ConductivityIntracellular` and
   `0/ConductivityExtracellular` written by `setManufacturedFields`
 - walls: `sealedHeartBoundary true`
@@ -56,9 +58,10 @@ shell is zero. The generator is
   coefficient, so the correctors converge where the tensors are oblique to all
   three face directions of the cubed sphere; the term vanishes at convergence
 
-`log.cardiacFoam` prints `phiE compatibility projection: imbalance <value>`
-at every `phiE` solve: the sum of the equation's source and boundary
-coefficients that the projection removes.
+`log.cardiacFoam` prints `phiE pure-Neumann imbalance <value> (relative
+<value>)` at every `phiE` solve: the sum of the equation's source and boundary
+coefficients, which the reference cell absorbs. With the sealed walls and the
+mean-free manufactured source it is round-off.
 
 ## Mesh
 

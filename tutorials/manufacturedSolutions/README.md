@@ -11,6 +11,7 @@ manufacturedSolutions/
 ├── eikonal/          cube, sphericalShell, coupled1D3DSphere
 ├── bidomain/         cube, sphericalShell
 ├── bathBidomain/     slab
+├── leadFieldECG/     slab and layered torso, sphericalShell
 └── electromechanics/ totalLagrangianEM
 ```
 
@@ -28,18 +29,22 @@ manufacturedSolutions/
 | [bidomain](bidomain/README.md) | [`cube`](bidomain/cube/README.md) | unit cube, hexahedra or tetrahedra |
 | | [`sphericalShell`](bidomain/sphericalShell/README.md) | spherical shell with sealed curved walls |
 | [bathBidomain](bathBidomain/README.md) | [`slab`](bathBidomain/slab/README.md) | myocardium slab between two bath slabs |
+| [leadFieldECG](leadFieldECG/README.md) | [`leadFieldECG`](leadFieldECG/README.md) | insulated slab or layered torso (`-problem`), hexahedra or tetrahedra, needs PETSc |
+| | [`sphericalShell`](leadFieldECG/sphericalShell/README.md) | heart shell between a conducting ball and an outer torso, needs PETSc |
 | [electromechanics](electromechanics/README.md) | [`totalLagrangianEM`](electromechanics/totalLagrangianEM/README.md) | unit cube, needs solids4foam |
 
-The Niederer slab benchmark is in
+The Niederer slab benchmark, monodomain and bidomain, is in
 [`../benchmarks`](../benchmarks/NiedererEtAl2011verification/README.md).
 
 ## Definitions of the manufactured solutions
 
-[`generators/`](generators/README.md) holds the definition of each monodomain
-and eikonal manufactured solution: the sympy generators, the NumPy reference
-modules, and the two construction documents
+[`generators/`](generators/README.md) holds the definition of each monodomain,
+bidomain, eikonal and lead-field manufactured solution: the sympy generators,
+the NumPy reference modules, and the four construction documents
 ([monodomain_mms.pdf](generators/docs/monodomain/monodomain_mms.pdf),
-[eikonal_mms.pdf](generators/docs/eikonal/eikonal_mms.pdf)). The C++ reference
+[eikonal_mms.pdf](generators/docs/eikonal/eikonal_mms.pdf),
+[bidomain_mms.pdf](generators/docs/bidomain/bidomain_mms.pdf),
+[leadField_mms.pdf](generators/docs/leadField/leadField_mms.pdf)). The C++ reference
 headers in `src/verificationModels/` are generated from the generators, in
 whole or in marked regions. The case READMEs describe how to run a case and
 point to these definitions.

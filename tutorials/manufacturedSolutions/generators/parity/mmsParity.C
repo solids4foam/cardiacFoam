@@ -41,6 +41,14 @@ Usage
     eikonalECG        1,2,3    reference(t)
     graph             1,2,3    V u1 u2 u3
     coupled           3        V1D_0 Vm3D_0 I_0 V1D_1 Vm3D_1 I_1
+    bidomain          1,2,3    phiE phiI shift phiEAt phiIAt VmAt
+                               gradVm(3) gradPhiE(3) gradPhiI(3)
+    leadFieldSlab     1        Vm phi
+    leadFieldLayered  1        R phi
+    bathBidomain      1,2,3    V u1 u2 u3 phiE phiI VmAt phiEAt phiIAt
+                               gradVm_x gradPhiEHeart_x gradPhiIHeart_x
+                               gradPhiEBath_x
+    radial            1        slope scaledTime (s = x; y z t ignored)
 
     keys
         beta=<v>                    Beta of the FDA ionic closure
@@ -49,6 +57,12 @@ Usage
         c0=<v>                      eikonal speed constant
         template=singleEvent|sine   eikonalECG template
         duration=<v> rise=<v>       singleEvent template parameters
+        k=<v>                       bidomain, leadField*: k (required)
+        alpha=<v>                   leadFieldLayered: surface current (required)
+        xLeft= xRight= sigmaOuterLeft= sigmaInnerLeft= sigmaHeart=
+        sigmaInnerRight= sigmaOuterRight=   leadFieldLayered layers (required)
+        k= alpha= se=               bathBidomain (required)
+        Pe= a=                      radial: Peclet number and ball ratio (required)
 
     Case parameters are those of the tutorials under
     tutorials/manufacturedSolutions; each constant cites its source.
@@ -62,6 +76,10 @@ Usage
 #include "monodomainVerification/manufacturedFDAReference.H"
 #include "monodomainVerification/manufacturedAnisotropicMonodomainReference.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
+#include "eikonalVerification/manufacturedRadialEikonalReference.H"
+#include "bidomainVerification/manufacturedFDABidomainReference.H"
+#include "ecgVerification/manufacturedLeadFieldECGReference.H"
+#include "bathBidomainVerification/manufacturedFDABathBidomainReference.H"
 
 #include <cstdio>
 #include <cstdlib>
@@ -164,6 +182,18 @@ struct Options
     {
         const auto it = kv.find(key);
         return it == kv.end() ? fallback : std::atof(it->second.c_str());
+    }
+
+    scalar required(const std::string& key) const
+    {
+        const auto it = kv.find(key);
+        if (it == kv.end())
+        {
+            std::cerr << "mmsParity: key " << key << "=<v> is required"
+                << std::endl;
+            std::exit(1);
+        }
+        return std::atof(it->second.c_str());
     }
 
     std::string word(const std::string& key, const std::string& fallback) const
@@ -341,6 +371,114 @@ void coupledRow(const scalar t)
     });
 }
 
+
+// Gauge of the bidomain case: tutorials/manufacturedSolutions/bidomain/
+// constant/electroProperties (phiERefPoint, phiEReferenceValue)
+const vector bidomainReferencePoint(0.125, 0.05, 0.05);
+const scalar bidomainReferenceValue = 0.0;
+
+
+void bidomainRow
+(
+    const scalar x, const scalar y, const scalar z, const scalar t,
+    const label d, const Options& opt
+)
+{
+    const scalar k = opt.required("k");
+    const point p(x, y, z);
+    scalarField X(1, x), Y(1, y), Z(1, z), phiE, phiI;
+    const scalar shift = manufacturedFDABidomainShift
+    (
+        t, d, k, bidomainReferencePoint, bidomainReferenceValue
+    );
+    computeManufacturedBidomainPhiE(phiE, X, Y, Z, t, d, k, shift);
+    computeManufacturedBidomainPhiI(phiI, X, Y, Z, t, d, k, shift);
+    const vector gV = manufacturedFDABidomainGradVm(p, t, d);
+    const vector gE = manufacturedFDABidomainGradPhiE(p, t, d, k);
+    const vector gI = manufacturedFDABidomainGradPhiI(p, t, d, k);
+    emit
+    ({
+        phiE[0], phiI[0], shift,
+        manufacturedFDABidomainPhiEAt(p, t, d, k, shift),
+        manufacturedFDABidomainPhiIAt(p, t, d, k, shift),
+        manufacturedFDABidomainVmAt(p, t, d),
+        gV.x(), gV.y(), gV.z(), gE.x(), gE.y(), gE.z(), gI.x(), gI.y(), gI.z()
+    });
+}
+
+void leadFieldSlabRow(const scalar x, const scalar t, const Options& opt)
+{
+    const point p(x, 0, 0);
+    emit
+    ({
+        manufacturedLeadFieldSlabVm(p, t),
+        manufacturedLeadFieldSlabPhi(p, t, opt.required("k"))
+    });
+}
+
+
+void leadFieldLayeredRow(const scalar x, const scalar t, const Options& opt)
+{
+    manufacturedLeadFieldLayers l;
+    l.xLeft = opt.required("xLeft");
+    l.xRight = opt.required("xRight");
+    l.sigmaOuterLeft = opt.required("sigmaOuterLeft");
+    l.sigmaInnerLeft = opt.required("sigmaInnerLeft");
+    l.sigmaInnerRight = opt.required("sigmaInnerRight");
+    l.sigmaOuterRight = opt.required("sigmaOuterRight");
+    l.sigmaHeart = opt.required("sigmaHeart");
+    const point p(x, 0, 0);
+    emit
+    ({
+        manufacturedLeadFieldLayeredResistance(x, l),
+        manufacturedLeadFieldLayeredPhi
+        (
+            p, t, opt.required("k"), opt.required("alpha"), l
+        )
+    });
+}
+
+void radialRow(const scalar s, const Options& opt)
+{
+    // the quadrature of the header against the closed form with Ei
+    const scalar Pe = opt.required("Pe");
+    const scalar a = opt.required("a");
+    emit
+    ({
+        radialEikonalMMS::slope(s, Pe, a),
+        radialEikonalMMS::scaledTime(s, Pe, a)
+    });
+}
+
+
+void bathBidomainRow
+(
+    const scalar x, const scalar y, const scalar z, const scalar t,
+    const label d, const Options& opt
+)
+{
+    const scalar k = opt.required("k");
+    const scalar alpha = opt.required("alpha");
+    const scalar se = opt.required("se");
+    const point p(x, y, z);
+    scalarField X(1, x), Y(1, y), Z(1, z), V, u1, u2, u3, phiE, phiI;
+    computeManufacturedFDABathV(V, X, Y, Z, t, d, alpha, se);
+    computeManufacturedFDABathU(u1, u2, u3, X, Y, Z, t, d, alpha, se);
+    computeManufacturedFDABathPhiE(phiE, X, t, k, alpha, se);
+    computeManufacturedFDABathPhiI(phiI, X, Y, Z, t, d, k, alpha, se);
+    emit
+    ({
+        V[0], u1[0], u2[0], u3[0], phiE[0], phiI[0],
+        manufacturedFDABathVmAt(p, t, alpha, se),
+        manufacturedFDABathPhiEAt(x, t, k, alpha, se),
+        manufacturedFDABathPhiIAt(p, t, k, alpha, se),
+        manufacturedFDABathGradVm(p, t, alpha, se).x(),
+        manufacturedFDABathGradPhiEHeart(p, t, k, alpha, se).x(),
+        manufacturedFDABathGradPhiIHeart(p, t, k, alpha, se).x(),
+        manufacturedFDABathGradPhiEBath(alpha, se).x()
+    });
+}
+
 } // End anonymous namespace
 
 
@@ -377,6 +515,12 @@ int main(int argc, char* argv[])
         fail(name + " exists for d = 3 only");
     }
 
+    if ((name == "leadFieldSlab" || name == "leadFieldLayered" || name == "radial")
+     && d != 1)
+    {
+        fail(name + " exists for d = 1 only");
+    }
+
     std::string line;
     while (std::getline(std::cin, line))
     {
@@ -409,6 +553,11 @@ int main(int argc, char* argv[])
         }
         else if (name == "graph") graphRow(x, y, z, t, d);
         else if (name == "coupled") coupledRow(t);
+        else if (name == "bidomain") bidomainRow(x, y, z, t, d, opt);
+        else if (name == "leadFieldSlab") leadFieldSlabRow(x, t, opt);
+        else if (name == "leadFieldLayered") leadFieldLayeredRow(x, t, opt);
+        else if (name == "bathBidomain") bathBidomainRow(x, y, z, t, d, opt);
+        else if (name == "radial") radialRow(x, opt);
         else fail("unknown case '" + name + "'");
     }
 

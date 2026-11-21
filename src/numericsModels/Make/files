@@ -4,8 +4,10 @@ sealedWall/sealedWallLeastSquaresVectors.C
 sealedWall/sealedWallLeastSquaresGrad.C
 interface/exposedPhiETrace.C
 interface/interfaceGradient.C
-pureNeumann/compatibilityProjection.C
+pureNeumann/compatibilityImbalance.C
+pureNeumann/referenceCell.C
 diffusion/conormalStabilisation.C
+probedOperator/probedOperator.C
 advection/facePeclet.C
 
 LIB = $(FOAM_USER_LIBBIN)/libnumericsModels

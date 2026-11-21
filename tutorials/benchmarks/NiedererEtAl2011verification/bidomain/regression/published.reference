@@ -1,0 +1,11 @@
+# Reference grammar: tutorials/regression/lib.sh.
+# probe <file> <time> <column> <expected> <tolerance>
+# -dx 5e-4 -endTime 0.015 -conductivity published: probe 0 (column 2) and the
+# diagonal line points 5, 8 and 10 (columns 7, 10, 12) have activated;
+# probes 4 and 8 (columns 6, 10) have not.
+probe  postProcessing/Niedererpoints/0/activationTime  0.015  2   0.00119544  1e-6
+probe  postProcessing/Niedererpoints/0/activationTime  0.015  6   -1          1e-6
+probe  postProcessing/Niedererpoints/0/activationTime  0.015  10  -1          1e-6
+probe  postProcessing/Niedererlines/0/activationTime   0.015  7   0.00126841  1e-6
+probe  postProcessing/Niedererlines/0/activationTime   0.015  10  0.00210159  1e-6
+probe  postProcessing/Niedererlines/0/activationTime   0.015  12  0.00304093  1e-6

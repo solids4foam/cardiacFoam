@@ -4,18 +4,25 @@
 #
 #   base     case under base/ providing mesh, system/ and Allprepare
 #   variant  files under variants/ copied over the base (at least
-#            constant/electroProperties)
+#            constant/electroProperties); a variant's Allprepare replaces
+#            the base's, and its Allprepare.parallel, if present, runs after
+#            decomposePar in np=N checks
 #   expect   pass: must complete and write the files in
 #                  regression/manifests/<name>
 #            fail:<text>: must stop with a FOAM FATAL error mentioning <text>
-#                  (write spaces in <text> as ~)
-#   edit     applied to constant/electroProperties with foamDictionary:
+#                  (write spaces in <text> as ~), in cardiacFoam or in the
+#                  case preparation
+#   edit     applied to constant/electroProperties with foamDictionary,
+#            after the case preparation (Allprepare, decomposePar and
+#            Allprepare.parallel), before cardiacFoam:
 #            path=value sets an entry, path! removes it (write spaces in
 #            values as ~; a value can be a whole {...} sub-dictionary);
 #            np=N runs on N processors (simple decomposition) and
 #            reconstructs; post=<script> then runs post/<script> in the
 #            run directory (a post-processing utility);
-#            skip=<version>[,...] skips the check on those OpenFOAM versions
+#            skip=<version>[,...] skips the check on those OpenFOAM versions;
+#            needs=solids4foam skips it in lightweight mode (the lead-field
+#            checks: buildLeadFields solves through solids4foam's PETSc layer)
 
 # ---- Myocardium models and options --------------------------------------
 monodomainExplicit                     slab  monodomainExplicit                     pass
@@ -64,6 +71,23 @@ bathTorsoECG                           bath  bathTorsoECG                       
 # Bath composition with a Purkinje network as the only activation
 bathBidomainPurkinjeReactionDiffusion  bath  bathBidomainPurkinjeReactionDiffusion  pass
 
+# ---- Torso ECG from lead fields (torsoCoupling leadField; the variants'
+# Allprepare runs buildLeadFields) -------------------------------------------
+# Bidomain with Gi and Ge of the Coeffs; monodomain with Gi and Ge in the ECG
+# domain entry
+bidomainLeadFieldECG                   bath  bidomainLeadFieldECG                   pass  skip=v2312  needs=solids4foam
+# The same heart without the torso, torsoCoupling and the ECG domain: the
+# lead-field ECG leaves the heart solution unchanged (./comparisons)
+bidomainWithoutTorsoECG                bath  bidomainLeadFieldECG                   pass  ecgDomains!  torso!  torsoCoupling!  bidomainSolverCoeffs/bathHeartPhiETrace!  skip=v2312  needs=solids4foam
+monodomainLeadFieldECG                 bath  monodomainLeadFieldECG                 pass  skip=v2312  needs=solids4foam
+# The discrete adjoint where its explicit part is non-zero: a sheared box
+# with rotated Gi and Ge, the heart touching outer patches, pinned with a
+# non-zero reference value; buildLeadFields stops on a failed self-check
+leadFieldBox                           leadFieldBox  leadFieldBox               pass  skip=v2312  needs=solids4foam
+leadFieldBoxGroundSealed               leadFieldBox  leadFieldBoxGroundSealed   pass  skip=v2312  needs=solids4foam
+leadFieldBoxConormal                   leadFieldBox  leadFieldBoxConormal       pass  skip=v2312  needs=solids4foam
+leadFieldBoxPointGradient              leadFieldBox  leadFieldBoxPointGradient  pass  skip=v2312  needs=solids4foam
+
 # ---- Single cell ------------------------------------------------------------
 singleCellBuenoOrovio                  singleCell singleCellBuenoOrovio             pass
 singleCellTWorldActiveTension          singleCell singleCellTWorldActiveTension     pass
@@ -82,6 +106,10 @@ eikonalPurkinjeSeedFlat                slab  eikonalPurkinje                    
 monodomainPseudoECGParallel            slab  monodomainPseudoECG                    pass  np=2
 eikonalECGParallel                     slab  eikonalECG                             pass  np=2
 bathTorsoECGParallel                   bath  bathTorsoECG                           pass  np=2
+# Lead fields built on the decomposition by Allprepare.parallel
+bidomainLeadFieldECGParallel           bath  bidomainLeadFieldECG                   pass  np=2  skip=v2312  needs=solids4foam
+# The heart wall x = 0 of the box is the processor boundary
+leadFieldBoxParallel                   leadFieldBox  leadFieldBox               pass  np=2  skip=v2312  needs=solids4foam
 bidomainPurkinjeReactionDiffusionParallel slab bidomainPurkinjeReactionDiffusion pass np=2
 bathBidomainPurkinjeReactionDiffusionParallel bath bathBidomainPurkinjeReactionDiffusion pass np=2
 # The decomposition splits the periodic faces into processorCyclic faces
@@ -101,13 +129,22 @@ bathBidomainRestartParallel            bath  bathBidomain                       
 # A decomposed Purkinje run, whose network state the master writes into the
 # case-root time directories, then reconstructed from the restart time on
 purkinjeRestartParallel                slab  monodomainPurkinjeReactionDiffusion    pass  np=2  post=restartLatestTime
+# sbdf2 does not write its Iion and Vm histories; a restart rebuilds them
+# with the same first-order start-up as a run from t = 0
+monodomainSbdf2Restart                 slab  monodomainSbdf2                        pass  post=restartLatestTime
 
 # ---- Invalid configurations: must stop with a clear fatal error ------------
 unknownMyocardiumSolver                slab  monodomainExplicit          fail:bogusSolver              myocardiumSolver=bogusSolver
 missingMyocardiumCoeffs                slab  monodomainExplicit          fail:bidomainSolverCoeffs     myocardiumSolver=bidomainSolver
+bidomainReferencePointOutside          slab  bidomain                    fail:must~lie~in~exactly~one~cell   bidomainSolverCoeffs/phiERefPoint=(1~1~1)
+bidomainReferenceValueWithoutPoint     slab  bidomain                    fail:phiEReferenceValue~is~set~but~phiERefPoint~is~not   bidomainSolverCoeffs/phiERefPoint!
 unknownIonicModel                      slab  monodomainExplicit          fail:bogusIonicModel          monodomainSolverCoeffs/ionicModel=bogusIonicModel
 unknownConductivitySource              slab  monodomainExplicit          fail:bogusSource              monodomainSolverCoeffs/conductivitySource=bogusSource
 unknownTimeCouplingScheme              slab  monodomainImplicit          fail:bogusScheme              monodomainSolverCoeffs/timeCouplingScheme=bogusScheme
+sbdf2WithExplicitAlgorithm             slab  monodomainSbdf2             fail:requires~solutionAlgorithm~implicit   monodomainSolverCoeffs/solutionAlgorithm=explicit
+# An ionic-model stimulus next to the PDE externalStimulus stimulates twice
+monodomainIonicStimulus                slab  monodomainImplicit          fail:active~ionic-model~stimulus   monodomainSolverCoeffs/singleCellStimulus={stim_start~20;stim_duration~1;stim_amplitude~60;stim_period_S1~1000;nstim1~1;stim_period_S2~0;nstim2~0;}
+bidomainIonicStimulus                  slab  bidomain                    fail:active~ionic-model~stimulus   bidomainSolverCoeffs/singleCellStimulus={stim_start~20;stim_duration~1;stim_amplitude~60;stim_period_S1~1000;nstim1~1;stim_period_S2~0;nstim2~0;}
 unknownVerificationModel               slab  monodomainVerificationNone  fail:bogusVerifier           monodomainSolverCoeffs/verificationModel/type=bogusVerifier
 unknownAdvanceScheme                   slab  monodomainPurkinjeReactionDiffusion fail:bogusAdvanceScheme monodomainSolverCoeffs/electrophysicsAdvanceScheme=bogusAdvanceScheme
 unknownConductionSystemDomain          slab  monodomainPurkinjeReactionDiffusion fail:bogusDomain  monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/conductionSystemDomain=bogusDomain
@@ -120,17 +157,48 @@ twoConductionNetworkDomains            slab  monodomainPurkinjeReactionDiffusion
 pvjDelayWithReactionDiffusion          slab  monodomainPurkinjeReactionDiffusion fail:pvjDelay~is~not~used monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjDelay=0.005
 seedProfileWithReactionDiffusion       slab  monodomainPurkinjeReactionDiffusion fail:seedProfile~is~used~only monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=front
 unknownSeedProfile                     slab  eikonalPurkinje                        fail:Unknown~seedProfile eikonalSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=bogus
+eikonalPvjCouplerOnMonodomain          slab  monodomainPurkinjeRestitutionEikonal fail:needs~myocardiumSolver~eikonalSolver monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/electroDomainCoupler=eikonalPvjCoupler monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/rPvj! monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/seedProfile=flat monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/couplingMode=unidirectional
+unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 ecgDomains/ECG/ecgSolver=bogusECG
+# A complete eikonalECG entry (sampling is required) on a monodomain heart
+eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:requires~myocardiumSolver~eikonalSolver  ecgDomains/ECG/ecgSolver=eikonalECG  ecgDomains/ECG/sampling={start~0;end~0.01;deltaT~1e-3;}
 eikonalSeedBoxListSizeMismatch         slab  eikonal                                fail:same~size  eikonalSolverCoeffs/stimulusLocationMinList=((0~0~0)~(9e-3~0~0))  eikonalSolverCoeffs/stimulusLocationMaxList=((1e-3~10e-3~0.1e-3))
-ecgDomainCoupling                      slab  monodomainPseudoECG         fail:ECG~domains~take~no~coupling monodomainSolverCoeffs/ecgDomains/ECG/coupling={electroDomainCoupler~reactionDiffusionPvjCoupler;}
-twoPseudoECGDomains                    slab  monodomainPseudoECG         fail:both~select~ecgSolver~pseudoECG monodomainSolverCoeffs/ecgDomains/ECG2={ecgSolver~pseudoECG;electrodePositions~{E3~(0.005~0.005~0.00005);}}
-unknownEcgSolver                       slab  monodomainPseudoECG         fail:bogusECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=bogusECG
-eikonalECGWithMonodomain               slab  monodomainPseudoECG         fail:eikonalECG               monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=eikonalECG
+twoPseudoECGDomains                    slab  monodomainPseudoECG         fail:both~select~ecgSolver~pseudoECG ecgDomains/ECG2={ecgSolver~pseudoECG;sigmaExtracellular~0.2;electrodePositions~{E3~(0.005~0.005~0.00005);}}
 eikonalECGWithoutHeterogeneity         slab  eikonalECG                  fail:ionicHeterogeneity       eikonalSolverCoeffs/ionicHeterogeneity!
-torsoECGWithMonodomain                 slab  monodomainPseudoECG         fail:torsoECG                 monodomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
-torsoECGWithoutBath                    slab  bidomainPseudoECG           fail:torsoECG                 bidomainSolverCoeffs/ecgDomains/ECG/ecgSolver=torsoECG
+# The torso: torsoECG without one; the torso without torsoCoupling and
+# torsoCoupling without the torso; the bath with a monodomain heart; a key of
+# pseudoECG in a torsoECG domain; the keyword leadFieldECG and a
+# bathPotentialDomain block, which are not part of electroProperties
+torsoECGWithoutTorso                   slab  bidomainPseudoECG           fail:selects~ecgSolver~torsoECG,~but~electroProperties~has~no~torso  ecgDomains/ECG/ecgSolver=torsoECG  ecgDomains/ECG/sigmaExtracellular!
+torsoWithoutCoupling                   bath  monodomainLeadFieldECG      fail:has~a~torso~block~but~no~torsoCoupling  torsoCoupling!  skip=v2312  needs=solids4foam
+torsoCouplingWithoutTorso              bath  monodomainLeadFieldECG      fail:but~has~no~torso~block   torso!  skip=v2312  needs=solids4foam
+bathCouplingWithMonodomain             bath  monodomainLeadFieldECG      fail:needs~myocardiumSolver~bidomainSolver  torsoCoupling=bath  ecgDomains!  skip=v2312  needs=solids4foam
+torsoECGWithPseudoECGKey               bath  bathTorsoECG                fail:sigmaExtracellular       ecgDomains/ECG/sigmaExtracellular=0.2  skip=v2312
+leadFieldECGKeyword                    bath  monodomainLeadFieldECG      fail:Unknown~ecgSolver~'leadFieldECG'  ecgDomains/ECG/ecgSolver=leadFieldECG  skip=v2312  needs=solids4foam
+bathPotentialDomainBlock               bath  bathBidomain                fail:bathPotentialDomain      bidomainSolverCoeffs/bathPotentialDomain={bathCellZones~(bath);}  skip=v2312
 bathWithoutCellZone                    bath  bathBidomain                fail:subset~cell~map          bidomainSolverCoeffs/cellZone!
-unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       bidomainSolverCoeffs/bathPotentialDomain/interfaceConductivityInterpolation=bogusInterpolation
+unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bogusInterpolation       torso/interfaceConductivityInterpolation=bogusInterpolation
+# conormalHarmonic without nInterfaceGradientCorrectors in the phiE solver
+# entry of fvSolution
+conormalWithoutGradientCorrectors      bath  bathBidomain                fail:nInterfaceGradientCorrectors  torso/interfaceConductivityInterpolation=conormalHarmonic
 bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ
+# Torso ECG from lead fields: an electrode without a lead field; the
+# conductivity changed after building; Gi (Gi+Ge)^-1 Ge not the monodomain
+# conductivity; Gi given to a bidomain ECG domain; an electrode in the heart
+# and one outside the mesh (also with the bath); the bidomain global heart
+# trace; a nonlinear scheme and a cached gradient (refused by
+# buildLeadFields); schemes changed after building
+leadFieldMissing                       bath  bidomainLeadFieldECG        fail:has~no~lead-field~file   ecgDomains/ECG/electrodePositions/added=(-0.7~0.05~0.05)  skip=v2312  needs=solids4foam
+leadFieldSignatureStale                bath  bidomainLeadFieldECG        fail:case:~~sumGe   bidomainSolverCoeffs/conductivityExtracellular=[~-1~-3~3~0~0~2~0~]~(0.05~0~0~0.05~0~0.0125)  skip=v2312  needs=solids4foam
+monodomainLeadFieldInconsistentGi      bath  monodomainLeadFieldECG      fail:differs~from~Gi~(Gi+Ge)^-1~Ge  ecgDomains/ECG/conductivityIntracellular=[~-1~-3~3~0~0~2~0~]~(0.24~0~0~0.12~0~0.06)  skip=v2312  needs=solids4foam
+bidomainLeadFieldWithGi                bath  bidomainLeadFieldECG        fail:but~bidomainSolver~reads~Gi~and~Ge  ecgDomains/ECG/conductivityIntracellular=[~-1~-3~3~0~0~2~0~]~(0.1~0~0~0.1~0~0.1)  skip=v2312  needs=solids4foam
+leadFieldElectrodeInHeart              bath  monodomainLeadFieldECG      fail:must~lie~in~the~torso  ecgDomains/ECG/electrodePositions/right=(0.5~0.05~0.05)  skip=v2312  needs=solids4foam
+torsoECGElectrodeOutside               bath  bathTorsoECG                fail:lies~outside~mesh  ecgDomains/ECG/electrodePositions/outside=(3~0.05~0.05)  skip=v2312
+leadFieldElectrodeOutside              bath  monodomainLeadFieldECG      fail:lies~outside~mesh  ecgDomains/ECG/electrodePositions/outside=(3~0.05~0.05)  skip=v2312  needs=solids4foam
+leadFieldHeartTraceGlobal              bath  bidomainLeadFieldECG        fail:bathHeartPhiETrace~global~is~not~supported  bidomainSolverCoeffs/sealedHeartBoundary=true  bidomainSolverCoeffs/bathHeartPhiETrace=global  skip=v2312  needs=solids4foam
+leadFieldNonlinearScheme               leadFieldBox  leadFieldBoxLimited        fail:is~not~linear  skip=v2312  needs=solids4foam
+leadFieldGradientCache                 leadFieldBox  leadFieldBoxGradientCache  fail:remove~it~from~the~cache  skip=v2312  needs=solids4foam
+leadFieldSchemesStale                  leadFieldBox  leadFieldBoxStaleSchemes   fail:Gauss~linear~uncorrected  skip=v2312  needs=solids4foam
+leadFieldMeshRenumbered                leadFieldBox  leadFieldBoxRenumbered     fail:does~not~belong~to~the~cells  skip=v2312  needs=solids4foam
 unknownActiveTensionModel              singleCell singleCellTWorldActiveTension fail:bogusTension     singleCellSolverCoeffs/activeTensionModel=bogusTension
 
 # ---- Misspelt or unknown entries: must stop and name the valid ones ---------
@@ -140,7 +208,8 @@ misspeltActiveTensionModel             singleCell singleCellTWorldActiveTension 
 misspeltStimulusKeyword                slab  monodomainExplicit          fail:did~you~mean~'stimulusIntensity' monodomainSolverCoeffs/externalStimulus/stimulusIntensty=1
 misspeltCouplingKeyword                slab  monodomainPurkinjeReactionDiffusion fail:did~you~mean~'pvjRadius' monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjRadiu=1e-3
 misspeltPurkinjeKeyword                slab  monodomainPurkinjeReactionDiffusion fail:did~you~mean~'purkinjeConductivity' monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/purkinjeConductivty=0.4
-unknownEcgDomainKeyword                slab  monodomainPseudoECG         fail:zzzUnknownKey            monodomainSolverCoeffs/ecgDomains/ECG/zzzUnknownKey=1
+unknownEcgDomainKeyword                slab  monodomainPseudoECG         fail:zzzUnknownKey            ecgDomains/ECG/zzzUnknownKey=1
+ecgDomainCoupling                      slab  monodomainPseudoECG         fail:'coupling' ecgDomains/ECG/coupling={electroDomainCoupler~reactionDiffusionPvjCoupler;}
 misspeltSolutionAlgorithm              slab  monodomainExplicit          fail:did~you~mean~'explicit'  monodomainSolverCoeffs/solutionAlgorithm=expicit
 misspeltPvjKernel                      slab  monodomainPurkinjeReactionDiffusionBidirectional fail:did~you~mean~'gaussian' monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjKernel=gausian
 unknownEikonalPvjCouplingScheme        slab  monodomainPurkinjeRestitutionEikonal fail:bogusScheme monodomainSolverCoeffs/domainCouplings/purkinjeToMyocardium/pvjCouplingScheme=bogusScheme
@@ -151,4 +220,4 @@ unknownActiveTensionExport             singleCell singleCellTWorldActiveTension 
 # Settings that are wrong whatever their spelling
 conductionNetworkUncoupled             slab  monodomainPurkinjeReactionDiffusion fail:links~it~to~the~myocardium monodomainSolverCoeffs/domainCouplings!
 conductionNetworkWithoutGraph          slab  monodomainPurkinjeReactionDiffusion fail:graphFile monodomainSolverCoeffs/conductionNetworkDomains/purkinjeNetwork/purkinjeGraphModelCoeffs/graphFile!
-ecgWithoutElectrodes                   slab  monodomainPseudoECG         fail:has~no~electrodes        monodomainSolverCoeffs/ecgDomains/ECG/electrodePositions!
+ecgWithoutElectrodes                   slab  monodomainPseudoECG         fail:has~no~electrodes        ecgDomains/ECG/electrodePositions!

@@ -38,7 +38,8 @@ autoPtr<myocardiumSolver> myocardiumSolver::New
     const fvMesh& supportMesh,
     const fvMeshSubset* meshSubsetPtr,
     const word& solverType,
-    const dictionary& coeffs
+    const dictionary& coeffs,
+    const bool externalPhiE
 )
 {
 
@@ -58,21 +59,16 @@ autoPtr<myocardiumSolver> myocardiumSolver::New
 
     return autoPtr<myocardiumSolver>
     (
-        ctorPtr(mesh, supportMesh, meshSubsetPtr, coeffs)
+        ctorPtr(mesh, supportMesh, meshSubsetPtr, coeffs, externalPhiE)
     );
 }
 
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-void myocardiumSolver::bindExternalPhiE
-(
-    const volScalarField& phiE,
-    const labelUList& heartCellMap
-)
+void myocardiumSolver::bindExternalPhiE(const volScalarField& heartPhiE)
 {
-    (void)phiE;
-    (void)heartCellMap;
+    (void)heartPhiE;
 
     FatalErrorInFunction
         << "The selected myocardiumSolver cannot bind an external phiE field."

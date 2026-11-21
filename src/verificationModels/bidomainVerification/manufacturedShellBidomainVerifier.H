@@ -25,9 +25,10 @@ Description
     sphere, Gi and Ge full, unequal and rotating through the wall (written
     cell-wise as 0/ConductivityIntracellular and 0/ConductivityExtracellular
     by setManufacturedFields), Vm = phiI - phiE and the FDA ionic closure.
-    The phiE equation takes the manufactured source and the compatibility
-    projection of its pure-Neumann system. Fields from
-    manufacturedShellBidomainReference.H.
+    The phiE equation takes the manufactured source, sampled at cell centres
+    with its volume-weighted mean removed so that the pure-Neumann phiE
+    system is compatible on the mesh; the solver applies no projection of
+    its own. Fields from manufacturedShellBidomainReference.H.
 
 Author
     Simao Nieto de Castro, UCD.
@@ -107,11 +108,6 @@ public:
         volScalarField& rhs,
         const scalar evaluationTime
     ) const override;
-
-    virtual bool requiresPhiECompatibilityProjection() const override
-    {
-        return true;
-    }
 
     virtual void writeManufacturedFields(const fvMesh& mesh) const override;
 

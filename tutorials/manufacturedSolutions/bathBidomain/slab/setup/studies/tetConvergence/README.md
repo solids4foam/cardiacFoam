@@ -72,12 +72,12 @@ Interface rows of the same runs (L2; potentials volume weighted, current
 densities face-area weighted, in A/m^2 against the manufactured current
 `alpha = 0.01`):
 
-| N | heart phiE | bath phiE | x=0 current jump | x=1 current jump | x=0 leakage | x=1 leakage | x=0 assembled | x=1 assembled |
-|---|---|---|---|---|---|---|---|---|
-| 10 | 3.8238e-03 | 5.4431e-03 | 4.0366e-03 | 3.9818e-03 | 3.9685e-03 | 3.8765e-03 | 5.9904e-04 | 5.9373e-04 |
-| 20 | 1.1528e-03 | 1.6260e-03 | 6.0793e-04 | 6.2093e-04 | 5.8971e-04 | 6.0458e-04 | 3.8649e-04 | 3.9304e-04 |
-| 40 | 3.4651e-04 | 4.8643e-04 | 1.5267e-04 | 1.5793e-04 | 1.5064e-04 | 1.5509e-04 | 3.5142e-04 | 3.9299e-04 |
-| 80 | 1.1887e-04 | 1.6792e-04 | 9.5046e-05 | 9.9408e-05 | 5.7130e-05 | 5.6690e-05 | 4.1201e-04 | 4.2078e-04 |
+| N | heart phiE | bath phiE | x=0 current jump | x=1 current jump | x=0 leakage | x=1 leakage |
+|---|---|---|---|---|---|---|
+| 10 | 3.8238e-03 | 5.4431e-03 | 4.0366e-03 | 3.9818e-03 | 3.9685e-03 | 3.8765e-03 |
+| 20 | 1.1528e-03 | 1.6260e-03 | 6.0793e-04 | 6.2093e-04 | 5.8971e-04 | 6.0458e-04 |
+| 40 | 3.4651e-04 | 4.8643e-04 | 1.5267e-04 | 1.5793e-04 | 1.5064e-04 | 1.5509e-04 |
+| 80 | 1.1887e-04 | 1.6792e-04 | 9.5046e-05 | 9.9408e-05 | 5.7130e-05 | 5.6690e-05 |
 
 Orders between consecutive levels:
 
@@ -87,16 +87,11 @@ Orders between consecutive levels:
 | bath phiE | 1.80 | 1.76 | 1.55 |
 | x=0 / x=1 current jump | 2.81 / 2.76 | 2.02 / 2.00 | 0.69 / 0.67 |
 | x=0 / x=1 leakage | 2.83 / 2.76 | 2.00 / 1.99 | 1.41 / 1.46 |
-| x=0 / x=1 assembled | 0.65 / 0.61 | 0.14 / 0.00 | -0.23 / -0.10 |
 
 The regional potentials converge at 1.8 to 1.55 and the current jump and
 leakage at about 2 up to `N = 40`, then flatten. The assembled current density
-of the solved field stops falling after `N = 20` and rises slightly at
-`N = 80`: the shared-face flux is conservative, but its constitutive error
-does not converge on this family. These runs evaluated the assembled current
-with the `unweightedHarmonic` interface conductivity of the utility while the
-solver used `distanceWeightedHarmonic`; `Allrun` gives both the method of
-`-interface`.
+of `bathBidomainInterfaceMetrics` uses the face conductivity of the solver's
+conductor (`passiveConductor`).
 
 Assembled interface current density of the exact `phiE` field
 (`-endTime 0.02`, gmsh 4.15.2 meshes):
@@ -109,9 +104,7 @@ Assembled interface current density of the exact `phiE` field
 | 80 | 0.0200392 | 2.5222e-04 | 2.5152e-04 | 0.82, 0.85 |
 
 (orders of `h = (cells/3)^(-1/3)`; the `N = 80` run used `dt = 0.0001401345`.)
-The interface flux construction is first order on the exact field; the solved
-assembled current above lies below it up to `N = 40` and above it at
-`N = 80`.
+The interface flux construction is first order on the exact field.
 
 Electrode pair (`-endTime 0.02`), L2 errors after removing the volume means
 of `phiE` and `phiI`, and interface rows:
@@ -122,9 +115,9 @@ of `phiE` and `phiI`, and interface rows:
 | 20 | 1.5430e-04 | 8.7756e-04 | 5.3710e-05 | 1.1348e-04 | 1.0718e-03 | 5.3634e-04 | 5.4046e-04 | 2.8141e-04 | 3.0035e-04 |
 | 40 | 6.9834e-05 | 2.7428e-04 | 2.1288e-05 | 5.1132e-05 | 3.3399e-04 | 1.3524e-04 | 1.3487e-04 | 2.2833e-04 | 2.3953e-04 |
 
-The interface rows follow the ground-electrode pattern: the leakage falls at
-about 2.8 and 2.0, the assembled current flattens, and the two interfaces
-agree to two or three digits.
+The leakage falls at about 2.8 and 2.0, as in the ground-electrode rows, the
+assembled current density flattens, and the two interfaces agree to two or
+three digits.
 
 ## Outputs
 

@@ -1,0 +1,17 @@
+{
+  "base": {
+    "entry": "manufacturedLeadFieldECG",
+    "cases_root": "tutorials",
+    "system/controlDict:endTime": 0.02,
+    "system/controlDict:writeInterval": 0.02,
+    "myocardium": "bidomain"
+  },
+  "sweep": {
+    "mode": "zip",
+    "independent": {
+      "numberCells": [20],
+      "parallel": [true],
+      "caseId": ["parallel_hex_N20"]
+    }
+  }
+}

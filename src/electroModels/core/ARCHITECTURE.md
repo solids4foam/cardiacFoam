@@ -57,9 +57,9 @@ Specialised contract for 3D FVM-based domains. A 1D graph solver implements
 | `volScalarField& VmRef()` | Mutable transmembrane potential |
 | `const volScalarField& Vm()` | Immutable Vm |
 | `const volScalarField& Iion()` | Ionic current (read-only) |
-| `const volScalarField* IionOldPtr()` / `IionOldOldPtr()` | Previous timestep(s)' ionic current, for solvers that extrapolate it (default: `nullptr`) |
+| `tmp<volScalarField> ionicCurrentForImplicitDiffusion()` | The ionic current of the implicit solve: `Iion`, or its sbdf2 extrapolation; the domain owns the time coupling and its history |
 | `volScalarField& sourceField()` | Coupling source term (write) |
-| `volScalarField* implicitSourceCoeffPtr()` (const and non-const) | Optional implicit source coefficient (default: `nullptr`) |
+| `const volScalarField& implicitSourceCoeff()` | Cell-local implicit coefficient of the junction currents (zero without couplers), assembled as `fvm::Sp` |
 | `const dimensionedScalar& chi()` | Surface-to-volume ratio [1/m] |
 | `const dimensionedScalar& Cm()` | Membrane capacitance [F/m²] |
 
@@ -126,7 +126,10 @@ electroStateDomain
 ## Top-level selection
 
 `electroModel::New(...)` reads `myocardiumSolver <type>` from
-`constant/electroProperties` and dispatches to a registered `electroModel` subtype.
+`constant/electroProperties`, the only read of the key in a running model, and
+dispatches to a registered `electroModel` subtype, passing the type on. The
+model keeps it (`myocardiumSolverType()`) and hands it explicitly to the
+myocardium factories; nothing re-derives it from the `Coeffs` name.
 
 `electrophysiologyModel` is registered under `monodomainSolver`, `bidomainSolver`,
 and `eikonalSolver` — the same top-level wrapper is used for all
@@ -134,8 +137,9 @@ myocardium-centred spatial workflows.
 
 Inside `electrophysiologyModel`, `myocardiumDomainInterface::New(...)` performs
 the secondary myocardium-domain dispatch. `monodomainSolver` and
-`bidomainSolver` resolve through the `myocardiumSolver` table; `eikonalSolver`
-builds `eikonalMyocardiumDomain`. `singleCellSolver` is registered directly in
+`bidomainSolver` resolve through the `myocardiumSolver` table; the name
+`eikonalMyocardiumDomain::solverName` (`eikonalSolver`) builds
+`eikonalMyocardiumDomain`. `singleCellSolver` is registered directly in
 the parent `electroModel` table and does not enter this secondary dispatch.
 
 ---
@@ -206,15 +210,17 @@ earlier ones:
 |---|---|
 | `configureMyocardiumDomain(...)` | Instantiate myocardium domain via factory |
 | `configureAdvanceScheme(...)` | Select the runtime advance scheme |
-| `configureBathPotentialDomain(...)` | Optionally instantiate a standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`); requires the myocardium domain to already be configured |
+| `configureBathPotentialDomain(...)` | With `torsoCoupling bath`, instantiate the standalone bath/extracellular potential domain (an `electroStateDomain`, concretely `extracellularPotentialDomain`) from the top-level `torso` block; requires the myocardium domain to already be configured |
 | `configureConductionDomains(...)` | Load the Purkinje graph, instantiate its domain, and build its PVJ couplings in the same pass |
-| `configureECGDomains(...)` | Instantiate the ECG domain(s), reading myocardium (and optionally bath) state via `electroStateProvider` |
+| `configureECGDomains(...)` | Select each domain's `ecgSolver`, which says what it reads (`source()`: myocardium, or the bath's `phiE`) and which myocardium it needs (`checkMyocardium`), then build the `ecgDomain` around it |
 
 No `configure*Couplings(...)` functions exist.
 
 `configureBathPotentialDomain(...)` instantiates an optional standalone
-domain, gated on whether `bathPotentialDomain` is present in
-`electroProperties`. It builds no couplings. It requires the myocardium
+domain, gated on `torsoCoupling bath` in the top level of
+`electroProperties`, from its `torso` block; a myocardium without an
+extracellular potential (`hasExtracellularPotential()`, i.e. not
+`bidomainSolver`) is then fatal. It builds no couplings. It requires the myocardium
 domain to already be configured (`system.hasMyocardium()`). It runs before
 `configureECGDomains(...)`: the potential domain it builds is one of the
 state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
@@ -222,8 +228,8 @@ state providers `configureECGDomains(...)` routes a `torsoECG` domain to.
 Conduction (PVJ) couplings are built inside `configureConductionDomains(...)`
 from a top-level `domainCouplings` block; each entry resolves against the
 conduction domain via `conductionNetworkDomain <name>`. ECG domains take no
-coupling: an ECG reads the myocardium (or bath) state directly, and a bath
-bidomain already couples the torso.
+coupling: an ECG reads the myocardium (or bath) state directly, and
+`torsoCoupling` couples the torso.
 
 Current rules:
 
@@ -237,9 +243,11 @@ Current rules:
   `writeEveryTimeStep yes` it writes a row every time step, for QRS and
   waveform measurements independent of `writeInterval`
 - Every conduction coupling must explicitly declare `conductionNetworkDomain <name>`
-- `bathPotentialDomain` is optional; when present it is read from
-  `electroProperties.subDict("bathPotentialDomain")`
-- A `coupling` entry in an `ecgDomains.<name>` entry is a fatal error
+- `torso` and `torsoCoupling` (top level) are optional and given together;
+  `torsoCoupling bath` builds the bath domain from `torso`,
+  `torsoCoupling leadField` leaves `torso` to the lead fields of `torsoECG`
+- `ecgDomains` is a top-level block; a `coupling` entry in an
+  `ecgDomains.<name>` entry is a fatal error
 
 ---
 
@@ -247,7 +255,7 @@ Current rules:
 
 ### Bath potential domain (single, optional)
 
-Build the one `bathPotentialDomain` entry if present. Independent of the
+Build the bath domain of `torsoCoupling bath`. Independent of the
 conduction and ECG passes; only depends on the myocardium domain already
 being built. Built before conduction, since a `torsoECG`-class ECG domain
 built afterwards may need it.
@@ -265,7 +273,9 @@ separate dictionary containers.
 
 Build every entry in `ecgDomains`. Each domain's `ecgSolver` (`pseudoECG`,
 `eikonalECG`, or `torsoECG`) determines which `electroStateProvider` it reads
-from; `torsoECG` requires the bath potential domain from the previous step.
+from; `torsoECG` requires the top-level `torso` and reads the bath potential
+domain of the previous step (`torsoCoupling bath`) or the myocardium
+(`torsoCoupling leadField`).
 
 ---
 
@@ -328,7 +338,7 @@ else
     myocardium.solveDiffusionStep(t0, dt, pimplePtr);
 }
 
-myocardium.finalizeDiffusionStep();
+myocardium.finalizeDiffusionStep(t0, dt);
 
 ```
 

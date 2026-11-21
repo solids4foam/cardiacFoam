@@ -44,25 +44,25 @@ eikonalSolverCoeffs
             epicardialCells  { range (0.5 1); }
         }
     }
+}
 
-    ecgDomains
+ecgDomains
+{
+    ECG
     {
-        ECG
+        ecgSolver eikonalECG;
+        checkGradVm true;
+        sigmaExtracellular 0.2;
+        sampling
         {
-            ecgSolver eikonalECG;
-            checkGradVm true;
-            sigmaExtracellular 0.2;
-            sampling
-            {
-                start  0;
-                end    0.4;
-                deltaT 1e-3;
-            }
-            electrodePositions
-            {
-                E1 (-0.01 0.005 0.00005);
-                E2 (0.02 0.005 0.00005);
-            }
+            start  0;
+            end    0.4;
+            deltaT 1e-3;
+        }
+        electrodePositions
+        {
+            E1 (-0.01 0.005 0.00005);
+            E2 (0.02 0.005 0.00005);
         }
     }
 }

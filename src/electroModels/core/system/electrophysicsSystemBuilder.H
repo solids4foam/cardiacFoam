@@ -29,6 +29,7 @@ Author
 #define electrophysicsSystemBuilder_H
 
 #include "electrophysicsSystem.H"
+#include "torsoCoupling.H"
 #include "electroStateProvider.H"
 #include "volFields.H"
 
@@ -45,13 +46,10 @@ void configureMyocardiumDomain
 (
     electrophysicsSystem&    system,
     const fvMesh&            mesh,
+    const word&              solverType,
     const dictionary&        electroProperties,
-    PtrList<volScalarField>& outFields,
-    const wordList&          postProcessFieldNames,
-    PtrList<volScalarField>& postProcessFields,
-    autoPtr<ionicModel>&     ionicModelPtr,
-    autoPtr<electroVerificationModel>& verificationModelPtr,
-    scalar                   initialDeltaT
+    scalar                   initialDeltaT,
+    const torsoCoupling::type coupling
 );
 
 void configureAdvanceScheme
@@ -68,17 +66,22 @@ void configureConductionDomains
     scalar                initialDeltaT
 );
 
+//- The extracellularPotentialDomain of torsoCoupling bath, from the torso
+//  block of the top-level electroProperties; none for any other coupling
 void configureBathPotentialDomain
 (
     electrophysicsSystem& system,
     const fvMesh&         mesh,
-    const dictionary&     electroProperties
+    const dictionary&     electroProperties,
+    const torsoCoupling::type coupling
 );
 
+//- The ECG domains of the ecgDomains block of the top-level
+//  electroProperties
 void configureECGDomains
 (
     electrophysicsSystem&       system,
-    const electroStateProvider& myocardiumStateProvider,
+    const myocardiumDomainInterface& myocardium,
     const electroStateProvider* potentialStateProviderPtr,
     const dictionary&           electroProperties
 );

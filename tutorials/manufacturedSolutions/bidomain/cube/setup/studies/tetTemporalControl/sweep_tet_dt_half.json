@@ -8,10 +8,10 @@
   "sweep": {
     "mode": "zip",
     "independent": {
-      "system/fvSchemes:gradSchemes.default": ["leastSquares", "Gauss linear", "leastSquares", "Gauss linear", "leastSquares", "Gauss linear", "leastSquares", "Gauss linear"],
-      "tetNumberCells": [40, 40, 40, 40, 80, 80, 80, 80],
-      "system/controlDict:deltaT": [0.000560538, 0.000560538, 0.000280269, 0.000280269, 0.000140174, 0.000140174, 7.0087e-05, 7.0087e-05],
-      "caseId": ["leastSquares_tet_N40_dt0.000560538", "GaussLinear_tet_N40_dt0.000560538", "leastSquares_tet_N40_dt0.000280269", "GaussLinear_tet_N40_dt0.000280269", "leastSquares_tet_N80_dt0.000140174", "GaussLinear_tet_N80_dt0.000140174", "leastSquares_tet_N80_dt7.0087e-05", "GaussLinear_tet_N80_dt7.0087e-05"]
+      "system/fvSchemes:gradSchemes.default": ["leastSquares", "leastSquares", "Gauss linear", "Gauss linear"],
+      "tetNumberCells": [40, 40, 40, 40],
+      "system/controlDict:deltaT": [0.0005571030640668524, 0.0002785515320334262, 0.0005571030640668524, 0.0002785515320334262],
+      "caseId": ["leastSquares_tet_N40_dt0.00055710306406685239", "leastSquares_tet_N40_dt0.0002785515320334262", "GaussLinear_tet_N40_dt0.00055710306406685239", "GaussLinear_tet_N40_dt0.0002785515320334262"]
     }
   }
 }

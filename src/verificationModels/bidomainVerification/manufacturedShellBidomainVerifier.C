@@ -110,7 +110,7 @@ manufacturedShellBidomainVerifier::manufacturedShellBidomainVerifier
     nPerDirection_(dict.subDict("verificationModel").get<label>("N")),
     phiEPtr_(nullptr),
     errorsReported_(false),
-    phiEReferenceValue_(dict.lookupOrDefault<scalar>("phiEReferenceValue", 0.0)),
+    phiEReferenceValue_(dict.get<scalar>("phiEReferenceValue")),
     phiEReferencePoint_(dict.get<point>("phiERefPoint")),
     beta_(0),
     betaInitialised_(false)
@@ -382,18 +382,28 @@ void manufacturedShellBidomainVerifier::addManufacturedPhiESource
 ) const
 {
     const vectorField& C = rhs.mesh().C().primitiveField();
-    scalarField& r = rhs.primitiveFieldRef();
+    const scalarField& V = rhs.mesh().V().field();
     const scalar S = Foam::sqrt(1 + evaluationTime);
 
+    scalarField source(C.size());
     forAll(C, cellI)
     {
-        r[cellI] +=
+        source[cellI] =
             S
            *(
                 shellBidomainMMS::divGiGradFi(C[cellI], p_)
               + shellBidomainMMS::divGeGradFe(C[cellI], p_)
             );
     }
+
+    // The continuum source integrates to zero over the sealed shell; its
+    // cell-centre samples do not, by a quadrature error of second order.
+    // Removing their volume-weighted mean makes the manufactured problem
+    // compatible on the mesh, so the pure-Neumann phiE system is solvable
+    // and its reference cell absorbs nothing.
+    source -= gSum(source*V)/gSum(V);
+
+    rhs.primitiveFieldRef() += source;
 }
 
 

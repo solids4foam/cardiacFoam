@@ -1,13 +1,16 @@
 # interfaceCurrentConvergence - bathBidomain
 
 Interface diagnostics on the conformal tetrahedral meshes of
-[tetConvergence](../tetConvergence/README.md) for the two interface
-conductivities of the global `phiE` equation
-(`interfaceConductivityInterpolation`, `Allrun -interface`): the harmonic mean
-of the two cell conductivities (`unweightedHarmonic`) and the harmonic mean
-weighted by the face-to-centre distances (`distanceWeightedHarmonic`, the
-case default). The solver and `bathBidomainInterfaceMetrics` use the same
-method.
+[tetConvergence](../tetConvergence/README.md) for the two heart-bath
+interface options of the global `phiE` equation
+(`interfaceConductivityInterpolation`, `Allrun -interface`). Both take the
+flux-continuous face conductivity on heart-bath faces; they differ in the
+cell gradient of the explicit corrections: the standard one
+(`distanceWeightedHarmonic`, the case default) or the jump-aware one of
+`conormalHarmonic`, with the `nInterfaceGradientCorrectors 2` passes of the
+case `fvSolution`. The assembled current density of
+`bathBidomainInterfaceMetrics` is the flux of the `distanceWeightedHarmonic`
+operator in both runs.
 
 ## Ladder
 
@@ -34,7 +37,7 @@ DT=(0.00892857 0.00224215 0.000560538 0.000140174)
 for i in 0 1 2 3
 do
     n=${N[$i]}; dt=${DT[$i]}
-    for m in distanceWeightedHarmonic unweightedHarmonic
+    for m in distanceWeightedHarmonic conormalHarmonic
     do
         rsync -a --exclude setup ../../../ results/${m}_tet_N$n/
         results/${m}_tet_N$n/Allrun parallel -mesh tet -N $n -dt $dt -endTime 0.02 -interface $m
@@ -44,21 +47,16 @@ python3 ../summarize.py results
 python3 ../summarize.py results --relative-to distanceWeightedHarmonic_tet
 ```
 
-The omnidriver specs for this study are `sweep_tet_distanceWeightedHarmonic.json` and `sweep_tet_unweightedHarmonic.json`.
+The omnidriver specs for this study are `sweep_tet_distanceWeightedHarmonic.json` and `sweep_tet_conormalHarmonic.json`.
 
-## Measured behaviour
+## Measured quantities
 
-Results of the last run of this study (`results/`, `N = 10` only, gmsh
-4.15.2, 14792 cells), L2:
-
-| method | Vm | phiE | heart phiE | bath phiE | x=0 current jump | x=0 leakage | x=0 assembled | x=1 assembled |
-|---|---|---|---|---|---|---|---|---|
-| distanceWeightedHarmonic | 1.9567e-04 | 3.7496e-03 | 2.8942e-03 | 4.1110e-03 | 3.3805e-03 | 3.6315e-03 | 3.5649e-04 | 3.6961e-04 |
-| unweightedHarmonic | 1.9558e-04 | 3.7817e-03 | 2.9427e-03 | 4.1379e-03 | 3.4014e-03 | 3.6188e-03 | 3.3727e-04 | 3.5564e-04 |
-
-At `N = 10` the method changes the potentials and the current jump by less
-than 2 % and the assembled current density by 4 to 5 %; the finer levels
-have not been run.
+For each method and level `../summarize.py` reports the L2 and Linf errors of
+`Vm`, `phiE` and `phiI` and the interface rows (L2): heart and bath `phiE`,
+current jump, intracellular leakage and assembled current density at `x = 0`
+and `x = 1`, with the orders between levels. With
+`--relative-to distanceWeightedHarmonic_tet` it reports the relative change
+of `conormalHarmonic` against `distanceWeightedHarmonic` at each level.
 
 ## Outputs
 
