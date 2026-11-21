@@ -38,19 +38,14 @@ fi
 # Mesh and anatomy field preparation
 # -------------------------
 
-# The mesh and its anatomy fields are the single copy shared with the
-# sibling electroHeart/electroMechHeart cases, kept once in
-# ../../mesh/ to avoid tracking the same ~10MB mesh twice in git. The mesh in
-# ../../mesh/ is already scaled to adult-heart-scale SI metres - just copy it in.
-# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
-# checkout made without LFS), fail here with a readable message instead of
-# letting cardiacFoam die later on an unparsable mesh.
-if head -c 40 ../../mesh/constant/polyMesh/points 2>/dev/null \
-    | grep -q "git-lfs.github.com"; then
-    echo "ERROR: ../../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
-    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
-    exit 1
-fi
+# The mesh and its anatomy fields, shared with the sibling cases in
+# ../../mesh/, are already scaled to adult-heart-scale SI metres - just copy
+# them in.
+# The heart mesh and its anatomy fields are written from the heart/torso mesh
+# ../../mesh/heartTorso (Git LFS), the one committed geometry, by
+# ../../prepareHeartMesh; it stops with a readable message if that mesh is a
+# Git-LFS pointer, and does nothing when its output is current.
+../../prepareHeartMesh
 
 cp -a ../../mesh/constant/polyMesh constant/polyMesh
 

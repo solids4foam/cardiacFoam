@@ -1,20 +1,52 @@
 # electromechanics/totalLagrangianEM
 
-Coupled electromechanics manufactured solution on the unit cube: the
-monodomain potential, an active tension computed from the numerical `Vm` and
-the numerical fibre stretch, and the nonlinear total-Lagrangian solid of
-solids4foam driven by a manufactured displacement on every boundary and a
-manufactured body force. It checks `Vm`, the displacement `D`, the fibre
-stretch `lambda` and the active tension `Ta` against their exact fields, and
-with them the electro-to-tension and tension-to-solid paths and the field
-mapping between the two regions. It does not check traction or pressure
-boundaries (the displacement is prescribed on every face), non-uniform fibres
-(`f0 = (1, 0, 0)`), a physiological active-tension model, or a wall treatment
-of `Vm` (zero normal gradient on every face). It needs cardiacFoam built with
-solids4foam.
+## What it does
 
-Origin: the `Vm` field is the monodomain problem of the FDA regulatory science
-tool (Pathmanathan & Gray 2014); the mechanics problem is this work.
+Runs a coupled electromechanics manufactured solution on the unit cube: the
+monodomain potential (the monodomain problem of the FDA regulatory science
+tool, Pathmanathan & Gray 2014), an active tension computed from the numerical
+`Vm` and the numerical fibre stretch, and the nonlinear total-Lagrangian solid
+of solids4foam driven by a manufactured displacement on every boundary and a
+manufactured body force (the mechanics problem is this work). It writes the
+errors of `Vm`, the displacement `D`, the fibre stretch `lambda` and the
+active tension `Ta` against their exact fields, and needs cardiacFoam built
+with solids4foam.
+
+- **Exercises:** the electro-to-tension and tension-to-solid paths of
+  `sequentialElectroMechanical`, the field mapping between the `electro` and
+  `solid` regions, `electroMechanicalLaw` with the runtime `Ta` and the fibre
+  fields, and `fvOptions` in the residual of
+  `nonLinearGeometryTotalLagrangianTotalDisplacement`. It is the only
+  regression that checks the coupled electromechanics against an exact
+  solution. It does not check traction or pressure boundaries (the
+  displacement is prescribed on every face), non-uniform fibres
+  (`f0 = (1, 0, 0)`), a physiological active-tension model, or a wall
+  treatment of `Vm` (zero normal gradient on every face).
+- **Use it for:** verifying a change to the electromechanical coupling, the
+  active-tension path or the solids4foam build that cardiacFoam links against;
+  a template for a manufactured solution with a case-local boundary condition
+  and body force (`src/`).
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs the case serially at `N = 20` with
+`-dt 0.00224215`, the step of the reference values, to `endTime 0.1` (45
+steps, final time `0.100897`). It compares
+`postProcessing/manufacturedElectromechanicsSummary.dat` with
+`regression/totalLagrangianEM.reference` (13 rows): the final time and the
+L1, L2 and Linf errors of `Vm`, `D`, `lambda` and `Ta`. The values are frozen
+from an earlier run, with absolute tolerances of about `1e-2` of each value.
+
+Marker: `regression/needs-solids4foam`. The script exits 77 (skip) under
+`CARDIAC_REGRESSION_BUILD_MODE=lightweight` or without a solids4foam tree,
+and fails when solids4foam is present but `libelectroMechanicalModels` is not
+built. Run it alone with:
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
 
@@ -92,14 +124,6 @@ include; `Allclean` removes `local/`, the meshes and the case-local library.
 
 `postProcessing/manufacturedElectromechanicsSummary.dat` holds the errors of
 `Vm`, `D`, `lambda` and `Ta` at the final time.
-
-Regression (`N = 20`, `-dt 0.00224215`): the final time and the L1, L2 and Linf
-errors of `Vm`, `D`, `lambda` and `Ta`. With
-`CARDIAC_REGRESSION_BUILD_MODE=lightweight` it exits 77 (skip).
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Notes on dictionary entries
 

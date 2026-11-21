@@ -37,8 +37,8 @@
 #         Set by Alltest-regression. regression_require_solids4foam exits
 #         with REGRESSION_SKIP_CODE (77) under lightweight.
 #     CARDIAC_REGRESSION_SCOPE        standard | full   (default standard)
-#         Read by cases that offer a wider check than the suite gate, see
-#         regression_scope.
+#         Read by Alltest-regression, not by the cases: standard runs the
+#         cases without regression/full-only, full runs every case.
 #
 # Reference grammar. One check per line, whitespace separated, '#' starts
 # a comment. Paths are relative to the case root; a path that does not
@@ -87,7 +87,6 @@ REGRESSION_REPORT_PATH=""
 REGRESSION_REPORT_ROWS=""
 REGRESSION_TIME_WINDOW="2.5e-3"
 REGRESSION_SUMMARY_FILE=""
-REGRESSION_SCOPE=standard
 REGRESSION_ALLRUN_LOG="log.Allrun"
 REGRESSION_CHECKS=0
 REGRESSION_FAILURES=0
@@ -180,25 +179,6 @@ regression_fail()
     REGRESSION_FAILURES=$((REGRESSION_FAILURES + 1))
     echo "FAIL: $1"
     regression_report_row check "" "" "" "" "" "" "" failed "$(regression_json_string "$1")"
-}
-
-# regression_scope: sets REGRESSION_SCOPE to standard or full from
-# CARDIAC_REGRESSION_SCOPE; exits on any other value. --check-only always
-# selects standard, since only one set of outputs exists to compare.
-regression_scope()
-{
-    REGRESSION_SCOPE="${CARDIAC_REGRESSION_SCOPE:-standard}"
-    case "${REGRESSION_SCOPE}" in
-        standard|full) ;;
-        *)
-            echo "FAIL: CARDIAC_REGRESSION_SCOPE must be 'standard' or 'full', got '${REGRESSION_SCOPE}'." >&2
-            exit 2
-            ;;
-    esac
-    if (( REGRESSION_CHECK_ONLY )); then
-        REGRESSION_SCOPE=standard
-    fi
-    echo "Scope: ${REGRESSION_SCOPE}"
 }
 
 # regression_require_run_mode: for cases whose variants cannot be compared

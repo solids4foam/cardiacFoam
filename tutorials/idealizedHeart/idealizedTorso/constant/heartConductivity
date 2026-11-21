@@ -1,0 +1,26 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      heartConductivity;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Heart conductivities (S/m), (fibre crossFibre), transversely isotropic about
+// the fibre: Clerc (1976), as used by Niederer et al. (2011). Read by
+// setup/heartConductivity.py, which writes 0/ConductivityIntracellular and
+// 0/ConductivityExtracellular from 0/fiber (Allrun).
+
+intracellular   (0.17 0.019);
+extracellular   (0.62 0.24);
+
+// ************************************************************************* //

@@ -8,7 +8,7 @@ generator checks its construction before it writes anything and emits:
 
 - `reference/<case>.py`: a NumPy-only module with the exact fields, sources
   and, for the ECG and junction cases, the reference quadratures (all
-  generators except `shell_mms.py`);
+  generators except `shell_mms.py` and `bath_shell_bidomain_mms.py`);
 - `latex/<case>_*.tex`: the formula fragments the documents print (all
   generators except `fda_bath_bidomain_mms.py`, whose solution no document
   prints);
@@ -39,6 +39,7 @@ no solver output.
 | `shell_bidomain_mms.py` | heart-only bidomain potentials on the sealed shell with unequal anisotropy ratios |
 | `slab_leadfield_mms.py` | lead-field ECG potentials of the insulated slab and the layered torso |
 | `shell_mms.py` | lead-field ECG transmission field of a heart shell between a bath ball and an outer bath (LaTeX fragments and C++ header, no NumPy module) |
+| `bath_shell_bidomain_mms.py` | bath bidomain potentials of the bath shell: the sealed bidomain shell coupled every step to a bath ball and an outer bath to `r3`, outer sphere insulated or grounded (LaTeX fragments and C++ header, no NumPy module) |
 | `template_mms.py` | passive monodomain field on the unit square: the starting point of a new generator (see "Creating a new manufactured solution") |
 | `mms_codegen.py` | C++ emission and the shared command line |
 | `mms_common/` | NumPy and LaTeX emitters (`numpy_emit.py`, `latex_emit.py`) and Gauss-Legendre quadratures (`quadrature.py`) |
@@ -74,6 +75,7 @@ that define its problem.
 | `fda_bath_bidomain_mms.py` | `bathBidomain/slab` |
 | `slab_leadfield_mms.py` | `leadFieldECG` (`-problem slab\|layered`) |
 | `shell_mms.py` | `leadFieldECG/sphericalShell` |
+| `bath_shell_bidomain_mms.py` | `bathBidomain/sphericalShell` (planned) |
 
 `electromechanics/totalLagrangianEM` has no generator; its reference is in
 `src/verificationModels/`.
@@ -89,7 +91,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 for g in fda_monodomain rotated_monodomain shell_monodomain pseudo_ecg \
          graph_monodomain coupled_1d3d cartesian_eikonal eikonal_ecg \
          shell_eikonal fda_bidomain fda_bath_bidomain shell_bidomain \
-         slab_leadfield shell template; do
+         slab_leadfield shell bath_shell_bidomain template; do
     .venv/bin/python ${g}_mms.py --self-check && .venv/bin/python ${g}_mms.py --emit || break
 done
 git status --short reference latex     # empty: the emitted files are unchanged
@@ -145,6 +147,7 @@ python fda_bath_bidomain_mms.py --emit
 python shell_bidomain_mms.py --emit
 python slab_leadfield_mms.py --emit
 python shell_mms.py --emit
+python bath_shell_bidomain_mms.py --emit
 python template_mms.py --emit
 ```
 
@@ -256,6 +259,7 @@ taken against this directory; `--check` exits 1 on a difference.
 | `slab_leadfield_mms.py` | `ecgVerification/manufacturedLeadFieldECGReference.H` (generated regions) |
 | `shell_bidomain_mms.py` | `bidomainVerification/manufacturedShellBidomainReference.H` |
 | `shell_mms.py` | `ecgVerification/manufacturedShellLeadFieldECGReference.H` |
+| `bath_shell_bidomain_mms.py` | `bathBidomainVerification/manufacturedShellBathBidomainReference.H` |
 | `shell_eikonal_mms.py` | `eikonalVerification/manufacturedShellEikonalReference.H` |
 
 A generated region lies between `// BEGIN GENERATED <name>` and

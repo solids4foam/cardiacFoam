@@ -1,19 +1,55 @@
 # bathBidomain/slab
 
-Bidomain manufactured solution with a conductive bath: a myocardium slab
-`0 <= x <= 1` between two bath slabs, on Cartesian hexahedra (`-mesh hex`,
-default) or conformal gmsh tetrahedra (`-mesh tet`). The case checks the
-global heart+bath `phiE` equation, the intracellular no-flux and the current
-continuity across the two heart-bath interfaces, the bath boundary conditions
-(ground and surface currents), the ionic coupling and the predictor-corrector
-bath coupling, together with the interface diagnostics of
-`bathBidomainInterfaceMetrics`. The exact potentials depend on `x` only and
-the interfaces are planar and normal to `x`; the case does not check curved
-or oblique interfaces, rotated conductivities or a spatially varying bath
-conductivity.
+## What it does
 
-Origin: the bidomain-with-bath problem of the FDA regulatory science tool
-(Pathmanathan & Gray 2014).
+Runs the bidomain-with-bath problem of the FDA regulatory science tool
+(Pathmanathan & Gray 2014): a myocardium slab `0 <= x <= 1` between two bath
+slabs, on Cartesian hexahedra (`-mesh hex`, default) or conformal gmsh
+tetrahedra (`-mesh tet`). It writes the field errors against the exact
+solution and, with `bathBidomainInterfaceMetrics`, the interface diagnostics at
+`x = 0` and `x = 1`. The exact potentials depend on `x` only and the
+interfaces are planar and normal to `x`.
+
+- **Exercises:** the global heart+bath `phiE` equation (`torsoCoupling bath`),
+  the intracellular no-flux and the current continuity across the two
+  heart-bath interfaces, the bath boundary conditions (ground and surface
+  currents), the ionic coupling and the predictor-corrector bath coupling,
+  together with the interface diagnostics of `bathBidomainInterfaceMetrics`.
+  No other regression checks the heart-bath interface trace and flux jumps
+  against an exact solution. It does not check curved or oblique interfaces,
+  rotated conductivities or a spatially varying bath conductivity.
+- **Use it for:** verifying a change to the bath coupling, the interface
+  conductivity interpolation or the bath boundary conditions; comparing
+  `distanceWeightedHarmonic` with `conormalHarmonic` (`-interface`); starting
+  the spatial, coupling, interface-current, gradient-scheme and temporal
+  studies in `setup/studies/`.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs the case defaults (3D hex, `N = 20`,
+`groundElectrode`, predictor-corrector on, `T = 0.2`) in parallel on six ranks
+(`simple`, `3 x 2 x 1`) and compares them with `regression/slab.reference`
+(57 rows):
+
+- from `postProcessing/3D_20_cells.dat`, the cells per direction, the final
+  time and 43 error rows: the L1, L2 and Linf errors of `Vm`, `phiE`, `phiI`,
+  `u1`, `u2` and `u3` (`u3` must be zero within `1e-12`), and the L2 bulk,
+  boundary, interface and gradient rows;
+- from `bathBidomainInterfaceMetrics.csv` (8 rows), the heart and bath `phiE`
+  errors and, at `x = 0` and `x = 1`, the trace jump, the current-density
+  jump and the intracellular leakage;
+- from `bathBidomainInterfaceMetricsExactField.csv` (4 rows, exact `phiE`),
+  the current-density jump and the assembled current density at both
+  interfaces.
+
+The values are frozen from an earlier run, with absolute tolerances of about
+`1e-5` of each value. No markers apply. Run it alone with:
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Problem
 
@@ -58,8 +94,9 @@ The `sides` patches carry no current.
 - myocardium solver: `bidomainSolver`, `solutionAlgorithm implicit`,
   `timeCouplingScheme godunov`, `ddt(Vm)` `backward`
 - bath: `torsoCoupling bath` with the top-level `torso` block (cellZone
-  `bath`, `conductivityField bodyAndOrgansConductivity`), `heartAssembly
-  matchedSubmesh`, `interfaceConductivityInterpolation`
+  `bath`, `conductivityField bodyAndOrgansConductivity`), the heart on
+  `cellZone myocardium` with `bathHeartPhiETrace zeroGradient`,
+  `interfaceConductivityInterpolation`
   `distanceWeightedHarmonic` or `conormalHarmonic` (`-interface`; the
   `phiE` solver entry of `system/fvSolution` sets
   `nInterfaceGradientCorrectors 2` for `conormalHarmonic`)
@@ -99,7 +136,7 @@ Every option writes a file in `local/`, which the dictionaries include;
 
 | option | effect | default |
 |---|---|---|
-| `parallel` | `decomposePar` (6 subdomains, scotch), parallel `cardiacFoam`, `reconstructPar -latestTime` | serial |
+| `parallel` | `decomposePar` (6 subdomains, `simple` `3 x 2 x 1`), parallel `cardiacFoam`, `reconstructPar -latestTime` | serial |
 | `-mesh hex\|tet` | blockMesh boxes or gmsh tetrahedra (3D) | hex |
 | `-dim 1\|2\|3` | dimension of the hex box and of the manufactured states | 3 |
 | `-N n` | cells per unit length; tet: element size `1/n` | 20 |
@@ -127,13 +164,6 @@ Outputs, in `postProcessing/`:
   `bathBidomainFaceErrorsExactField.csv`: the same with `phiE` replaced by
   the exact field (`-exactFields`), which isolates the interface flux
   construction.
-
-Regression (the defaults: 3D hex, `N = 20`, `groundElectrode`, parallel on
-six ranks): the summary and every error row of `3D_20_cells.dat`.
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Studies
 

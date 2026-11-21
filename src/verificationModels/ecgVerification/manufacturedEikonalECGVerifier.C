@@ -23,6 +23,7 @@ License
 #include "PstreamReduceOps.H"
 #include "addToRunTimeSelectionTable.H"
 #include "ecgModelIO.H"
+#include "verificationUtils.H"
 #include "eikonalVerification/manufacturedEikonalReference.H"
 #include "eikonalVerification/manufacturedShellEikonalReference.H"
 
@@ -154,16 +155,7 @@ manufacturedEikonalECGVerifier::manufacturedEikonalECGVerifier
     sineTemplate_(false),
     templateDuration_(0),
     templateRise_(0),
-    sampleCount_(0),
-    referenceErrorL1Sum_(electrodePositions_.size(), scalar(0)),
-    referenceErrorL2Sum_(electrodePositions_.size(), scalar(0)),
-    referenceErrorLinf_(electrodePositions_.size(), scalar(0)),
-    checkErrorL1Sum_(),
-    checkErrorL2Sum_(),
-    checkErrorLinf_(),
-    referenceDeltaL1Sum_(),
-    referenceDeltaL2Sum_(),
-    referenceDeltaLinf_(),
+    statistics_(electrodePositions_.size()),
     summaryWritten_(false),
     shellCacheValid_(false),
     shellPsi_(),
@@ -200,77 +192,22 @@ void manufacturedEikonalECGVerifier::resizeStorage()
     const label nChecks = checkQuadratureOrders_.size();
     const label nElectrodes = electrodePositions_.size();
 
-    referenceErrorL1Sum_.setSize(nElectrodes, scalar(0));
-    referenceErrorL2Sum_.setSize(nElectrodes, scalar(0));
-    referenceErrorLinf_.setSize(nElectrodes, scalar(0));
-    checkErrorL1Sum_.setSize(nChecks);
-    checkErrorL2Sum_.setSize(nChecks);
-    checkErrorLinf_.setSize(nChecks);
-    referenceDeltaL1Sum_.setSize(nChecks);
-    referenceDeltaL2Sum_.setSize(nChecks);
-    referenceDeltaLinf_.setSize(nChecks);
-
-    for (label checkI = 0; checkI < nChecks; ++checkI)
-    {
-        checkErrorL1Sum_[checkI].setSize(nElectrodes, scalar(0));
-        checkErrorL2Sum_[checkI].setSize(nElectrodes, scalar(0));
-        checkErrorLinf_[checkI].setSize(nElectrodes, scalar(0));
-        referenceDeltaL1Sum_[checkI].setSize(nElectrodes, scalar(0));
-        referenceDeltaL2Sum_[checkI].setSize(nElectrodes, scalar(0));
-        referenceDeltaLinf_[checkI].setSize(nElectrodes, scalar(0));
-    }
+    statistics_.resize(nChecks, nElectrodes);
 }
 
 
 void manufacturedEikonalECGVerifier::initialiseOutput()
 {
-    const fileName outDir(mesh_.time().globalPath() / "postProcessing");
-    wordList columns;
-
-    forAll(electrodeNames_, electrodeI)
-    {
-        const word& name = electrodeNames_[electrodeI];
-        columns.append("numeric_" + name);
-
-        forAll(checkQuadratureOrders_, checkI)
-        {
-            columns.append
-            (
-                "refQ" + Foam::name(checkQuadratureOrders_[checkI]) + "_" + name
-            );
-        }
-
-        columns.append
+    const fileName outDir(verificationUtils::postProcessingDir(mesh_.time()));
+    const wordList columns
+    (
+        ecgErrorStatistics::seriesColumns
         (
-            "refQ" + Foam::name(referenceQuadratureOrder_) + "_" + name
-        );
-
-        forAll(checkQuadratureOrders_, checkI)
-        {
-            columns.append
-            (
-                "errQ" + Foam::name(checkQuadratureOrders_[checkI]) + "_" + name
-            );
-        }
-
-        columns.append
-        (
-            "errQ" + Foam::name(referenceQuadratureOrder_) + "_" + name
-        );
-
-        forAll(checkQuadratureOrders_, checkI)
-        {
-            columns.append
-            (
-                "deltaQuadratureQ"
-              + Foam::name(checkQuadratureOrders_[checkI])
-              + "_Q"
-              + Foam::name(referenceQuadratureOrder_)
-              + "_"
-              + name
-            );
-        }
-    }
+            electrodeNames_,
+            checkQuadratureOrders_,
+            referenceQuadratureOrder_
+        )
+    );
 
     outputPtr_ =
         ecgModelIO::openTimeSeries
@@ -604,43 +541,13 @@ void manufacturedEikonalECGVerifier::updateStatistics
     const List<scalar>& referenceValues
 )
 {
-    ++sampleCount_;
-
-    forAll(numericValues, electrodeI)
-    {
-        const scalar referenceError =
-            Foam::mag(numericValues[electrodeI] - referenceValues[electrodeI]);
-
-        referenceErrorL1Sum_[electrodeI] += referenceError;
-        referenceErrorL2Sum_[electrodeI] += referenceError*referenceError;
-        referenceErrorLinf_[electrodeI] =
-            max(referenceErrorLinf_[electrodeI], referenceError);
-
-        forAll(checkQuadratureOrders_, checkI)
-        {
-            const scalar checkError = Foam::mag
-            (
-                numericValues[electrodeI]
-              - checkReferenceValues[checkI][electrodeI]
-            );
-            const scalar referenceDelta = Foam::mag
-            (
-                referenceValues[electrodeI]
-              - checkReferenceValues[checkI][electrodeI]
-            );
-
-            checkErrorL1Sum_[checkI][electrodeI] += checkError;
-            checkErrorL2Sum_[checkI][electrodeI] += checkError*checkError;
-            checkErrorLinf_[checkI][electrodeI] =
-                max(checkErrorLinf_[checkI][electrodeI], checkError);
-
-            referenceDeltaL1Sum_[checkI][electrodeI] += referenceDelta;
-            referenceDeltaL2Sum_[checkI][electrodeI] +=
-                referenceDelta*referenceDelta;
-            referenceDeltaLinf_[checkI][electrodeI] =
-                max(referenceDeltaLinf_[checkI][electrodeI], referenceDelta);
-        }
-    }
+    statistics_.add
+    (
+        checkQuadratureOrders_.size(),
+        numericValues,
+        checkReferenceValues,
+        referenceValues
+    );
 }
 
 
@@ -823,67 +730,29 @@ void manufacturedEikonalECGVerifier::writeSummary()
 
     const fileName outputFile
     (
-        mesh_.time().globalPath()
-      / "postProcessing"
+        verificationUtils::postProcessingDir(mesh_.time())
       / ("manufacturedEikonalECGSummary_" + domainName_ + ".dat")
     );
     OFstream os(outputFile);
 
     os << "Manufactured eikonal ECG summary\n";
-    os << "samples " << sampleCount_ << "\n";
+    os << "samples " << statistics_.sampleCount() << "\n";
     os << "dimension " << dimension_ << "D\n";
     if (domain_ == "shell")
     {
         os << "domain shell\n";
     }
-    os << "qChecks";
-    forAll(checkQuadratureOrders_, checkI)
-    {
-        os << " " << checkQuadratureOrders_[checkI];
-    }
-    os << "\n";
-    os << "qReference " << referenceQuadratureOrder_ << "\n";
+    ecgErrorStatistics::writeQuadratureOrders
+    (
+        os,
+        checkQuadratureOrders_,
+        referenceQuadratureOrder_
+    );
     if (domain_ != "shell")
     {
         os << "k " << k_ << "\n";
     }
-    os << "Electrode  L1_err_ref  L2_err_ref  Linf_err_ref";
-    forAll(checkQuadratureOrders_, checkI)
-    {
-        const label qCheck = checkQuadratureOrders_[checkI];
-        os << "  L1_err_q" << qCheck
-           << "  L2_err_q" << qCheck
-           << "  Linf_err_q" << qCheck
-           << "  L1_delta_q" << qCheck << "_ref"
-           << "  L2_delta_q" << qCheck << "_ref"
-           << "  Linf_delta_q" << qCheck << "_ref";
-    }
-    os << "\n";
-
-    const scalar count = max(scalar(1), scalar(sampleCount_));
-
-    forAll(electrodeNames_, electrodeI)
-    {
-        os << electrodeNames_[electrodeI] << " "
-           << referenceErrorL1Sum_[electrodeI]/count << " "
-           << Foam::sqrt(referenceErrorL2Sum_[electrodeI]/count) << " "
-           << referenceErrorLinf_[electrodeI];
-
-        forAll(checkQuadratureOrders_, checkI)
-        {
-            os << " " << checkErrorL1Sum_[checkI][electrodeI]/count
-               << " "
-               << Foam::sqrt(checkErrorL2Sum_[checkI][electrodeI]/count)
-               << " " << checkErrorLinf_[checkI][electrodeI]
-               << " "
-               << referenceDeltaL1Sum_[checkI][electrodeI]/count
-               << " "
-               << Foam::sqrt(referenceDeltaL2Sum_[checkI][electrodeI]/count)
-               << " " << referenceDeltaLinf_[checkI][electrodeI];
-        }
-
-        os << "\n";
-    }
+    statistics_.writeTable(os, electrodeNames_, checkQuadratureOrders_);
 }
 
 

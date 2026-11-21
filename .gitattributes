@@ -1,7 +1,8 @@
-# tutorials/idealizedHeart/mesh/ is the single shared copy of the idealized
-# heart's anatomy - the polyMesh, the 0/ anatomy fields, and the Purkinje
-# graph - consumed by electroHeart, electroMechHeart, pathos/conductionBlock
-# and pathos/ionicPathology. The whole directory is the LFS unit so that a
+# tutorials/idealizedHeart/mesh/ holds the one committed idealized geometry -
+# the heart/torso mesh heartTorso/ with its 0/ fields, and the Purkinje
+# graphs. The heart mesh and fields of electroHeart, electroMechHeart and
+# pathos/* are written from heartTorso by idealizedHeart/prepareHeartMesh
+# (git-ignored). The whole directory is the LFS unit so that a
 # new asset dropped in here is covered by construction rather than by
 # remembering to extend a per-subdirectory glob.
 #

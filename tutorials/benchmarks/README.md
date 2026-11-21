@@ -13,9 +13,9 @@ cd tutorials/benchmarks/NiedererEtAl2011verification
 ./Allrun
 ```
 
-The regression, from the repository root:
+The regression is in the `full` tier; from the repository root:
 
 ```bash
-CARDIAC_REGRESSION_BUILD_MODE=lightweight \
+CARDIAC_REGRESSION_SCOPE=full CARDIAC_REGRESSION_BUILD_MODE=lightweight \
     ./tutorials/Alltest-regression --only 'benchmarks/NiedererEtAl2011verification'
 ```

@@ -61,31 +61,25 @@ requireFullElectroMechanicalBuild
 # Mesh preparation
 # -------------------------
 
-# The mesh is the single copy shared with the sibling electroHeart
-# case, kept once in ../mesh/ to avoid tracking the same ~10MB mesh twice in
-# git. It is already scaled to adult-heart-scale SI metres (80 x 100 x 80 mm,
-# 226 mL) - just copy it into both regions. Do not run blockMesh here:
+# The mesh, shared with the sibling cases in ../mesh/, is already scaled to
+# adult-heart-scale SI metres (80 x 100 x 80 mm, 226 mL) - just copy it into
+# both regions. Do not run blockMesh here:
 # system/blockMeshDict belongs to the slab tutorial scaffold and was already
 # removed from this case.
-# Guard: if the shared mesh is still a Git-LFS pointer (a clone or CI
-# checkout made without LFS), fail here with a readable message instead of
-# letting cardiacFoam die later on an unparsable mesh.
-if head -c 40 ../mesh/constant/polyMesh/points 2>/dev/null \
-    | grep -q "git-lfs.github.com"; then
-    echo "ERROR: ../mesh holds Git-LFS pointer files, not the real mesh." 1>&2
-    echo "       Run 'git lfs install && git lfs pull' and retry." 1>&2
-    exit 1
-fi
+# The heart mesh and its anatomy fields are written from the heart/torso mesh
+# ../mesh/heartTorso (Git LFS), the one committed geometry, by
+# ../prepareHeartMesh; it stops with a readable message if that mesh is a
+# Git-LFS pointer, and does nothing when its output is current.
+../prepareHeartMesh
 
 cp -a ../mesh/constant/polyMesh constant/electro/polyMesh
 cp -a ../mesh/constant/polyMesh constant/solid/polyMesh
 
-# The shared fibre/sheet/tm/conductivity fields also live once in
-# ../mesh/0/, alongside the mesh. D is case-specific and stays committed
-# here. f0f (the face-interpolated, unit-length companion of f0 that
-# electroMechanicalLaw requires) was precomputed once from f0 via
-# interpolateFibreField and committed alongside it, the same way f0
-# itself is precomputed rather than solved for at run time.
+# The shared fibre/sheet/tm/conductivity fields are in ../mesh/0/,
+# alongside the mesh. D is case-specific and stays committed here. f0f (the
+# face-interpolated, unit-length companion of f0 that electroMechanicalLaw
+# requires) is made from f0 by interpolateFibreField on the solid region,
+# with the region's interpolation scheme (skewCorrected linear).
 # git does not track empty directories, so a case whose 0/ holds nothing
 # tracked has no 0/ at all in a fresh checkout and every copy below fails
 # with "No such file or directory" - the solver then dies and the
@@ -93,8 +87,8 @@ cp -a ../mesh/constant/polyMesh constant/solid/polyMesh
 mkdir -p 0/electro 0/solid
 
 cp ../mesh/0/fiber 0/solid/f0
-cp ../mesh/0/f0f 0/solid/f0f
 cp ../mesh/0/sheet 0/solid/sheet
+runApplication -s solid interpolateFibreField -region solid
 cp ../mesh/0/tm 0/electro/tm
 cp ../mesh/0/tm 0/solid/tm
 cp ../mesh/0/Conductivity 0/electro/Conductivity

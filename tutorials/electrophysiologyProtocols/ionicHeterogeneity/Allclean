@@ -9,3 +9,4 @@ for d in [0-9]*; do
 done
 
 rm -rf postProcessing
+rm -rf local
