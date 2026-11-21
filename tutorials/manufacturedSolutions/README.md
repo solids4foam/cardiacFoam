@@ -61,8 +61,8 @@ cd tutorials/manufacturedSolutions/bidomain/cube
 ./Allrun -mesh tet                # the same case on gmsh tetrahedra
 ```
 
-`tutorials/Alltest-regression` runs the regressions; `--only` selects cases by
-path:
+`tutorials/Alltest-regression` runs the regressions. Every case here is in
+the `standard` tier, the one CI runs; `--only` selects cases by path:
 
 ```bash
 CARDIAC_REGRESSION_BUILD_MODE=lightweight \

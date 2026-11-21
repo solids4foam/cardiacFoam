@@ -1,9 +1,31 @@
 # Ionic pathologies on the idealized biventricular heart
 
+## What it does
+
 Monodomain tissue simulation modelling acute ischemia or Brugada syndrome
 type-1 via `ionicConstantOverrides` on the `TNNP` ionic model, with
 pseudo-ECG output and a coupled (unmodified) Purkinje network. Two variants
 of the same case, selected at run time; no default — see Execution below.
+
+- **Exercises:** no code path of its own: the monodomain tissue, cable
+  Purkinje network and pseudo-ECG of `../../electroHeart`, with TNNP in the
+  tissue and `ionicConstantOverrides` (global and `epicardialCells` scopes).
+- **Use it for:** acute ischemia and Brugada parametrisations on the whole
+  heart, and as a starting point for other ionic pathologies expressed as
+  constant overrides.
+
+## Regression
+
+Tier: `none`.
+
+None. The solver path (monodomain tissue, `monodomain1DSolver` Purkinje
+network, `reactionDiffusionPvjCoupler`, pseudo-ECG on this mesh) is checked by
+[`electroHeart`](../../electroHeart/README.md) (full), and
+`ionicConstantOverrides` (a global scale, a named-region set and a
+named-region scale) by
+[`ionicHeterogeneity`](../../../electrophysiologyProtocols/ionicHeterogeneity/README.md)
+(standard, its `./Allrun overrides` run). What this case adds is the two
+pathology parametrisations, not a code path.
 
 ## Stack
 
@@ -46,10 +68,11 @@ where the `brugada` variant's `g_to`/`g_CaL` override applies.
 
 ## Mesh and anatomy fields
 
-`Allrun` copies from `../../mesh/`:
-`fiber`/`sheet`/`sheetNormal`/`tm`/`tv`/`apicobasal`/`Conductivity`/
-`polyMesh`/`purkinjeGraph` as-is (no graph modification for either
-variant here).
+`Allrun` runs `../../prepareHeartMesh` (which writes the heart mesh and
+fields from `../../mesh/heartTorso`, see `../../README.md`) and copies from
+`../../mesh/` only what this case reads: `constant/polyMesh`, `0/tm`,
+`0/Conductivity` and `constant/purkinjeGraph`, as-is (no graph modification
+for either variant here).
 
 ## ECG electrodes
 

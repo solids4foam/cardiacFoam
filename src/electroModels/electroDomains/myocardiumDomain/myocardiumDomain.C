@@ -397,10 +397,6 @@ myocardiumDomain::myocardiumDomain
         }
     }
 
-    if (verificationModelPtr_)
-    {
-        verificationModelPtr_->bindSourceField(sourceField_);
-    }
     diffusionSolverPtr_->bindVerifier(verificationModelPtr_.get());
 
     initialiseProcessing();

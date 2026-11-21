@@ -30,3 +30,20 @@ Electrodes lie in the torso: an electrode outside the mesh or in a
 myocardium cell stops the run with a fatal error. A bidomain myocardium
 whose heart potential takes the bath's trace on the heart wall is not
 supported: the conductor's heart companion is zeroGradient.
+
+## The heart wall
+
+The forward problem is the extracellular problem for a given `Vm`:
+`div((Gi + Ge) grad phi) = -div(Gi grad Vm)` in the heart,
+`div(sigma grad phi) = 0` in the torso, and `phi` and the total current
+continuous at the heart wall. The heart side of the heart-torso faces
+carries `Gi + Ge`, and the heart source moves the wall current
+`q = n.Gi grad(Vm)` of each wall face to the torso cell
+(`passiveConductor::transferWallLayer`).
+
+The bath (`torsoCoupling bath`) solves the same problem but writes the wall
+with `Ge`. It solves `Vm` and `phi` together, so the pair satisfies
+intracellular insulation and only extracellular current crosses the wall.
+A `Vm` given to the lead fields does not satisfy that identity with the
+torso's `phi`, so only the total-current form holds. For the bath's own `Vm`
+the two forms are the same equation. See `passiveConductor.H`.

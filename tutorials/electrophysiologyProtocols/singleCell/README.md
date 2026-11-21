@@ -1,10 +1,39 @@
 # singleCell tutorial architecture
 
-This case is the single integration-point electrophysiology workflow.
+## What it does
 
-- Electro model: `singleCellSolver`
-- Voltage evolution: inside ionic ODE system (`solveVmWithinODESolver=true`)
-- Spatial representation: single integration point (0-D)
+Integrates one ionic model at a single integration point (0-D,
+`singleCellSolver`), with the membrane voltage solved inside the ionic ODE
+system (`solveVmWithinODESolver` true). The committed case paces a TWorld
+endocardial cell twice at a 1000 ms cycle length, integrates the
+`LandNiedererTWorld` active tension, and writes Vm, `cai` and `AV_Ta` traces to
+`postProcessing/` over 2 s.
+
+- **Exercises:** `singleCellSolver`, the TWorld ionic model with the RKF45
+  integrator, the `LandNiedererTWorld` active-tension model and the
+  single-cell trace writers. Only this case checks a calcium-handling ionic
+  model and an active-tension model against reference values in the
+  `standard` tier.
+- **Use it for:** looking at one ionic model's action potential, calcium
+  transient and active tension before using the model in tissue; ionic-model
+  and tissue sweeps (`setup/sweep_ionic_model_tissue.json`); the TWorld versus
+  Gaur species comparison (`setup/studies/tworldVsGaur/`).
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `Allrun` (serial, the committed 2 s run)
+and compares six values in `regression/singleCell.reference` with frozen
+values from an earlier run: Vm and `cai` from
+`TWorld_endocardialCells_S1_1000.txt`, and `AV_Ta` from
+`TWorld_endocardialCells_S1_1000_Ta.txt`, each at 1.0 s and 1.5 s, within
+absolute tolerances of 5e-3 (Vm, `AV_Ta`) and 5e-6 (`cai`). Run it on its own
+from the case root:
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Folder structure
 
@@ -25,8 +54,11 @@ tutorials/electrophysiologyProtocols/singleCell/
 │   ├── sweep_ionic_model_tissue.json
 │   └── studies/
 │       └── tworldVsGaur/
-├── singleCell.reference
-├── regressionTest.sh
+├── regression/
+│   ├── regressionTest.sh
+│   └── singleCell.reference
+├── plotSweep
+├── plotVoltage
 ├── Allrun
 ├── Allclean
 └── README.md
@@ -118,7 +150,7 @@ Manual:
 
 ```bash
 ./Allrun
-./regressionTest.sh
+./regression/regressionTest.sh
 ```
 
 omniD-managed sweeps (this case IS the default -- omniD's `singleCell`
@@ -141,11 +173,6 @@ or this record's one allowed axis, `ionicModel` (a bare model name; derives
 `stim_amplitude`). Neither study varies S2 pacing, so there is no
 `s1s2Protocol`-style axis here; `stim_period_S1` and
 `outputVariables.ionic.export` are set as direct keys.
-
-## Regression behavior
-
-`regressionTest.sh` is local to this case and validates against
-`singleCell.reference`.
 
 ## Notes on dictionary entries
 

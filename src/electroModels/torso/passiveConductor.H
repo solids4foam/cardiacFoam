@@ -34,11 +34,22 @@ Description
     intracellular part is assembled on the heart sub-mesh and injected
     through the heart-to-base cell and face maps.
 
-    Heart-torso faces carry Ge on the heart side when the intracellular
-    potential is insulated at the heart wall (bidomain), and Gi + Ge when the
-    source Vm is sealed there (a monodomain source): the current crossing the
-    wall is Ge grad(phi).n in the first case and (Gi + Ge) grad(phi).n in the
-    second.
+    The heart side of the heart-torso faces depends on the coupling served,
+    for either myocardium. Given Vm, both couplings solve
+    div((Gi + Ge) grad phi) = -div(Gi grad Vm) in the heart and
+    div(sigma grad phi) = 0 in the torso, with phi and the total current
+    continuous at the heart wall:
+    - bath: Ge. The bath solves Vm and phi together, and the pair satisfies
+      intracellular insulation n.Gi grad(Vm + phi) = 0 at the wall (the Vm
+      equation and the heart block close the same intracellular wall faces),
+      so the current crossing the wall is n.Ge grad(phi).
+    - leadField: Gi + Ge. Vm is given and does not satisfy that identity with
+      the torso's phi, so the wall carries the total current
+      n.(Gi + Ge) grad(phi) + q, q = n.Gi grad(Vm); heartSource moves the
+      share of q of each wall face to the torso cell (transferWallLayer).
+    For the bath's own Vm the two wall conditions are the same equation;
+    with Ge and a given Vm the wall flux is wrong by n.Gi grad(phi), a
+    first-order error wherever current crosses the wall.
 
     Torso faces between cells of different conductivity take the
     distance-weighted harmonic mean of the two conductivities, which carries

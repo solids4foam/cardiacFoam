@@ -19,10 +19,19 @@ Class
     manufacturedShellLeadFieldECGVerifier
 
 Description
-    Lead-field ECG verifier against the spherical-shell transmission
-    solution of shell_mms.py (heart shell between the bath zones bloodPool
-    and bath), with the channels of leadFieldECGVerifierBase. Its
-    verificationModel takes no keys beyond type.
+    Lead-field ECG verifier on the spherical shell (heart shell between the
+    bath zones bloodPool and bath), with the channels of
+    leadFieldECGVerifierBase, against one of two solutions (key solution):
+    - transmission (default): the lead-field conductor transmission solution
+      of shell_mms.py, Vm sealed on both spheres;
+    - bathShell: the bath shell of bath_shell_bidomain_mms.py with the outer
+      sphere insulated. Its Vm is the bath-coupled one, whose intracellular
+      wall current n.Gi grad(Vm) = -n.Gi grad(phiE) is non-zero, and its phiE
+      is the potential of the two-way torsoCoupling bath solve: with phi_i
+      sealed, the lead-field conductor (Gi + Ge in the heart) with the source
+      Vm and the solution's phiE source has the same solution. The static
+      channels therefore compare the lead field on the bath shell's exact Vm
+      with the exact potentials the bath solve is verified against.
 
     The conductor must be pinned, with no ground or surface-current
     patches, and its zones, Gi, Ge and torso conductivity
@@ -48,6 +57,8 @@ Author
 
 #include "leadFieldECGVerifierBase.H"
 #include "ecgVerification/manufacturedShellLeadFieldECGReference.H"
+#include "bathBidomainVerification/manufacturedShellBathBidomainReference.H"
+#include "Enum.H"
 #include "PtrList.H"
 #include "overrideTypeName.H"
 
@@ -58,8 +69,32 @@ class manufacturedShellLeadFieldECGVerifier
 :
     public leadFieldECGVerifierBase
 {
-    //- The parameters of the solution
+public:
+
+    //- The solution the verifier compares with
+    enum class solutionType
+    {
+        transmission,
+        bathShell
+    };
+
+    static const Enum<solutionType> solutionTypeNames;
+
+private:
+
+    solutionType solution_;
+
+    //- The parameters of the solutions
     shellTransmissionMMS::Params shellParams_;
+    shellBathBidomainMMS::Params bathParams_;
+
+    // The functions of the selected solution
+    label refZoneOf(const point& p) const;
+    scalar refSigmaB(const point& p, const label zone) const;
+    symmTensor refGi(const point& p) const;
+    symmTensor refGe(const point& p) const;
+    scalar refPhiESource(const point& p, const scalar t, const label zone) const;
+    vector refGradPhiE(const point& p, const scalar t, const label zone) const;
 
     //- The lead fields z_e
     PtrList<volScalarField> leadFields_;

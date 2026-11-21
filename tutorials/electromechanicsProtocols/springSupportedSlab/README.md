@@ -1,25 +1,52 @@
 # springSupportedSlab tutorial
 
+## What it does
+
 The Niederer et al. (2011) slab in electromechanics, with both fibre-wise
-ends resting on spring supports (`solidSpringDashpot`). The spring stiffness decides
-how much the slab can shorten when it contracts:
+ends resting on spring supports (`solidSpringDashpot`). A plane wave of
+monodomain TNNP activation along the fibres drives `LandNiedererTWorld`
+active tension in a neo-Hookean solid, and the spring stiffness `kEnds`
+decides how much the slab can shorten when it contracts. It writes the
+displacement of and force on each end, and `Ta`, `Vm` and `Ca_i` probes.
 
-| End springs | What the slab does |
-|---|---|
-| `kEnds → ∞` | ends held in place: isometric twitch, no shortening |
-| `kEnds ≈ 2E/L` | springs as stiff as the tissue: partial shortening |
-| `kEnds → 0` | ends free: unloaded shortening |
+- **Exercises:** the spring (Robin) support in the coupled electromechanics
+  solver, exercised by no other case, including the check that the end force
+  from the stress field equals `-kEnds · A0 · <Dx>`.
+- **Use it for:** choosing spring stiffnesses for valve-plane or pericardial
+  supports, since heart models are cut off at the valves and held by the
+  pericardium and surrounding tissue, both usually modelled as springs; one
+  number (the slab shortening) against one parameter (`kEnds`) makes the
+  effect easy to read. The condition itself (formulation, implementation,
+  literature values) is documented in
+  `modules/solids4foam/src/solids4FoamModels/solidModels/fvPatchFields/solidSpringDashpot/README.md`.
 
-## Why this case exists
+## Regression
 
-Heart models are cut off at the valves and are held in the body by the
-pericardium and surrounding tissue. Both are usually modelled as spring
-(Robin) supports instead of fixed or free boundaries. This case checks the
-spring support in the coupled electromechanics solver on a geometry where
-the answer is easy to read: one number (the slab shortening) against one
-parameter (`kEnds`). The condition itself (formulation,
-implementation, literature values) is documented in
-`modules/solids4foam/src/solids4FoamModels/solidModels/fvPatchFields/solidSpringDashpot/README.md`.
+Tier: `full`. Markers: `needs-solids4foam` (exits 77 in `lightweight` build
+mode).
+
+`regression/regressionTest.sh` runs `./Allrun parallel` once (6 subdomains
+per region) with the default `system/caseParameters` (`kEnds = 1e7`,
+`deltaT = 1e-5`) but `endTime = 0.05` instead of the tutorial's 0.25: by then
+activation has crossed the slab, `Ta` has risen in its middle and both ends
+have moved about 30% beyond their resting preload. The stiffness sweep and
+the `deltaT = 1e-6` reference are not part of it. It compares
+`regression/springSupportedSlab.reference` (9 rows, values frozen from an
+earlier run of the code):
+
+- `Vm` at the far end, resting at 0.02 s and activated at 0.05 s (tolerance
+  2e-3 and 3e-3 V)
+- `Ta` near the stimulus (M band) and at the slab centre at 0.05 s (tolerance
+  200 Pa)
+- `Dx` on `xMin` at 0.02 and 0.05 s and on `xMax` at 0.05 s, the shortening
+  (tolerance 7e-6 m)
+- the spring law, `F_xMin = -kEnds · A0 · <Dx>` with `A0 = 2.1e-5 m²` and
+  `kEnds` read from `system/caseParameters`, at 0.02 and 0.05 s (tolerance
+  1e-4 N)
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Folder structure
 
@@ -44,7 +71,8 @@ tutorials/electromechanicsProtocols/springSupportedSlab/
 │   └── postprocess_springStiffness.py  summary table and figure
 ├── regression/
 │   ├── regressionTest.sh
-│   └── springSupportedSlab.reference
+│   ├── springSupportedSlab.reference
+│   └── full-only, needs-solids4foam
 ├── Allrun
 └── Allclean
 ```
@@ -83,6 +111,13 @@ endTime         0.25;     // covers the active-tension peak [s]
 
 - `kEnds` sets the support. The transition from isometric to free shortening
   is around 2E/L = 1e7 Pa/m.
+
+| End springs | What the slab does |
+|---|---|
+| `kEnds → ∞` | ends held in place: isometric twitch, no shortening |
+| `kEnds ≈ 2E/L` | springs as stiff as the tissue: partial shortening |
+| `kEnds → 0` | ends free: unloaded shortening |
+
 - `deltaT` sets the accuracy of the coupled solution. Lower it to check
   time-step convergence (the sweep includes `deltaT = 1e-6` as reference).
 
@@ -204,42 +239,19 @@ shortening against `kEnds`.
   so the response is nearly quasi-static. A dashpot (`cNormal`,
   `cTangential`) has little effect here.
 
-## Regression behavior
-
-The regression is a single run: `regression/regressionTest.sh` runs
-`./Allrun parallel` once with the default `system/caseParameters`
-(`kEnds = 1e7`, `deltaT = 1e-5`) but stops at `endTime = 0.05` instead of
-the tutorial's 0.25: by then activation has crossed the slab, `Ta` has risen
-in its middle and both ends have moved about 30% beyond their resting
-preload. The stiffness sweep and the `deltaT = 1e-6` reference are not part
-of it. The run is compared against `regression/springSupportedSlab.reference`:
-
-- `Vm` at the far end, resting at 0.02 s and activated at 0.05 s
-- `Ta` near the stimulus and at the slab centre at 0.05 s
-- `Dx` on `xMin` at 0.02 and 0.05 s and on `xMax` at 0.05 s (the shortening)
-- the spring law, `F_xMin = -kEnds · A0 · <Dx>`, at 0.02 and 0.05 s
-
-It exits 77 (expected skip) in `lightweight` build mode, and is wired into
-`tutorials/Alltest-regression`.
-
 ## Notes on dictionary entries
 
-**Mesh.** `system/blockMeshDict` uses deltaX = 1.0 mm.
+**Mesh.** `system/blockMeshDict` uses 40 x 6 x 14 hexahedra on the
+20 x 3 x 7 mm slab, a uniform spacing of 0.5 mm.
 
 **Active tension.** `0/solid/Ta` is the initial active tension. The
 electromechanical model registers and solves `Ta`, but the solid model builds
 its stiffness while it is constructed, before that field exists, so
-`electroMechanicalLaw` reads `Ta` from this file. In
-`constant/electroMechanicalProperties`, the `Batched` variants of the
-active-tension models (`LandNiedererTWorldBatched`, `NashPanfilovBatched`) use
-GPU/OpenMP vectorisation with `batchedSubsteps` explicit substeps per
-mechanics step and `batchedParallelCells` for CPU multi-threading. Batched
-active tension always integrates with explicit Euler (its states are not stiff,
-the fastest time constant being ~0.7 ms), so it has no `batchedIntegrator`
-key; that key belongs to the ionic model only. `preconditioningTime` (default
-1000 ms, 0 disables) overrides the pre-conditioning time; the resting `Cai` is
-queried from the ionic model's initial state. The `ODESolver` settings apply
-to the scalar `LandNiedererTWorld` only.
+`electroMechanicalLaw` reads `Ta` from this file.
+`constant/electroMechanicalProperties` selects the scalar `LandNiedererTWorld`
+model, integrated with the `ODESolver` settings (`RKF45`, `absTol 1e-8`,
+`relTol 1e-6`). The batched versions of the active-tension models are listed
+in [`src/activeTensionModels/README.md`](../../../src/activeTensionModels/README.md).
 
 **Solid solver.** In `constant/solid/solidProperties`, `rTol` is the relative
 residual (converged when residual < rTol x initial residual), `aTol` the

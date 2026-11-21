@@ -1,13 +1,39 @@
 # ionicHeterogeneity
 
-This tutorial runs the meshless `ionicHeterogeneityProbe` utility for the
-Bueno-Orovio transmural heterogeneity map.
+## What it does
 
-It samples synthetic transmural distances from `t=0` to `t=1`, applies the
-configured endocardial, M-cell, and epicardial bands, and writes one voltage
-trace per sample. It is intended to check whether the smoothed transition bands
-produce plausible action potentials before using the same heterogeneity settings
-in a spatial myocardium case.
+Runs the meshless `ionicHeterogeneityProbe` utility on the Bueno-Orovio
+transmural heterogeneity map: it samples the transmural coordinate from `t=0`
+to `t=1`, applies the endocardial, M-cell and epicardial bands, and writes one
+action potential per sample with its metrics. `./Allrun overrides` runs the
+same probe with the constant overrides of `constant/ionicConstantOverrides`.
+
+- **Exercises:** `ionicHeterogeneity` in `namedRegions` mode with blended
+  transitions, and `ionicConstantOverrides` (a `global` scale, a `set` and a
+  `scale` on named regions). No other regression exercises the overrides.
+- **Use it for:** checking a heterogeneity map or an override parametrisation
+  (for example the ones of `../../idealizedHeart/pathos/ionicPathology`) at
+  single-cell cost before running it in tissue.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs the probe twice, seconds each:
+
+- as configured: `peak` and `APD90` from `AP_metrics.csv` at five transmural
+  samples (the three plateaus and both blends) and `waveformRMS` from
+  `smoothness_report.csv` at a plateau and both blends, against
+  `regression/ionicHeterogeneity.reference` (13 rows);
+- with `./Allrun overrides`: its log must report each of the three overrides,
+  and the same metrics are compared against `regression/overrides.reference`
+  (13 rows).
+
+The values are frozen from an earlier run. Run it alone with:
+
+```bash
+./regression/regressionTest.sh
+```
 
 The current transmural map uses one-sided transition bands. In other words,
 `transitionWidth` starts at each interface and extends toward the next tissue
@@ -51,8 +77,13 @@ wmake applications/utilities/ionicHeterogeneityProbe
 Then run this tutorial:
 
 ```bash
-./Allrun
+./Allrun              # the map of constant/electroProperties
+./Allrun overrides    # the same, with constant/ionicConstantOverrides
 ```
+
+`./Allrun overrides` copies `constant/ionicConstantOverrides` to
+`local/overrides`, which `constant/electroProperties` includes in
+`singleCellSolverCoeffs`; a plain `./Allrun` leaves it empty.
 
 The utility returns non-zero if any configured smoothness or AP-shape check
 fails; the CSV files are still written and `Allrun` exits with that status.
@@ -103,16 +134,3 @@ python3 ../../../applications/utilities/ionicHeterogeneityProbe/plotIonicHeterog
 
 To also write separate overlays of every computed voltage trace in the Endo-M
 and M-Epi areas, add `--all-traces`.
-
-## Regression
-
-Covered by `tutorials/Alltest-regression`. `regression/regressionTest.sh`
-cleans, runs, and checks `peak`/`APD90` from `AP_metrics.csv` at five
-transmural samples (endo/mid/epi plateaus plus both blends) and
-`waveformRMS` from `smoothness_report.csv` at a plateau and both blend
-transitions, against `regression/ionicHeterogeneity.reference`. Run it
-directly with:
-
-```bash
-./regression/regressionTest.sh
-```

@@ -1,18 +1,68 @@
 # leadFieldECG
 
-Verification of the lead-field ECG (`ecgSolver torsoECG` with
-`torsoCoupling leadField` and the lead fields of `buildLeadFields`). The case checks two things:
+## What it does
 
-- that the lead-field channel equals the converged forward
-  passive-conductor solve of the same conductor; the lead field is the
-  discrete adjoint `A^-T e` of the finite-volume operator `A`, so the two
-  agree to the tolerance of the linear solves on hexahedra and tetrahedra;
-  and
-- that both converge to an exact torso potential.
+Runs the lead-field ECG (`ecgSolver torsoECG` with `torsoCoupling leadField`
+and the lead fields of `buildLeadFields`) on a heart slab between two torso
+slabs (`-problem slab`, default), with layered torso slabs and a current
+across them (`-problem layered`) or with a wall current (`-problem
+wallCurrent`). The myocardium is a monodomain or a bidomain solver on the
+cellZone `myocardium`; the torso (the top-level `torso` block) exists only as
+the conductor of the ECG, and no bath forward solve is run. The verifier
+`manufacturedLeadFieldECGVerifier` compares each channel with a direct forward
+solve of the same conductor and with the exact torso potential.
 
-The myocardium is a monodomain or a bidomain solver on the cellZone
-`myocardium`. The torso (the top-level `torso` block) exists only as the
-conductor of the ECG; no bath forward solve is run.
+- **Exercises:** the lead-field reciprocity: the lead field is the discrete
+  adjoint `A^-T e` of the finite-volume operator `A`, so the channel equals
+  the converged direct forward solve of the same conductor to the tolerance of
+  the linear solves, on hexahedra and tetrahedra; and the convergence of both
+  to an exact torso potential. It also exercises the assembled-matrix PETSc
+  solves (`leadField`, `leadFieldDirect`) and, with `-problem wallCurrent`,
+  the wall-current transfer of the conductor's heart source. `-problem
+  layered` is the only regression in which a current crosses the heart walls
+  and an interface between torso zones of different conductivity.
+- **Use it for:** verifying a change to `buildLeadFields`, `torsoECG` or the
+  passive conductor against the direct solve and the exact potential; checking
+  a mesh type or a scheme before using the lead field on an anatomical torso;
+  starting the convergence, reciprocity and organ-jump studies in
+  `setup/studies/`.
+
+## Regression
+
+Tier: `standard`.
+
+`regression/regressionTest.sh` runs `Allrun parallel` twice on the default
+mesh (hex, `N = 10`, monodomain, `dt = 0.01`, `endTime = 0.05`, two ranks,
+scotch): the defaults (`-problem slab`) and `-problem layered` (`alpha =
+0.01`). Each run compares the rows of
+`postProcessing/manufacturedLeadFieldECGSummary_ECG.dat`:
+
+- the reciprocity gaps `leadField-direct_relative` and
+  `leadFieldStatic-directStatic` (Linf), checked against zero within `1e-9`
+  and `1.4e-9`;
+- the static errors against the exact potential at the electrode-cell
+  centroids, and `phiStatic_surface` over the cells of the outer boundary.
+  `regression/leadFieldECG.reference` (slab, 10 rows) checks `torsoLeftFar`
+  and `nearLeft` against zero within `1e-9`, and `torsoRight`, `nearRight`,
+  `surface3` and `phiStatic_surface` against values frozen from an earlier
+  run (absolute tolerances of about `1e-5` of each value).
+  `regression/leadFieldECGLayered.reference` (layered, 11 rows) checks the
+  left electrodes `torsoLeft` and `nearLeft`, where the current crosses the
+  torso layer interface `x = -0.5`, against zero within `1e-9`, and the right
+  electrodes (where the current also crosses both heart walls) and
+  `phiStatic_surface` against the slab's frozen values.
+
+Markers: `regression/needs-solids4foam` (exit 77 under
+`CARDIAC_REGRESSION_BUILD_MODE=lightweight` or without a solids4foam tree).
+The `leadField` and `leadFieldDirect` solves also need cardiacFoam built with
+PETSc. `--check-only` is not supported: each problem needs its own run. Run it
+alone with:
+
+```bash
+./regression/regressionTest.sh
+```
+
+## Problem
 
 The verifier `manufacturedLeadFieldECGVerifier` evaluates each sample in four
 ways:
@@ -28,8 +78,6 @@ ways:
 
 It compares these with the exact potential at the electrode point and at the
 centroid of the electrode's cell.
-
-## Problem
 
 ### `-problem slab`: insulated heart slab
 
@@ -324,22 +372,6 @@ Outputs in `postProcessing/`:
   - `directStatic-exactPoint`, `directStatic-exactCentroid`;
   - `localisation` (`exactPoint - exactCentroid`).
 - `1D_<cells>_cells.dat`: the myocardium verifier's `Vm` errors.
-
-The regression runs the defaults (hex, `N = 10`, monodomain) and
-`-problem layered` on the same mesh, each in parallel on two ranks. For each
-it checks:
-
-- the reciprocity gap `leadField-direct_relative`, which must be within
-  `1e-9` of 0;
-- the static rows against the exact potential
-  (`regression/leadFieldECG.reference`,
-  `regression/leadFieldECGLayered.reference`). In the layered run the
-  current crosses the torso layer interface (left electrodes, exact to
-  round-off) and both heart walls (right electrodes, the slab's error).
-
-```bash
-./regression/regressionTest.sh
-```
 
 ## Curved heart
 

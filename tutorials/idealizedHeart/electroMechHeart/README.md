@@ -1,6 +1,21 @@
 # Idealized biventricular electromechanics
 
-This case uses cardiacFoam's sequential electromechanical model, the TNNP ionic model, and the Land--Niederer active-tension model. Mechanics uses the rule-based fibre field `f0`, copied from `../mesh/0/fiber`.
+## What it does
+
+This case uses cardiacFoam's sequential electromechanical model on the idealized biventricular heart: monodomain (or eikonal) electrophysiology with the TNNP ionic model in an `electro` region, the Land--Niederer (`LandNiedererTWorld`) active-tension model, and a total-Lagrangian neo-Hookean solid in a `solid` region. It paces the apex and runs to 20 ms. Mechanics uses the rule-based fibre field `f0`, copied from `../mesh/0/fiber`.
+
+- **Exercises:** the electromechanics coupling on an anatomical mesh, with the fibre field interpolated onto the solid's faces (`interpolateFibreField -region solid` makes `f0f`). It is the only regression that runs electromechanics on an anatomical mesh and the only one that runs `interpolateFibreField`.
+- **Use it for:** a starting point for whole-heart electromechanics (add cavity pressures and a pericardial or basal spring, see Mechanical boundary conditions), and for checking a solids4foam build against an anatomical case.
+
+## Regression
+
+Tier: `full`. Markers: `needs-solids4foam` (exits 77 in `lightweight` build mode).
+
+`regression/regressionTest.sh` runs `./Allrun parallel` (the `monodomain` variant; 6 subdomains per region, `simple` strips along x) with `endTime` set to 0.01 instead of the tutorial's 0.02. It compares `regression/electroMechHeart.reference` (10 rows, values frozen from an earlier run of the code): `activationTime` at the apex probe (3.2 ms, tolerance 1e-5 s) and at the mid-wall probe (still -1); the displacement `D` at both probes at 5 and 10 ms (apex x and z, mid-wall y; tolerance 1e-6 m, 2e-6 m for the mid-wall); and the apical active tension `Ta` at 5 and 10 ms (tolerance 10 Pa). The `eikonal` variant is not in the regression. This is the slowest regression of the suite.
+
+```bash
+./regression/regressionTest.sh
+```
 
 ## Mesh and activation
 
@@ -33,33 +48,30 @@ The isotropic passive law (`E=100 kPa`, `nu=0.3`) is a first-integration-test ap
 
 ## Run prerequisites
 
-This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun eikonal`, and `parallel` for either). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — they live in `../mesh/` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`); `t` is derived from `tm`, not copied. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
+This needs cardiacFoam compiled with solids4foam, including `libelectroMechanicalModels`. From this directory, run `./Allrun` (or `./Allrun eikonal`, and `parallel` for either). The mesh and the `fiber`/`sheet`/`tm`/`Conductivity` fields are not committed in this case directory — `../prepareHeartMesh` writes them in `../mesh/` from the heart/torso mesh `../mesh/heartTorso` and `Allrun` copies them in each run (the `fiber` field becomes this case's `f0`). `f0f` is made from `f0` by `interpolateFibreField -region solid`, with the solid region's `skewCorrected linear` interpolation; `t` is derived from `tm`. `Allclean` removes those copies and the derived `t` along with the generated regional meshes and run output.
 
 ## Notes on dictionary entries
 
 **Stimulus.** The apical stimulus box in `constant/electro/electroProperties`
 contains 26 cell centres at the mesh apex, where the supplied `apicobasal`
-coordinate is smallest. All values are SI: `Allrun` scales the mesh to
-adult-heart dimensions. The ionic and mechanical states remain at rest for 2 ms
-before the apical pacing pulse begins.
+coordinate is smallest. All values are SI: the shared mesh in `../mesh/` is
+already in adult-heart-scale metres and `Allrun` copies it as-is. The ionic
+and mechanical states remain at rest for 2 ms before the apical pacing pulse
+begins.
 
-**Run length.** `endTime` covers complete ventricular activation and the
-electromechanical response; the write interval is 5 ms.
+**Run length.** `endTime` is 0.02 s with `deltaT` 1e-5 s; the write interval
+is 5 ms.
 
 **Active tension.** `0/solid/Ta` is the initial active tension. The
 electromechanical model registers and solves `Ta`, but the solid model builds
 its stiffness while it is constructed, before that field exists, so
-`electroMechanicalLaw` reads `Ta` from this file. In
-`constant/electroMechanicalProperties` the `Batched` variants of the
-active-tension models (`LandNiedererTWorldBatched`, `NashPanfilovBatched`) use
-GPU/OpenMP vectorisation with `batchedSubsteps` explicit substeps per
-mechanics step and `batchedParallelCells` for CPU multi-threading. Batched
-active tension always integrates with explicit Euler (its states are not stiff,
-the fastest time constant being ~0.7 ms), so it has no `batchedIntegrator`
-key; that key belongs to the ionic model only. `preconditioningTime` (default
-1000 ms, 0 disables) overrides the pre-conditioning time; the resting `Cai` is
-queried from the ionic model's initial state. The `ODESolver` settings apply
-to the scalar `LandNiedererTWorld` only.
+`electroMechanicalLaw` reads `Ta` from this file. Both
+`constant/electroMechanicalProperties.*` select the scalar
+`LandNiedererTWorld` model, integrated with the `ODESolver` settings (`RKF45`,
+`absTol 1e-8`, `relTol 1e-6`); the `eikonal` variant adds
+`activeTensionSignal templates` and its `activeTensionTemplates` (see
+Variants). The batched versions of the active-tension models are listed in
+[`src/activeTensionModels/README.md`](../../../src/activeTensionModels/README.md).
 
 **Solid solver.** In `constant/solid/solidProperties`, `rTol` is the relative
 residual (converged when residual < rTol x initial residual; the solver

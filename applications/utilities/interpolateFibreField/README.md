@@ -13,7 +13,7 @@ How you get it depends on where your `f0` came from:
 | `setFibreField`, which computes rule-based fibres on your mesh | Nothing extra: `setFibreField` writes `f0f` alongside `f0`. |
 | Anywhere else: an anatomical dataset, another tool, or a different mesh | Run `interpolateFibreField` once `f0` is in place. |
 
-> **The shipped `tutorials/idealizedHeart` case already includes a precomputed `f0f`** in `mesh/0/`. That is why `electroMechHeart/Allrun` copies it instead of calling this tool. That `f0f` belongs to that mesh: on any other mesh, generate your own. Never copy an `f0f` across meshes.
+> `tutorials/idealizedHeart/electroMechHeart/Allrun` runs `interpolateFibreField -region solid` once `f0` is in place. `f0f` belongs to its mesh and to the interpolation scheme of the run (`interpolate(f0)`, from `interpolationSchemes`): never copy an `f0f` across meshes.
 
 ## Usage
 

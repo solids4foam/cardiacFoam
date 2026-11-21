@@ -1,36 +1,37 @@
 # eikonal1DCableCV tutorial
 
-This tutorial is the minimal tissue-scale conduction-velocity calibration case
-for `cardiacFoam`.
+## What it does
 
-- Electro model: `eikonalSolver`
-- Geometry: 20 mm cable with a single-cell cross-section
-- Purpose: launch one paced wave, measure activation times at several stations,
-  and compute a conduction velocity suitable for conductivity calibration
+Solves the eikonal equation for activation time (`eikonalSolver`,
+advection-diffusion form, no ionic model) on a 20 mm cable of
+0.1 mm x 0.1 mm cross-section (400 x 1 x 1 cells, 0.05 mm), seeded in the
+first 2 mm. The solver sets `deltaT` and `endTime` to 1 and solves once; five
+probes sample `activationTime`, from which `setup/extract_cv.py` computes the
+conduction velocity (CV).
 
-## Why this case exists
+- **Exercises:** `eikonalSolver` with `eikonalAdvectionDiffusionApproach`
+  and a stimulus-box seed on a one-cell-thick cable, and `probes` sampling of
+  `activationTime`.
+- **Use it for:** tuning `conductivity` or `c0` to a target CV; comparing
+  the eikonal CV across mesh resolutions (`cable1DEikonalCV`, `dx` axis) and
+  against the monodomain cable (`../monodomain1DCableCV`).
 
-Before a 2D sheet, 3D slab, ventricle, or Purkinje-coupled simulation can be
-trusted, the tissue propagation speed has to be checked in isolation. This case
-gives the smallest practical setup for that task:
+## Regression
 
-- one paced wavefront
-- a straight cable geometry
-- conduction confined to the cable myocardium
-- direct access to activation-time-based CV measurements
+Tier: `none`.
 
-The intended workflow is:
-
-1. choose an ionic model and tissue type
-2. run the cable
-3. measure CV
-4. adjust `conductivity` in `constant/electroProperties`
-5. rerun until the central-cable CV matches the target physiology
+None. The eikonal solver with the advection-diffusion form and a
+stimulus-box seed is checked by
+[`manufacturedSolutions/eikonal/cube`](../../../manufacturedSolutions/eikonal/cube/README.md)
+(standard) against an exact solution. What this case adds is the CV
+measurement protocol.
 
 ## Folder structure
 
 ```text
 tutorials/electrophysiologyProtocols/cableProtocol/eikonal1DCableCV/
+├── 0/
+│   └── activationTime
 ├── constant/
 │   ├── electroProperties
 │   └── physicsProperties
@@ -38,10 +39,12 @@ tutorials/electrophysiologyProtocols/cableProtocol/eikonal1DCableCV/
 │   ├── blockMeshDict
 │   ├── cableProbes
 │   ├── controlDict
+│   ├── decomposeParDict
 │   ├── fvSchemes
 │   └── fvSolution
 ├── setup/
-│   └── extract_cv.py
+│   ├── extract_cv.py
+│   └── table_summary.py
 ├── Allrun
 ├── Allclean
 └── README.md
@@ -51,8 +54,8 @@ tutorials/electrophysiologyProtocols/cableProtocol/eikonal1DCableCV/
 
 - Cable length: 20 mm
 - Cross-section: 0.1 mm x 0.1 mm
-- Resolution: 0.1 mm along the cable (`200 x 1 x 1`)
-- Stimulus region: first 0.5 mm of the cable
+- Resolution: 0.05 mm along the cable (`400 x 1 x 1`)
+- Stimulus region: first 2 mm of the cable, over the whole cross-section
 
 Five probes are placed at:
 
@@ -78,6 +81,7 @@ because it avoids both the stimulus source region and the distal boundary.
 - `decomposePar`
 - `runParallel cardiacFoam`
 - `reconstructPar`
+- `redistributeRestartState`
 
 The decomposition is defined in `system/decomposeParDict`.
 
@@ -108,6 +112,13 @@ omnidriver --plugin cardiacfoam --repo . plan --strict \
 
 ## Main calibration knob
 
+The calibration workflow is:
+
+1. run the cable
+2. measure CV
+3. adjust `conductivity` (or `c0`) in `constant/electroProperties`
+4. rerun until the central-cable CV matches the target physiology
+
 The primary CV tuning parameter in this case is:
 
 ```cpp
@@ -119,12 +130,13 @@ eikonalSolverCoeffs
 
 Increasing `conductivity` increases CV; decreasing it lowers CV.
 
-`chi`, `cm`, spatial resolution, and time step also affect the measured value,
-so keep those fixed while calibrating conductivity.
+`c0`, `chi`, `cm` and the spatial resolution also affect the measured value,
+so keep those fixed while calibrating conductivity. The time step does not:
+the solver sets `deltaT` and `endTime` to 1 and solves once.
 
 ## Outputs
 
-- field writes in time directories (`Vm`, `activationTime`, ...)
+- `activationTime` in time directory `1` (the eikonal solver does not write `Vm`)
 - probe traces in `postProcessing/cableProbes/`
 - CV summary in `postProcessing/cv_summary.txt`
 - `setup/table_summary.py` walks a sweep's own `<output_dir>/cases/case_NNNN/
