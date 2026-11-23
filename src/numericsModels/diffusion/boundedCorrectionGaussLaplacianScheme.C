@@ -359,7 +359,9 @@ Foam::fv::boundedCorrectionGaussLaplacianScheme<GType>::fvmLaplacian
 
     if (mesh.fluxRequired(vf.name()))
     {
-        fvm.faceFluxCorrectionPtr(tcorr.ptr());
+        // Raw pointer before v2412, unique_ptr since: one form for both
+        fvm.faceFluxCorrectionPtr() =
+            fvScalarMatrix::faceFluxFieldPtrType(tcorr.ptr());
     }
 
     return tfvm;
