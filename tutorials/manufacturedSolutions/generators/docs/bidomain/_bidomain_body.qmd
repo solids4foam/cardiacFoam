@@ -759,6 +759,10 @@ $\kappa$, $\alpha$, $\chi$, $C_m$, $\sigma_b$ and the $\beta$ scale of the tutor
 dictionaries and of the ionic model `bathBidomainFDAManufactured` with those of
 the generator.
 
+## Figures
+
+![FDA bath slab at $t=0$, tutorial parameters. (a) The heart between two bath slabs: $\phi_e=0$ on $x=-1$ and the current $\alpha$ enters through $x=2$. (b) $V_m$ and $\phi_i$ in the heart and $\phi_e$ in the three slabs; $\phi_e$ is continuous at the walls (dotted) and linear in the bath with slope $\alpha/\sigma_b$. (c) The extracellular current density $\sigma_e\partial_x\phi_e$ (bath: $\sigma_b\partial_x\phi_e$), equal to $\alpha$ in the bath and on both walls, and the intracellular current density $\sigma_{i,xx}\partial_x\phi_i$, which vanishes on both walls.](figures/fda_bath_slab.png){#fig-bath-slab width=100%}
+
 ## Regeneration
 
 ```bash
@@ -855,6 +859,8 @@ space, and $r_j$ closes the common mode in the bath. The normals
 $\mathbf n_1=-\mathbf x/r_1$ and $\mathbf n_2=\mathbf x/r_2$ are polynomial,
 so every correction is smooth at the origin.
 
+## Exact solution
+
 *Potentials.* With $T=A_T\sin(\nu t)$ and
 
 {{< include ../../latex/shell_bath_p.tex >}}
@@ -917,6 +923,10 @@ and both parameter sets:
 - the common mode leaves $V_m$ unchanged to $10^{-14}$;
 - the ionic closure to $10^{-13}$;
 - the reference point lies in the outer bath.
+
+## Figures
+
+![Bath shell, default parameter set, insulated outer sphere, $t=0$. (a) $\phi_e$ in the plane $z=0$ across the blood pool, the heart shell and the outer bath; the dashed circles are the spheres $r_1$ and $r_2$. (b) $V_m$ in the heart shell on the same plane. (c) On the great circle of each sphere in that plane, the intracellular conormal flux $\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m$ with $\mathbf n$ the normal out of the heart, which is the virtual-electrode current, and $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$, which vanishes on both spheres.](figures/bath_shell.png){#fig-bath-shell width=100%}
 
 ## Regeneration
 

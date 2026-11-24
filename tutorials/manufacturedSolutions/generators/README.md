@@ -73,7 +73,7 @@ that define its problem.
 | `fda_bath_bidomain_mms.py` | `bathBidomain/slab` |
 | `slab_leadfield_mms.py` | `leadFieldECG` (`-problem slab\|layered`) |
 | `shell_mms.py` | `leadFieldECG/sphericalShell` |
-| `bath_shell_bidomain_mms.py` | `bathBidomain/sphericalShell` (planned) |
+| `bath_shell_bidomain_mms.py` | `bathBidomain/sphericalShell` |
 
 `electromechanics/totalLagrangianEM` has no generator; its reference is in
 `src/verificationModels/`.
