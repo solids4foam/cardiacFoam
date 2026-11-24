@@ -98,8 +98,9 @@ def test_every_marker_owned_by_exactly_one_generator(header):
 # Every generator in the release: --emit and --self-check, so the README can
 # document one command per case; --check/--write only where a header is owned.
 CLI_GENERATORS = ("fda_monodomain_mms", "rotated_monodomain_mms", "pseudo_ecg_mms",
-                  "graph_monodomain_mms", "coupled_1d3d_mms", "cartesian_eikonal_mms",
-                  "eikonal_ecg_mms", "shell_monodomain_mms", "shell_eikonal_mms",
+                  "graph_monodomain_mms", "coupled_1d3d_mms", "radial_eikonal_mms",
+                  "cartesian_eikonal_mms", "eikonal_ecg_mms", "shell_monodomain_mms",
+                  "shell_eikonal_mms",
                   "fda_bidomain_mms", "fda_bath_bidomain_mms", "slab_leadfield_mms",
                   "template_mms")
 
@@ -138,7 +139,8 @@ def test_cli_self_check_failure_exits_nonzero(monkeypatch, name):
     assert mod.main(["--emit"]) != 0 and "outputs" not in calls
 
 
-@pytest.mark.parametrize("name", ("graph_monodomain_mms", "coupled_1d3d_mms", "template_mms"))
+@pytest.mark.parametrize("name", ("graph_monodomain_mms", "coupled_1d3d_mms",
+                                  "radial_eikonal_mms", "template_mms"))
 def test_cli_without_header_has_no_check_path(monkeypatch, name):
     mod, _ = _stubbed(monkeypatch, name)
     with pytest.raises(SystemExit):

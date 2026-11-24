@@ -118,7 +118,7 @@ ANALYTIC_FIGURES = {
     "monodomain": ["fda_cube.png", "rotated_cube.png", "shell_monodomain.png",
                    "pseudo_ecg.png", "graph_1d3d_geometry.png", "graph_1d3d_fields.png"],
     "eikonal": ["cartesian_eikonal.png", "eikonal_ecg.png", "shell_eikonal.png",
-                "shell_eikonal_c0.png"],
+                "shell_eikonal_c0.png", "radial_eikonal.png"],
     "bidomain": ["fda_bidomain_cube.png", "shell_bidomain.png", "shell_bidomain_sources.png"],
     "leadField": ["slab_geometry.png", "slab_potential.png", "shell_regions.png",
                   "shell_fields.png"],

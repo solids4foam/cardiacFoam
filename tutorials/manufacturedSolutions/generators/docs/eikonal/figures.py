@@ -33,6 +33,9 @@ XL = r"$x/(1\,\mathrm{m})$"
 TL = r"$t/(1\,\mathrm{s})$"
 SL = r"$s/(1\,\mathrm{s})$"
 SLICE_TITLE = r"$x=0.3,\ y=0.2,\ z=0.4$"
+# the defaults of the tutorial eikonal/coupled1D3DSphere, and a stretched, turned example of it
+RADIAL_PE, RADIAL_A = 46.0, 0.25
+RADIAL_AXES, RADIAL_ANGLE = (1.3, 0.8, 1.1), 0.7
 
 
 def slices_image(settings, func, clim):
@@ -189,12 +192,84 @@ def shell_eikonal_c0(settings, outdir):
     fs.save(fig, outdir, "shell_eikonal_c0.png", settings)
 
 
+def radial_cut(ref, settings, axes, angle, extent):
+    """V (psi - T_k)/L of the flat profile on the plane z = 0 (L = V = 1, T_k = 0) on a square
+    grid of half-width `extent`, masked inside the held ball and outside the sealed wall;
+    returns the grid, the field and the stretched radius r/L."""
+    n = 240 if settings.draft else 700
+    axis = np.linspace(-extent, extent, n)
+    gx, gy = np.meshgrid(axis, axis)
+    points = np.stack([gx, gy, np.zeros_like(gx)], axis=-1)
+    s = np.linalg.norm(ref.stretched(points, axes, angle), axis=-1)
+    field = ref.exact_field(points, RADIAL_PE, RADIAL_A, 1.0, 1.0, 0.0, "flat", axes, angle)
+    free = (s > RADIAL_A) & (s < RADIAL_A + 1.0)
+    return gx, gy, np.ma.masked_where(~free, field), s
+
+
+def radial_eikonal(settings, outdir):
+    ref = fs.load_reference("radial_eikonal")
+    Pe, a = RADIAL_PE, RADIAL_A
+    b = a + 1.0
+    fig = plt.figure(figsize=(9.8, 8.8))
+    gs = GridSpec(2, 2, figure=fig, hspace=0.38, wspace=0.34)
+
+    ax = fig.add_subplot(gs[0, 0])
+    s = np.linspace(a, b, 400)
+    for Pe_v, color in ((5.0, fs.PSI_LIGHT), (21.0, fs.PSI), (94.0, fs.PSI_DARK)):
+        ax.plot(s, ref.slope(s, Pe_v, a), color=color,
+                label=r"$\mathrm{Pe}_L=%g$" % Pe_v)
+    ax.axhline(1.0, color=fs.NEUTRAL, ls=":", lw=1.0)
+    ax.set_xlabel(r"$s=r/L$")
+    ax.set_ylabel(r"$w=V\,\mathrm{d}\psi/\mathrm{d}r$")
+    ax.set_title(r"(a) slope at $R/L=%g$" % a, loc="left", fontsize=11)
+    ax.set_xlim(a, b)
+    ax.set_ylim(0.0, 4.0)
+    ax.legend(frameon=False, loc="upper right")
+
+    ax = fig.add_subplot(gs[0, 1])
+    for profile, ls, label in (("flat", "-", "flat"), ("front", "--", "front"),
+                               ("curvedFront", ":", "curvedFront")):
+        ax.plot(s, ref.exact_time(s, Pe, a, 1.0, 1.0, 0.0, profile), color=fs.PSI, ls=ls,
+                label=label)
+    ax.set_xlabel(r"$s=r/L$")
+    ax.set_ylabel(r"$V(\psi-T_k)/L$")
+    ax.set_title(r"(b) seed profiles at $\mathrm{Pe}_L=%g$" % Pe, loc="left", fontsize=11)
+    ax.set_xlim(a, b)
+    ax.legend(frameon=False, loc="upper left")
+
+    extent = 2.0
+    span = (0.0, float(ref.exact_time(b, Pe, a, 1.0, 1.0, 0.0, "flat")))
+    for col, (axes, angle, title) in enumerate((
+            ((1.0, 1.0, 1.0), 0.0, r"(c) isotropic, $\psi$ on $z=0$"),
+            (RADIAL_AXES, RADIAL_ANGLE, r"(d) anisotropic, $\psi$ on $z=0$"))):
+        ax = fig.add_subplot(gs[1, col])
+        gx, gy, field, radius = radial_cut(ref, settings, axes, angle, extent)
+        image = ax.pcolormesh(gx, gy, field, cmap=fs.CMAP, vmin=span[0], vmax=span[1],
+                              shading="auto", rasterized=True)
+        ax.contour(gx, gy, field, levels=np.linspace(span[0], span[1], 11)[1:-1],
+                   colors="white", linewidths=0.6)
+        ax.contourf(gx, gy, radius, levels=[0.0, a], colors=[fs.PIN], alpha=0.35)
+        ax.contour(gx, gy, radius, levels=[a, b], colors=[fs.PIN, fs.DOMAIN], linewidths=1.2)
+        ax.set_aspect("equal")
+        ax.set_xlim(-extent, extent)
+        ax.set_ylim(-extent, extent)
+        ax.set_xlabel(r"$x/L$")
+        ax.set_ylabel(r"$y/L$")
+        ax.set_title(title, loc="left", fontsize=11)
+        fs.colourbar_2d(fig, ax, image, r"$V(\psi-T_k)/L$")
+    fs.legend(fig.axes[2], [(r"held ball, $|\boldsymbol{\xi}|\leq R$", fs.PIN),
+                            (r"sealed wall, $|\boldsymbol{\xi}|=R_o$", fs.DOMAIN)],
+              ncol=1, inside="upper left")
+    fs.save(fig, outdir, "radial_eikonal.png", settings)
+
+
 def main():
     ap = fs.cli(__doc__, MESH_CASES)
     args = ap.parse_args()
     settings = fs.Settings(args.draft)
     outdir = args.outdir or os.path.join(HERE, "figures")
-    for build in (cartesian_eikonal, eikonal_ecg, shell_eikonal, shell_eikonal_c0):
+    for build in (cartesian_eikonal, eikonal_ecg, shell_eikonal, shell_eikonal_c0,
+                  radial_eikonal):
         build(settings, outdir)
     fs.run_mesh_cases(args, MESH_CASES, outdir, settings)
 
