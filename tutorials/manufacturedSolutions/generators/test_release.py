@@ -23,7 +23,7 @@ GENERATORS = ["fda_monodomain_mms.py", "rotated_monodomain_mms.py", "shell_monod
 DOCUMENTS = ["docs/monodomain/monodomain_mms.qmd", "docs/eikonal/eikonal_mms.qmd",
              "docs/bidomain/bidomain_mms.qmd", "docs/leadField/leadField_mms.qmd"]
 
-# Code spellings that must not reach the printed formulas (the paper writes
+# Code spellings that must not reach the printed formulas (the documents write
 # V_m, psi, sigma, C_m and D, r for the template duration and rise).
 FORBIDDEN = [r"\bVm\b", r"\btau\b", r"\bcm\b", r"\brise\b", r"\bduration\b"]
 

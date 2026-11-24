@@ -78,7 +78,7 @@ def test_seed_offset_slope_solves_unbounded_radial_equation():
                                   (94.0, 0.1), (94.0, 0.5)])
 def test_parity_radial(Pe, a):
     """The quadrature of the C++ header equals the closed form with the
-    exponential integral to 1e-9 (P5 states 1e-10 for its tested range)."""
+    exponential integral to 1e-9."""
     try:
         from parity.test_parity import compare, parity_available
     except ImportError:
@@ -208,10 +208,10 @@ def test_seed_profiles_differ_in_the_dirichlet_data():
 
 
 def test_seed_profile_arrival_dependence_on_ball_radius():
-    # README of eikonal1D3D: the time at a fixed point depends on R through R/L for flat
-    # and (almost) not at all for curvedFront.  At fixed L and Pe_L, R/L from 0.1 to 0.5:
-    # the paper quotes changes of 0.48 (flat), 0.08 (front), < 0.01 (curvedFront) L/V at
-    # Pe_L = 46, at r = L.
+    # README of the tutorial coupled1D3DSphere: the time at a fixed point depends on R
+    # through R/L for flat and (almost) not at all for curvedFront.  At fixed L and Pe_L,
+    # with R/L from 0.1 to 0.5, the exact time at r = L and Pe_L = 46 changes by 0.48
+    # (flat), 0.08 (front) and less than 0.01 (curvedFront) L/V.
     ref = _reference()
     Pe, L, V = 46.0, 1.0, 1.0
     change = {}
