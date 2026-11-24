@@ -315,8 +315,7 @@ stimulus point are pinned to the exact $\psi$: the case does not exercise a
 stimulus region or the constraint $\psi=0$ of ordinary runs.
 
 The construction is parametric in $c_0$. The stated problem instance is
-$c_0=1$; a higher $c_0$ lies outside the regime in which the solver paper
-verifies the shell, and the document makes no statement about it.
+$c_0=1$, and the document makes no statement about other values.
 
 ## Problem instance
 

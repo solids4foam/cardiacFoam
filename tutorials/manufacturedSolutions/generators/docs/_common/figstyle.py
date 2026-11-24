@@ -1,6 +1,6 @@
 """Shared style and helpers of the figure scripts.
 
-The conventions follow the paper's figures: one sans-serif family, 12 pt labels,
+The conventions: one sans-serif family, 12 pt labels,
 10 pt ticks, a fixed colour per quantity, light-grey geometry with a cut-away,
 dark-red rods for fibre directions, blue dots for cube electrodes and red
 triangles for named electrodes.  Scalar fields use one perceptually uniform

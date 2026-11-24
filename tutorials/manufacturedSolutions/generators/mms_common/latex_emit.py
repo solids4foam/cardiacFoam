@@ -1,4 +1,4 @@
-"""LaTeX fragments in the paper's notation."""
+"""LaTeX fragments in the notation of the construction documents."""
 
 import math
 import re
