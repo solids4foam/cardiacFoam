@@ -305,6 +305,7 @@ taken against this directory; `--check` exits 1 on a difference.
 | `shell_bidomain_mms.py` | `bidomainVerification/manufacturedShellBidomainReference.H` |
 | `shell_mms.py` | `ecgVerification/manufacturedShellLeadFieldECGReference.H` |
 | `shell_eikonal_mms.py` | `eikonalVerification/manufacturedShellEikonalReference.H` |
+| `radial_eikonal_mms.py` | `eikonalVerification/manufacturedRadialEikonalReference.H` (hand-written, no `--check` or `--write`; the generator tests its self-test samples) |
 
 A generated region lies between `// BEGIN GENERATED <name>` and
 `// END GENERATED <name>`; the rest of such a header is hand-written. The

@@ -453,3 +453,278 @@ python shell_eikonal_mms.py --check $H/manufacturedShellEikonalReference.H
 the geometry fragments `latex/shell_*.tex` are written by
 `shell_monodomain_mms.py`. The header and the emitted module carry $c_0$ as a
 runtime parameter and are written at $c_0=1$.
+
+# Radial eikonal field around a held ball {#sec-eikonal-radial}
+
+## Description and limitations
+
+The activation time of a wave that spreads from a held ball of radius $R$ to the
+sealed wall of a concentric sphere of radius $R_o$, in tissue with the
+isotropic metric $\mathbf M=m\mathbf I$. The field depends on the radius alone,
+so the eikonal--diffusion operator reduces to an ordinary differential
+equation with a closed-form solution. The case has no manufactured source:
+$S_\psi=0$, and the exact field solves the equation as ordinary runs pose it.
+The wall is sealed, $\mathbf n\cdot\mathbf M\nabla\psi=0$, and the ball takes
+the place of the stimulus sites: its cells are seeded at the times of a seed
+profile and stay at them until the equation reaches them earlier (the held
+ball); with the profile `exact` they stay at the exact field.
+
+The case exercises the curvature of the front, which enters through the term
+$2\psi'/r$, the exponential layer in which the field meets the sealed wall,
+the held ball, and the path from a one-dimensional graph into the tissue: a
+terminal at the centre of the ball seeds its cells through
+`eikonalPvjCoupler` with the profile of the case. The seed profiles `flat`,
+`front` and `curvedFront` pose three problems whose exact fields differ by a
+constant, the value held on the ball.
+
+Because the source is zero and the metric is constant, the case exercises
+neither a manufactured source nor the derivatives of a varying metric, and the
+ball replaces the stimulus box and the condition $\psi=0$ at the stimulus
+sites of ordinary runs. The field is singular at the centre (it has $\log r$
+and $1/r$ terms), so the ball has a positive radius. The closed form below
+uses the exponential integral and overflows a double when
+$\mathrm{Pe}_L(a+1)$, defined below, exceeds about 700; the NumPy reference
+evaluates the same field without it and has no such limit. The profile
+`curvedFront` needs $a\ge2/\mathrm{Pe}_L$, so that the ball contains the
+critical radius defined below. The coupler seeds a sphere, so a stretched
+ball (the anisotropic variant of the construction) is held by the verifier
+instead, with the `flat` or the `exact` profile.
+
+## Problem instance
+
+A sphere of radius $R_o$ centred at the origin, sealed, around a ball of
+radius $R$, the held ball. With $L$ the wall thickness, the scales of the
+problem are
+
+{{< include ../../latex/radial_eikonal_scales.tex >}}
+
+with $m=\sigma/(\chi C_m)$ the isotropic metric, $V$ the speed of a plane
+front and $\mathrm{Pe}_L=VL/m$ the Péclet number of the problem, the ratio of
+the advective to the diffusive term. The symbols of this section ($a$, $b$,
+$s$, $w$, $m$, $q$, $W$) are local to it. Two parameters describe the problem,
+$\mathrm{Pe}_L$ and $a=R/L$, and the tutorial defaults are
+
+{{< include ../../latex/radial_eikonal_params.tex >}}
+
+The tutorial fixes $L=0.0131\,\mathrm m$, $\sigma=0.4978\,\mathrm{S\,m^{-1}}$,
+$\chi=1.4\times10^{5}\,\mathrm m^{-1}$ and $C_m=0.01\,\mathrm{F\,m^{-2}}$, so
+that $m=\sigma/1400$, and sets $c_0=\mathrm{Pe}_L\sqrt m/L$ and the terminal
+time $T_k=2L/V$ (`terminalTime`). In cardiacFoam:
+
+- tutorial `eikonal/coupled1D3DSphere`, run by `Allrun` with `-N` (cells
+  across the wall: gmsh tetrahedra of size $L/N$, default 10), `-PeL`,
+  `-ballRatio`, `-seedProfile` (`flat`, `front`, `curvedFront` or `exact`)
+  and `-axes "ax ay az"`;
+- myocardium solver `eikonalSolver` with
+  `eikonalAdvectionDiffusionApproach true`, `sealedHeartBoundary true` and
+  `conductivitySource field`;
+- verifier `manufacturedRadialEikonalVerifier`, which reads `wallThickness`,
+  `ballRatio`, `terminalTime`, `sigma`, `axes` and `angle` from the case and
+  requires the conductivity that `setManufacturedFields` writes: $\sigma$
+  times the identity here, and the tensor of the anisotropic variant below;
+- for `flat`, `front` and `curvedFront`, a graph of one edge that leads from
+  a root to a terminal at the centre and an `eikonalPvjCoupler` with
+  `pvjRadius` equal to $R$, which seeds the cells of the ball at $T_k$ plus the
+  offset of the profile (the seed offsets below); for `exact`, no graph: the
+  verifier holds the ball at the exact field.
+
+The verifier compares the computed field with the exact one on the cells
+outside the ball and reports the error relative to the activation span
+$(L/V)\,(W(b)-W(a))$, over all of them, in the bulk, at the wall and beside the
+ball (`postProcessing/radial_errors.dat`).
+
+## Construction
+
+*Reduction.* With $\mathbf M=m\mathbf I$ and $\psi=\psi(r)$,
+$\nabla\cdot(\mathbf M\nabla\psi)=m(\psi''+2\psi'/r)$ and
+$\sqrt{\nabla\psi\cdot\mathbf M\nabla\psi}=\sqrt m\,|\psi'|$, so that
+$c_0\sqrt{\nabla\psi\cdot\mathbf M\nabla\psi}=V|\psi'|$. For $\psi'\ge0$, which holds
+on the solution below, the equation with $S_\psi=0$ is
+
+{{< include ../../latex/radial_eikonal_equation.tex >}}
+
+and the sealed wall is $\psi'(R_o)=0$. With $s=r/L$ and the slope $w=V\psi'$
+(1 for a plane front) it becomes a linear equation for $w$,
+
+{{< include ../../latex/radial_eikonal_slope_equation.tex >}}
+
+with $w(b)=0$ at the sealed wall.
+
+*Solution of the slope.* The function $u=s^2w$ satisfies
+
+{{< include ../../latex/radial_eikonal_u_equation.tex >}}
+
+which the quadratic
+
+{{< include ../../latex/radial_eikonal_q.tex >}}
+
+solves, and the solutions of the homogeneous equation are multiples of
+$e^{\mathrm{Pe}_Ls}$, so $u=q(s)+Ce^{\mathrm{Pe}_Ls}$. The wall condition
+$u(b)=0$ fixes $C$. Where $u$ vanishes, $u'=-\mathrm{Pe}_Ls^2<0$, so as $s$
+increases $u$ can cross zero only downwards and, being positive just inside
+the wall ($u'(b)<0$), stays positive for $s<b$: $w>0$ for $s<b$. The time
+follows from $\psi'=w/V$.
+
+*Seed profiles.* The three profiles of the coupler give the same field up to
+the value held on the ball. With the critical radius
+
+{{< include ../../latex/radial_eikonal_critical.tex >}}
+
+($r_c=2L/\mathrm{Pe}_L$, and $\rho_c$ is its counterpart in the metric distance
+used below), $\psi=T_k$ at $r=R$ for `flat`, $\psi=T_k+R/V$ at $r=R$ for
+`front`, and $\psi=T_k$ at $r=r_c$ for `curvedFront`, which is solved in the
+field outside $r_c$. The profile `exact` has the field of `flat`; the verifier
+holds the ball at it.
+
+*Anisotropy.* A constant anisotropic metric keeps the solution exact in a
+stretched coordinate. With the rotation by $\alpha$ about the axis
+$(1,1,1)/\sqrt3$,
+
+{{< include ../../latex/radial_eikonal_rotation.tex >}}
+
+($\mathbf K\mathbf v=\mathbf u\times\mathbf v$ for $\mathbf u=(1,1,1)/\sqrt3$) and the
+speed ratios $\eta_1,\eta_2,\eta_3$ along the principal axes,
+
+{{< include ../../latex/radial_eikonal_metric.tex >}}
+
+the ball is the ellipsoid $r\le R$ and the wall the ellipsoid $r=R_o$, and the
+field of the isotropic problem evaluated at $r=\lVert\boldsymbol\xi\rVert$
+solves the equation for $\mathbf M$ between them. The sealed condition
+$\mathbf n\cdot\mathbf M\nabla\psi=0$ becomes $\psi'(R_o)=0$: the normal of the
+wall is parallel to $\mathbf Q\mathbf D^{-1}\boldsymbol\xi$ and
+$\mathbf M\nabla\psi=m\mathbf Q\mathbf D\,\nabla_{\!\xi}\psi$.
+
+## Exact solution
+
+With $q(b)$ the value of $q$ at $s=b$,
+
+{{< include ../../latex/radial_eikonal_slope.tex >}}
+
+and the primitive of $w$ ($W'=w$),
+
+{{< include ../../latex/radial_eikonal_primitive.tex >}}
+
+the field of the problem with $\psi=T_k$ on the ball is
+
+{{< include ../../latex/radial_eikonal_psi.tex >}}
+
+and the three seed profiles are
+
+{{< include ../../latex/radial_eikonal_profiles.tex >}}
+
+The gradient in the anisotropic variant is, with $w$ evaluated at $s=r/L$ and
+$\boldsymbol\xi$, $r$ as above,
+
+{{< include ../../latex/radial_eikonal_gradient.tex >}}
+
+which does not depend on the profile. A point inside the ball takes the value
+of the ball surface, as the verifier does when it evaluates the error.
+
+*Seed offsets.* The coupler deposits on each
+cell of the ball the activation time of its terminal plus an offset that
+depends on the metric distance
+$\rho=\sqrt{\mathbf d\cdot\mathbf M^{-1}\mathbf d}$ of the cell centre from the
+terminal ($\mathbf d$ the offset of the centre from the terminal):
+
+{{< include ../../latex/radial_eikonal_offsets.tex >}}
+
+The `front` offset is $R/V$ at the surface of the ball, the value held for
+`front` above. The `curvedFront` offset is zero for $\rho\le\rho_c$ and is the
+integral, from $\rho_c$, of $1/c_0+2/(c_0^2\rho)+2/(c_0^3\rho^2)$, the solution
+$g$ of $c_0g-g'-2g/\rho=1$ in a medium without a wall.
+
+*Note for implementers.* The NumPy module does not call $\mathrm{Ei}$. It writes
+the term of $W$ that contains it as an integral over the wall layer,
+
+{{< include ../../latex/radial_eikonal_primitive_integral.tex >}}
+
+and evaluates the integral by eight-point Gauss--Legendre quadrature on
+panels that follow the exponential layer at the wall and the growth of $1/t^2$
+at small $t$; `manufacturedRadialEikonalReference.H` does the same. It agrees
+with the closed form to $3\times10^{-10}$ for the values of $\mathrm{Pe}_L$ and
+$a$ tested below and, unlike the closed form, stays finite for large
+$\mathrm{Pe}_L$.
+
+The full expressions are `printed_form()` of `radial_eikonal_mms.py`, whose
+closed form is `slope` and `scaled_time` ($=W(s)-W(a)$). The functions of
+`reference/radial_eikonal.py` are
+
+- `parameters(c0, m, L)`: $V$ and $\mathrm{Pe}_L$;
+- `q(s, Pe)`, `slope(s, Pe, a)` ($w$), `wall_integral(s, Pe, a)` and
+  `scaled_time(s, Pe, a)`;
+- `exact_time(s, Pe, a, L, V, terminal_time, profile)`, with `profile` one of
+  `flat`, `front`, `exact` and `curvedFront`;
+- `rotation_about_diagonal(angle)` and `stretched(x, axes, angle)`
+  ($\boldsymbol\xi$), with `axes` $=(\eta_1,\eta_2,\eta_3)$;
+- `exact_field(x, Pe, a, L, V, terminal_time, profile, axes, angle)` and
+  `exact_gradient(x, Pe, a, L, V, axes, angle)`;
+- `metric_radius(d, M)` ($\rho$), `seed_offset(rho, c0, profile)` and
+  `seed_times(centres, terminal, terminal_time, M, c0, profile)`.
+
+## Self-checks
+
+`--self-check` asserts, for $\mathrm{Pe}_L\in\{2,5,21,46,94\}$ and
+$a\in\{0.02,0.1,0.25,0.5\}$ on 40 points above the ball up to the wall:
+
+- the reference slope equals `slope` to $10^{-13}$ and the reference time
+  equals `scaled_time`, which uses `scipy.special.expi`, to $3\times10^{-10}$;
+- for $a\ge0.1$, the reference slope satisfies the equation for $w$ with
+  central differences of step $10^{-5}$ to $10^{-5}$;
+- $w$ vanishes at the wall and the time vanishes on the ball, both to
+  $10^{-14}$;
+
+and, besides, that:
+
+- where the closed form overflows ($\mathrm{Pe}_L=1000$, $a=0.25$ and
+  $\mathrm{Pe}_L=3000$, $a=0.1$) the reference arrival time at the wall is
+  finite and equals the integral of the reference slope, by 4000 panels of
+  eight-point quadrature, to $10^{-8}$;
+- the `front` field exceeds the `flat` field by $(L/V)a$ and the `curvedFront`
+  field differs from it by $(L/V)\,(W(a)-W(2/\mathrm{Pe}_L))$ (both to $10^{-14}$),
+  the `flat` field is $T_k$ on the ball, and `curvedFront` with
+  $a<2/\mathrm{Pe}_L$ is rejected;
+- for the anisotropic metric ($c_0=5$, $m=0.5$, $\eta=(1.3,0.8,1.1)$,
+  $\alpha=0.7$) at 12 points between the ball and the wall, the exact gradient
+  equals central differences of the field to $10^{-6}$, the eikonal residual of the
+  field (with the divergence of the flux by central differences) is below
+  $10^{-5}$, and $\mathbf n\cdot\mathbf M\nabla\psi$ vanishes on the wall
+  ellipsoid to $10^{-12}$;
+- the `curvedFront` offset has the slope $1/c_0+2/(c_0^2\rho)+2/(c_0^3\rho^2)$
+  to $10^{-6}$ at $c_0=30$, vanishes for $\rho\le\rho_c$, and the `front` and
+  `flat` offsets are $\rho/c_0$ and 0.
+
+The expressions printed above are checked against these functions
+(`check_printed_form`): with sympy, $w$ solves its equation and vanishes at the
+wall, $u$ solves its equation, $q$ solves the equation of $u$, $W'=w$, and
+$\psi$ solves the radial equation, is $T_k$ on the ball and has $\psi'=0$ at
+$R_o$, `front` is $T_k+R/V$ on the ball and `curvedFront` is $T_k$ at the
+critical radius; $VL/\mathrm{Pe}_L=m$, $b=R_o/L$, $r_c=2L/\mathrm{Pe}_L$ and
+$\sqrt m\,\rho_c=r_c$. Numerically they equal `slope`, `scaled_time` (also with the wall integral evaluated by
+quadrature in place of $\mathrm{Ei}$), `exact_time` for the three profiles,
+`seed_offset`, `rotation_about_diagonal`, `stretched` and `exact_gradient`, and
+$w>0$ before the wall.
+
+`pytest test_radial_eikonal_mms.py` also compares the emitted module with the
+seven self-test samples of the C++ header, which the verifier checks at
+start-up as well.
+
+## Figures
+
+![Radial eikonal field, from `reference/radial_eikonal.py`. (a) The slope $w=V\,\mathrm{d}\psi/\mathrm{d}r$ for $\mathrm{Pe}_L=5$, 21 and 94 at $a=0.25$; the dotted line is the plane-front value 1. (b) $V(\psi-T_k)/L$ against $s=r/L$ for the three seed profiles at $\mathrm{Pe}_L=46$, $a=0.25$. (c) The field of the flat profile on the plane $z=0$ ($L=V=1$, $T_k=0$), with isochrones at each tenth of the arrival time at the wall, the held ball (orange) and the sealed wall (grey). (d) The same field for $\eta=(1.3,0.8,1.1)$ turned by $\alpha=0.7$ about $(1,1,1)$: the cut of the field that is radial in $\boldsymbol\xi$.](figures/radial_eikonal.png){#fig-eikonal-radial width=100%}
+
+## Regeneration
+
+```bash
+python radial_eikonal_mms.py --emit
+python radial_eikonal_mms.py --self-check
+python radial_eikonal_mms.py --report [--PeL VALUE] [--ballRatio VALUE]
+```
+
+`--emit` writes `reference/radial_eikonal.py` and
+`latex/radial_eikonal_*.tex`. `--report` prints the arrival time at the wall
+and the slope on the ball for the given $\mathrm{Pe}_L$ and $a$. The generator
+owns no region of a C++ header: `manufacturedRadialEikonalReference.H` is
+hand-written, and the generator tests it through its seven self-test samples
+of $w$ and $W(s)-W(a)$. The parity harness of cardiacFoam compares the
+compiled header with `reference/radial_eikonal.py` (`mmsParity radial`). The
+generator needs SciPy for the closed form; the emitted module does not.
