@@ -9,9 +9,7 @@ generator checks its construction before it writes anything and emits:
 - `reference/<case>.py`: a NumPy-only module with the exact fields, sources
   and, for the ECG and junction cases, the reference quadratures (all
   generators except `shell_mms.py` and `bath_shell_bidomain_mms.py`);
-- `latex/<case>_*.tex`: the formula fragments the documents print (all
-  generators except `fda_bath_bidomain_mms.py`, whose solution no document
-  prints);
+- `latex/<case>_*.tex`: the formula fragments the documents print;
 - for cardiacFoam only, the generated regions (or the whole) of a C++
   reference header under `src/verificationModels/`.
 
