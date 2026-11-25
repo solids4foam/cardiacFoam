@@ -16,6 +16,7 @@ The discretisation pieces the tissue solvers share: how a sealed heart wall and 
 | `pureNeumann/compatibilityImbalance` | reports the discrete imbalance of a pure-Neumann potential equation, which its reference cell absorbs; the equation is not changed |
 | `probedOperator/probedOperator` | a linear cell-to-cell operator stored as a sparse matrix by graph-coloured probing of the function that applies it, with its transpose |
 | `diffusion/conormalStabilisation` | term added to a tensor Laplacian that makes the face-conormal magnitude its implicit coefficient, so the correctors converge when the conductivity is oblique to the faces; zero at convergence |
+| `diffusion/boundedCorrectionGaussLaplacianScheme` | Laplacian scheme `boundedCorrectionGauss` (optional, chosen in `laplacianSchemes`): the two-point flux of `Gauss linear corrected` with its explicit tensor and non-orthogonal correction limited face by face, and scaled to zero near local extrema, so diffusion does not deepen a minimum or raise a maximum |
 | `advection/facePeclet` | face Peclet number of an advection-diffusion operator with a tensor face diffusivity, and its log line |
 
 ## Folders
