@@ -376,7 +376,7 @@ def reference_module(module, functions, doc):
     return text.rstrip("\n") + "\n" + RUNTIME % (list(module.PARAM_ORDER),)
 
 
-# LaTeX names of the shell symbols, in Paper I notation where it has one.
+# LaTeX names of the shell symbols.
 SHELL_SYMBOLS = {"r1": "r_1", "r2": "r_2", "gamma1": r"\gamma_1", "gamma2": r"\gamma_2",
                  "gil": r"\sigma_f", "git": r"\sigma_s", "gin": r"\sigma_n",
                  "theta0": r"\theta_0", "theta1": r"\theta_1", "k": "k",
@@ -385,8 +385,8 @@ SHELL_SYMBOLS = {"r1": "r_1", "r2": "r_2", "gamma1": r"\gamma_1", "gamma2": r"\g
 
 
 def shell_symbol_names(extra=()):
-    """symbol_names for the shell parameters, the paper symbols and the given
-    (symbol, LaTeX) pairs."""
+    """symbol_names for the shell parameters, the shared symbols of
+    paper_symbol_names and the given (symbol, LaTeX) pairs."""
     names = {P[n] if n in P else sp.Symbol(n, real=True): tex for n, tex in SHELL_SYMBOLS.items()}
     names.update(paper_symbol_names([sp.Symbol(n, real=True) for n in ("chi", "cm", "c0")]))
     names.update(dict(extra))
@@ -464,7 +464,7 @@ def latex_fragments():
 
 
 def parameter_fragment(params, extra=()):
-    """The shell parameters in Paper I notation (angles in degrees)."""
+    """The shell parameters in LaTeX (angles in degrees)."""
     pairs = []
     for name in SCALAR_PARAMS:
         if name not in SHELL_SYMBOLS or name not in params:
