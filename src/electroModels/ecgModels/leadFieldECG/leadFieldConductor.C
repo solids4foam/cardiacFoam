@@ -746,13 +746,18 @@ dictionary leadFieldConductor::signature() const
     }
     sig.add("groundPatches", ground);
 
+    // Constant in time with lead fields (passiveConductor)
+    const scalarList currentValues
+    (
+        torso.surfaceCurrentValues(baseMesh_.time().value())
+    );
     dictionary currents;
     forAll(torso.surfaceCurrentPatches, patchI)
     {
         currents.add
         (
             torso.surfaceCurrentPatches[patchI],
-            torso.surfaceCurrentValues[patchI]
+            currentValues[patchI]
         );
     }
     sig.add("surfaceCurrentPatches", currents);
@@ -905,7 +910,7 @@ tmp<volScalarField> leadFieldConductor::forwardPotential() const
         )
     );
     conductor.torso().setGroundValues(tphiE.ref());
-    conductor.setSurfaceCurrents(tphiE.ref());
+    conductor.setSurfaceCurrents(tphiE.ref(), baseMesh_.time().value());
 
     return tphiE;
 }

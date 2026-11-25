@@ -6,7 +6,9 @@ the sum, over the heart cells, of the electrode's lead field times the heart
 source of the current `Vm`, plus the constant term of the conductor's
 boundary data and reference. No elliptic problem is solved per step, and
 one build serves every run on the same heart, torso, conductivities and
-electrodes.
+electrodes. The boundary data are therefore constant: a surface current
+that varies in time stops the run (`passiveConductor`); the bath
+(`torsoCoupling bath`) takes it.
 
 - `leadFieldConductor` builds the heart+torso conductor (`passiveConductor`,
   shared with the bath) for an ECG domain, with its electrodes and the

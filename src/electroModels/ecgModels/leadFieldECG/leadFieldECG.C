@@ -109,7 +109,7 @@ void leadFieldECG::load
 
     const bool hasConstant =
         max(mag(torso.groundValues)) > 0
-     || max(mag(torso.surfaceCurrentValues)) > 0
+     || max(mag(torso.surfaceCurrentValues(mesh.time().value()))) > 0
      || (torso.pinsReference() && torso.phiEReferenceValue != 0);
     const tmp<scalarField> tb
     (

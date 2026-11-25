@@ -59,6 +59,22 @@ Description
     Ground patches fix the constant of the potential; without them the cell
     containing phiERefPoint is pinned to phiEReferenceValue.
 
+    Each surfaceCurrentPatches entry is the normal current density into the
+    conductor (A/m^2) as a Function1 of time, so a plain number is a
+    constant and a pulse is, for example, a table:
+
+        surfaceCurrentPatches
+        {
+            source  table ((0 0) (1e-3 0) (1.001e-3 20) (5e-3 20) ...);
+            other   0.01;
+        }
+
+    The bath evaluates it at the end t0 + dt of each step. Lead fields are
+    built once and carry the surface currents in their constant term, and
+    the heart does not see these currents under torsoCoupling leadField:
+    the conductor of a lead field is fatal unless every current is a
+    constant Function1 (a plain number, constant or zero).
+
     The potential is named phiE on the base and heart meshes. With
     interfaceConductivityInterpolation conormalHarmonic, the solver entry of
     phiE in fvSolution sets the number of jump-aware gradient passes
@@ -94,6 +110,8 @@ Author
 #include "point.H"
 #include "wordList.H"
 #include "scalarList.H"
+#include "PtrList.H"
+#include "Function1.H"
 #include "scalarMatrices.H"
 #include "probedOperator.H"
 #include "torsoCoupling.H"
@@ -151,9 +169,11 @@ public:
         wordList groundPatches;
         scalarList groundValues;
 
-        //- Neumann (surface-current) patches and their currents
+        //- Neumann (surface-current) patches and their normal current
+        //  densities (A/m^2, positive into the conductor) as functions of
+        //  time (Function1; a plain number is a constant)
         wordList surfaceCurrentPatches;
-        scalarList surfaceCurrentValues;
+        PtrList<Function1<scalar>> surfaceCurrents;
 
         //- phiERefPoint and the value pinned at its cell, both required
         //  without ground patches; not read (zero) with ground patches
@@ -175,6 +195,14 @@ public:
         {
             return groundPatches.empty();
         }
+
+        //- True when every surface current is a constant Function1 (a
+        //  plain number, constant or zero)
+        bool constantSurfaceCurrents() const;
+
+        //- The surface currents at time t, in the order of
+        //  surfaceCurrentPatches
+        scalarList surfaceCurrentValues(const scalar t) const;
 
         //- Patch types of the potential on mesh: fixedValue on the ground
         //  patches, fixedGradient on the surface-current patches when
@@ -429,10 +457,10 @@ public:
     //  heart cells and correct its boundary conditions
     void fillHeart(const volScalarField& psi, volScalarField& heartPsi) const;
 
-    //- Set the gradient I/(n.sigmaTotal.n) of the surface current I on the
-    //  surface-current patches of psi (fixedGradient) and evaluate them;
-    //  fatal for a non-positive normal conductivity
-    void setSurfaceCurrents(volScalarField& psi) const;
+    //- Set the gradient I(t)/(n.sigmaTotal.n) of the surface current I at
+    //  time t on the surface-current patches of psi (fixedGradient) and
+    //  evaluate them; fatal for a non-positive normal conductivity
+    void setSurfaceCurrents(volScalarField& psi, const scalar t) const;
 
     //- Pin the reference cell to value (no-op when ground patches fix the
     //  constant)

@@ -77,8 +77,9 @@ class extracellularPotentialDomain
     //  Zero means one equation solve.
     label nNonOrthogonalCorrectors_;
 
-    //- Time at which manufactured data are evaluated
-    scalar manufacturedEvaluationTime_;
+    //- The end t0 + dt of the step: the time of the manufactured data and
+    //  of the surface currents
+    scalar newTime_;
 
     //- Cell gradient of phiE used by the face corrections of the phiE operator (jump-aware under conormalHarmonic)
     autoPtr<volVectorField> interfaceGradientPtr_;

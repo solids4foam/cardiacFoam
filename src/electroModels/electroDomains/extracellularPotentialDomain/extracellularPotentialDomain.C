@@ -96,7 +96,7 @@ extracellularPotentialDomain::extracellularPotentialDomain
     (
         resolveNonOrthogonalCorrectors(baseMesh)
     ),
-    manufacturedEvaluationTime_(baseMesh.time().value())
+    newTime_(baseMesh.time().value())
 {
     const labelUList* heartCellMapPtr = heartDomain_.subsetCellMapPtr();
     const labelUList* heartFaceMapPtr = heartDomain_.subsetFaceMapPtr();
@@ -211,6 +211,23 @@ extracellularPotentialDomain::extracellularPotentialDomain
 
     torso.setGroundValues(phiEPtr_());
     sealedWallPolicy::publish(phiEPtr_(), false);
+
+    // The surface currents, densities set at the end of each step: the
+    // current of a patch is its density times its area
+    forAll(torso.surfaceCurrentPatches, i)
+    {
+        const label patchI =
+            baseMesh_.boundaryMesh().findPatchID
+            (
+                torso.surfaceCurrentPatches[i]
+            );
+
+        Info<< "Surface current on patch " << torso.surfaceCurrentPatches[i]
+            << ": " << torso.surfaceCurrents[i].type()
+            << " (A/m^2 into the conductor), area "
+            << gSum(baseMesh_.magSf().boundaryField()[patchI]) << " m^2"
+            << endl;
+    }
 
     VmGlobalPtr_.reset
     (
@@ -351,7 +368,7 @@ const electroVerificationModel* extracellularPotentialDomain::verifier() const
 
 void extracellularPotentialDomain::prepareTimeStep(scalar t0, scalar dt)
 {
-    manufacturedEvaluationTime_ = t0 + dt;
+    newTime_ = t0 + dt;
 }
 
 
@@ -360,7 +377,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
     const passiveConductor& conductor = conductorPtr_();
     const passiveConductor::torsoSettings& torso = conductor.torso();
 
-    conductor.setSurfaceCurrents(phiEPtr_());
+    conductor.setSurfaceCurrents(phiEPtr_(), newTime_);
 
     updateHeartPhiE();
 
@@ -372,7 +389,7 @@ void extracellularPotentialDomain::solvePhiEOnce()
         model->addManufacturedPhiESource
         (
             rhsGlobal,
-            manufacturedEvaluationTime_
+            newTime_
         );
     }
 

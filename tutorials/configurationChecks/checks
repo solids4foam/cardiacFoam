@@ -70,6 +70,10 @@ bathBidomain                           bath  bathBidomain                       
 bathTorsoECG                           bath  bathTorsoECG                           pass
 # Bath composition with a Purkinje network as the only activation
 bathBidomainPurkinjeReactionDiffusion  bath  bathBidomainPurkinjeReactionDiffusion  pass
+# A surface current as a function of time (Function1 table): 0 at t = 0,
+# the constant 0.01 of bathBidomain from 0.5 ms, before the end of the first
+# step (0.56 ms), at which the bath evaluates it
+bathBidomainCurrentTable               bath  bathBidomain                           pass  torso/surfaceCurrentPatches/xMax=table~((0~0)~(5e-4~0.01)~(1~0.01))
 
 # ---- Torso ECG from lead fields (torsoCoupling leadField; the variants'
 # Allprepare runs buildLeadFields) -------------------------------------------
@@ -181,6 +185,8 @@ unknownBathInterfaceInterpolation      bath  bathBidomain                fail:bo
 # entry of fvSolution
 conormalWithoutGradientCorrectors      bath  bathBidomain                fail:nInterfaceGradientCorrectors  torso/interfaceConductivityInterpolation=conormalHarmonic
 bathPhiEFileOverride                   bath  bathPhiEFileOverride         fail:global~phiE~patch~types~differ
+# Lead fields are built once: a surface current that varies in time
+leadFieldCurrentVaryingInTime          bath  bidomainLeadFieldECG        fail:vary~in~time   torso/surfaceCurrentPatches={xMax~table~((0~0)~(1~0.01));}  skip=v2312  needs=solids4foam
 # Torso ECG from lead fields: an electrode without a lead field; the
 # conductivity changed after building; Gi (Gi+Ge)^-1 Ge not the monodomain
 # conductivity; Gi given to a bidomain ECG domain; an electrode in the heart

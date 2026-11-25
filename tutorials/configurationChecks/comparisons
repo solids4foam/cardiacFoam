@@ -42,6 +42,7 @@ same    eikonal                              eikonalSeedBoxListSingle           
 same    eikonalPurkinje                      eikonalPurkinjeCutBranchIgnored                  1/activationTime.purkinjeNetwork
 same    eikonalPurkinje                      eikonalPurkinjeCutBranchIgnored                  1/activationTime
 same    bathBidomain                         bathTorsoECG                                     0.00336323/phiE
+same    bathBidomain                         bathBidomainCurrentTable                         0.00336323/phiE
 same    bidomainWithoutTorsoECG              bidomainLeadFieldECG                             0.00336323/Vm
 same    bidomainWithoutTorsoECG              bidomainLeadFieldECG                             0.00336323/phiE
 

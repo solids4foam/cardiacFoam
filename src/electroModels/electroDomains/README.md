@@ -31,6 +31,28 @@ Time levels of the manufactured sources:
 
 In the implicit solve, PIMPLE `nOuterCorrectors` and `nNonOrthogonalCorrectors` repeat the same operation: they reassemble the `Vm` equation with updated explicit terms and solve it again. Neither evaluates the ionic current again, so only their product sets the number of solves. With a bath and `bathPredictorCorrector` on, `nOuterCorrectors` sets the number of `phiE`/`Vm` passes instead. With it off, the global `phiE` is solved once per step and the outer loop repeats only the `Vm` solve with that `phiE`.
 
+## Ground and surface currents of the bath
+
+The `torso` block of `electroProperties` sets the boundary data of the global `phiE` of `extracellularPotentialDomain`; a patch in neither list is insulated.
+
+```cpp
+torso
+{
+    ...
+    groundPatches          { back 0; }
+    surfaceCurrentPatches
+    {
+        chest  table ((0 0) (0.1 0) (0.100001 20) (0.105 20) (0.105001 -10) (0.11 -10) (0.110001 0));
+        // side 0.5;
+    }
+}
+```
+
+- `groundPatches`: the fixed potential of each patch (V). Without a ground patch, `phiERefPoint` and `phiEReferenceValue` pin the potential.
+- `surfaceCurrentPatches`: the normal current density into the conductor (A/m², negative out of it) of each patch, set as the gradient `J/(n.sigma.n)` of `phiE`. `J` is a `Function1` of time (s): a plain number is a constant; a `table` of `(time J)` pairs is linear between them and clamped outside; other types take the dictionary form, `<patch> { type square; ... }`. A `<patch>Coeffs` entry is rejected as an unknown patch.
+- The bath evaluates `J` at the end `t0 + dt` of each step, the time level of the implicit `Vm`/`phiE` pair, before every `phiE` solve of the step. The current of a patch is `J` times its area, which the log prints at start-up.
+- With `torsoCoupling leadField` each current must be a constant `Function1` (a plain number, `constant` or `zero`): the lead fields are built once, hold the surface currents only in the constant term of each channel, and the heart does not see them. Any other type is fatal there, even one whose values do not change.
+
 ## Folders
 
 ```text

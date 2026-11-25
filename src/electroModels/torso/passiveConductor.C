@@ -83,13 +83,6 @@ passiveConductor::torsoSettings passiveConductor::torsoSettings::read
     if (currentDict)
     {
         s.surfaceCurrentPatches = currentDict->toc();
-        s.surfaceCurrentValues.setSize(s.surfaceCurrentPatches.size(), 0.0);
-
-        forAll(s.surfaceCurrentPatches, patchI)
-        {
-            s.surfaceCurrentValues[patchI] =
-                currentDict->get<scalar>(s.surfaceCurrentPatches[patchI]);
-        }
     }
 
     if (groundDict)
@@ -165,6 +158,21 @@ passiveConductor::torsoSettings passiveConductor::torsoSettings::read
         }
     }
 
+    // The current density of each patch as a function of time: a plain
+    // number is a constant
+    s.surfaceCurrents.setSize(s.surfaceCurrentPatches.size());
+    forAll(s.surfaceCurrentPatches, patchI)
+    {
+        s.surfaceCurrents.set
+        (
+            patchI,
+            Function1<scalar>::New
+            (
+                s.surfaceCurrentPatches[patchI], *currentDict, &mesh
+            )
+        );
+    }
+
     return s;
 }
 
@@ -197,6 +205,36 @@ wordList passiveConductor::torsoSettings::patchTypes
     }
 
     return types;
+}
+
+
+bool passiveConductor::torsoSettings::constantSurfaceCurrents() const
+{
+    for (const Function1<scalar>& current : surfaceCurrents)
+    {
+        if (!current.constant())
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+scalarList passiveConductor::torsoSettings::surfaceCurrentValues
+(
+    const scalar t
+) const
+{
+    scalarList values(surfaceCurrents.size());
+
+    forAll(surfaceCurrents, i)
+    {
+        values[i] = surfaceCurrents[i].value(t);
+    }
+
+    return values;
 }
 
 
@@ -287,6 +325,34 @@ passiveConductor::passiveConductor
     layerCoeffStart_(),
     layerCoeff_()
 {
+    // Lead fields are built once and hold the surface currents only in the
+    // constant term of each channel; the heart of a leadField coupling does
+    // not see them. A current that varies in time has no representation.
+    if
+    (
+        coupling_ == torsoCoupling::type::leadField
+     && !torso_.constantSurfaceCurrents()
+    )
+    {
+        wordList varying;
+        forAll(torso_.surfaceCurrents, i)
+        {
+            if (!torso_.surfaceCurrents[i].constant())
+            {
+                varying.append(torso_.surfaceCurrentPatches[i]);
+            }
+        }
+
+        FatalErrorInFunction
+            << "The surface currents of patches " << flatOutput(varying)
+            << " vary in time, but torsoCoupling leadField needs constant "
+            << "ones: the lead fields are built once and carry the surface "
+            << "currents only in the constant term of each ECG channel, and "
+            << "the heart does not see them. Use torsoCoupling bath for a "
+            << "current that varies in time."
+            << exit(FatalError);
+    }
+
     if (torso_.interface == interfaceInterpolation::conormalHarmonic)
     {
         const dictionary& solverDict = baseMesh_.solverDict(potentialName);
@@ -997,12 +1063,18 @@ void passiveConductor::fillHeart
 }
 
 
-void passiveConductor::setSurfaceCurrents(volScalarField& psi) const
+void passiveConductor::setSurfaceCurrents
+(
+    volScalarField& psi,
+    const scalar t
+) const
 {
     const volTensorField& sigma = sigmaTotalPtr_();
 
     forAll(torso_.surfaceCurrentPatches, i)
     {
+        const scalar current = torso_.surfaceCurrents[i].value(t);
+
         const label patchI =
             baseMesh_.boundaryMesh().findPatchID
             (
@@ -1036,7 +1108,7 @@ void passiveConductor::setSurfaceCurrents(volScalarField& psi) const
                     << exit(FatalError);
             }
 
-            gradient[faceI] = torso_.surfaceCurrentValues[i]/sigmaN;
+            gradient[faceI] = current/sigmaN;
         }
 
         psiP.evaluate();

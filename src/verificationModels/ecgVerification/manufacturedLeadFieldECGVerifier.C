@@ -176,7 +176,11 @@ void manufacturedLeadFieldECGVerifier::initialiseLayered
 
     // alpha = I n_x on every surface-current face; no net current
     const wordList& patches = torso.surfaceCurrentPatches;
-    const scalarList& currents = torso.surfaceCurrentValues;
+    // Constant in time with lead fields (passiveConductor)
+    const scalarList currents
+    (
+        torso.surfaceCurrentValues(baseMesh.time().value())
+    );
     scalar alphaMin = GREAT;
     scalar alphaMax = -GREAT;
     scalar netCurrent = 0;

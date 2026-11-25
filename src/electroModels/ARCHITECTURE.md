@@ -145,6 +145,9 @@ domain. Implements `electroStateDomain`.
 
 - Solves an elliptic Poisson equation for `phiE` driven by the scattered heart
   `Vm`, with Dirichlet `groundPatches` and Neumann `surfaceCurrentPatches`.
+  Each surface current is a `Function1` of time, set at the end `t0 + dt`
+  of the step before every `phiE` solve
+  ([electroDomains/README.md](electroDomains/README.md#ground-and-surface-currents-of-the-bath)).
 
 - Owns a `passiveConductor` (`torso/`), built from the top-level `torso`
   block: the heart+torso cell and face conductivities, the operator, the
