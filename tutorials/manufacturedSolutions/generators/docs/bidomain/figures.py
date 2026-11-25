@@ -4,7 +4,9 @@
     python figures.py [--outdir DIR] [--draft] [--mesh-case NAME=PATH ...]
 
 The analytic figures use bidomain_reference.py (FDA cube through
-reference/fda_bidomain.py, sealed shell through shell_bidomain_mms.py).  Mesh
+reference/fda_bidomain.py, sealed shell through shell_bidomain_mms.py), the
+FDA bath slab through reference/fda_bath_bidomain.py and the bath shell through
+bath_shell_bidomain_mms.py.  Mesh
 figures read constant/polyMesh of a meshed case the author supplies:
 
     fda_cube_hex, fda_cube_tet, shell_hex, shell_tet
@@ -26,6 +28,7 @@ import vtk  # noqa: E402
 from matplotlib.gridspec import GridSpec  # noqa: E402
 
 import bidomain_reference as br  # noqa: E402
+import bath_shell_bidomain_mms as bsb  # noqa: E402
 
 MESH_CASES = {
     "fda_cube_hex": "FDA cube, hex",
@@ -199,12 +202,152 @@ def shell_sources(settings, outdir):
     fs.save(fig, outdir, "shell_bidomain_sources.png", settings)
 
 
+def _heart_bath_axes(ax):
+    """Dotted lines at the two heart walls and the slab names on the x axis."""
+    for wall in (0.0, 1.0):
+        ax.axvline(wall, color=fs.GREY, lw=0.8, ls=":")
+    ax.set_xlim(-1, 2)
+    ax.set_xlabel(XL)
+
+
+def bath_slab(settings, outdir):
+    """FDA bath slab: geometry, potentials and current densities at t = 0."""
+    ref = fs.load_reference("fda_bath_bidomain")
+    par = (ref.PARAMS["K"], ref.PARAMS["ALPHA"], ref.PARAMS["SE"])
+    gi_xx, se, sb = br.GI[0], ref.PARAMS["SE"], ref.PARAMS["SIGMA_B"]
+    alpha = ref.PARAMS["ALPHA"]
+    x = np.linspace(-1, 2, 1201)
+    xh = x[(x >= 0) & (x <= 1)]
+    z0, zh = 0 * x, 0 * xh
+    pe = ref.phiE_d1(x, z0, z0, 0.0, *par)
+    vm = ref.Vm_d1(xh, zh, zh, 0.0, *par)
+    pi = ref.phiI_d1(xh, zh, zh, 0.0, *par)
+    h = 1e-7
+
+    def slope(f, xs, lo, hi):
+        """Central difference of f inside one slab (lo, hi): the points are kept
+        2h inside it, since phi_e has a kink on each heart wall."""
+        xc = np.clip(xs, lo + 2 * h, hi - 2 * h)
+        zs = 0 * xc
+        return (f(xc + h, zs, zs, 0.0, *par) - f(xc - h, zs, zs, 0.0, *par)) / (2 * h)
+
+    left, right = x < 0, x > 1
+    heart = ~left & ~right
+    j_e = np.concatenate([sb * slope(ref.phiE_d1, x[left], -1, 0),
+                          se * slope(ref.phiE_d1, x[heart], 0, 1),
+                          sb * slope(ref.phiE_d1, x[right], 1, 2)])
+    j_i = gi_xx * slope(ref.phiI_d1, xh, 0, 1)
+    assert abs(j_i[0]) < 1e-4 * alpha and abs(j_i[-1]) < 1e-4 * alpha, "intracellular current on a wall"
+    assert np.allclose(j_e[left], alpha, atol=1e-6) and np.allclose(j_e[right], alpha, atol=1e-6)
+    assert abs(j_e[heart][0] - alpha) < 1e-4 * alpha and abs(j_e[heart][-1] - alpha) < 1e-4 * alpha
+
+    fig, axes = plt.subplots(1, 3, figsize=(12.8, 3.9), gridspec_kw={"width_ratios": [1.15, 1, 1]})
+    ax = axes[0]
+    for lo, hi, colour, name in ((-1, 0, fs.MESH_FACE, "bath"), (0, 1, "#b7cde3", "myocardium"),
+                                 (1, 2, fs.MESH_FACE, "bath")):
+        ax.add_patch(plt.Rectangle((lo, 0), hi - lo, 1, facecolor=colour, edgecolor=fs.MESH_EDGE, lw=1.0))
+        ax.text((lo + hi) / 2, 0.62, name, ha="center", va="center", fontsize=10)
+    ax.text(-0.5, 0.36, r"$\sigma_b$", ha="center", va="center", fontsize=10)
+    ax.text(0.5, -0.05, r"$\sigma_b=\sigma_{e,xx}/2$", ha="center", va="top", fontsize=10)
+    ax.text(1.5, 0.36, r"$\sigma_b$", ha="center", va="center", fontsize=10)
+    ax.text(0.5, 0.36, r"$\boldsymbol{\sigma}_i,\ \boldsymbol{\sigma}_e$", ha="center", va="center", fontsize=10)
+    ax.plot([-1.0, -1.0], [0, 1], color="black", lw=3.0, solid_capstyle="butt")
+    ax.text(-1.0, 1.1, r"grounded, $\phi_e=0$", ha="left", va="bottom", fontsize=10)
+    ax.annotate("", xy=(2.0, 0.5), xytext=(2.4, 0.5),
+                arrowprops=dict(arrowstyle="-|>", lw=1.8, color="black", shrinkA=0, shrinkB=0))
+    ax.text(2.0, 1.1, r"current $\alpha$ in", ha="right", va="bottom", fontsize=10)
+    ax.set_xlim(-1.1, 2.5)
+    ax.set_ylim(-0.25, 1.35)
+    ax.set_aspect("equal")
+    ax.set_axis_off()
+    ax.set_title("(a) heart between two bath slabs", loc="left", fontsize=11)
+    ax = axes[1]
+    ax.plot(xh, vm, color=fs.VM, label=r"$V_m$")
+    ax.plot(x, pe, color=PHIE, label=r"$\phi_e$")
+    ax.plot(xh, pi, color=PHII, label=r"$\phi_i$")
+    _heart_bath_axes(ax)
+    ax.set_title(r"(b) potentials at $t=0$", loc="left", fontsize=11)
+    ax.legend(frameon=False, fontsize=9, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    ax = axes[2]
+    ax.plot(x, j_e / alpha, color=PHIE, label=r"$\sigma_e\,\partial_x\phi_e$ (bath: $\sigma_b\,\partial_x\phi_e$)")
+    ax.plot(xh, j_i / alpha, color=PHII, label=r"$\sigma_{i,xx}\,\partial_x\phi_i$")
+    ax.axhline(0, color=fs.GREY, lw=0.6)
+    _heart_bath_axes(ax)
+    ax.set_ylabel(r"current density$/\alpha$")
+    ax.set_title(r"(c) current densities at $t=0$", loc="left", fontsize=11)
+    ax.legend(frameon=False, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    fig.subplots_adjust(wspace=0.4)
+    fs.save(fig, outdir, "fda_bath_slab.png", settings)
+
+
+def _t6(components):
+    """Full tensor of the six stored components (xx, xy, xz, yy, yz, zz)."""
+    c = components
+    return np.stack([np.stack([c[..., 0], c[..., 1], c[..., 2]], -1),
+                     np.stack([c[..., 1], c[..., 3], c[..., 4]], -1),
+                     np.stack([c[..., 2], c[..., 4], c[..., 5]], -1)], -2)
+
+
+def bath_shell(settings, outdir):
+    """Bath shell: phi_e and V_m in the plane z = 0 and the wall currents."""
+    params = bsb.default_params()
+    model = bsb.build("insulated", params)
+    r1, r2, r3 = params["r1"], params["r2"], params["r3"]
+    n = 161 if settings.draft else 481
+    s = np.linspace(-r3, r3, n)
+    X, Y = np.meshgrid(s, s)
+    pts = np.stack([X, Y, 0 * X], -1)
+    r = np.hypot(X, Y)
+    phie = np.full(r.shape, np.nan)
+    vm = np.full(r.shape, np.nan)
+    for zone, mask in ((0, r < r1), (1, (r >= r1) & (r <= r2)), (2, (r > r2) & (r <= r3))):
+        phie[mask] = model.eval_xyz(zone, "phiE", pts[mask], 0.0)
+        if zone == 1:
+            vm[mask] = model.eval_xyz(1, "Vm", pts[mask], 0.0)
+    a = np.linspace(0, 2 * np.pi, 361)
+    flux = {}
+    for j, sign in ((1, -1.0), (2, 1.0)):
+        radius = params["r%d" % j]
+        ring = np.stack([radius * np.cos(a), radius * np.sin(a), 0 * a], -1)
+        nrm = sign * ring / radius
+        gi = _t6(model.eval_xyz(1, "GiZ", ring, 0.0))
+        g_vm = model.eval_xyz(1, "gradVm", ring, 0.0)
+        g_pi = model.eval_xyz(1, "gradPhiI", ring, 0.0)
+        flux[j] = (np.einsum("pi,pij,pj->p", nrm, gi, g_vm), np.einsum("pi,pij,pj->p", nrm, gi, g_pi))
+        assert np.abs(flux[j][1]).max() < 1e-12, "intracellular conormal flux on a wall"
+    fig, axes = plt.subplots(1, 3, figsize=(14.0, 4.6), constrained_layout=True,
+                             gridspec_kw={"width_ratios": [1, 1, 1.25]})
+    for ax, field, title, label, tag in ((axes[0], phie, r"$\phi_e$ at $t=0$", r"$\phi_e$", "(a)"),
+                                         (axes[1], vm, r"$V_m$ at $t=0$", r"$V_m$", "(b)")):
+        im = ax.imshow(field, origin="lower", extent=(-r3, r3, -r3, r3), cmap=fs.CMAP)
+        for radius in (r1, r2):
+            ax.add_patch(plt.Circle((0, 0), radius, fill=False, ls="--", lw=0.9, color="white"))
+        ax.set_title("%s %s, plane $z=0$" % (tag, title), loc="left", fontsize=11)
+        ax.set_xlabel(r"$x/(1\,\mathrm{m})$")
+        if tag == "(a)":
+            ax.set_ylabel(r"$y/(1\,\mathrm{m})$")
+        fs.colourbar_2d(fig, ax, im, label)
+    axes[2].set_ylabel("conormal flux")
+    ax = axes[2]
+    deg = np.degrees(a)
+    ax.plot(deg, flux[1][0], color=fs.VM, label=r"$r_1$: $\mathbf{n}\cdot\boldsymbol{\sigma}_i\nabla V_m$")
+    ax.plot(deg, flux[2][0], color=PHII, label=r"$r_2$: $\mathbf{n}\cdot\boldsymbol{\sigma}_i\nabla V_m$")
+    ax.plot(deg, flux[1][1], color="black", ls="--", lw=1.4, label=r"$\mathbf{n}\cdot\boldsymbol{\sigma}_i\nabla\phi_i$ (both)")
+    ax.axhline(0, color=fs.GREY, lw=0.6)
+    ax.set_xlim(0, 360)
+    ax.set_xticks([0, 90, 180, 270, 360])
+    ax.set_xlabel(r"angle from $+x$ in the plane $z=0$ (deg)")
+    ax.set_title("(c) intracellular wall current", loc="left", fontsize=11)
+    ax.legend(frameon=False, fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.2))
+    fs.save(fig, outdir, "bath_shell.png", settings)
+
+
 def main():
     ap = fs.cli(__doc__, MESH_CASES)
     args = ap.parse_args()
     settings = fs.Settings(args.draft)
     outdir = args.outdir or os.path.join(HERE, "figures")
-    for build in (fda_cube, shell_fields, shell_sources):
+    for build in (fda_cube, shell_fields, shell_sources, bath_slab, bath_shell):
         build(settings, outdir)
     fs.run_mesh_cases(args, MESH_CASES, outdir, settings)
 

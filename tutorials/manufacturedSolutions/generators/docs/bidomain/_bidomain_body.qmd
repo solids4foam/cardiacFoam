@@ -8,7 +8,7 @@ exact potentials, the sources, the gauge of the extracellular potential and the
 checks that each construction passes. It states the problems only; it contains
 no solver output. Every displayed field, tensor, source and coefficient below
 is printed by the sympy generator of its problem, `fda_bidomain_mms.py`,
-`shell_bidomain_mms.py` or `bath_shell_bidomain_mms.py`, which also writes the
+`shell_bidomain_mms.py`, `fda_bath_bidomain_mms.py` or `bath_shell_bidomain_mms.py`, which also writes the
 NumPy reference module and, for the shells, the C++ reference header of
 cardiacFoam. A reader with this document
 and the generator folder can rebuild each problem in another code.
@@ -63,7 +63,7 @@ units on the normalised coordinates $x/(1\,\mathrm m)$ and $t/(1\,\mathrm s)$.
 
 ## Manufactured ionic closure {#sec-ionic}
 
-Both problems use the manufactured ionic model of
+The problems use the manufactured ionic model of
 @pathmanathan2013verification, with state $(V_m,u_1,u_2,u_3)$. The solver
 supplies $V_m$; the model advances the auxiliary states with $V_m$ held fixed,
 at the rates
@@ -83,7 +83,8 @@ and the solver divides it by $C_m$,
 The FDA cube uses the ionic model `bidomainFDAManufactured`, whose $\beta_d$ is
 computed from the two conductivities (@sec-fda); the shell uses
 `monodomainFDAManufactured` with the rounded $\beta=\beta_3=-8.6$ of the
-monodomain document. With $u_3=0$ and auxiliary states that make
+monodomain document; the FDA bath slab uses `bathBidomainFDAManufactured`
+(@sec-bath-slab). With $u_3=0$ and auxiliary states that make
 $(u_1-V_m)u_2^2=1/(1+t)$, the ionic term of the $V_m$ equation is
 
 $$
@@ -91,7 +92,8 @@ $$
 $$
 
 which cancels the time derivative of $V_m=\sqrt{1+t}\,F$ and leaves
-$-\beta V_m$.
+$-\beta V_m$. In the FDA bath slab $u_3\neq0$ and $V_m-u_3$ takes the place
+of $V_m$ in both terms.
 
 ## Gauge of the extracellular potential {#sec-gauge}
 
@@ -585,6 +587,201 @@ the shared fragments `latex/shell_*.tex` are those of
 including a table of self-test samples that the verifier compares with its
 compiled functions at start-up.
 
+# FDA bath slab {#sec-bath-slab}
+
+## Description and limitations
+
+The bidomain problem with a bath of @pathmanathan2013verification, part of the
+FDA regulatory science tool for cardiac electrophysiology [@fda2023eprst]: a
+myocardium slab $0\le x\le1$ between two bath slabs, $-1\le x<0$ and
+$1<x\le2$, on the box $[-1,2]\times[0,1]^2$ in three dimensions, with
+$y,z\in[0,0.1]$ in one dimension and $z\in[0,0.05]$ in two. Heart and bath form
+one extracellular conductor, solved together at every step
+(`torsoCoupling bath`). In the bath $\nabla\cdot(\sigma_b\nabla\phi_e)=0$ with
+a scalar conductivity $\sigma_b$ that is the same in both slabs. On $x=0$ and
+$x=1$ the extracellular potential is continuous, the extracellular current is
+continuous through $\boldsymbol\sigma_e$ on the heart side,
+$\mathbf n\cdot\boldsymbol\sigma_e\nabla\phi_e=\sigma_b\,\mathbf n\cdot\nabla\phi_e$,
+and the intracellular space is sealed,
+$\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i=0$. The face $x=-1$ is grounded,
+$\phi_e=0$, a current density $\alpha$ enters through $x=2$,
+$\sigma_b\,\partial\phi_e/\partial x=\alpha$, and the lateral faces carry no
+current. Since $\phi_e$ does not have zero normal flux at the heart walls,
+$\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m=-\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_e$
+is non-zero there: the walls carry the intracellular current of a virtual
+electrode.
+
+The case exercises the global heart and bath $\phi_e$ equation, the continuity
+of the trace and of the extracellular current across two plane interfaces, the
+intracellular sealing with a non-zero wall current, the ground and
+surface-current conditions of the bath, the ionic coupling, the time
+integration and the predictor--corrector coupling of the bath
+(`bathPredictorCorrector`), on hexahedra in one, two and three dimensions and
+on Delaunay tetrahedra in three.
+
+$V_m$ and $\phi_e$ depend on $x$ and $t$ only, so the potentials are the same
+in every dimension and only the auxiliary states carry $y$ and $z$, through
+$G_d$. The interfaces are plane and normal to $x$, the two tensors are
+diagonal with the face normals as eigenvectors, and the bath conductivity is
+uniform. The case therefore does not exercise curved or oblique interfaces,
+rotated heart tensors, a bath conductivity that varies in space, or a
+$\phi_e$ source in the heart; the bath shell (@sec-bath-shell) does.
+
+As in the FDA cube, the residual of the heart equations is not zero. The
+tutorial dictionary gives $\boldsymbol\sigma_e$ to nine decimals, so
+$\sigma_{i,xx}\pi^2=1.1$ and $\sigma_{i,xx}/(\sigma_{i,xx}+\sigma_{e,xx})=\kappa$
+hold to rounding. On the exact fields the residuals of the $V_m$ and $\phi_e$
+equations (left minus right side) are $\rho_pSF$ and $\rho_eSF$, with $S$ and
+$F$ defined below and, for $d=1,2,3$,
+
+{{< include ../../latex/fda_bath_residual_relative.tex >}}
+
+## Problem instance
+
+The box of the description, the heart $0\le x\le1$ between the two bath
+slabs. The diagonal conductivities of the heart are those of the FDA cube
+(@sec-fda),
+
+{{< include ../../latex/fda_bidomain_Gi.tex >}}
+
+{{< include ../../latex/fda_bidomain_Ge.tex >}}
+
+the bath conductivity is $\sigma_b=\sigma_{e,xx}/2$, and the constants are
+
+{{< include ../../latex/fda_bath_params.tex >}}
+
+with $\kappa=1/\sqrt2$, the value of the tutorial, and $\beta$ the constant of
+the ionic model. In cardiacFoam:
+
+- tutorial `manufacturedSolutions/bathBidomain/slab`, options `-dim 1|2|3`
+  (`-mesh hex`, the default) and `-mesh tet` (three dimensions),
+  `-variant groundElectrode|electrodePair`, `-predictorCorrector yes|no` and
+  `-interface distanceWeightedHarmonic|conormalHarmonic`;
+- myocardium solver `bidomainSolver` (`sealedHeartBoundary false`,
+  `bathHeartPhiETrace zeroGradient`, `conductivitySource uniform`), the bath as
+  cellZone `bath` of the `torso` block with `torsoCoupling bath`, the ground
+  patch `xMin` and the surface-current patch `xMax` carrying $\alpha$, and the
+  bath conductivity written by `setTorsoOrganConductivityField`;
+- ionic model `bathBidomainFDAManufactured`;
+- verifier `manufacturedFDABathBidomainVerifier`.
+
+`groundElectrode` is the variant constructed below. `electrodePair` applies the
+currents $-\alpha$ on $x=-1$ and $\alpha$ on $x=2$; $\phi_e$ is then defined
+up to a constant, pinned at `phiERefPoint`, and the verifier compares $\phi_e$
+and $\phi_i$ with their volume means removed.
+
+## Construction
+
+With $S=\sqrt{1+t}$ and $F=\cos(\pi x)$, the heart potentials are those of the
+FDA cube in one dimension plus the current that crosses the heart. $F$ is an
+eigenfunction, $\sigma_{i,xx}F''=-k_1F$ with $k_1=\sigma_{i,xx}\pi^2$.
+
+*Heart.* With $\phi_e=-\kappa SF+\alpha x/\sigma_{e,xx}+C$ and
+$\kappa(\boldsymbol\sigma_i+\boldsymbol\sigma_e)=\boldsymbol\sigma_i$, the linear terms of
+$V_m$ and $\phi_e$ have no second derivative and
+
+$$
+\sigma_{i,xx}\,\partial_{xx}V_m+(\sigma_{i,xx}+\sigma_{e,xx})\,\partial_{xx}\phi_e
+=\left(\kappa(\sigma_{i,xx}+\sigma_{e,xx})-\sigma_{i,xx}\right)\pi^2SF=0 ,
+$$
+
+so the elliptic equation holds with no source. The $x$-derivative of
+$\phi_i=V_m+\phi_e$ is $-(1-\kappa)S\pi\sin(\pi x)$, which vanishes on $x=0$
+and $x=1$: the term $-\alpha x/\sigma_{e,xx}$ of $V_m$ cancels the
+extracellular current in $\phi_i$, which seals the intracellular space. In the
+$V_m$ equation $\nabla\cdot(\boldsymbol\sigma_i\nabla\phi_i)=-(1-\kappa)k_1SF$, and
+$u_3=-\alpha x/\sigma_{e,xx}$ is the part of $V_m$ that does not depend on
+time, $V_m-u_3=SF$. The ionic model (@sec-ionic) then cancels the time
+derivative of $V_m$ and leaves $-\beta SF$, so the equation holds with no
+applied current for
+
+{{< include ../../latex/fda_bath_beta.tex >}}
+
+which is $-(1-\kappa)k_1$ because $k_1=1.1$.
+
+*Bath.* In the bath $\phi_e$ is linear with $\partial_x\phi_e=\alpha/\sigma_b$,
+so the current density is $\alpha$ in every slab; in the heart
+$\sigma_{e,xx}\partial_x\phi_e=\alpha$ on $x=0$ and $x=1$, where $F'=0$. The
+three branches below are continuous at $x=0$ and $x=1$, and the constant
+
+{{< include ../../latex/fda_bath_C.tex >}}
+
+makes $\phi_e=0$ on $x=-1$ at every time.
+
+## Exact solution
+
+In the heart, $0\le x\le1$,
+
+{{< include ../../latex/fda_bath_Vm.tex >}}
+
+and $\phi_e$ in the three slabs, $x\le0$, $0<x\le1$ and $x>1$, is
+
+{{< include ../../latex/fda_bath_phiE.tex >}}
+
+with $\phi_i=V_m+\phi_e$ and the auxiliary states
+
+{{< include ../../latex/fda_G_d3.tex >}}
+
+{{< include ../../latex/fda_bath_u1.tex >}}
+
+{{< include ../../latex/fda_bath_u2.tex >}}
+
+{{< include ../../latex/fda_bath_u3.tex >}}
+
+($G_1=x+1$, $G_2=xy^2+1$.) The potentials do not depend on $d$. The full
+expressions are `fields(d)` of `fda_bath_bidomain_mms.py` and `Vm_d<d>`,
+`phiE_d<d>` (all three slabs), `phiI_d<d>`, `u1_d<d>`, `u2_d<d>`, `u3_d<d>`,
+`Iion_d<d>` (the current $J_{\mathrm{ion}}$) of `reference/fda_bath_bidomain.py`,
+with arguments $(x,y,z,t,\kappa,\alpha,\sigma_{e,xx})$ and $\sigma_b=\sigma_{e,xx}/2$;
+its `PARAMS` holds `K`, `ALPHA`, `SE`, `SIGMA_B`, `CM`, `CHI` and `BETA`.
+
+## Self-checks {#sec-bath-slab-checks}
+
+`fda_bath_bidomain_mms.py --self-check` asserts:
+
+- for $d=1,2,3$, $\partial_tu_1$ and $\partial_tu_2$ equal the ionic rates on
+  the exact fields;
+- for $d=1,2,3$, the residuals of both heart equations are constant multiples
+  $\rho_pSF$, $\rho_eSF$ of $SF$ with $|\rho|/(\sigma_{i,xx}\pi^2)\le10^{-8}$
+  (the values are printed above);
+- $\phi_e$ is linear in the bath, continuous at $x=0$ and $x=1$, with
+  $\sigma_{e,xx}\partial_x\phi_e$ in the heart equal to $\sigma_b\partial_x\phi_e$
+  in the bath there, and $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$ vanishes on
+  both walls;
+- $\phi_e(-1)=0$ and $\sigma_b\partial_x\phi_e=\alpha$ on $x=2$;
+- $\sigma_b$ of the tutorial is $\sigma_{e,xx}/2$;
+- with $\alpha=0$, $\phi_e$ is the insulated-slab potential of
+  `slab_leadfield_mms.py`;
+- the printed constants round-trip.
+
+`pytest test_fda_bath_bidomain_mms.py` also compares the conductivities,
+$\kappa$, $\alpha$, $\chi$, $C_m$, $\sigma_b$ and the $\beta$ scale of the tutorial
+dictionaries and of the ionic model `bathBidomainFDAManufactured` with those of
+the generator.
+
+## Figures
+
+![FDA bath slab at $t=0$, tutorial parameters. (a) The heart between two bath slabs: $\phi_e=0$ on $x=-1$ and the current $\alpha$ enters through $x=2$. (b) $V_m$ and $\phi_i$ in the heart and $\phi_e$ in the three slabs; $\phi_e$ is continuous at the walls (dotted) and linear in the bath with slope $\alpha/\sigma_b$. (c) The extracellular current density $\sigma_e\partial_x\phi_e$ (bath: $\sigma_b\partial_x\phi_e$), equal to $\alpha$ in the bath and on both walls, and the intracellular current density $\sigma_{i,xx}\partial_x\phi_i$, which vanishes on both walls.](figures/fda_bath_slab.png){#fig-bath-slab width=100%}
+
+## Regeneration
+
+```bash
+python fda_bath_bidomain_mms.py --emit
+python fda_bath_bidomain_mms.py --self-check
+H=../../../src/verificationModels/bathBidomainVerification
+python fda_bath_bidomain_mms.py --check $H/manufacturedFDABathBidomainReference.H
+```
+
+`--emit` writes `reference/fda_bath_bidomain.py` and `latex/fda_bath_*.tex`.
+The spatial factor, the auxiliary states and the ionic closure are those of
+`fda_monodomain_mms.py`, imported. The formulas of
+`manufacturedFDABathBidomainReference.H` ($\sigma_b$, $C$, $F$, $V_m$, the
+auxiliary states, the three branches of $\phi_e$, $\phi_i$ and the gradients at
+a point) are generated regions, rewritten by `--write` and compared by
+`--check`; the parity harness of cardiacFoam compares the compiled header with
+`reference/fda_bath_bidomain.py` to $10^{-12}$. The constants of the ionic model
+`bathBidomainFDAManufactured_2014.H` are hand-written.
+
 # Bath shell {#sec-bath-shell}
 
 ## Description and limitations
@@ -662,6 +859,8 @@ space, and $r_j$ closes the common mode in the bath. The normals
 $\mathbf n_1=-\mathbf x/r_1$ and $\mathbf n_2=\mathbf x/r_2$ are polynomial,
 so every correction is smooth at the origin.
 
+## Exact solution
+
 *Potentials.* With $T=A_T\sin(\nu t)$ and
 
 {{< include ../../latex/shell_bath_p.tex >}}
@@ -724,6 +923,10 @@ and both parameter sets:
 - the common mode leaves $V_m$ unchanged to $10^{-14}$;
 - the ionic closure to $10^{-13}$;
 - the reference point lies in the outer bath.
+
+## Figures
+
+![Bath shell, default parameter set, insulated outer sphere, $t=0$. (a) $\phi_e$ in the plane $z=0$ across the blood pool, the heart shell and the outer bath; the dashed circles are the spheres $r_1$ and $r_2$. (b) $V_m$ in the heart shell on the same plane. (c) On the great circle of each sphere in that plane, the intracellular conormal flux $\mathbf n\cdot\boldsymbol\sigma_i\nabla V_m$ with $\mathbf n$ the normal out of the heart, which is the virtual-electrode current, and $\mathbf n\cdot\boldsymbol\sigma_i\nabla\phi_i$, which vanishes on both spheres.](figures/bath_shell.png){#fig-bath-shell width=100%}
 
 ## Regeneration
 

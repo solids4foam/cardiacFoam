@@ -1,9 +1,31 @@
 import os
+import re
 import tempfile
 
 import pytest
 
 import bath_shell_bidomain_mms as B
+
+
+CASE = os.path.join(B.HERE, "..", "bathBidomain", "sphericalShell")
+
+
+@pytest.mark.skipif(not os.path.isdir(CASE), reason="tutorial case absent (cardiacFoam-only)")
+def test_tutorial_matches():
+    """The tutorial's radii, ionic constants and defaults are the generator's."""
+    p = B.default_params()
+    geo = open(os.path.join(CASE, "shell.geo.template")).read()
+    for name in ("r1", "r2", "r3"):
+        assert float(re.search(r"^%s\s*=\s*([0-9.]+);" % name, geo, re.M).group(1)) == p[name]
+    props = open(os.path.join(CASE, "constant", "electroProperties")).read()
+    # Cm = 2 and Chi = 3 are the constants of the ionic closure (ionic_residual)
+    assert re.search(r"\bchi\s*\[[^\]]*\]\s*(\S+);", props).group(1) == "3"
+    assert re.search(r"\bcm\s*\[[^\]]*\]\s*(\S+);", props).group(1) == "2"
+    assert re.search(r"\bouterClosure\s+(\S+);", props).group(1) == B.SOLUTIONS[0]
+    assert re.search(r"\bparameterSet\s+(\S+);", props).group(1) == "default"
+    allrun = open(os.path.join(CASE, "Allrun")).read()
+    assert "oneOf -outer \"$outer\" " + " ".join(B.SOLUTIONS) in allrun
+    assert "oneOf -parameterSet \"$parameterSet\" default alternate" in allrun
 
 
 def test_shared_construction():

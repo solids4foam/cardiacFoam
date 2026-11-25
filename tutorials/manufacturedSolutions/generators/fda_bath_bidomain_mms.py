@@ -30,9 +30,9 @@ phi_e(-1) = 0 and sigma_b phi_e'(2) = alpha; sigma_b of the tutorial is
 Ge_xx/2; with alpha = 0 phi_e is the slab potential of slab_leadfield_mms.py;
 the printed constants round-trip.
 
---emit writes reference/fda_bath_bidomain.py (no LaTeX: no document prints
-this solution).  --write PATH rewrites, and --check PATH compares, the
-generated regions of manufacturedFDABathBidomainReference.H.
+--emit writes reference/fda_bath_bidomain.py and latex/fda_bath_*.tex, the
+fragments that docs/bidomain/ prints.  --write PATH rewrites, and --check PATH
+compares, the generated regions of manufacturedFDABathBidomainReference.H.
 
     python fda_bath_bidomain_mms.py --emit
     python fda_bath_bidomain_mms.py --self-check
@@ -49,7 +49,8 @@ import sympy as sp
 import fda_bidomain_mms as fbm
 import fda_monodomain_mms as fmm
 import mms_codegen as codegen
-from mms_common.latex_emit import printed_constant
+from mms_common.latex_emit import (emit_cases_fragment, emit_latex_fragment,
+                                   emit_parameter_fragment, printed_constant)
 from mms_common.numpy_emit import emit_numpy_module
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -217,6 +218,51 @@ def run_self_checks():
         printed_constant(v, 10)
 
 
+# ------------------------------------------------------------------ LaTeX ----
+
+def _sci(v):
+    mantissa, exponent = ("%.1e" % v).split("e")
+    return r"%s\times10^{%d}" % (mantissa, int(exponent))
+
+
+def latex_fragments():
+    """{path relative to this folder: LaTeX} of the fragments docs/bidomain/
+    prints.  Every field is printed from the expression the checks use; the
+    unit-free S is the symbol for sqrt(1 + t) and G_d stands for G_1, G_2, G_3
+    (fda_monodomain_mms.py)."""
+    Ss = sp.Symbol("S", positive=True)
+    Gd = sp.Symbol("G_d", positive=True)
+    names = {Ss: "S", k: r"\kappa", alpha: r"\alpha", se: r"\sigma_{e,xx}",
+             SB: r"\sigma_b", C_S: "C", Gd: "G_d"}
+    sub = {S: Ss}
+    F = spatial_factor()
+    u1, u2, u3 = u_of(F, Gd)
+    out = {
+        "fda_bath_Vm.tex": emit_latex_fragment("V_m", vm_of(F).subs(sub), names),
+        "fda_bath_u1.tex": emit_latex_fragment("u_1", u1.subs(sub), names),
+        "fda_bath_u2.tex": emit_latex_fragment("u_2", u2, names),
+        "fda_bath_u3.tex": emit_latex_fragment("u_3", u3, names),
+        "fda_bath_C.tex": emit_latex_fragment("C", constant_of().subs(sub), names),
+        "fda_bath_beta.tex": emit_latex_fragment(
+            r"\beta", sp.Mul(BETA_SCALE, 1 - k, evaluate=False), names),
+    }
+    conditions = (r"x\le 0", r"0<x\le 1", r"x>1")
+    out["fda_bath_phiE.tex"] = emit_cases_fragment(
+        r"\phi_e", [(e.subs(sub), c) for (e, _), c in zip(phie_branches(C_S), conditions)],
+        names)
+    out["fda_bath_params.tex"] = emit_parameter_fragment(
+        [(r"C_m", CM), (r"\chi", CHI), (r"\kappa", sp.Float(float(K), 12)),
+         (r"\alpha", printed_constant(ALPHA, 3)), (r"\sigma_b", printed_constant(SIGMA_B, 9)),
+         (r"\beta", sp.Float(float(beta_of(K)), 10))], per_row=3)
+    rows = [relative_residuals(d) for d in DIMENSIONS]
+    _check(all(r == rows[0] for r in rows), "the relative residuals depend on d")
+    out["fda_bath_residual_relative.tex"] = (
+        "$$\n\\frac{|\\rho_p|}{\\sigma_{i,xx}\\pi^2} = %s,\\quad "
+        "\\frac{|\\rho_e|}{\\sigma_{i,xx}\\pi^2} = %s\n$$\n"
+        % tuple(_sci(v) for v in rows[0]))
+    return {"latex/" + name: text for name, text in out.items()}
+
+
 # ------------------------------------------------------------------ NumPy ----
 
 def numpy_module():
@@ -238,7 +284,9 @@ def numpy_module():
 
 def render_outputs():
     """{path relative to this folder: text} of every emitted file."""
-    return {"reference/%s.py" % REFERENCE_NAME: numpy_module()}
+    out = {"reference/%s.py" % REFERENCE_NAME: numpy_module()}
+    out.update(latex_fragments())
+    return out
 
 
 def write_outputs(root=HERE):
