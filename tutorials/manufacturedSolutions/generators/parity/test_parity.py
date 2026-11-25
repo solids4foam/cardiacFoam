@@ -241,3 +241,18 @@ def test_coupled_terminal_current_matches_continuum_value(app):
     s = np.sqrt(1 + t)
     assert out[0, 2] == pytest.approx(1.5 * s, rel=1e-10)
     assert out[0, 5] == pytest.approx(-1.5 * s, rel=1e-10)
+
+
+def test_pvj_continuum_app_reports_a_one_cell_mesh(app, tmp_path):
+    # pvjContinuumParity (the C++ class pvjContinuumReference on a polyMesh) on one tetrahedron
+    # wholly inside the support of the uniform kernel: omega is the volume, W the ball mass.
+    from parity import pvj_parity
+
+    points = np.array([[0.0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    pvj_parity.write_case(tmp_path, points, np.array([[0, 1, 2, 3]]), "uniform", 2.0,
+                          (0.2, 0.2, 0.2), {"kind": "interior"})
+    volume, centre, (w, _), index, omega, _ = pvj_parity.run_case(tmp_path)
+    assert volume[0] == pytest.approx(1/6, rel=1e-14)
+    np.testing.assert_allclose(centre[0], 0.25, rtol=1e-14)
+    assert w == pytest.approx(4*np.pi*2.0**3/3, rel=1e-13)
+    assert list(index) == [0] and omega[0] == pytest.approx(1/6, rel=1e-13)

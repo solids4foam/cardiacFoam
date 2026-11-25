@@ -15,7 +15,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 GENERATORS = ["fda_monodomain_mms.py", "rotated_monodomain_mms.py", "shell_monodomain_mms.py",
               "pseudo_ecg_mms.py", "graph_monodomain_mms.py", "coupled_1d3d_mms.py",
-              "cartesian_eikonal_mms.py", "eikonal_ecg_mms.py", "shell_eikonal_mms.py",
+              "radial_eikonal_mms.py", "cartesian_eikonal_mms.py", "eikonal_ecg_mms.py",
+              "shell_eikonal_mms.py",
               "fda_bidomain_mms.py", "fda_bath_bidomain_mms.py", "shell_bidomain_mms.py",
               "slab_leadfield_mms.py",
               "shell_mms.py", "bath_shell_bidomain_mms.py", "template_mms.py"]

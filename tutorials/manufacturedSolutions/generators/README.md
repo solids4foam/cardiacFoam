@@ -29,8 +29,8 @@ no solver output.
 | `shell_monodomain_mms.py` | monodomain field on the sealed spherical shell with a rotating anisotropic conductivity |
 | `pseudo_ecg_mms.py` | pseudo-ECG integrand and Gauss-Legendre reference of the cube fields |
 | `graph_monodomain_mms.py` | reaction-diffusion Purkinje graph field and the bidirectional terminal term |
-| `coupled_1d3d_mms.py` | continuum 1D-3D junction: half-ball kernel sampling, junction current, deposition |
-| `radial_eikonal_mms.py` | closed-form radial eikonal field with no source, evaluated by `manufacturedRadialEikonalReference.H`, without `--emit` |
+| `coupled_1d3d_mms.py` | continuum 1D-3D junction: half-ball kernel sampling, junction current, deposition; also emits the continuum junction on a mesh (`reference/pvj_continuum.py`, from `mms_common/pvj_continuum.py`) |
+| `radial_eikonal_mms.py` | closed-form radial eikonal field with no source around a held ball in a sealed sphere (flat, front and curvedFront seed profiles, anisotropic ellipsoid, seed offsets); the closed form uses SciPy, the emitted reference does not; evaluated by `manufacturedRadialEikonalReference.H` |
 | `cartesian_eikonal_mms.py` | exponential activation time on the unit cube, d = 1, 2, 3 |
 | `eikonal_ecg_mms.py` | eikonal-driven ECG integrand, templates and Gauss-Legendre reference |
 | `shell_eikonal_mms.py` | activation time on the sealed shell, parametric in `c0`; critical-point report |
@@ -42,15 +42,15 @@ no solver output.
 | `bath_shell_bidomain_mms.py` | bath bidomain potentials of the bath shell: the sealed bidomain shell coupled every step to a bath ball and an outer bath to `r3`, outer sphere insulated or grounded (LaTeX fragments and C++ header, no NumPy module) |
 | `template_mms.py` | passive monodomain field on the unit square: the starting point of a new generator (see "Creating a new manufactured solution") |
 | `mms_codegen.py` | C++ emission and the shared command line |
-| `mms_common/` | NumPy and LaTeX emitters (`numpy_emit.py`, `latex_emit.py`) and Gauss-Legendre quadratures (`quadrature.py`) |
-| `reference/` | emitted NumPy modules, one per case |
+| `mms_common/` | NumPy and LaTeX emitters (`numpy_emit.py`, `latex_emit.py`), Gauss-Legendre quadratures (`quadrature.py`), the continuum junction on a mesh (`pvj_continuum.py`, NumPy only, copied to `reference/pvj_continuum.py`) and small test meshes for it (`pvj_meshes.py`) |
+| `reference/` | emitted NumPy modules, one per case (`coupled_1d3d.py` and `pvj_continuum.py` both come from `coupled_1d3d_mms.py`) |
 | `latex/` | emitted LaTeX fragments |
 | `docs/_common/` | document preamble, nomenclature, bibliography and figure style (`figstyle.py`) |
 | `docs/monodomain/`, `docs/eikonal/`, `docs/bidomain/`, `docs/leadField/` | Quarto entry file `<equation>_mms.qmd` (front matter), its includable text `_<equation>_body.qmd`, rendered PDF, figure script `figures.py` and `figures/` |
 | `docs/bidomain/bidomain_reference.py`, `docs/leadField/leadfield_reference.py` | checks that the tutorial dictionaries match the generators, and comparison of the exact fields with finished runs (`--run-check`); the lead-field module takes the slab and layered potentials from `reference/slab_leadfield.py` |
 | `test_*.py` | generator tests; `test_release.py` holds the release checks |
 | `requirements.txt` | Python dependencies |
-| `parity/` | cardiacFoam-only: an OpenFOAM application comparing the C++ headers with the NumPy references |
+| `parity/` | cardiacFoam-only: OpenFOAM applications comparing the C++ headers (`mmsParity`) and the C++ class `pvjContinuumReference` (`pvjContinuum/`, run by `pvj_parity.py`) with the NumPy references |
 
 ## Cases that use each generator
 
@@ -89,7 +89,7 @@ committed files (Python 3, Quarto and a TeX distribution; see "Setup"):
 cd tutorials/manufacturedSolutions/generators
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 for g in fda_monodomain rotated_monodomain shell_monodomain pseudo_ecg \
-         graph_monodomain coupled_1d3d cartesian_eikonal eikonal_ecg \
+         graph_monodomain coupled_1d3d radial_eikonal cartesian_eikonal eikonal_ecg \
          shell_eikonal fda_bidomain fda_bath_bidomain shell_bidomain \
          slab_leadfield shell bath_shell_bidomain template; do
     .venv/bin/python ${g}_mms.py --self-check && .venv/bin/python ${g}_mms.py --emit || break
@@ -139,6 +139,7 @@ python shell_monodomain_mms.py --emit
 python pseudo_ecg_mms.py --emit
 python graph_monodomain_mms.py --emit
 python coupled_1d3d_mms.py --emit
+python radial_eikonal_mms.py --emit
 python cartesian_eikonal_mms.py --emit
 python eikonal_ecg_mms.py --emit
 python shell_eikonal_mms.py --emit
@@ -151,13 +152,60 @@ python bath_shell_bidomain_mms.py --emit
 python template_mms.py --emit
 ```
 
-and the same with `--self-check`. The shell eikonal checks and the
-critical-point table take a `c0`:
+and the same with `--self-check`. `coupled_1d3d_mms.py --emit` writes two modules,
+`reference/coupled_1d3d.py` and `reference/pvj_continuum.py`; `radial_eikonal_mms.py` with
+neither option prints the arrival time at the wall of `--PeL` and `--ballRatio`
+(`--report`). The shell eikonal checks and the critical-point table take a `c0`:
 
 ```bash
 python shell_eikonal_mms.py --self-check --c0 5
 python shell_eikonal_mms.py --report --c0 5
 ```
+
+## Junction references without the solver
+
+Every reference of the Purkinje-myocardium junction is importable with NumPy only (SciPy is
+not needed either: `reference/radial_eikonal.py` evaluates the Ei term by the quadrature of
+the C++ header).
+
+- `reference/coupled_1d3d.py`: the cube junction, continuum sampling, current and deposition
+  with the half-ball quadrature.
+- `reference/radial_eikonal.py`: the exact radial eikonal field around a held ball in a sealed
+  sphere for the `flat`, `front` and `curvedFront` seed profiles (`exact_time`,
+  `exact_field`, `exact_gradient`), the anisotropic ellipsoid `M = m Q diag(axes^2) Q^T`,
+  and the seed times `pvjMapper::setSeedOffsets` gives the support cells (`seed_times`).
+  `Pe (a + 1)` is not limited to 700 as in the closed form.
+- `reference/pvj_continuum.py`: the continuum junction on a mesh, the algorithm of the C++ class
+  `pvjContinuumReference`. A mesh is a list of cells, a cell a list of faces, a face an array of
+  vertex coordinates (the module text lists the helpers that build it from hexahedra,
+  tetrahedra or a polyMesh):
+
+```python
+import numpy as np
+from reference import pvj_continuum as pc            # or copy that one file: it imports NumPy only
+
+cells = pc.cells_from_hexahedra(vertices)            # vertices (n, 8, 3), OpenFOAM hex order
+terminal, radius = (0.5, 0.0, 0.0), 0.2
+kind, normal, wall = pc.shell_support(terminal, 0.5, 1.0, radius)   # cavitySphere on r1 = 0.5
+out = pc.junction_source(cells, terminal, radius, "cosine", kind, current=1.0,
+                         f=lambda p: np.cos(np.pi*p[:, 0]), normal=normal, wall_radius=wall)
+# out.omega, out.omega_f: int_{K cap B} w and w f per cell; out.normalisation: W of the true
+# support; out.source: the cell average I omega_K/(W |K|) of the continuum source
+```
+
+  `support_integral` gives `W` and `int w f` for a ball cut by nothing, by a flat wall or by a
+  sphere with the tissue outside it; `cell_integrals` the per-cell integrals. The kernels are
+  `uniform`, `linear`, `gaussian` (truncated) and `cosine`. At the default sizes of the C++ class
+  a pure NumPy run costs a few seconds per terminal and mesh of a few cells for `linear` and
+  `cosine`, and up to about 15 s for `uniform` and `gaussian`, whose cut size is finest; the
+  keyword arguments `cut_size`, `inside_size` and `tip_size` (fractions of the radius) trade
+  accuracy for time as the keys `referenceCutSize`, `referenceInsideSize` and
+  `referenceTipSize` of the C++ class do.
+
+Not ported, because the C++ does not cover it either: a support cut by two walls, a terminal on
+the outer sphere of the shell (tissue inside the sphere), and a curved wall that is not a sphere
+about the origin. The seed offsets are given for the activation metric of one terminal at a
+time; the first-arrival rule between overlapping supports belongs to the solver.
 
 ## Documents and figures
 
@@ -278,6 +326,14 @@ python -m pytest parity/test_parity.py
 `parity/test_parity.py` fails, rather than skips, without OpenFOAM; the
 per-generator parity tests skip with "parity harness absent (cardiacFoam-only)"
 when `parity/` or the OpenFOAM environment is missing.
+
+`mmsParity radial` evaluates the radial eikonal field of
+`manufacturedRadialEikonalReference.H`; `test_radial_eikonal_mms.py` compares it with
+`reference/radial_eikonal.py`. The junction on a mesh is compared by a second application,
+`parity/pvjContinuum/pvjContinuumParity`, which compiles `pvjContinuumReference.C` and runs
+it on a polyMesh written by `parity/pvj_parity.py`; `test_pvj_continuum.py` builds it with
+`wmake`, runs it on warped hexahedral, Kuhn tetrahedral and curved shell-sector meshes and
+compares cell volumes and centres, the support integrals and the cell integrals.
 
 ## Sealed-shell generators
 
